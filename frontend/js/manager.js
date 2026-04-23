@@ -222,7 +222,8 @@ async function loadShipments() {
                 <td>${s.route_type || 'direct'} <br><small>ETA: ${etaFormatted}</small></td>
                 <td>
                     ${actionHtml}
-                    <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')" title="Edit">✏️</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openTrackModal('${s.id}')" title="Live Track">📍</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:5px;" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')" title="Edit">✏️</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -252,7 +253,10 @@ async function loadShipments() {
                         <td style="padding-left:30px;">↳ ${leg.description} <br><small>Drop: ${leg.drop.address || 'Location'}</small></td>
                         <td><span class="badge" style="background: rgba(255,255,255,0.1); font-size:0.7rem;">${leg.status}</span></td>
                         <td>direct <br><small>Sch: ${legEta}</small></td>
-                        <td>${legActionHtml}</td>
+                        <td>
+                            ${legActionHtml}
+                            <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openTrackModal('${leg.id}')" title="Live Track">📍</button>
+                        </td>
                     `;
                     tbody.appendChild(legTr);
                 });
@@ -360,6 +364,104 @@ async function bulkAssign() {
         alert(res.message);
         loadShipments();
     } catch(e) {}
+}
+
+let trackMap;
+let trackMarkers = [];
+
+async function openTrackModal(shipmentId) {
+    document.getElementById('track-shipment-id').innerText = shipmentId.substring(0,8);
+    document.getElementById('track-modal').style.display = 'block';
+    
+    if (!trackMap) {
+        trackMap = L.map('track-map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+    }
+    
+    // Invalidate size in case modal was hidden
+    setTimeout(() => { if (trackMap) trackMap.invalidateSize(true); }, 200);
+    
+    // Clear old markers/routes
+    trackMarkers.forEach(m => trackMap.removeLayer(m));
+    trackMarkers = [];
+    
+    document.getElementById('track-status').innerText = 'Loading...';
+    document.getElementById('track-current').innerText = '...';
+    document.getElementById('track-next').innerText = '...';
+    
+    try {
+        const shipments = await apiCall('/shipments/');
+        const target = shipments.find(s => s.id === shipmentId);
+        if (!target) return;
+        
+        let activeLeg = target;
+        let routeSegments = [];
+        let finalDrop = target.drop;
+        
+        // If it's a split parent, gather legs (or if it IS a leg, track the parent flow)
+        let parentId = target.is_leg ? target.parent_id : target.id;
+        const legs = shipments.filter(s => s.parent_id === parentId).sort((a,b) => a.leg_order - b.leg_order);
+        
+        if (legs.length > 0) {
+            routeSegments = legs;
+            activeLeg = legs.find(l => l.status !== 'delivered') || legs[legs.length - 1];
+            finalDrop = legs[legs.length - 1].drop;
+        } else {
+            routeSegments = [target];
+        }
+        
+        document.getElementById('track-status').innerText = target.status.toUpperCase();
+        
+        if (target.status === 'delivered' || (legs.length > 0 && legs[legs.length-1].status === 'delivered')) {
+            document.getElementById('track-status').innerText = 'DELIVERED';
+            document.getElementById('track-current').innerText = 'Delivery Completed';
+            document.getElementById('track-next').innerText = 'None';
+            
+            const m = L.marker([finalDrop.lat, finalDrop.lng]).addTo(trackMap).bindPopup("Final Destination (Delivered)");
+            trackMarkers.push(m);
+            trackMap.setView([finalDrop.lat, finalDrop.lng], 13);
+            return;
+        }
+        
+        let curLocStr = "Waiting for GPS...";
+        if (activeLeg.current_location) {
+            curLocStr = `${activeLeg.current_location.lat.toFixed(4)}, ${activeLeg.current_location.lng.toFixed(4)}`;
+            const curMarker = L.circleMarker([activeLeg.current_location.lat, activeLeg.current_location.lng], {
+                color: '#00f2fe', radius: 8, fillOpacity: 1
+            }).addTo(trackMap).bindPopup("Current Location");
+            trackMarkers.push(curMarker);
+            trackMap.setView([activeLeg.current_location.lat, activeLeg.current_location.lng], 10);
+        } else {
+            trackMap.setView([activeLeg.pickup.lat, activeLeg.pickup.lng], 10);
+        }
+        
+        document.getElementById('track-current').innerText = curLocStr;
+        document.getElementById('track-next').innerText = activeLeg.drop.address || `Lat: ${activeLeg.drop.lat.toFixed(4)}, Lng: ${activeLeg.drop.lng.toFixed(4)}`;
+        
+        for (const seg of routeSegments) {
+            const start = seg.pickup;
+            const end = seg.drop;
+            
+            const startMarker = L.circleMarker([start.lat, start.lng], {color: '#f6ad55', radius: 5, fillOpacity: 1}).addTo(trackMap);
+            const endMarker = L.circleMarker([end.lat, end.lng], {color: '#48bb78', radius: 5, fillOpacity: 1}).addTo(trackMap);
+            trackMarkers.push(startMarker, endMarker);
+            
+            try {
+                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
+                const data = await res.json();
+                if(data.routes && data.routes[0]) {
+                    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    let color = '#3182ce'; // Blue
+                    if (seg.status === 'delivered') color = '#a0aec0'; // Grey out completed portions
+                    const pline = L.polyline(coords, {color: color, weight: 4, opacity: 0.8}).addTo(trackMap);
+                    trackMarkers.push(pline);
+                }
+            } catch(e) {}
+        }
+        
+    } catch(err) {
+        console.error("Track Modal Error:", err);
+    }
 }
 
 // Drivers & Vehicles

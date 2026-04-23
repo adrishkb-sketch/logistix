@@ -205,6 +205,20 @@
 
     <div id="alert-container"></div>
 
+    <!-- Live Track Modal -->
+    <div id="track-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:600px; max-width:90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0;">Live Tracking: <span id="track-shipment-id"></span></h3>
+            <button style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;" onclick="document.getElementById('track-modal').style.display='none'">✖</button>
+        </div>
+        <div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9rem;">
+            <p style="margin-bottom:5px;"><b>Status:</b> <span id="track-status" style="color:var(--success);">In Transit</span></p>
+            <p style="margin-bottom:5px;"><b>Current Location:</b> <span id="track-current">Waiting for GPS...</span></p>
+            <p style="margin:0;"><b>Next Stop:</b> <span id="track-next">Loading...</span></p>
+        </div>
+        <div id="track-map" style="height: 300px; width: 100%; border-radius: 8px; border: 1px solid var(--card-border);"></div>
+    </div>
+
     <!-- Edit Modal -->
     <div id="edit-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
         <h3>Edit <span id="edit-type"></span></h3>
