@@ -41,9 +41,30 @@ def get_shipments():
 
 @router.get("/{shipment_id}")
 def get_shipment(shipment_id: str):
-    shipment = shipments_db.get_by_id(shipment_id)
+    all_ships = shipments_db.get_all()
+    shipment = next((s for s in all_ships if s["id"] == shipment_id), None)
+    
+    if not shipment:
+        # Try prefix matching for short IDs
+        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+        
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    # Inherit OTP from parent if it's a split leg
+    if shipment.get("is_leg") and not shipment.get("delivery_otp"):
+        parent = shipments_db.get_by_id(shipment.get("parent_id"))
+        if parent and parent.get("delivery_otp"):
+            shipment["delivery_otp"] = parent.get("delivery_otp")
+            shipments_db.update(shipment["id"], {"delivery_otp": shipment["delivery_otp"]})
+            
+    # If it's a legacy shipment and STILL doesn't have an OTP, generate one
+    if not shipment.get("delivery_otp"):
+        import random
+        new_otp = str(random.randint(1000, 9999))
+        shipment["delivery_otp"] = new_otp
+        shipments_db.update(shipment["id"], {"delivery_otp": new_otp})
+            
     return shipment
 
 @router.put("/{shipment_id}")
@@ -178,7 +199,8 @@ def _generate_legs(parent_shipment, leg_data):
             is_leg=True,
             leg_order=i+1,
             route_type="direct",
-            expected_delivery=expected_time.isoformat()
+            expected_delivery=expected_time.isoformat(),
+            delivery_otp=parent_shipment.get("delivery_otp")
         )
         shipments_db.insert(leg_shipment.model_dump())
         

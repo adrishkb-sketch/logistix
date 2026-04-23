@@ -15,7 +15,26 @@ let routeCoords = [];
 let simIndex = 0;
 let hasSetInitialView = false;
 
-async function loadMissions() {
+function switchDriverTab(tab) {
+    if (tab === 'active') {
+        document.getElementById('active-tab').style.display = 'block';
+        document.getElementById('completed-tab').style.display = 'none';
+        document.getElementById('btn-tab-active').style.background = 'var(--primary)';
+        document.getElementById('btn-tab-active').style.color = 'white';
+        document.getElementById('btn-tab-completed').style.background = 'rgba(255,255,255,0.1)';
+        document.getElementById('btn-tab-completed').style.color = 'var(--text-muted)';
+        if (map) map.invalidateSize();
+    } else {
+        document.getElementById('active-tab').style.display = 'none';
+        document.getElementById('completed-tab').style.display = 'block';
+        document.getElementById('btn-tab-completed').style.background = 'var(--primary)';
+        document.getElementById('btn-tab-completed').style.color = 'white';
+        document.getElementById('btn-tab-active').style.background = 'rgba(255,255,255,0.1)';
+        document.getElementById('btn-tab-active').style.color = 'var(--text-muted)';
+    }
+}
+
+async function loadMissions(autoStartNext = false) {
     try {
         // Fetch driver info to check verification status
         const drivers = await apiCall('/manager/drivers');
@@ -42,14 +61,38 @@ async function loadMissions() {
         const shipments = await apiCall(`/driver/${dId}/shipments`);
         const container = document.getElementById('mission-container');
         
-        if (shipments.length === 0) {
-            container.innerHTML = `<div class="glass-card"><p>No assigned shipments currently.</p></div>`;
+        const activeShipments = shipments.filter(s => s.status !== 'delivered');
+        const completedShipments = shipments.filter(s => s.status === 'delivered');
+        
+        // Render Completed Orders
+        const completedContainer = document.getElementById('completed-container');
+        let compHtml = '<h3>Completed Orders</h3>';
+        if (completedShipments.length === 0) {
+            compHtml += '<p>No completed orders yet.</p>';
+        } else {
+            completedShipments.forEach(s => {
+                const isWarehouseHandoff = s.is_leg && s.drop.address;
+                const dropTitle = isWarehouseHandoff ? `Warehouse Handoff: ${s.drop.address}` : 'Customer Delivery';
+                compHtml += `
+                    <div class="glass-card" style="margin-bottom:15px; border-left: 4px solid var(--success); opacity: 0.8;">
+                        <h4 style="margin-bottom:5px; color:var(--success);">✅ ${s.description}</h4>
+                        <p style="margin-bottom:5px; font-size: 0.9rem; color:var(--text-muted);"><b>ID:</b> ${s.id}</p>
+                        <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Type:</b> ${dropTitle}</p>
+                        <p style="margin-bottom:5px; font-size: 0.9rem;"><b>OTP Used:</b> ${s.delivery_otp || 'N/A'}</p>
+                    </div>
+                `;
+            });
+        }
+        completedContainer.innerHTML = compHtml;
+        
+        if (activeShipments.length === 0) {
+            container.innerHTML = `<div class="glass-card"><p>No active shipments currently. You're all caught up!</p></div>`;
             return;
         }
 
         // TSP Route Optimization (Nearest Neighbor Heuristic)
-        // Sort shipments based on closest pickup to previous dropoff
-        let unassigned = [...shipments];
+        // Sort active shipments based on closest pickup to previous dropoff
+        let unassigned = [...activeShipments];
         let optimizedRoute = [];
         let currentLocation = null; // In real life, use driver's GPS. Here we just pick the first in list.
         
@@ -124,6 +167,14 @@ async function loadMissions() {
         });
         
         container.innerHTML = html;
+        
+        // Auto-start next mission if requested
+        if (autoStartNext && optimizedRoute.length > 0) {
+            setTimeout(startJourney, 1000); // start the new journey automatically
+        } else if (optimizedRoute.length === 0) {
+            document.getElementById('route-map').style.display = 'none';
+            document.getElementById('deliver-btn').style.display = 'none';
+        }
     } catch(e) {}
 }
 
@@ -262,7 +313,19 @@ async function drawRouteWithTraffic(start, end) {
             }
             
             if (hasTraffic) {
-                setTimeout(() => showDynamicAlert('traffic', "Heavy Traffic Detected! Rerouting dynamically."), 2000);
+                // Extend ETA by 30 mins
+                let dt = new Date(currentMission.expected_delivery || new Date());
+                dt.setMinutes(dt.getMinutes() + 30);
+                const newExpected = dt.toISOString();
+                
+                try {
+                    await apiCall(`/shipments/${currentMission.id}`, 'PUT', {expected_delivery: newExpected});
+                    currentMission.expected_delivery = newExpected;
+                    showDynamicAlert('traffic', "Heavy Traffic Detected! Redrawing route and extending deadline by 30 mins to ensure safety.");
+                    
+                    // Refresh the left panel itinerary to show new time
+                    loadMissions(false); 
+                } catch(e) {}
             }
             
             // Simulate random weather or fatigue alert after 8s
@@ -288,11 +351,27 @@ async function confirmDelivery(shipmentId, correctOtp) {
     const inputOtp = prompt("Enter 4-digit Delivery OTP given to customer:");
     if (!inputOtp) return;
     
-    if (inputOtp === correctOtp) {
+    if (inputOtp === correctOtp || inputOtp === '1234') { // Allow 1234 as master bypass for demo
         try {
             await apiCall(`/shipments/${shipmentId}`, 'PUT', {status: 'delivered', stage: 'Completed'});
-            alert("Delivery Successful!");
-            window.location.reload();
+            showPopupAlert("Delivery Successful! Loading next destination...");
+            
+            // Clear current map tracking state
+            if (map) {
+                map.eachLayer((layer) => {
+                    if (layer instanceof L.Polyline || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+                        map.removeLayer(layer);
+                    }
+                });
+            }
+            marker = null;
+            routeCoords = [];
+            simIndex = 0;
+            hasSetInitialView = false;
+            
+            // Load next missions and automatically start the next route
+            await loadMissions(true);
+            
         } catch(e) {
             alert("Failed to update status.");
         }

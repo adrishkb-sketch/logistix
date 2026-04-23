@@ -24,10 +24,10 @@
         <h1>Track Your Shipment</h1>
         <p class="subtitle" style="margin-bottom: 2rem;">Enter your Shipment ID to get real-time status and your secure delivery OTP.</p>
         
-        <form id="track-form" onsubmit="event.preventDefault(); searchShipment();">
+        <form id="track-form" onsubmit="event.preventDefault(); return false;">
             <div class="input-group" style="display: flex; gap: 10px;">
                 <input type="text" id="tracking-id" placeholder="Enter Shipment ID (e.g. 1234abcd...)" required style="flex-grow: 1;">
-                <button type="submit" class="btn-primary" style="width: auto; padding: 0 30px;">Track</button>
+                <button type="button" id="track-btn" class="btn-primary" style="width: auto; padding: 0 30px;" onclick="searchShipment()">Track</button>
             </div>
         </form>
 
@@ -57,6 +57,75 @@
     </div>
 
     <script src="../js/api.js"></script>
-    <script src="../js/track.js"></script>
+    <script>
+        console.log("Track page loaded directly.");
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            if (id) {
+                document.getElementById('tracking-id').value = id;
+                searchShipment();
+            }
+        });
+
+        async function searchShipment() {
+            console.log("searchShipment called!");
+            const trackingId = document.getElementById('tracking-id').value.trim();
+            if (!trackingId) {
+                alert("Please enter a tracking ID");
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            const errorMsg = document.getElementById('error-msg');
+            const btn = document.getElementById('track-btn');
+            
+            if (btn) {
+                btn.innerText = 'Searching...';
+            }
+            
+            errorMsg.style.display = 'none';
+            resultsDiv.style.display = 'none';
+
+            try {
+                const shipment = await apiCall(`/shipments/${trackingId}`);
+                console.log("Found shipment:", shipment);
+                
+                document.getElementById('res-desc').innerText = shipment.description || 'N/A';
+                document.getElementById('res-id').innerText = shipment.id;
+                
+                const statusEl = document.getElementById('res-status');
+                statusEl.innerText = shipment.status || 'Pending';
+                if (shipment.status === 'delivered') statusEl.style.color = 'var(--success)';
+                else if (shipment.status === 'in_transit') statusEl.style.color = '#00f2fe';
+                else statusEl.style.color = 'white';
+                
+                const etaEl = document.getElementById('res-eta');
+                if (shipment.status === 'delivered') {
+                    etaEl.innerText = 'Delivered';
+                    etaEl.style.color = 'var(--success)';
+                } else if (shipment.expected_delivery) {
+                    const dt = new Date(shipment.expected_delivery);
+                    etaEl.innerText = dt.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
+                    etaEl.style.color = 'var(--warning)';
+                } else {
+                    etaEl.innerText = 'Calculating...';
+                }
+                
+                document.getElementById('res-otp').innerText = shipment.delivery_otp || 'N/A';
+                
+                resultsDiv.style.display = 'block';
+            } catch(err) {
+                console.error("API Error caught:", err);
+                errorMsg.innerText = err.message || "Shipment not found. Please check your ID.";
+                errorMsg.style.display = 'block';
+            } finally {
+                if (btn) {
+                    btn.innerText = 'Track';
+                }
+            }
+        }
+    </script>
 </body>
 </html>

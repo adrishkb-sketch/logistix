@@ -1,27 +1,36 @@
-window.onload = () => {
+window.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     if (id) {
         document.getElementById('tracking-id').value = id;
         searchShipment();
     }
-};
+});
 
-async function searchShipment() {
+window.searchShipment = async function() {
+    console.log("searchShipment triggered");
     const trackingId = document.getElementById('tracking-id').value.trim();
-    if (!trackingId) return;
+    if (!trackingId) {
+        alert("Please enter a tracking ID");
+        return;
+    }
     
     const resultsDiv = document.getElementById('results');
     const errorMsg = document.getElementById('error-msg');
-    const btn = document.querySelector('button[type="submit"]');
+    const btn = document.getElementById('track-btn');
     
-    btn.disabled = true;
-    btn.innerText = 'Searching...';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Searching...';
+    }
+    
     errorMsg.style.display = 'none';
     resultsDiv.style.display = 'none';
 
     try {
+        console.log("Fetching shipment:", trackingId);
         const shipment = await apiCall(`/shipments/${trackingId}`);
+        console.log("Shipment found:", shipment);
         
         document.getElementById('res-desc').innerText = shipment.description;
         document.getElementById('res-id').innerText = shipment.id;
@@ -48,9 +57,13 @@ async function searchShipment() {
         
         resultsDiv.style.display = 'block';
     } catch(err) {
+        console.error("Tracking Error:", err);
+        errorMsg.innerText = err.message || "Shipment not found. Please check your ID.";
         errorMsg.style.display = 'block';
     } finally {
-        btn.disabled = false;
-        btn.innerText = 'Track';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'Track';
+        }
     }
 }
