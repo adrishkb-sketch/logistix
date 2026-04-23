@@ -35,6 +35,7 @@ class Driver(BaseModel):
     challan_count: int = 0
     driving_score: float = 100.0 # out of 100
     assigned_vehicle_id: Optional[str] = None
+    base_warehouse_id: Optional[str] = None
     verification_status: str = "unverified" # unverified, pending_manual, verified
     verification_image: Optional[str] = None
 
@@ -49,6 +50,7 @@ class Vehicle(BaseModel):
     last_service_date: Optional[str] = None
     status: str = "available" # available, assigned, maintenance
     assigned_driver_id: Optional[str] = None
+    base_warehouse_id: Optional[str] = None
 
 class Warehouse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

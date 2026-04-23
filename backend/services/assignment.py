@@ -15,6 +15,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     
     drivers = drivers_db.get_all()
     vehicles = vehicles_db.get_all()
+    warehouses_db = JSONDatabase("warehouses")
+    warehouses = warehouses_db.get_all()
     
     # We need to calculate current load for multi-shipment logic
     from backend.database import JSONDatabase
@@ -41,13 +43,28 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 current_weight = sum(s.get("weight", 0) for s in active_for_vehicle)
                 
                 if current_weight + shipment.get("weight", 0) <= vehicle.get("capacity", 0):
-                    # Check distance constraints
-                    if dist > 50 and vehicle["type"] == "bike":
-                        continue # Skip bikes for long distance
+                    
+                    # Base Warehouse limits
+                    if vehicle.get("base_warehouse_id"):
+                        wh = next((w for w in warehouses if w["id"] == vehicle["base_warehouse_id"]), None)
+                        if wh:
+                            base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
+                            v_type = vehicle.get("type", "")
+                            
+                            if v_type in ["bike", "scooty"] and base_dist > 15: continue
+                            if v_type == "3 wheeled (battery)" and base_dist > 30: continue
+                            if v_type == "3 wheeled (non EV)" and base_dist > 40: continue
+                            if v_type == "small van" and base_dist > 60: continue
+                            if v_type == "large van" and base_dist > 100: continue
+                            
+                    # Check route distance constraints
+                    v_type_short = vehicle.get("type", "")
+                    if dist > 50 and v_type_short in ["bike", "scooty", "3 wheeled (battery)", "3 wheeled (non EV)"]:
+                        continue # Skip short range vehicles for long distance routes
                         
                     score_modifier = 0
-                    if dist < 30 and vehicle["type"] == "bike": score_modifier += 10
-                    if dist > 50 and vehicle["type"] == "truck": score_modifier += 10
+                    if dist < 30 and v_type_short in ["bike", "scooty"]: score_modifier += 10
+                    if dist > 50 and v_type_short == "truck": score_modifier += 10
                     
                     # Boost score if shipment is fragile and driver is safe
                     labels = shipment.get("labels", [])

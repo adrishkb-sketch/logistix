@@ -39,6 +39,13 @@ def create_shipment(shipment_data: ShipmentCreate):
 def get_shipments():
     return shipments_db.get_all()
 
+@router.get("/{shipment_id}")
+def get_shipment(shipment_id: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    return shipment
+
 @router.put("/{shipment_id}")
 def update_shipment(shipment_id: str, data: dict):
     shipment = shipments_db.get_by_id(shipment_id)

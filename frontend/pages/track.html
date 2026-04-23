@@ -7,35 +7,52 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
     <style>
-        .track-container { max-width: 500px; margin: 50px auto; padding: 20px; text-align: center; }
-        .result-card { margin-top: 2rem; display: none; text-align: left;}
-        .timeline { margin-top: 1rem; border-left: 2px solid var(--primary); padding-left: 15px; }
-        .timeline-item { margin-bottom: 15px; position: relative; }
-        .timeline-item::before {
-            content: ''; position: absolute; left: -21px; top: 0; width: 10px; height: 10px;
-            background: var(--primary); border-radius: 50%;
-        }
+        body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .track-container { max-width: 600px; width: 100%; text-align: center; }
+        .results-card { margin-top: 2rem; display: none; text-align: left; animation: fadeIn 0.5s ease-out forwards; }
+        .otp-box { background: rgba(49, 130, 206, 0.2); border: 2px dashed #3182ce; border-radius: 8px; padding: 20px; text-align: center; margin-top: 20px; }
+        .otp-code { font-size: 3rem; font-weight: 700; letter-spacing: 5px; color: #63b3ed; margin: 10px 0; }
+        .home-link { position: absolute; top: 20px; left: 20px; color: var(--text-muted); text-decoration: none; transition: color 0.3s; }
+        .home-link:hover { color: white; }
     </style>
 </head>
 <body>
     <div class="background-animation"></div>
+    <a href="../index.html" class="home-link">← Back to Home</a>
 
     <div class="track-container">
-        <h1 style="font-size:2rem; margin-bottom:1rem;">Track Your Order</h1>
+        <h1>Track Your Shipment</h1>
+        <p class="subtitle" style="margin-bottom: 2rem;">Enter your Shipment ID to get real-time status and your secure delivery OTP.</p>
         
-        <form id="track-form" class="glass-card" style="padding:1.5rem;">
-            <div class="input-group">
-                <input type="text" id="shipment-id" required placeholder="Enter Shipment ID">
+        <form id="track-form" onsubmit="event.preventDefault(); searchShipment();">
+            <div class="input-group" style="display: flex; gap: 10px;">
+                <input type="text" id="tracking-id" placeholder="Enter Shipment ID (e.g. 1234abcd...)" required style="flex-grow: 1;">
+                <button type="submit" class="btn-primary" style="width: auto; padding: 0 30px;">Track</button>
             </div>
-            <button type="submit" class="btn-primary">Track</button>
         </form>
 
-        <div id="result" class="glass-card result-card">
-            <!-- Injected tracking data -->
-        </div>
-        
-        <div style="margin-top:20px;">
-            <a href="../index.html" style="color:var(--text-muted); text-decoration:none;">&larr; Back Home</a>
+        <div id="error-msg" style="color: var(--danger); margin-top: 1rem; display: none;">Shipment not found. Please check your ID.</div>
+
+        <div id="results" class="glass-card results-card">
+            <h3 id="res-desc" style="margin-bottom: 5px;">Shipment Name</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">ID: <span id="res-id"></span></p>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                <div>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Status</p>
+                    <strong id="res-status" style="font-size: 1.1rem; text-transform: capitalize;">Pending</strong>
+                </div>
+                <div style="text-align: right;">
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Estimated Arrival</p>
+                    <strong id="res-eta" style="font-size: 1.1rem; color: var(--warning);">Pending...</strong>
+                </div>
+            </div>
+
+            <div class="otp-box">
+                <p style="margin:0; font-size: 0.9rem; color: var(--text-muted);">Secure Delivery OTP</p>
+                <div class="otp-code" id="res-otp">----</div>
+                <p style="margin:0; font-size: 0.85rem;">Provide this 4-digit code to the driver upon arrival.</p>
+            </div>
         </div>
     </div>
 

@@ -48,6 +48,18 @@ async function loadMapData() {
             markers.push(m);
         });
 
+        // Populate base warehouse dropdowns
+        const dBase = document.getElementById('d-base');
+        const vBase = document.getElementById('v-base');
+        if (dBase && vBase && warehouses.length > 0) {
+            dBase.innerHTML = '<option value="">Select Base Warehouse</option>';
+            vBase.innerHTML = '<option value="">Select Base Warehouse</option>';
+            warehouses.forEach(w => {
+                dBase.innerHTML += `<option value="${w.id}">${w.name}</option>`;
+                vBase.innerHTML += `<option value="${w.id}">${w.name}</option>`;
+            });
+        }
+
         const shipments = await apiCall('/shipments/');
         for (const s of shipments) {
             if (s.current_location) {
@@ -171,7 +183,10 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
 // Shipments Table Rendering
 async function loadShipments() {
     try {
-        const shipments = await apiCall('/shipments/');
+        const [shipments, drivers] = await Promise.all([
+            apiCall('/shipments/'),
+            apiCall('/manager/drivers') // Needed to lookup assigned driver names
+        ]);
         const tbody = document.getElementById('shipments-table-body');
         tbody.innerHTML = '';
         
@@ -187,14 +202,18 @@ async function loadShipments() {
                 actionHtml = `<small style="color:var(--warning)">Route Split</small>`;
             } else if (s.status === 'pending') {
                 actionHtml = `
-                    <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; margin-bottom:4px;" onclick="autoAssign('${s.id}')">Auto Assign</button>
+                    <div style="display:flex; gap:5px; margin-bottom:4px;">
+                        <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem;" onclick="autoAssign('${s.id}')">Auto Assign</button>
+                        <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--secondary);" onclick="openManualAssign('${s.id}')">👨‍✈️ Manual</button>
+                    </div>
                     <div style="display:flex; gap:5px;">
                         <button style="background:rgba(255,255,255,0.1); border:1px solid #fff; color:#fff; border-radius:4px; cursor:pointer; font-size:0.75rem; padding:2px 5px;" onclick="autoSplit('${s.id}')">🤖 AI Split</button>
                         <button style="background:rgba(255,255,255,0.1); border:1px solid #fff; color:#fff; border-radius:4px; cursor:pointer; font-size:0.75rem; padding:2px 5px;" onclick="openManualSplit('${s.id}')">🛠️ Manual Split</button>
                     </div>
                 `;
             } else {
-                actionHtml = `<small>${s.stage}</small>`;
+                let dName = s.assigned_driver_id ? (drivers.find(d => d.id === s.assigned_driver_id)?.name || 'Driver') : '';
+                actionHtml = `<small style="color:var(--success)">Assigned: ${dName}</small><br><small>${s.stage}</small>`;
             }
             
             tr.innerHTML = `
@@ -216,9 +235,18 @@ async function loadShipments() {
                     let legTr = document.createElement('tr');
                     legTr.style.background = 'rgba(255,255,255,0.02)';
                     
-                    let legActionHtml = leg.status === 'pending' 
-                        ? `<button class="btn-primary" style="padding:4px 8px; font-size:0.75rem" onclick="autoAssign('${leg.id}')">Auto Assign Leg</button>` 
-                        : `<small>${leg.stage}</small>`;
+                    let legActionHtml = '';
+                    if (leg.status === 'pending') {
+                        legActionHtml = `
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem" onclick="autoAssign('${leg.id}')">Auto Assign</button>
+                                <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; background:var(--secondary);" onclick="openManualAssign('${leg.id}')">👨‍✈️ Manual</button>
+                            </div>
+                        `;
+                    } else {
+                        let ldName = leg.assigned_driver_id ? (drivers.find(d => d.id === leg.assigned_driver_id)?.name || 'Driver') : '';
+                        legActionHtml = `<small style="color:var(--success)">Assigned: ${ldName}</small><br><small>${leg.stage}</small>`;
+                    }
                         
                     legTr.innerHTML = `
                         <td style="padding-left:30px;">↳ ${leg.description} <br><small>Drop: ${leg.drop.address || 'Location'}</small></td>
@@ -285,6 +313,46 @@ async function autoAssign(id) {
     } catch(e) {}
 }
 
+async function openManualAssign(id) {
+    currentAssignId = id;
+    try {
+        const drivers = await apiCall('/manager/drivers');
+        // Only show verified drivers who have an assigned vehicle
+        const available = drivers.filter(d => d.verification_status === 'verified' && d.assigned_vehicle_id);
+        
+        const select = document.getElementById('assign-driver-select');
+        select.innerHTML = '<option value="">Select a Driver</option>';
+        available.forEach(d => {
+            select.innerHTML += `<option value="${d.id}">${d.name} (${d.license_type})</option>`;
+        });
+        
+        document.getElementById('assign-modal').style.display = 'block';
+    } catch(e) {}
+}
+
+async function submitManualAssign() {
+    const driverId = document.getElementById('assign-driver-select').value;
+    if (!driverId) {
+        alert("Please select a driver");
+        return;
+    }
+    
+    try {
+        // Need to get the driver's vehicle ID for the manual assign API
+        const drivers = await apiCall('/manager/drivers');
+        const driver = drivers.find(d => d.id === driverId);
+        if (!driver || !driver.assigned_vehicle_id) {
+            alert("Driver missing assigned vehicle");
+            return;
+        }
+        
+        const res = await apiCall(`/shipments/${currentAssignId}/assign?driver_id=${driverId}&vehicle_id=${driver.assigned_vehicle_id}`, 'POST');
+        alert(res.message);
+        document.getElementById('assign-modal').style.display = 'none';
+        loadShipments();
+    } catch(e) {}
+}
+
 async function bulkAssign() {
     if (!confirm("Are you sure you want to auto-assign all pending shipments?")) return;
     try {
@@ -303,6 +371,7 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             login_id: document.getElementById('d-login').value,
             password: document.getElementById('d-pass').value,
             license_type: document.getElementById('d-license').value,
+            base_warehouse_id: document.getElementById('d-base').value,
             driving_score: Math.floor(Math.random() * 20) + 80, // Mock 80-100 score
             challan_count: Math.floor(Math.random() * 3), // Mock 0-2 challans
             safety_rating: (Math.random() * 2 + 3).toFixed(1), // Mock 3.0-5.0
@@ -322,6 +391,7 @@ document.getElementById('add-vehicle-form').addEventListener('submit', async (e)
             capacity: parseFloat(document.getElementById('v-cap').value),
             speed: 60,
             fuel_efficiency: parseFloat(document.getElementById('v-eff').value),
+            base_warehouse_id: document.getElementById('v-base').value,
             vehicle_health_score: Math.floor(Math.random() * 30) + 70 // Mock 70-100 score
         });
         document.getElementById('add-vehicle-form').reset();
@@ -429,6 +499,7 @@ async function manualVerify(driverId, status) {
 let currentEditType = null;
 let currentEditId = null;
 let currentSplitId = null;
+let currentAssignId = null;
 
 window.openEditModal = function(type, id, val1, val2) {
     currentEditType = type;
