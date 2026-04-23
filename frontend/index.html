@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistix | Intelligent Dispatch</title>
+    <meta name="description" content="AI-driven, real-time intelligent logistics platform">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    <main class="auth-container">
+        <div class="glass-card login-card">
+            <h1>Logistix</h1>
+            <p class="subtitle">Intelligent Dispatch Platform</p>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('manager')">Manager</button>
+                <button class="tab-btn" onclick="switchTab('driver')">Driver</button>
+                <button class="tab-btn" onclick="switchTab('signup')">Company Signup</button>
+            </div>
+
+            <!-- Manager Login -->
+            <form id="manager-login-form" class="auth-form active">
+                <div class="input-group">
+                    <label for="manager-email">Email</label>
+                    <input type="email" id="manager-email" required placeholder="manager@company.com">
+                </div>
+                <div class="input-group">
+                    <label for="manager-password">Password</label>
+                    <input type="password" id="manager-password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-primary">Login to Dashboard</button>
+            </form>
+
+            <!-- Driver Login -->
+            <form id="driver-login-form" class="auth-form">
+                <div class="input-group">
+                    <label for="driver-id">Login ID</label>
+                    <input type="text" id="driver-id" required placeholder="DRV-101">
+                </div>
+                <div class="input-group">
+                    <label for="driver-password">Password</label>
+                    <input type="password" id="driver-password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn-primary">Driver Login</button>
+            </form>
+
+            <!-- Company Signup (OTP Flow) -->
+            <form id="signup-form" class="auth-form">
+                <div id="step-1">
+                    <div class="input-group">
+                        <label for="signup-name">Company Name</label>
+                        <input type="text" id="signup-name" required placeholder="FastLogistics Inc.">
+                    </div>
+                    <div class="input-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" required placeholder="admin@fastlogistics.com">
+                    </div>
+                    <div class="input-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" required placeholder="••••••••">
+                    </div>
+                    <button type="button" class="btn-primary" onclick="requestOTP()">Request OTP</button>
+                </div>
+                <div id="step-2" style="display:none;">
+                    <p class="info-text">OTP sent to console.</p>
+                    <div class="input-group">
+                        <label for="signup-otp">Enter 6-digit OTP</label>
+                        <input type="text" id="signup-otp" required placeholder="123456">
+                    </div>
+                    <button type="submit" class="btn-primary">Verify & Register</button>
+                </div>
+            </form>
+
+            <div class="public-track-link">
+                <a href="pages/track.html">Track a Shipment (Public)</a>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

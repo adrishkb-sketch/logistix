@@ -1,0 +1,33 @@
+[
+    {
+        "id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "name": "amal",
+        "login_id": "amal",
+        "password": "1234",
+        "rating": 5.0,
+        "fatigue_score": 0.0,
+        "total_deliveries": 0,
+        "status": "available",
+        "license_type": "van",
+        "challan_count": 0,
+        "driving_score": 100.0,
+        "assigned_vehicle_id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
+        "verification_status": "verified",
+        "verification_image": "85b145da-487b-4c4b-8665-a7fe0444e0dd.png",
+        "verification_message": "AI could not read the plate confidently. Manual review required."
+    },
+    {
+        "id": "16c10368-d447-47eb-a56d-562bad25d0e2",
+        "name": "deb",
+        "login_id": "deb",
+        "password": "1234",
+        "rating": 5.0,
+        "fatigue_score": 0.0,
+        "total_deliveries": 0,
+        "status": "available",
+        "license_type": "van",
+        "challan_count": 0,
+        "driving_score": 100.0,
+        "assigned_vehicle_id": null
+    }
+]

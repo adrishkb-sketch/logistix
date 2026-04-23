@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Shipment | Logistix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .track-container { max-width: 500px; margin: 50px auto; padding: 20px; text-align: center; }
+        .result-card { margin-top: 2rem; display: none; text-align: left;}
+        .timeline { margin-top: 1rem; border-left: 2px solid var(--primary); padding-left: 15px; }
+        .timeline-item { margin-bottom: 15px; position: relative; }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -21px; top: 0; width: 10px; height: 10px;
+            background: var(--primary); border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+
+    <div class="track-container">
+        <h1 style="font-size:2rem; margin-bottom:1rem;">Track Your Order</h1>
+        
+        <form id="track-form" class="glass-card" style="padding:1.5rem;">
+            <div class="input-group">
+                <input type="text" id="shipment-id" required placeholder="Enter Shipment ID">
+            </div>
+            <button type="submit" class="btn-primary">Track</button>
+        </form>
+
+        <div id="result" class="glass-card result-card">
+            <!-- Injected tracking data -->
+        </div>
+        
+        <div style="margin-top:20px;">
+            <a href="../index.html" style="color:var(--text-muted); text-decoration:none;">&larr; Back Home</a>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="../js/track.js"></script>
+</body>
+</html>

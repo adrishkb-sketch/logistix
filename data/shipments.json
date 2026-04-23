@@ -1,0 +1,28 @@
+[
+    {
+        "id": "2a14070e-432d-4679-b555-0dc177990317",
+        "pickup": {
+            "lat": 22.51704698,
+            "lng": 88.36582352,
+            "address": null
+        },
+        "drop": {
+            "lat": 24.51704698,
+            "lng": 89.36582352,
+            "address": null
+        },
+        "weight": 50.0,
+        "description": "random",
+        "created_at": "2026-04-23T07:05:26.313132",
+        "status": "in_transit",
+        "route_type": "warehouse_hop",
+        "stage": "Assigned to Driver",
+        "expected_delivery": "2026-04-23T09:05:26.313178",
+        "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "assigned_vehicle_id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
+        "current_location": {
+            "lat": 22.594217666711007,
+            "lng": 88.29886250574815
+        }
+    }
+]

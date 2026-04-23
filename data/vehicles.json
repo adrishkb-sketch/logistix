@@ -1,0 +1,39 @@
+[
+    {
+        "id": "6be73de8-1af3-4ef1-ac3a-68daa6addd0b",
+        "type": "truck",
+        "speed": 60.0,
+        "capacity": 1000.0,
+        "fuel_efficiency": 10.0,
+        "status": "available",
+        "assigned_driver_id": null
+    },
+    {
+        "id": "a5fa0d5c-67dc-4606-8a9c-24d97f2527b5",
+        "type": "bike",
+        "speed": 60.0,
+        "capacity": 50.0,
+        "fuel_efficiency": 16.0,
+        "status": "available",
+        "assigned_driver_id": null
+    },
+    {
+        "id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
+        "type": "van",
+        "speed": 60.0,
+        "capacity": 500.0,
+        "fuel_efficiency": 15.0,
+        "status": "available",
+        "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f"
+    },
+    {
+        "id": "6ab88691-c4cb-4206-8857-f511d483cdb4",
+        "type": "bike",
+        "number_plate": "WB12AQ4668",
+        "speed": 60.0,
+        "capacity": 50.0,
+        "fuel_efficiency": 20.0,
+        "status": "available",
+        "assigned_driver_id": null
+    }
+]
