@@ -189,7 +189,7 @@
                     </form>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Name</th><th>Metrics</th><th>Score/Safety</th><th>Challans</th><th>Linked Vehicle</th></tr></thead>
+                            <thead><tr><th>Name</th><th>Metrics</th><th>Score/Safety</th><th>Challans</th><th>Reward Points</th><th>Linked Vehicle</th></tr></thead>
                             <tbody id="drivers-table-body"></tbody>
                         </table>
                     </div>
@@ -350,27 +350,30 @@
                     </table>
                 </div>
             </section>
+            <!-- Smart Contract Ledger Section -->
+            <section id="ledger" class="section-content" style="display:none;">
+                <div class="glass-card section-card">
+                    <h3>Smart Contract Ledger ⛓️</h3>
+                    <p class="subtitle">Blockchain-verified micro-payments to driver wallets based on trip performance.</p>
+                    <div class="table-container">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            <thead>
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
+                                    <th style="padding:10px;">Tx Hash</th>
+                                    <th style="padding:10px;">Timestamp</th>
+                                    <th style="padding:10px;">Shipment ID</th>
+                                    <th style="padding:10px;">Driver ID (To)</th>
+                                    <th style="padding:10px;">Amount (₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledger-table-body">
+                                <!-- Ledger rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </main>
-        <section id="sec-ledger" style="display:none;">
-            <h2>Smart Contract Ledger</h2>
-            <p style="color:var(--text-muted); margin-top:-10px; margin-bottom:20px;">Blockchain-verified micro-payments to driver wallets.</p>
-            <div class="glass-card">
-                <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                    <thead>
-                        <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
-                            <th style="padding:10px;">Tx Hash</th>
-                            <th style="padding:10px;">Timestamp</th>
-                            <th style="padding:10px;">Shipment ID</th>
-                            <th style="padding:10px;">Driver ID (To)</th>
-                            <th style="padding:10px;">Amount (₹)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ledger-table-body">
-                        <!-- Ledger rows injected here -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
 
     </div>
 
@@ -456,7 +459,7 @@
             <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('profile-modal').style.display='none'">✖</button>
         </div>
         
-        <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; margin-bottom:25px;">
+        <div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; margin-bottom:25px;">
             <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
                 <small style="color:var(--text-muted)">Safety Index</small>
                 <h3 id="prof-stat-1" style="font-size:1.1rem; margin-top:5px;"></h3>
@@ -476,6 +479,10 @@
             <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
                 <small style="color:var(--text-muted)">Trips</small>
                 <h3 id="prof-stat-4" style="font-size:1.1rem; margin-top:5px;"></h3>
+            </div>
+            <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+                <small style="color:var(--text-muted)">Earnings</small>
+                <h3 id="prof-stat-6" style="font-size:1.1rem; margin-top:5px; color:var(--accent);"></h3>
             </div>
         </div>
 

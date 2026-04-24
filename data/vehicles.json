@@ -23,7 +23,7 @@
         "speed": 60.0,
         "capacity": 500.0,
         "fuel_efficiency": 15.0,
-        "status": "available",
+        "status": "maintenance",
         "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f"
     },
     {

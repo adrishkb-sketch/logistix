@@ -71,15 +71,15 @@
         "labels": [],
         "delivery_otp": "4913",
         "created_at": "2026-04-23T12:06:01.534824",
-        "status": "in_transit",
+        "status": "delayed",
         "route_type": "direct",
-        "stage": "Assigned to Driver",
+        "stage": "Vehicle Breakdown",
         "expected_delivery": "2026-04-23T07:21:21.346Z",
         "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
         "assigned_vehicle_id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
         "current_location": {
-            "lat": 22.594207719493646,
-            "lng": 88.29885863816028
+            "lat": 22.5944459062217,
+            "lng": 88.29896702811037
         },
         "parent_id": "5a2c0df8-9b15-4da9-8463-7a9403a9eaf2",
         "is_leg": true,
@@ -90,6 +90,13 @@
                 "status": "delayed",
                 "message": "Caught in custom cyclone.",
                 "reason": "Disaster Simulation: cyclone",
+                "location": null
+            },
+            {
+                "timestamp": "2026-04-24T07:20:53.998142",
+                "status": "delayed",
+                "message": "Driver reported: BREAKDOWN.",
+                "reason": "Driver reported a breakdown issue.",
                 "location": null
             }
         ]
@@ -111,13 +118,16 @@
         "labels": [],
         "delivery_otp": null,
         "created_at": "2026-04-23T12:06:01.535161",
-        "status": "assigned",
+        "status": "in_transit",
         "route_type": "direct",
         "stage": "Assigned to Driver",
         "expected_delivery": "2026-04-24T00:55:52.913818",
         "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
         "assigned_vehicle_id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
-        "current_location": null,
+        "current_location": {
+            "lat": 22.594207742611893,
+            "lng": 88.29885865137909
+        },
         "parent_id": "5a2c0df8-9b15-4da9-8463-7a9403a9eaf2",
         "is_leg": true,
         "leg_order": 2,

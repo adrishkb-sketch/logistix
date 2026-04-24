@@ -1,1 +1,9 @@
-[]
+[
+    {
+        "tx_hash": "0x7d3a8e92f1b4c6a5d8e7f2a1b0c9d8e7f2a1b0c9",
+        "timestamp": "2026-04-24T06:30:00Z",
+        "shipment_id": "demo-ship-123",
+        "to_address": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "points_awarded": 1250
+    }
+]

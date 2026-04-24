@@ -140,7 +140,6 @@ function showSection(sectionId) {
     } else if (sectionId === 'drivers' || sectionId === 'verifications') {
         loadDriversAndVehicles();
     } else if (sectionId === 'ledger') {
-        document.getElementById('sec-ledger').style.display = 'block';
         loadLedger();
     }
 }
@@ -715,6 +714,7 @@ async function loadDriversAndVehicles() {
                 <td><span class="badge" style="background:rgba(255,255,255,0.1)">${d.license_type}</span><br><small>OT: ${d.on_time_rate || 100}%</small></td>
                 <td>${d.driving_score.toFixed(1)}/100<br><small>Safety: ${d.safety_rating || 5.0}⭐</small></td>
                 <td><span style="color:${d.challan_count > 0 ? 'var(--danger)' : 'var(--success)'}">${d.challan_count}</span></td>
+                <td><strong style="color:var(--accent)">₹${d.reward_points || 0}</strong></td>
                 <td>
                     ${d.assigned_vehicle_id ? `<small>Linked</small>` : `<small style="color:var(--warning)">Unlinked</small>`}
                     <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openEditModal('drivers', '${d.id}', '${d.name}', '${d.license_type}')" title="Edit">✏️</button>
@@ -1297,6 +1297,7 @@ async function viewFullProfile(type, id) {
             }
             document.getElementById('prof-stat-5').innerText = `${avgRating.toFixed(1)}⭐`;
             document.getElementById('prof-stat-5').style.display = 'block';
+            document.getElementById('prof-stat-6').innerText = `₹${p.reward_points || 0}`;
             
             document.getElementById('prof-meter-label').innerText = `Fatigue Level: ${(p.fatigue_score || 0).toFixed(0)}%`;
             const meter = document.getElementById('prof-meter-bar');
@@ -1307,7 +1308,8 @@ async function viewFullProfile(type, id) {
             document.getElementById('prof-stat-2').innerText = `${p.vehicle_health_score || 100}%`;
             document.getElementById('prof-stat-3').innerText = `${(p.total_distance_km || 0).toFixed(0)} km`;
             document.getElementById('prof-stat-4').innerText = 'Grade A';
-            document.getElementById('prof-stat-5').innerText = ''; // Hide or leave blank for vehicle
+            document.getElementById('prof-stat-5').innerText = ''; 
+            document.getElementById('prof-stat-6').innerText = '';
             
             document.getElementById('prof-meter-label').innerText = `Fuel Efficiency Index`;
             document.getElementById('prof-meter-bar').style.width = '85%';
