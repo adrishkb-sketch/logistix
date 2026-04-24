@@ -8,9 +8,11 @@ import uuid
 router = APIRouter()
 companies_db = JSONDatabase("companies")
 drivers_db = JSONDatabase("drivers")
+shipments_db = JSONDatabase("shipments")
 
 # Temporary in-memory OTP store for simulation
 otp_store = {}
+customer_otp_store = {}  # phone -> otp
 
 class OTPRequest(BaseModel):
     email: str
@@ -62,5 +64,64 @@ def driver_login(data: DriverLogin):
     drivers = drivers_db.get_all()
     for d in drivers:
         if d["login_id"] == data.login_id and d["password"] == data.password:
-            return {"message": "Login successful", "driver_id": d["id"], "name": d["name"]}
+            return {"message": "Login successful", "driver_id": d["id"], "name": d["name"], "company_id": d.get("company_id")}
     raise HTTPException(status_code=401, detail="Invalid credentials")
+
+# ──────────────────────────────────────────────────────────────
+# Customer Tracking: Phone → OTP → Orders
+# ──────────────────────────────────────────────────────────────
+
+class CustomerOTPRequest(BaseModel):
+    phone: str
+
+class CustomerOTPVerify(BaseModel):
+    phone: str
+    otp: str
+
+@router.post("/customer/request-otp")
+def customer_request_otp(data: CustomerOTPRequest):
+    phone = data.phone.strip()
+    if not phone:
+        raise HTTPException(status_code=400, detail="Phone number is required")
+    all_shipments = shipments_db.get_all()
+    matched = [s for s in all_shipments if s.get("receiver_phone") == phone]
+    if not matched:
+        raise HTTPException(status_code=404, detail="No orders found for this phone number")
+    otp = str(random.randint(100000, 999999))
+    customer_otp_store[phone] = otp
+    print(f"\n--- [MOCK CUSTOMER OTP SMS] ---")
+    print(f"To: {phone}")
+    print(f"Your Logistix tracking code is: {otp}")
+    print(f"--------------------------------\n")
+    return {"message": "OTP sent. Check server console.", "phone": phone}
+
+@router.post("/customer/verify-otp")
+def customer_verify_otp(data: CustomerOTPVerify):
+    phone = data.phone.strip()
+    stored = customer_otp_store.get(phone)
+    if not stored or stored != data.otp.strip():
+        raise HTTPException(status_code=401, detail="Invalid or expired OTP")
+    del customer_otp_store[phone]
+    all_shipments = shipments_db.get_all()
+    orders = [s for s in all_shipments if s.get("receiver_phone") == phone]
+    orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)
+    slim = []
+    for s in orders:
+        slim.append({
+            "id": s.get("id"),
+            "description": s.get("description"),
+            "status": s.get("status"),
+            "stage": s.get("stage"),
+            "expected_delivery": s.get("expected_delivery"),
+            "created_at": s.get("created_at"),
+            "receiver_name": s.get("receiver_name"),
+        })
+    return {"phone": phone, "orders": slim}
+
+@router.get("/customer/shipments")
+def get_customer_shipments(phone: str):
+    """Lookup all shipments by receiver phone (used for order-id search)."""
+    all_shipments = shipments_db.get_all()
+    orders = [s for s in all_shipments if s.get("receiver_phone") == phone]
+    orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)
+    return orders

@@ -77,11 +77,7 @@
                         <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-timely">0%</div>
                         <div style="font-size:0.8rem; color:var(--success);">↑ 2.4% from last week</div>
                     </div>
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--accent);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Operational Revenue</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-revenue">$0</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">Est. Gross Earnings</div>
-                    </div>
+
                     <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--warning);">
                         <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Avg. Delivery Delay</h4>
                         <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-delay">0m</div>
@@ -412,6 +408,27 @@
                         </table>
                     </div>
                 </div>
+
+                <div class="glass-card section-card" style="margin-top:20px;">
+                    <h3>Verified Vehicles</h3>
+                    <p class="subtitle">List of all vehicles successfully verified by AI or Manual review.</p>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Vehicle Type</th>
+                                    <th>Number Plate</th>
+                                    <th>System ID</th>
+                                    <th>Verified Driver</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verified-vehicles-table-body">
+                                <!-- Verified vehicles injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- Weather Fleet Map Section -->
@@ -525,7 +542,36 @@
             <!-- Smart Contract Ledger Section -->
             <section id="ledger" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
-                    <h3>Smart Contract Ledger ⛓️</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h3>Driver Wallet Summary 💰</h3>
+                        <div style="display:flex; gap:10px;">
+                            <select id="ledger-driver-sort" class="btn-primary" style="width:auto; padding:5px 10px; background:rgba(0,0,0,0.3);" onchange="renderDriverPointsSummary()">
+                                <option value="points">Sort by Points (High-Low)</option>
+                                <option value="warehouse">Sort by Warehouse</option>
+                                <option value="vehicle">Sort by Vehicle Type</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="subtitle">Real-time aggregate points balance for all verified drivers.</p>
+                    <div class="table-container" style="margin-bottom:30px;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            <thead>
+                                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
+                                    <th style="padding:10px;">Driver</th>
+                                    <th style="padding:10px;">Assigned Vehicle</th>
+                                    <th style="padding:10px;">Warehouse Hub</th>
+                                    <th style="padding:10px;">Total Points 🏆</th>
+                                </tr>
+                            </thead>
+                            <tbody id="driver-points-body">
+                                <!-- Driver point rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
+                        <h3 style="margin:0;">Transaction Ledger ⛓️</h3>
+                    </div>
                     <p class="subtitle">Blockchain-verified micro-payments to driver wallets based on trip performance.</p>
                     
                     <div class="glass-card" style="padding:15px; background:rgba(49, 130, 206, 0.1); border:1px solid var(--primary); margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
@@ -535,7 +581,6 @@
                         </div>
                         <div style="display:flex; gap:10px; align-items:center;">
                             <input type="number" id="boost-percent" value="10" min="1" max="100" style="width:70px; padding:8px; border-radius:6px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
-                            <span style="color:white;">%</span>
                             <button class="btn-primary" style="width:auto; padding:8px 20px;" onclick="boostDriverPoints()">Apply Boost</button>
                         </div>
                     </div>

@@ -4,6 +4,8 @@ from typing import Dict, Any
 from backend.services.ocr_service import process_number_plate_image
 import os
 import uuid
+import random
+from datetime import datetime
 
 router = APIRouter()
 shipments_db = JSONDatabase("shipments")
@@ -11,8 +13,18 @@ drivers_db = JSONDatabase("drivers")
 
 @router.get("/{driver_id}/shipments")
 def get_driver_shipments(driver_id: str):
+    from backend.services.cold_chain import calculate_shipment_vitality
     all_shipments = shipments_db.get_all()
     assigned = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id]
+    
+    # Recalculate vitality for perishables
+    for s in assigned:
+        if s.get("is_perishable"):
+            new_v = calculate_shipment_vitality(s)
+            if new_v != s.get("vitality"):
+                s["vitality"] = new_v
+                shipments_db.update(s["id"], {"vitality": new_v})
+                
     return assigned
 
 @router.get("/safety/rest-stops")
@@ -75,7 +87,7 @@ def update_driver_location(driver_id: str, location: Dict[str, Any]):
             perf = check_shipment_performance(s, driver, vehicle)
             
             # Check for status change to log it
-            prev_perf = s.get("performance_stats", {})
+            prev_perf = s.get("performance_stats") or {}
             if perf["status"] != prev_perf.get("status"):
                 from backend.models import ShipmentEvent
                 status_emoji = "🔴" if perf["status"] == "delayed" else ("🟢" if perf["status"] == "early" else "🔵")
@@ -342,18 +354,53 @@ def get_driver_stats(driver_id: str):
     all_ships = shipments_db.get_all()
     my_ships = [s for s in all_ships if s.get("assigned_driver_id") == driver_id]
     
-    delivered = [s for s in my_ships if s["status"] == "delivered"]
+    delivered = [s for s in my_ships if s.get("status") == "delivered"]
     timely = [s for s in delivered if s.get("actual_delivery", "") <= s.get("expected_delivery", "9999")]
     timely_percent = (len(timely) / len(delivered) * 100) if delivered else 100
     
     total_earned = sum([s.get("weight", 0) * 5 for s in delivered]) # Mock earnings
     
+    # Calculate performance history from last 5 delivered shipments
+    # Sort by actual delivery date (oldest to newest)
+    sorted_delivered = sorted(delivered, key=lambda x: x.get("actual_delivery", ""), reverse=False)
+    
+    perf_history = []
+    for s in sorted_delivered[-5:]:
+        # Score based on punctuality: 100 if on-time, 70 if late
+        score = 100 if s.get("actual_delivery", "") <= s.get("expected_delivery", "9999") else 70
+        perf_history.append(score)
+    
+    # Pad with 0s at the beginning if fewer than 5 trips have been completed
+    while len(perf_history) < 5:
+        perf_history.insert(0, 0)
+    
+    # Most recent trip breakdown
+    latest_trip = sorted_delivered[-1] if sorted_delivered else None
+    latest_breakdown = latest_trip.get("points_breakdown") if latest_trip else None
+    
     return {
         "total_trips": len(my_ships),
         "delivered_count": len(delivered),
         "timely_percent": round(timely_percent, 1),
-        "total_earned": total_earned,
+        "total_points": driver.get("reward_points", 0), # Corrected key
+        "latest_breakdown": latest_breakdown,
         "reward_points": driver.get("reward_points", 0),
         "fatigue_score": driver.get("fatigue_score", 0),
-        "perf_history": [random.randint(70, 100) for _ in range(5)] # Last 5 trips mock
+        "perf_history": perf_history
     }
+
+@router.post("/{driver_id}/health")
+def update_health_metrics(driver_id: str, metrics: Dict[str, Any]):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    driver["health_metrics"] = {
+        "heart_rate": int(metrics.get("heart_rate", 70)),
+        "blood_pressure": metrics.get("blood_pressure", "120/80"),
+        "oxygen": int(metrics.get("oxygen", 98)),
+        "stress_index": int(metrics.get("stress_index", 10)),
+        "last_updated": datetime.utcnow().isoformat()
+    }
+    drivers_db.update(driver_id, driver)
+    return {"message": "Health metrics updated successfully"}

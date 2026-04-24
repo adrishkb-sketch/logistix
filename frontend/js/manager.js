@@ -13,6 +13,14 @@ let volumeChart, fleetChart;
 let weatherMap;
 let weatherMarkers = [];
 
+// Real-time Refresh Loop
+setInterval(() => {
+    const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
+    if (activeSection && activeSection.id === 'shipments') {
+        loadShipments();
+    }
+}, 30000); // Refresh every 30s
+
 function initMap() {
     // Default to a central location (e.g., India center)
     map = L.map('map').setView([20.5937, 78.9629], 5);
@@ -430,7 +438,6 @@ async function loadInsights() {
         
         // Update Stats Grid
         document.getElementById('stat-timely').innerText = `${stats.timely_percent}%`;
-        document.getElementById('stat-revenue').innerText = `$${stats.revenue.toLocaleString()}`;
         document.getElementById('stat-delay').innerText = `${stats.avg_delay_mins}m`;
         document.getElementById('stat-active').innerText = stats.active_shipments;
 
@@ -760,8 +767,19 @@ async function resolveAlert(id) {
 // Shipments
 document.getElementById('create-shipment-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const [plat, plng] = document.getElementById('pickup-loc').value.split(',').map(n => parseFloat(n.trim()));
-    const [dlat, dlng] = document.getElementById('drop-loc').value.split(',').map(n => parseFloat(n.trim()));
+    const pickupVal = document.getElementById('pickup-loc').value.trim();
+    const dropVal = document.getElementById('drop-loc').value.trim();
+    
+    if (!pickupVal.includes(',') || !dropVal.includes(',')) {
+        return alert("Please enter coordinates in 'Lat, Lng' format.");
+    }
+
+    const [plat, plng] = pickupVal.split(',').map(n => parseFloat(n.trim()));
+    const [dlat, dlng] = dropVal.split(',').map(n => parseFloat(n.trim()));
+    
+    if (isNaN(plat) || isNaN(plng) || isNaN(dlat) || isNaN(dlng)) {
+        return alert("Invalid coordinates. Please enter numeric values for Lat and Lng.");
+    }
     
     const data = {
         pickup: {lat: plat, lng: plng},
@@ -770,16 +788,21 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
         description: document.getElementById('description').value,
         is_perishable: document.getElementById('is-perishable').checked,
         receiver_name: document.getElementById('receiver-name').value,
-        receiver_phone: document.getElementById('receiver-phone').value
+        receiver_phone: document.getElementById('receiver-phone').value,
+        labels: [] // Ensure labels is present as expected by ShipmentCreate
     };
     
     try {
         data.company_id = localStorage.getItem('manager_id');
+        // Using trailing slash to be explicit and avoid 307 redirects
         await apiCall('/shipments/', 'POST', data);
         alert('Shipment Created Successfully!');
         document.getElementById('create-shipment-form').reset();
         loadShipments();
-    } catch(e) {}
+    } catch(e) {
+        console.error("Creation failed:", e);
+        // Error message is already alerted by apiCall, but we can log it here
+    }
 });
 
 // Shipments Table Rendering
@@ -1270,10 +1293,11 @@ document.getElementById('link-form').addEventListener('submit', async (e) => {
 
 async function loadDriversAndVehicles() {
     try {
-        const [drivers, vehicles, warehouses] = await Promise.all([
+        const [drivers, vehicles, warehouses, shipments] = await Promise.all([
             apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`)
+            apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`),
+            apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`)
         ]);
         globalDrivers = drivers;
         globalVehicles = vehicles;
@@ -1317,6 +1341,31 @@ async function loadDriversAndVehicles() {
                 badge.innerText = verifCount;
                 badge.style.display = verifCount > 0 ? 'inline-block' : 'none';
             }
+        }
+
+        // Verified Vehicles Table
+        const verifiedTbody = document.getElementById('verified-vehicles-table-body');
+        if (verifiedTbody) {
+            verifiedTbody.innerHTML = '';
+            drivers.forEach(d => {
+                if (d.verification_status === "verified" && d.assigned_vehicle_id) {
+                    const v = vehicles.find(vh => vh.id === d.assigned_vehicle_id);
+                    if (v) {
+                        const hasActiveShipment = shipments.some(s => s.assigned_driver_id === d.id && ["assigned", "in_transit", "picked_up"].includes(s.status));
+                        verifiedTbody.innerHTML += `<tr>
+                            <td>${v.type}</td>
+                            <td><b>${v.number_plate}</b></td>
+                            <td><small>${v.system_id || v.id.slice(0,8)}</small></td>
+                            <td>${d.name}</td>
+                            <td>
+                                <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--danger)" 
+                                    ${hasActiveShipment ? 'disabled title="Vehicle in use"' : ''}
+                                    onclick="unverifyDriver('${d.id}')">Unverify</button>
+                            </td>
+                        </tr>`;
+                    }
+                }
+            });
         }
     } catch(err) {
         console.error("Dashboard load failed", err);
@@ -1451,6 +1500,14 @@ window.renderVehiclesTable = function() {
 async function manualVerify(driverId, status) {
     try {
         await apiCall(`/manager/verify-driver/${driverId}?status=${status}&company_id=${localStorage.getItem('manager_id')}`, 'POST');
+        loadDriversAndVehicles();
+    } catch (e) {}
+}
+
+async function unverifyDriver(driverId) {
+    if (!confirm("Are you sure you want to unverify this vehicle? This will block the driver immediately.")) return;
+    try {
+        await apiCall(`/manager/unverify-driver/${driverId}?company_id=${localStorage.getItem('manager_id')}`, 'POST');
         loadDriversAndVehicles();
     } catch (e) {}
 }
@@ -1825,7 +1882,7 @@ async function loadWeatherFleetData() {
 
 async function loadMessages() {
     try {
-        const msgs = await apiCall(`/tracking/messages/${localStorage.getItem('manager_id')}`);
+        const msgs = await apiCall(`/tracking/messages/${localStorage.getItem('manager_id')}?company_id=${localStorage.getItem('manager_id')}`);
         const container = document.getElementById('messages-container');
         container.innerHTML = msgs.length === 0 ? '<p>No messages yet.</p>' : msgs.reverse().map(m => `
             <div style="margin-bottom:10px; padding:10px; background:${m.sender_type==='manager'?'rgba(49, 130, 206, 0.2)':'rgba(72, 187, 120, 0.2)'}; border-radius:8px; border-left:4px solid ${m.sender_type==='manager'?'var(--primary)':'var(--success)'}">
@@ -2049,30 +2106,102 @@ async function fetchJourneyReview() {
 }
 async function loadLedger() {
     const tbody = document.getElementById('ledger-table-body');
-    if (!tbody) return;
+    const pbody = document.getElementById('driver-points-body');
+    if (!tbody || !pbody) return;
+    
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading Blockchain Ledger...</td></tr>';
     
     try {
+        // Fetch Ledger
         const txs = await apiCall('/manager/ledger?company_id=' + localStorage.getItem('manager_id'));
+        
+        // Fetch Drivers for Summary
+        if (!globalDrivers.length) {
+            globalDrivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
+        }
+
+        renderDriverPointsSummary();
+
         if (txs.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No Smart Contract transactions found.</td></tr>';
             return;
         }
         
         txs.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-        tbody.innerHTML = txs.map(tx => `
-            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                <td style="padding:10px; color:#00f2fe; font-family:monospace; font-size:0.8rem;">${tx.tx_hash}</td>
+        tbody.innerHTML = txs.map(tx => {
+            const isBoost = tx.shipment_id === 'GLOBAL_BOOST';
+            const driver = globalDrivers.find(d => d.id === tx.to_address);
+            const driverLabel = driver ? driver.name : (tx.to_address || 'N/A').substring(0, 8) + '...';
+            const shipLabel = isBoost
+                ? `<span style="color:var(--warning); font-size:0.75rem;">⚡ GLOBAL BOOST</span>`
+                : (tx.shipment_id || '').substring(0, 8);
+            return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05); ${isBoost ? 'background:rgba(246,173,85,0.04);' : ''}">
+                <td style="padding:10px; color:#00f2fe; font-family:monospace; font-size:0.8rem;">${(tx.tx_hash || '—').substring(0,18)}...</td>
                 <td style="padding:10px; font-size:0.8rem;">${new Date(tx.timestamp).toLocaleString()}</td>
-                <td style="padding:10px;">${tx.shipment_id.substring(0,8)}</td>
-                <td style="padding:10px;">${tx.to_address.substring(0,8)}...</td>
+                <td style="padding:10px;">${shipLabel}</td>
+                <td style="padding:10px;">${driverLabel}</td>
                 <td style="padding:10px; color:var(--success); font-weight:bold;">🏆 ${tx.points_awarded}</td>
-            </tr>
-        `).join('');
+            </tr>`;
+        }).join('');
     } catch(err) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger);">Error loading ledger.</td></tr>';
     }
 }
+
+window.renderDriverPointsSummary = async function() {
+    const pbody = document.getElementById('driver-points-body');
+    if (!pbody) return;
+
+    const companyId = localStorage.getItem('manager_id');
+
+    // Always ensure all three data sets are loaded before sorting
+    if (!globalDrivers.length) {
+        globalDrivers = await apiCall(`/manager/drivers?company_id=${companyId}`);
+    }
+    if (!globalVehicles.length) {
+        globalVehicles = await apiCall(`/manager/vehicles?company_id=${companyId}`);
+    }
+    if (!globalWarehouses.length) {
+        globalWarehouses = await apiCall(`/manager/warehouses?company_id=${companyId}`);
+    }
+
+    const sortMode = document.getElementById('ledger-driver-sort')?.value || 'points';
+
+    let sorted = [...globalDrivers];
+    sorted.sort((a, b) => {
+        if (sortMode === 'points') return (b.reward_points || 0) - (a.reward_points || 0);
+        if (sortMode === 'warehouse') {
+            const wA = globalWarehouses.find(w => w.id === a.base_warehouse_id)?.name || '';
+            const wB = globalWarehouses.find(w => w.id === b.base_warehouse_id)?.name || '';
+            return wA.localeCompare(wB);
+        }
+        if (sortMode === 'vehicle') {
+            const vA = globalVehicles.find(v => v.id === a.assigned_vehicle_id)?.type || 'Unlinked';
+            const vB = globalVehicles.find(v => v.id === b.assigned_vehicle_id)?.type || 'Unlinked';
+            return vA.localeCompare(vB);
+        }
+        return 0;
+    });
+
+    if (!sorted.length) {
+        pbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">No drivers found.</td></tr>';
+        return;
+    }
+
+    pbody.innerHTML = sorted.map(d => {
+        const vehicle = globalVehicles.find(v => v.id === d.assigned_vehicle_id);
+        const hub = globalWarehouses.find(w => w.id === d.base_warehouse_id);
+        return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:10px;"><b>${d.name}</b><br><small style="color:var(--text-muted)">${d.system_id}</small></td>
+                <td style="padding:10px;">${vehicle ? `<b>${vehicle.type}</b><br><small>${vehicle.number_plate}</small>` : '<small style="color:var(--text-muted)">Unlinked</small>'}</td>
+                <td style="padding:10px;"><small>${hub ? hub.name : 'N/A'}</small></td>
+                <td style="padding:10px; color:var(--accent); font-weight:bold; font-size:1.1rem;">${Math.floor(d.reward_points || 0)}</td>
+            </tr>
+        `;
+    }).join('');
+};
 
 async function triggerDisaster(type, lat, lng) {
     try {
@@ -2282,18 +2411,24 @@ async function applyOracleStrategy() {
 }
 
 async function boostDriverPoints() {
-    const percent = document.getElementById('boost-percent').value;
+    const percent = parseFloat(document.getElementById('boost-percent').value);
+    if (!percent || percent <= 0) {
+        alert('Please enter a valid percentage greater than 0.');
+        return;
+    }
+    if (!confirm(`Apply a ${percent}% points boost to ALL drivers in your fleet?`)) return;
     try {
-        await apiCall('/manager/ledger/boost', 'POST', {
+        const res = await apiCall('/manager/ledger/boost', 'POST', {
             company_id: localStorage.getItem('manager_id'),
-            percentage: parseFloat(percent)
+            percentage: percent
         });
-        alert(`Successfully boosted fleet reward points by ${percent}%!`);
+        alert(res.message);
+        // Force-refresh global drivers cache so wallet summary reflects new totals
+        globalDrivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
+        renderDriverPointsSummary();
         loadLedger();
-        // Also refresh strategy plan as it might affect 'Driver Focus' progress if we add that
-        loadStrategyPlan(); 
     } catch(err) {
-        alert("Failed to apply boost.");
+        alert('Failed to apply boost: ' + (err.message || err));
     }
 }
 

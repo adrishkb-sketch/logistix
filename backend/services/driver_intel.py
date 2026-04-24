@@ -73,3 +73,26 @@ def calculate_driver_performance_score(driver: Dict[str, Any]) -> float:
     score -= (challans * 2.0)
     
     return round(max(0.0, min(100.0, score)), 2)
+
+def calculate_vehicle_efficiency_score(vehicle: Dict[str, Any]) -> float:
+    """
+    Vehicle Efficiency Score:
+    - Health Score (Maintenance): 50%
+    - Fuel Efficiency (vs Max for type): 50%
+    """
+    health = float(vehicle.get("vehicle_health_score", 100.0))
+    fuel_eff = float(vehicle.get("fuel_efficiency", 15.0))
+    
+    # Max expected fuel efficiency by type (rough estimates for normalization)
+    max_eff_map = {
+        "bike": 50, "scooty": 45, 
+        "3 wheeled (battery)": 80, "3 wheeled (non EV)": 25,
+        "small van": 18, "large van": 14, "truck": 10
+    }
+    v_type = vehicle.get("type", "small van")
+    max_eff = max_eff_map.get(v_type, 15)
+    
+    fuel_component = (fuel_eff / max_eff) * 100
+    
+    score = (health * 0.5) + (fuel_component * 0.5)
+    return round(max(0.0, min(100.0, score)), 2)

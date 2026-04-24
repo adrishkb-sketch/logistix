@@ -23,13 +23,18 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     warehouses = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
     
     # We need to calculate current load for multi-shipment logic
-    from backend.database import JSONDatabase
     shipments_db = JSONDatabase("shipments")
     all_shipments = shipments_db.get_all()
     
     available_pairs = []
     
+    from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue
+    
     for d in drivers:
+        # Recalculate vital stats for real-time accuracy
+        d["fatigue_score"] = calculate_fatigue(d)
+        d["driving_score"] = calculate_driver_performance_score(d)
+        
         # STRICT BLOCK: Driver fatigue too high
         if d.get("fatigue_score", 0) > 80:
             continue

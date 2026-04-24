@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from backend.models import ShipmentCreate, Shipment, Location
+from backend.models import ShipmentCreate, Shipment, Location, ShipmentEvent
 from backend.database import JSONDatabase
 from backend.services.assignment import auto_assign_shipment
 from backend.services.route_engine import calculate_route_type, haversine
@@ -17,16 +17,22 @@ warehouses_db = JSONDatabase("warehouses")
 def create_shipment(shipment_data: ShipmentCreate):
     dist = haversine(shipment_data.pickup.lat, shipment_data.pickup.lng, shipment_data.drop.lat, shipment_data.drop.lng)
     
+    # Cold Chain Distance Validation
+    if shipment_data.is_perishable and dist > 500:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cold Chain distance limit exceeded ({round(dist, 1)}km). Max allowed is 500km for perishable goods."
+        )
+
     # Calculate ETA based on avg speed 40km/h
     eta_hours = dist / 40.0
     now = datetime.utcnow()
-    expected_delivery = (now + timedelta(hours=eta_hours)).isoformat()
-    pickup_deadline = (now + timedelta(hours=1)).isoformat() # Deadline to pick up is 1 hour from now
+    expected_delivery = (now + timedelta(hours=eta_hours)).isoformat() + "Z"
+    pickup_deadline = (now + timedelta(hours=1)).isoformat() + "Z" # Deadline to pick up is 1 hour from now
     
     # Generate random 4-digit OTP for delivery security
     otp = str(random.randint(1000, 9999))
     
-    from backend.models import ShipmentEvent
     initial_log = ShipmentEvent(
         status="pending",
         message="Shipment created and awaiting assignment.",
@@ -35,13 +41,11 @@ def create_shipment(shipment_data: ShipmentCreate):
     
     new_shipment = Shipment(
         **shipment_data.model_dump(),
-        company_id=shipment_data.company_id if hasattr(shipment_data, 'company_id') else "unknown",
         route_type="direct",
         expected_delivery=expected_delivery,
         pickup_deadline=pickup_deadline,
         delivery_otp=otp,
         logs=[initial_log],
-        is_perishable=shipment_data.is_perishable,
         vitality=100.0,
         qr_code_data=str(uuid.uuid4())
     )
@@ -124,21 +128,38 @@ def update_shipment(shipment_id: str, data: dict):
                 
                 driver = drivers_db.get_by_id(driver_id)
                 if driver:
-                    # Gamification: Points Calculation
-                    # Haversine distance between pickup and drop
+                    # Gamification: Advanced Points Calculation
                     dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
                     weight = shipment.get("weight", 0)
                     
-                    # Base points: 10 per km, 2 per kg
-                    points = round((dist * 10.0) + (weight * 2.0))
+                    # 1. Base Distance Points (5 per km)
+                    base_pts = round(dist * 5.0)
                     
-                    # Bonus for early delivery (mocked random bonus 0-20%)
-                    bonus_multiplier = 1.0 + (random.randint(0, 20) / 100.0)
-                    total_points = round(points * bonus_multiplier)
+                    # 2. Punctuality Bonus (Max 50)
+                    is_timely = datetime.utcnow().isoformat() <= shipment.get("expected_delivery", "9999")
+                    punct_pts = 50 if is_timely else 0
+                    
+                    # 3. Safety Multiplier (No active challans in record)
+                    safety_bonus = 30 if driver.get("challan_count", 0) == 0 else 0
+                    
+                    # 4. Wellness Bonus (Proper Rest / Low Fatigue)
+                    fatigue = driver.get("fatigue_score", 0)
+                    wellness_pts = 20 if fatigue < 30 else 5
+                    
+                    total_points = base_pts + punct_pts + safety_bonus + wellness_pts
+                    
+                    breakdown = {
+                        "base_distance": base_pts,
+                        "punctuality_bonus": punct_pts,
+                        "safety_incentive": safety_bonus,
+                        "wellness_bonus": wellness_pts,
+                        "total": total_points
+                    }
                     
                     tx = SmartContractTx(
                         to_address=driver_id,
                         points_awarded=total_points,
+                        breakdown=breakdown,
                         shipment_id=shipment_id,
                         leg_id=shipment_id if shipment.get("is_leg") else None
                     )
@@ -146,17 +167,52 @@ def update_shipment(shipment_id: str, data: dict):
                     
                     # Update driver reward points
                     new_balance = driver.get("reward_points", 0.0) + total_points
-                    drivers_db.update(driver_id, {"reward_points": new_balance})
+                    driver["reward_points"] = new_balance
                     
+                    # Save breakdown to shipment for driver view
+                    data["points_breakdown"] = breakdown
+                    
+                    msg += f" Smart Contract executed. Awarded: {total_points} Points 🏆."
+                    
+                    # Update Performance Metrics
+                    driver["total_trips"] = driver.get("total_trips", 0) + 1
+                    
+                    # Check punctuality
+                    is_timely = datetime.utcnow().isoformat() <= shipment.get("expected_delivery", "9999")
+                    old_punct = driver.get("punctuality_rate", 100.0)
+                    # Weighted average for punctuality (80% historical, 20% recent)
+                    new_punct = (old_punct * 0.8) + (100.0 if is_timely else 70.0) * 0.2
+                    driver["punctuality_rate"] = round(new_punct, 2)
+                    
+                    # Recalculate scores
+                    from backend.services.driver_intel import calculate_driver_performance_score, calculate_safety_rating, calculate_vehicle_efficiency_score
+                    driver["safety_rating"] = calculate_safety_rating(driver)
+                    driver["driving_score"] = calculate_driver_performance_score(driver)
+                    
+                    drivers_db.update(driver_id, driver)
+                    
+                    # Update Vehicle Health (Wear & Tear)
+                    vehicle_id = shipment.get("assigned_vehicle_id")
+                    if vehicle_id:
+                        vehicles_db = JSONDatabase("vehicles")
+                        vehicle = vehicles_db.get_by_id(vehicle_id)
+                        if vehicle:
+                            # Wear and tear: ~0.05% health reduction per km
+                            wear = dist * 0.05 
+                            new_health = max(0.0, vehicle.get("vehicle_health_score", 100.0) - wear)
+                            vehicle["vehicle_health_score"] = round(new_health, 2)
+                            vehicle["efficiency_score"] = calculate_vehicle_efficiency_score(vehicle)
+                            vehicles_db.update(vehicle_id, vehicle)
+
                     msg += f" Smart Contract executed. Awarded: {total_points} Points 🏆."
                     
                     # Journey Review Generation
                     punctuality = driver.get("punctuality_rate", 100.0)
-                    safety = driver.get("safety_index", 100.0)
+                    safety = driver.get("safety_rating", 5.0) * 20.0 # Convert 5.0 scale to 100
                     challans = driver.get("challan_count", 0)
                     
                     # Simple AI Scorecard mock logic
-                    p_score = punctuality - random.randint(0, 5) # slight deduction if any
+                    p_score = punctuality - random.randint(0, 5) 
                     s_score = safety - (challans * 5)
                     overall = (p_score + s_score) / 2
                     

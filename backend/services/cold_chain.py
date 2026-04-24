@@ -10,8 +10,13 @@ def calculate_shipment_vitality(shipment: dict) -> float:
     if shipment.get("status") == "delivered":
         return vitality
 
-    # 1. Decay based on Time Delay
+    # 0. Base Decay (0.5% per hour since creation)
+    created_at = datetime.fromisoformat(shipment.get("created_at").replace('Z', ''))
     now = datetime.utcnow()
+    total_hours = (now - created_at).total_seconds() / 3600.0
+    vitality -= (total_hours * 0.5)
+
+    # 1. Decay based on Time Delay
     expected = datetime.fromisoformat(shipment.get("expected_delivery").replace('Z', ''))
     
     if now > expected:

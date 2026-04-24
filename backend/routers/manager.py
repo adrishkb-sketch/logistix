@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from backend.models import Driver, Vehicle, Warehouse
 from backend.database import JSONDatabase
+from datetime import datetime
 import uuid
 import random
 import requests
@@ -17,7 +18,16 @@ shipments_db = JSONDatabase("shipments")
 @router.get("/ledger")
 def get_ledger(company_id: str):
     txs = ledger_db.get_all()
-    return [t for t in txs if t.get("company_id") == company_id]
+    # Match by company_id if present, OR if the transaction has a driver in this company
+    driver_ids = {d["id"] for d in drivers_db.get_all() if d.get("company_id") == company_id}
+    result = []
+    for t in txs:
+        if t.get("company_id") == company_id:
+            result.append(t)
+        elif t.get("to_address") in driver_ids:
+            # SmartContractTx entries use to_address as driver_id
+            result.append(t)
+    return result
 
 @router.post("/ledger/boost")
 def boost_points(data: dict):
@@ -26,24 +36,39 @@ def boost_points(data: dict):
     
     if not company_id:
         raise HTTPException(status_code=400, detail="Missing company_id")
+    if percentage <= 0:
+        raise HTTPException(status_code=400, detail="Percentage must be positive")
         
     drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
+    boosted_count = 0
     for d in drivers:
-        current_points = d.get("reward_points", 0)
-        boost = int(current_points * (percentage / 100.0))
-        if boost > 0:
-            drivers_db.update(d["id"], {"reward_points": current_points + boost})
-            # Log to ledger
-            ledger_db.insert({
-                "company_id": company_id,
-                "driver_id": d["id"],
-                "points": boost,
-                "timestamp": "Now", # In a real app use datetime
-                "hash": f"0x{uuid.uuid4().hex[:16]}",
-                "shipment_id": "BULK_BOOST"
-            })
+        current_points = float(d.get("reward_points", 0))
+        boost = round(current_points * (percentage / 100.0), 2)
+        new_total = round(current_points + boost, 2)
+        drivers_db.update(d["id"], {"reward_points": new_total})
+        # Log boost as a proper SmartContractTx-compatible ledger entry
+        ledger_db.insert({
+            "id": str(uuid.uuid4()),
+            "tx_hash": f"0x{uuid.uuid4().hex}",
+            "from_address": "Logistix_Escrow",
+            "to_address": d["id"],
+            "points_awarded": boost,
+            "breakdown": {
+                "base_distance": 0,
+                "punctuality_bonus": 0,
+                "safety_incentive": 0,
+                "wellness_bonus": 0,
+                "boost": boost,
+                "total": boost
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+            "shipment_id": "GLOBAL_BOOST",
+            "leg_id": None,
+            "company_id": company_id
+        })
+        boosted_count += 1
             
-    return {"message": f"Successfully boosted points for {len(drivers)} drivers by {percentage}%."}
+    return {"message": f"Successfully boosted points for {boosted_count} drivers by {percentage}%."}
 
 @router.get("/system/baseline-stats")
 def get_baseline_stats(company_id: str):
@@ -344,9 +369,26 @@ def manual_verify_driver(driver_id: str, status: str):
     drivers_db.update(driver_id, {"verification_status": status})
     return {"message": f"Driver marked as {status}"}
 
+@router.post("/unverify-driver/{driver_id}")
+def unverify_driver(driver_id: str, company_id: str):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver or driver.get("company_id") != company_id:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    # Check for active shipments assigned to this driver
+    shipments_db = JSONDatabase("shipments")
+    all_shipments = shipments_db.get_all()
+    active = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit", "picked_up"]]
+    
+    if active:
+        raise HTTPException(status_code=400, detail="Cannot unverify driver while they have an active shipment.")
+        
+    drivers_db.update(driver_id, {"verification_status": "unverified"})
+    return {"message": "Driver unverified successfully"}
+
 @router.get("/leaderboard")
 def get_leaderboard(category: str = "driver", sort_by: str = "overall"):
-    from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue
+    from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue, calculate_vehicle_efficiency_score
     
     if category == "driver":
         drivers = drivers_db.get_all()
@@ -354,16 +396,34 @@ def get_leaderboard(category: str = "driver", sort_by: str = "overall"):
         for d in drivers:
             d["fatigue_score"] = calculate_fatigue(d)
             d["overall_score"] = calculate_driver_performance_score(d)
+            # Map frontend keys to backend data
+            d["safety_index"] = d.get("safety_rating", 5.0)
+            ratings = d.get("customer_ratings", [])
+            d["rating"] = sum(ratings)/len(ratings) if ratings else 5.0
             processed.append(d)
             
-        if sort_by == "overall":
-            return sorted(processed, key=lambda x: x["overall_score"], reverse=True)
-        return sorted(processed, key=lambda x: x.get(sort_by, 0), reverse=True)
+        key_map = {
+            "overall": "overall_score",
+            "safety_index": "safety_index",
+            "punctuality_rate": "punctuality_rate",
+            "rating": "rating"
+        }
+        target_key = key_map.get(sort_by, "overall_score")
+        return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
     else:
         vehicles = vehicles_db.get_all()
-        if sort_by == "overall":
-            return sorted(vehicles, key=lambda x: x.get("efficiency_score", 0), reverse=True)
-        return sorted(vehicles, key=lambda x: x.get(sort_by, 0), reverse=True)
+        processed = []
+        for v in vehicles:
+            v["efficiency_score"] = calculate_vehicle_efficiency_score(v)
+            processed.append(v)
+            
+        key_map = {
+            "overall": "efficiency_score",
+            "vehicle_health_score": "vehicle_health_score",
+            "fuel_efficiency": "fuel_efficiency"
+        }
+        target_key = key_map.get(sort_by, "efficiency_score")
+        return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
 
 @router.get("/drivers/{driver_id}/profile")
 def get_driver_profile(driver_id: str):

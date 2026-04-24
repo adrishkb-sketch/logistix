@@ -25,6 +25,16 @@ let isZenMode = false;
 let motionThreshold = 15; // G-force threshold for erratic driving
 let lastMotionAlert = 0;
 
+// Real-time Refresh Loop
+setInterval(() => {
+    const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
+    // If mission tab or dashboard is active
+    if (activeSection && (activeSection.id === 'active-tab' || activeSection.id === 'dash-tab')) {
+        if (activeSection.id === 'active-tab') loadActiveMission();
+        else loadDashStats();
+    }
+}, 30000); // Refresh every 30s
+
 function switchDriverTab(tab) {
     const tabs = ['dash', 'active', 'completed', 'profile'];
     tabs.forEach(t => {
@@ -46,14 +56,36 @@ async function loadDashStats() {
     try {
         const stats = await apiCall(`/driver/${localStorage.getItem('driver_id')}/dashboard/stats`);
         
-        document.getElementById('d-stat-earned').innerText = `$${stats.total_earned.toLocaleString()}`;
+        document.getElementById('d-stat-earned').innerText = `${Math.floor(stats.total_points || 0)}`;
         document.getElementById('d-stat-ontime').innerText = `${stats.timely_percent}%`;
         document.getElementById('d-stat-safety').innerText = (5 - (stats.fatigue_score/100)).toFixed(1);
 
-        renderDriverChart(stats.perf_history);
+        // Populate Last Trip Breakdown
+        const summaryBox = document.getElementById('last-trip-summary');
+        const summaryContent = document.getElementById('trip-breakdown-content');
+        if (stats.latest_breakdown) {
+            summaryBox.style.display = 'block';
+            const b = stats.latest_breakdown;
+            summaryContent.innerHTML = `
+                <div style="display:flex; justify-content:space-between;"><span>📏 Base Distance:</span> <span>+${b.base_distance}</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>⏱️ Punctuality Bonus:</span> <span>+${b.punctuality_bonus}</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>🛡️ Safety Incentive:</span> <span>+${b.safety_incentive}</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>🧘 Wellness Bonus:</span> <span>+${b.wellness_bonus}</span></div>
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:8px 0;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--success);"><span>Total Points:</span> <span>${b.total}</span></div>
+            `;
+        } else {
+            summaryBox.style.display = 'none';
+        }
+
+        if (stats.perf_history && stats.perf_history.length > 0) {
+            renderDriverChart(stats.perf_history);
+        } else {
+            renderDriverChart([0, 0, 0, 0, 0]); 
+        }
         
         // Mini vehicle details
-        const drivers = await apiCall(`/manager/drivers`);
+        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
         const me = drivers.find(d => d.id === localStorage.getItem('driver_id'));
         if (me && me.assigned_vehicle_id) {
             document.getElementById('vehicle-mini-details').innerText = `Active Vehicle: ${me.assigned_vehicle_id}`;
@@ -70,7 +102,7 @@ function renderDriverChart(history) {
     driverPerfChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['T-4', 'T-3', 'T-2', 'T-1', 'Latest'],
+            labels: ['Trip -4', 'Trip -3', 'Trip -2', 'Trip -1', 'Latest'],
             datasets: [{
                 label: 'Score',
                 data: history,
@@ -81,6 +113,8 @@ function renderDriverChart(history) {
             }]
         },
         options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: { 
                 y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } },
@@ -93,25 +127,47 @@ function renderDriverChart(history) {
 async function loadMissions(autoStartNext = false) {
     try {
         // Fetch driver info to check verification status
-        const drivers = await apiCall('/manager/drivers');
+        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
         const me = drivers.find(d => d.id === dId);
         
+        const mainContent = document.getElementById('main-content');
+        const vScreen = document.getElementById('verification-screen');
+        const vUploadBox = document.getElementById('v-upload-box');
+        const vPendingBox = document.getElementById('v-pending-box');
+        const vNoVehicleBox = document.getElementById('v-no-vehicle-box');
+        const vScreenMsg = document.getElementById('v-screen-msg');
+        const reportBtn = document.getElementById('report-issue-btn');
+
         if (me && me.assigned_vehicle_id) {
-            const vOverlay = document.getElementById('verification-overlay');
-            const vMsg = document.getElementById('verification-msg');
-            const vForm = document.getElementById('verify-form');
-            
+            vNoVehicleBox.style.display = 'none';
             if (me.verification_status === "unverified") {
-                vOverlay.style.display = 'block';
-                vForm.style.display = 'block';
-                vMsg.innerText = "Please upload a photo of your assigned vehicle's number plate.";
+                mainContent.style.display = 'none';
+                if (reportBtn) reportBtn.style.display = 'none';
+                vScreen.style.display = 'block';
+                vUploadBox.style.display = 'block';
+                vPendingBox.style.display = 'none';
+                vScreenMsg.innerText = "To ensure safety and compliance, please verify your assigned vehicle's number plate.";
             } else if (me.verification_status === "pending_manual") {
-                vOverlay.style.display = 'block';
-                vForm.style.display = 'none';
-                vMsg.innerHTML = `<span style="color:var(--warning)">Verification Pending</span><br>AI could not read the plate. Waiting for manager approval.`;
+                mainContent.style.display = 'none';
+                if (reportBtn) reportBtn.style.display = 'none';
+                vScreen.style.display = 'block';
+                vUploadBox.style.display = 'none';
+                vPendingBox.style.display = 'block';
             } else {
-                vOverlay.style.display = 'none';
+                mainContent.style.display = 'block';
+                if (reportBtn) reportBtn.style.display = 'block';
+                vScreen.style.display = 'none';
+                loadDashStats();
             }
+        } else {
+            // No vehicle assigned
+            mainContent.style.display = 'none';
+            if (reportBtn) reportBtn.style.display = 'none';
+            vScreen.style.display = 'block';
+            vUploadBox.style.display = 'none';
+            vPendingBox.style.display = 'none';
+            vNoVehicleBox.style.display = 'block';
+            vScreenMsg.innerText = "Vehicle Assignment Pending";
         }
 
         const shipments = await apiCall(`/driver/${dId}/shipments`);
@@ -327,16 +383,17 @@ async function loadMissions(autoStartNext = false) {
     }
 }
 
-document.getElementById('verify-form').addEventListener('submit', async (e) => {
+document.getElementById('verify-form-main')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const file = document.getElementById('plate-image').files[0];
+    const file = document.getElementById('plate-image-main').files[0];
     if (!file) return;
     
     const formData = new FormData();
     formData.append('file', file);
     
-    document.getElementById('verify-btn').innerText = "Scanning...";
-    document.getElementById('verify-btn').disabled = true;
+    const btn = document.getElementById('verify-btn-main');
+    btn.innerText = "Scanning Plate...";
+    btn.disabled = true;
     
     try {
         const res = await fetch(`http://localhost:8000/api/driver/${dId}/verify`, {
@@ -352,6 +409,8 @@ document.getElementById('verify-form').addEventListener('submit', async (e) => {
         loadMissions();
     } catch (err) {
         alert("Verification failed");
+        btn.innerText = "🚀 Upload & Verify (AI)";
+        btn.disabled = false;
     }
 });
 
@@ -577,7 +636,7 @@ async function loadAlertsAndMessages() {
         }
         
         // Fetch Messages
-        const msgs = await apiCall(`/tracking/messages/${dId}`);
+        const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`);
         const container = document.getElementById('driver-messages');
         container.innerHTML = msgs.length === 0 ? '<p style="font-size:0.8rem; color:var(--text-muted)">No messages from manager.</p>' : msgs.map(m => `
             <div style="margin-bottom:8px; padding:8px; background:${m.sender_type==='driver'?'rgba(49, 130, 206, 0.1)':'rgba(72, 187, 120, 0.1)'}; border-radius:6px; border-left:3px solid ${m.sender_type==='driver'?'var(--primary)':'var(--success)'}">
@@ -665,6 +724,33 @@ async function loadProfileData() {
         document.getElementById('profile-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
     }
 }
+
+function openHealthModal() {
+    document.getElementById('health-modal').style.display = 'block';
+}
+
+function closeHealthModal() {
+    document.getElementById('health-modal').style.display = 'none';
+}
+
+document.getElementById('health-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const metrics = {
+        heart_rate: document.getElementById('v-heart-rate').value,
+        blood_pressure: document.getElementById('v-bp').value,
+        oxygen: document.getElementById('v-oxygen').value,
+        stress_index: document.getElementById('v-stress').value
+    };
+    
+    try {
+        await apiCall(`/driver/${localStorage.getItem('driver_id')}/health`, 'POST', metrics);
+        alert("Vitals updated successfully!");
+        closeHealthModal();
+        loadProfileData();
+    } catch (e) {
+        alert("Failed to update vitals");
+    }
+});
 
 async function uploadProfilePic() {
     const file = document.getElementById('profile-upload').files[0];
@@ -881,7 +967,7 @@ async function confirmArrival() {
 // Predictive Fatigue check
 setInterval(async () => {
     const dId = localStorage.getItem('driver_id');
-    const drivers = await apiCall('/manager/drivers');
+    const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
     const me = drivers.find(d => d.id === dId);
     if (me && me.fatigue_score > 90 && !isZenMode) {
         triggerZenMode("extreme_fatigue");

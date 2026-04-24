@@ -23,7 +23,8 @@ class SmartContractTx(BaseModel):
     from_address: str = "Logistix_Escrow"
     to_address: str
     points_awarded: float
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    breakdown: Optional[dict] = None
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     shipment_id: str
     leg_id: Optional[str] = None
 
@@ -62,7 +63,7 @@ class Driver(BaseModel):
     base_warehouse_id: Optional[str] = None
     verification_status: str = "unverified" # unverified, pending_manual, verified
     verification_image: Optional[str] = None
-    join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     total_trips: int = 0
     safety_index: float = 100.0
     punctuality_rate: float = 100.0
@@ -102,7 +103,7 @@ class Vehicle(BaseModel):
     status: str = "available" # available, assigned, maintenance
     assigned_driver_id: Optional[str] = None
     base_warehouse_id: Optional[str] = None
-    join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     total_distance_km: float = 0.0
     efficiency_score: float = 100.0
 
@@ -117,7 +118,7 @@ class Warehouse(BaseModel):
     manager_name: Optional[str] = None
 
 class ShipmentEvent(BaseModel):
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     status: str
     message: str
     reason: Optional[str] = None # 'weather', 'traffic', 'challan', 'mechanical'
@@ -133,7 +134,7 @@ class Shipment(BaseModel):
     description: str
     labels: List[str] = Field(default_factory=list)
     delivery_otp: Optional[str] = None
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     status: str = "pending" # pending, assigned, in_transit, delivered
     route_type: Optional[str] = None # direct, warehouse
     stage: str = "Awaiting Assignment"
@@ -162,6 +163,7 @@ class ShipmentCreate(BaseModel):
     drop: Location
     weight: float
     description: str
+    company_id: str
     labels: Optional[List[str]] = []
     is_perishable: bool = False
     receiver_name: str
@@ -176,7 +178,7 @@ class Alert(BaseModel):
     suggestion: str
     shipment_id: Optional[str] = None
     driver_id: Optional[str] = None
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     status: str = "active" # active, ignored, resolved
 
 class Message(BaseModel):
@@ -186,7 +188,7 @@ class Message(BaseModel):
     sender_id: str # company_id or driver_id
     receiver_id: str # company_id or driver_id
     content: str
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     sender_type: str # manager, driver
 
 class JourneyReview(BaseModel):
@@ -198,4 +200,4 @@ class JourneyReview(BaseModel):
     challan_penalty: float
     total_score: float
     feedback_message: str
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")

@@ -60,169 +60,211 @@
             </div>
         </div>
 
-        <div class="tabs" style="display:flex; gap:10px; margin-bottom: 20px;">
-            <button class="btn-primary" id="btn-tab-dash" style="flex:1;" onclick="switchDriverTab('dash')">Dashboard</button>
-            <button class="btn-primary" id="btn-tab-active" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('active')">My Route</button>
-            <button class="btn-primary" id="btn-tab-completed" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('completed')">History</button>
-            <button class="btn-primary" id="btn-tab-profile" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('profile')">Profile</button>
-        </div>
-
-        <div id="dash-tab" style="display:block;">
-            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-                <div class="glass-card" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
-                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Earned</div>
-                    <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-earned">$0</div>
-                </div>
-                <div class="glass-card" style="padding:1rem; border-top:4px solid var(--success); text-align:center;">
-                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">On-Time</div>
-                    <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-ontime">0%</div>
-                </div>
-                <div class="glass-card" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
-                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Score</div>
-                    <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-safety">5.0</div>
-                </div>
-            </div>
-            
-            <div class="glass-card" style="padding:1rem; margin-bottom:1.5rem;">
-                <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Performance Velocity</h4>
-                <canvas id="driverPerfChart" height="180"></canvas>
-            </div>
-
-            <div class="glass-card" style="padding:1rem; text-align:center; background:linear-gradient(135deg, rgba(0,242,254,0.1), rgba(0,0,0,0));">
-                <h4 style="margin:0;">Active vehicle details</h4>
-                <div id="vehicle-mini-details" style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Loading...</div>
-                <button class="btn-primary" style="margin-top:10px; width:auto; padding:5px 15px; background:var(--success);" onclick="switchDriverTab('active')">View Live Route →</button>
-            </div>
-        </div>
-
-        <div id="active-tab" style="display:none;">
-            <div id="instruction-banner" class="instruction-banner">
-                <!-- Injected via JS -->
-            </div>
-
-            <div id="verification-overlay" class="glass-card" style="display:none; text-align:center; margin-bottom: 20px;">
-                <h3>Vehicle Verification Required</h3>
-                <p id="verification-msg">Please upload a photo of the vehicle's number plate to start.</p>
-                <form id="verify-form" style="margin-top:15px;">
-                    <input type="file" id="plate-image" accept="image/*" required style="margin-bottom:10px;">
-                    <button type="submit" class="btn-primary" id="verify-btn">Upload & Scan (ML)</button>
-                </form>
-            </div>
-
-            <div id="mission-container">
-                <!-- Dynamically injected -->
-                <p>Loading your assigned routes...</p>
-            </div>
-
-            <div style="position:relative;">
-                <div id="route-map" style="display:none;"></div>
-                <button id="fullscreen-btn" class="btn-primary" style="display:none; position:absolute; top:10px; right:10px; z-index:1000; padding:5px 10px; font-size:0.8rem; width:auto;" onclick="toggleFullscreen()">Fullscreen</button>
-            </div>
-            
-            <div id="alert-container"></div>
-
-            <div class="glass-card" style="margin-top:20px;">
-                <h3>Message Manager</h3>
-                <div id="driver-messages" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                    <!-- Messages from manager -->
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="manager-msg-content" placeholder="Type a message..." style="flex:1; padding:10px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">
-                    <button class="btn-primary" style="width:auto; padding:0 20px;" onclick="sendMessageToManager()">Send</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="completed-tab" style="display:none;">
-            <div id="completed-container">
-                <!-- Dynamically injected -->
-            </div>
-        </div>
-
-        <div id="profile-tab" style="display:none;">
-            <div class="glass-card" style="text-align:center; padding:30px;">
-                <div id="p-pic-container" style="position:relative; width:120px; height:120px; margin:0 auto 20px;">
-                    <img id="profile-img" src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver" style="width:100%; height:100%; border-radius:50%; border:4px solid var(--primary); object-fit:cover;">
-                    <button class="btn-primary" style="position:absolute; bottom:0; right:0; width:35px; height:35px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;" onclick="document.getElementById('profile-upload').click()">📷</button>
-                </div>
-                <input type="file" id="profile-upload" style="display:none;" accept="image/*" onchange="uploadProfilePic()">
+        <!-- Verification Screen (Visible if unverified) -->
+        <div id="verification-screen" style="display:none; text-align:center;">
+             <div class="glass-card section-card" style="padding:40px 20px;">
+                <div style="font-size:4rem; margin-bottom:20px;">🛡️</div>
+                <h2 style="margin-bottom:10px;">Security Verification</h2>
+                <p id="v-screen-msg" style="color:var(--text-muted); margin-bottom:30px;">To ensure safety and compliance, please verify your assigned vehicle's number plate.</p>
                 
-                <h2 id="p-name">Driver Name</h2>
-                <p id="p-login" style="color:var(--text-muted); margin-bottom:20px;">@login_id</p>
+                <div id="v-upload-box">
+                    <form id="verify-form-main">
+                        <input type="file" id="plate-image-main" accept="image/*" required style="margin-bottom:20px; color:white; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); width:100%;">
+                        <button type="submit" class="btn-primary" id="verify-btn-main" style="padding:15px 30px; font-size:1.1rem; background:var(--accent);">🚀 Upload & Verify (AI)</button>
+                    </form>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:15px;">Your photo will be analyzed by our AI for automatic approval.</p>
+                </div>
                 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left;">
-                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                        <small style="color:var(--text-muted)">Total Trips</small>
-                        <h4 id="p-trips">0</h4>
-                    </div>
-                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                        <small style="color:var(--text-muted)">Safety Score</small>
-                        <h4 id="p-safety">100%</h4>
-                    </div>
-                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                        <small style="color:var(--text-muted)">Punctuality</small>
-                        <h4 id="p-punct">100%</h4>
-                    </div>
-                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                        <small style="color:var(--text-muted)">Avg Rating</small>
-                        <h4 id="p-rating">5.0 ⭐</h4>
-                    </div>
-                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05); grid-column: span 2;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <small style="color:var(--text-muted)">Platform Tenure</small>
-                                <h4 id="p-experience" style="margin:0; color:var(--primary);">0 Days</h4>
-                            </div>
-                            <div style="text-align:right;">
-                                <small style="color:var(--text-muted)">Reward Points 🏆</small>
-                                <h4 id="p-wallet" style="margin:0; color:var(--success);">0</h4>
-                            </div>
-                        </div>
-                    </div>
+                <div id="v-pending-box" style="display:none;">
+                    <div class="pulse-warning" style="color:var(--warning); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">⏳ Awaiting Approval</div>
+                    <p style="color:var(--text-muted);">AI could not verify the plate automatically. Your manager has been notified for manual review.</p>
+                    <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()">🔄 Refresh Status</button>
                 </div>
 
-                <div style="margin-top:25px; text-align:left;">
-                    <div class="glass-card" style="padding:15px; background:linear-gradient(135deg, rgba(245,101,101,0.1), rgba(0,0,0,0)); border: 1px solid rgba(245,101,101,0.2);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <h4 style="margin:0; color:var(--danger);">🛡️ Medical Health Card</h4>
-                            <span id="h-status" class="badge" style="background:var(--success); font-size:0.7rem;">FIT TO DRIVE</span>
-                        </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                            <div style="text-align:center;">
-                                <div style="font-size:0.7rem; color:var(--text-muted);">HEART RATE</div>
-                                <div style="font-size:1.2rem; font-weight:bold; color:var(--danger);" id="h-rate">-- BPM</div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:0.7rem; color:var(--text-muted);">BLOOD PRESSURE</div>
-                                <div style="font-size:1.2rem; font-weight:bold;" id="h-bp">--/--</div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:0.7rem; color:var(--text-muted);">OXYGEN (SpO2)</div>
-                                <div style="font-size:1.2rem; font-weight:bold; color:var(--accent);" id="h-o2">--%</div>
-                            </div>
-                            <div style="text-align:center;">
-                                <div style="font-size:0.7rem; color:var(--text-muted);">STRESS INDEX</div>
-                                <div style="font-size:1.2rem; font-weight:bold;" id="h-stress">--</div>
-                            </div>
-                        </div>
-                        <p style="margin-top:10px; font-size:0.7rem; color:var(--text-muted); text-align:center;">Last Sync: <span id="h-sync">Just now</span> via Wearable AI</p>
-                    </div>
+                <div id="v-no-vehicle-box" style="display:none;">
+                    <div style="font-size:4rem; margin-bottom:20px;">🚛</div>
+                    <h2 style="margin-bottom:10px;">Waiting for Assignment</h2>
+                    <p style="color:var(--text-muted); margin-bottom:30px;">Your manager has not assigned a vehicle to you yet. Please contact dispatch.</p>
+                    <button class="btn-primary" style="background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()">🔄 Check Assignment</button>
                 </div>
+             </div>
+        </div>
 
-                <div style="margin-top:25px; text-align:left;">
-                    <label style="font-size:0.85rem; color:var(--text-muted)">Fatigue Meter</label>
-                    <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; margin-top:5px; overflow:hidden;">
-                        <div id="p-fatigue-bar" style="width:0%; height:100%; background:var(--primary); transition:width 0.5s ease;"></div>
+        <!-- Gated Main Content (Visible if verified) -->
+        <div id="main-content" style="display:none;">
+            <div class="tabs" style="display:flex; gap:10px; margin-bottom: 20px;">
+                <button class="btn-primary" id="btn-tab-dash" style="flex:1;" onclick="switchDriverTab('dash')">Dashboard</button>
+                <button class="btn-primary" id="btn-tab-active" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('active')">My Route</button>
+                <button class="btn-primary" id="btn-tab-completed" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('completed')">History</button>
+                <button class="btn-primary" id="btn-tab-profile" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('profile')">Profile</button>
+            </div>
+
+            <div id="dash-tab" style="display:block;">
+                <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Points</div>
+                        <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-earned">0</div>
+                    </div>
+                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--success); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">On-Time</div>
+                        <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-ontime">0%</div>
+                    </div>
+                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Score</div>
+                        <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-safety">5.0</div>
                     </div>
                 </div>
                 
-                <button class="btn-primary" style="margin-top:30px; background:var(--secondary);" onclick="startRest()">Start 12h Rest Period</button>
+                <div class="glass-card" style="padding:1rem; margin-bottom:1.5rem;">
+                    <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Performance Velocity</h4>
+                    <div style="position: relative; height: 180px; width: 100%;">
+                        <canvas id="driverPerfChart"></canvas>
+                    </div>
+                    <div style="margin-top:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:0.75rem; color:var(--text-muted); line-height:1.4; border:1px solid rgba(255,255,255,0.05);">
+                        <b style="color:var(--primary);">💡 Performance Velocity</b><br>
+                        This chart shows your performance trend over your last 5 trips. Higher bars mean better safety and punctuality.
+                        <div style="margin-top:5px; display:flex; gap:10px; font-size:0.7rem;">
+                            <span><b>Trip -4:</b> Oldest</span>
+                            <span><b>Latest:</b> Most Recent</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="last-trip-summary" class="glass-card" style="display:none; padding:1rem; margin-bottom:1.5rem; border-left:4px solid var(--accent); background:linear-gradient(90deg, rgba(0, 242, 254, 0.05), transparent);">
+                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:var(--accent);">Last Trip Performance 🚀</h4>
+                    <div id="trip-breakdown-content" style="font-size:0.8rem; line-height:1.6;">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+
+                <div class="glass-card" style="padding:1rem; text-align:center; background:linear-gradient(135deg, rgba(0,242,254,0.1), rgba(0,0,0,0));">
+                    <h4 style="margin:0;">Active vehicle details</h4>
+                    <div id="vehicle-mini-details" style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Loading...</div>
+                    <button class="btn-primary" style="margin-top:10px; width:auto; padding:5px 15px; background:var(--success);" onclick="switchDriverTab('active')">View Live Route →</button>
+                </div>
             </div>
-        </div>
-    </div>
+
+            <div id="active-tab" style="display:none;">
+                <div id="instruction-banner" class="instruction-banner">
+                    <!-- Injected via JS -->
+                </div>
+
+                <div id="mission-container">
+                    <!-- Dynamically injected -->
+                    <p>Loading your assigned routes...</p>
+                </div>
+
+                <div style="position:relative;">
+                    <div id="route-map" style="display:none;"></div>
+                    <button id="fullscreen-btn" class="btn-primary" style="display:none; position:absolute; top:10px; right:10px; z-index:1000; padding:5px 10px; font-size:0.8rem; width:auto;" onclick="toggleFullscreen()">Fullscreen</button>
+                </div>
+                
+                <div id="alert-container"></div>
+
+                <div class="glass-card" style="margin-top:20px;">
+                    <h3>Message Manager</h3>
+                    <div id="driver-messages" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                        <!-- Messages from manager -->
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="manager-msg-content" placeholder="Type a message..." style="flex:1; padding:10px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">
+                        <button class="btn-primary" style="width:auto; padding:0 20px;" onclick="sendMessageToManager()">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="completed-tab" style="display:none;">
+                <div id="completed-container">
+                    <!-- Dynamically injected -->
+                </div>
+            </div>
+
+            <div id="profile-tab" style="display:none;">
+                <div class="glass-card" style="text-align:center; padding:30px;">
+                    <div id="p-pic-container" style="position:relative; width:120px; height:120px; margin:0 auto 20px;">
+                        <img id="profile-img" src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver" style="width:100%; height:100%; border-radius:50%; border:4px solid var(--primary); object-fit:cover;">
+                        <button class="btn-primary" style="position:absolute; bottom:0; right:0; width:35px; height:35px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;" onclick="document.getElementById('profile-upload').click()">📷</button>
+                    </div>
+                    <input type="file" id="profile-upload" style="display:none;" accept="image/*" onchange="uploadProfilePic()">
+                    
+                    <h2 id="p-name">Driver Name</h2>
+                    <p id="p-login" style="color:var(--text-muted); margin-bottom:20px;">@login_id</p>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left;">
+                        <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                            <small style="color:var(--text-muted)">Total Trips</small>
+                            <h4 id="p-trips">0</h4>
+                        </div>
+                        <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                            <small style="color:var(--text-muted)">Safety Score</small>
+                            <h4 id="p-safety">100%</h4>
+                        </div>
+                        <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                            <small style="color:var(--text-muted)">Punctuality</small>
+                            <h4 id="p-punct">100%</h4>
+                        </div>
+                        <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                            <small style="color:var(--text-muted)">Avg Rating</small>
+                            <h4 id="p-rating">5.0 ⭐</h4>
+                        </div>
+                        <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05); grid-column: span 2;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <small style="color:var(--text-muted)">Platform Tenure</small>
+                                    <h4 id="p-experience" style="margin:0; color:var(--primary);">0 Days</h4>
+                                </div>
+                                <div style="text-align:right;">
+                                    <small style="color:var(--text-muted)">Reward Points 🏆</small>
+                                    <h4 id="p-wallet" style="margin:0; color:var(--success);">0</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:25px; text-align:left;">
+                        <div class="glass-card" style="padding:15px; background:linear-gradient(135deg, rgba(245,101,101,0.1), rgba(0,0,0,0)); border: 1px solid rgba(245,101,101,0.2);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <h4 style="margin:0; color:var(--danger);">🛡️ Medical Health Card</h4>
+                                <span id="h-status" class="badge" style="background:var(--success); font-size:0.7rem;">FIT TO DRIVE</span>
+                            </div>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.7rem; color:var(--text-muted);">HEART RATE</div>
+                                    <div style="font-size:1.2rem; font-weight:bold; color:var(--danger);" id="h-rate">-- BPM</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.7rem; color:var(--text-muted);">BLOOD PRESSURE</div>
+                                    <div style="font-size:1.2rem; font-weight:bold;" id="h-bp">--/--</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.7rem; color:var(--text-muted);">OXYGEN (SpO2)</div>
+                                    <div style="font-size:1.2rem; font-weight:bold; color:var(--accent);" id="h-o2">--%</div>
+                                </div>
+                                <div style="text-align:center;">
+                                    <div style="font-size:0.7rem; color:var(--text-muted);">STRESS INDEX</div>
+                                    <div style="font-size:1.2rem; font-weight:bold;" id="h-stress">--</div>
+                                </div>
+                            </div>
+                            <button class="btn-primary" style="margin-top:15px; width:100%; font-size:0.8rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);" onclick="openHealthModal()">Update Vitals</button>
+                            <p style="margin-top:10px; font-size:0.7rem; color:var(--text-muted); text-align:center;">Last Sync: <span id="h-sync">Just now</span> via Wearable AI</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:25px; text-align:left;">
+                        <label style="font-size:0.85rem; color:var(--text-muted)">Fatigue Meter</label>
+                        <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; margin-top:5px; overflow:hidden;">
+                            <div id="p-fatigue-bar" style="width:0%; height:100%; background:var(--primary); transition:width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-primary" style="margin-top:30px; background:var(--secondary);" onclick="startRest()">Start 12h Rest Period</button>
+                </div>
+            </div>
+        </div> <!-- end main-content -->
+    </div> <!-- end driver-layout -->
     
     <!-- Persistent Report Issue Button -->
-    <button onclick="openIncidentModal()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--danger); color:white; border:none; padding:12px 24px; border-radius:30px; font-weight:bold; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 15px rgba(229,62,62,0.6); z-index:1000;">
+    <button id="report-issue-btn" onclick="openIncidentModal()" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--danger); color:white; border:none; padding:12px 24px; border-radius:30px; font-weight:bold; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 15px rgba(229,62,62,0.6); z-index:1000;">
         🚨 Report Issue
     </button>
 
@@ -270,8 +312,6 @@
                 <button class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="deactivateZen()">I'm Fine, Resume Route</button>
             </div>
         </div>
-    </div>
-
     </div>
 
     <!-- Loading Optimizer Modal -->
@@ -324,6 +364,37 @@
             <button class="btn-primary" id="btn-submit-verify" disabled onclick="submitVerification()">Complete Pickup</button>
             <button class="btn-primary" style="background:transparent; border:1px solid white;" onclick="closeVerifyModal()">Cancel</button>
         </div>
+    </div>
+
+    <!-- Health Vitals Modal -->
+    <div id="health-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <h2 style="margin-bottom:15px; font-size:1.2rem;">❤️ Update Health Vitals</h2>
+        <form id="health-form">
+            <div style="margin-bottom:15px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Heart Rate (BPM)</label>
+                <input type="number" id="v-heart-rate" required placeholder="e.g. 72" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Blood Pressure (mmHg)</label>
+                <input type="text" id="v-bp" required placeholder="e.g. 120/80" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Oxygen Level (SpO2 %)</label>
+                <input type="number" id="v-oxygen" required placeholder="e.g. 98" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Stress Index (0-100)</label>
+                <input type="range" id="v-stress" min="0" max="100" style="width:100%;">
+                <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-muted);">
+                    <span>Relaxed</span>
+                    <span>Stressed</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button type="submit" class="btn-primary" style="flex:1;">Update Vitals</button>
+                <button type="button" class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="closeHealthModal()">Cancel</button>
+            </div>
+        </form>
     </div>
 
     <!-- Scripts -->

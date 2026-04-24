@@ -16,8 +16,8 @@
         "driving_score": 0.0,
         "assigned_vehicle_id": "bd06663f-143a-4ad1-97ed-a18e0196fafb",
         "base_warehouse_id": "1b0e0151-08d9-4bd8-8931-777affdced7b",
-        "verification_status": "unverified",
-        "verification_image": null,
+        "verification_status": "verified",
+        "verification_image": "9fc4f12c-f8f5-413a-9242-620451b0188d.png",
         "join_date": "2026-04-24T14:11:57.682560",
         "total_trips": 0,
         "safety_index": 100.0,
@@ -40,7 +40,8 @@
         "phone_number": "12345",
         "is_zen_mode": false,
         "zen_destination": null,
-        "system_id": "DRV-SBT8"
+        "system_id": "DRV-SBT8",
+        "verification_message": "AI OCR Engine is currently initializing. Please verify manually or try again in a moment."
     },
     {
         "id": "411a8a42-7317-486f-a735-31a2e7fb5731",

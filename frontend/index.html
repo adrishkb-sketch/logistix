@@ -3,85 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistix | Intelligent Dispatch</title>
-    <meta name="description" content="AI-driven, real-time intelligent logistics platform">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Logistix | Intelligent Dispatch Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
     <div class="background-animation"></div>
 
-    <main class="auth-container">
-        <div class="glass-card login-card">
-            <h1>Logistix</h1>
-            <p class="subtitle">Intelligent Dispatch Platform</p>
+    <div class="landing-page">
+        <!-- Hero Section -->
+        <header class="hero">
+            <div class="hero-content">
+                <div class="doodle" style="top: 10%; left: 10%;">📦</div>
+                <div class="doodle" style="top: 20%; right: 15%;">✨</div>
+                <div class="doodle" style="bottom: 15%; left: 5%;">🚚</div>
+                
+                <h1>Logistics, <br>Simplified with AI.</h1>
+                <p>The world's first intelligent dispatch platform designed for the complex needs of modern supply chains. From Cold Chain vitality tracking to AR-powered loading, we've got you covered.</p>
+                
+                <div class="cta-group">
+                    <a href="#get-started" class="btn-premium btn-primary-glow">Get Started Now</a>
+                    <a href="#features" class="btn-premium btn-outline" style="border: 1px solid var(--card-border); color: #fff; padding: 16px 40px; border-radius: 50px; text-decoration:none;">Explore Features</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Section -->
+        <section class="stats-section">
+            <div class="stat-card">
+                <span class="stat-number" data-target="1500">0</span>
+                <span class="stat-label">Total Companies</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" data-target="12400">0</span>
+                <span class="stat-label">Active Drivers</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" data-target="98">0</span>
+                <span class="stat-label">% On-Time Rate</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" data-target="50000">0</span>
+                <span class="stat-label">Trips Completed</span>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="features-section">
+            <h2 class="section-title">Why Logistix?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">❄️</div>
+                    <h3>Cold Chain 2.0</h3>
+                    <p>Real-time vitality monitoring for perishable goods. Our AI predicts decay based on temperature, traffic, and vehicle health.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI Dispatch</h3>
+                    <p>Automated driver-vehicle assignment using multi-factor optimization including fatigue, history, and proximity.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏗️</div>
+                    <h3>AR Cargo Plan</h3>
+                    <p>Augmented Reality blueprints for drivers to optimize truck space and ensure safe weight distribution.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Secure Tracking</h3>
+                    <p>OTP-verified authenticated tracking for end customers. No more public data leaks, only secure logistics.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Get Started / Login Selection -->
+        <section id="get-started" class="auth-selection">
+            <h2 class="section-title">Enter the Dashboard</h2>
+            <p style="color:var(--text-muted); margin-bottom: 30px;">Choose your portal to begin</p>
             
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('manager')">Manager</button>
-                <button class="tab-btn" onclick="switchTab('driver')">Driver</button>
-                <button class="tab-btn" onclick="switchTab('signup')">Company Signup</button>
+            <div class="role-grid">
+                <div class="role-card" onclick="openLoginModal('manager')">
+                    <div style="font-size:3rem;">🏢</div>
+                    <h4>Manager Portal</h4>
+                    <p>Control fleet, warehouses, and track real-time operations.</p>
+                </div>
+                
+                <div class="role-card" onclick="openLoginModal('driver')">
+                    <div style="font-size:3rem;">🚛</div>
+                    <h4>Driver App</h4>
+                    <p>View missions, scan cargo, and earn performance points.</p>
+                </div>
+                
+                <a href="pages/track.html" class="role-card" style="text-decoration:none; color:inherit;">
+                    <div style="font-size:3rem;">📦</div>
+                    <h4>Receiver Portal</h4>
+                    <p>Track your orders securely with phone-based OTP login.</p>
+                </a>
+                
+                <div class="role-card" style="border-style: dashed; background: transparent;" onclick="openLoginModal('signup')">
+                    <div style="font-size:3rem;">🚀</div>
+                    <h4>Join as Company</h4>
+                    <p>Register your logistics business and start scaling today.</p>
+                </div>
             </div>
+        </section>
 
-            <!-- Manager Login -->
-            <form id="manager-login-form" class="auth-form active">
-                <div class="input-group">
-                    <label for="manager-email">Email</label>
-                    <input type="email" id="manager-email" required placeholder="manager@company.com">
-                </div>
-                <div class="input-group">
-                    <label for="manager-password">Password</label>
-                    <input type="password" id="manager-password" required placeholder="••••••••">
-                </div>
-                <button type="submit" class="btn-primary">Login to Dashboard</button>
-            </form>
+        <footer style="padding: 60px 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; border-top: 1px solid var(--card-border);">
+            <p>&copy; 2026 Logistix AI Solutions. All rights reserved.</p>
+        </footer>
+    </div>
 
-            <!-- Driver Login -->
-            <form id="driver-login-form" class="auth-form">
-                <div class="input-group">
-                    <label for="driver-id">Login ID</label>
-                    <input type="text" id="driver-id" required placeholder="DRV-101">
-                </div>
-                <div class="input-group">
-                    <label for="driver-password">Password</label>
-                    <input type="password" id="driver-password" required placeholder="••••••••">
-                </div>
-                <button type="submit" class="btn-primary">Driver Login</button>
-            </form>
-
-            <!-- Company Signup (OTP Flow) -->
-            <form id="signup-form" class="auth-form">
-                <div id="step-1">
-                    <div class="input-group">
-                        <label for="signup-name">Company Name</label>
-                        <input type="text" id="signup-name" required placeholder="FastLogistics Inc.">
-                    </div>
-                    <div class="input-group">
-                        <label for="signup-email">Email</label>
-                        <input type="email" id="signup-email" required placeholder="admin@fastlogistics.com">
-                    </div>
-                    <div class="input-group">
-                        <label for="signup-password">Password</label>
-                        <input type="password" id="signup-password" required placeholder="••••••••">
-                    </div>
-                    <button type="button" class="btn-primary" onclick="requestOTP()">Request OTP</button>
-                </div>
-                <div id="step-2" style="display:none;">
-                    <p class="info-text">OTP sent to console.</p>
-                    <div class="input-group">
-                        <label for="signup-otp">Enter 6-digit OTP</label>
-                        <input type="text" id="signup-otp" required placeholder="123456">
-                    </div>
-                    <button type="submit" class="btn-primary">Verify & Register</button>
-                </div>
-            </form>
-
-            <div class="public-track-link">
-                <a href="pages/track.html">Track a Shipment (Public)</a>
-            </div>
+    <div id="auth-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:1000; align-items:center; justify-content:center;">
+        <div class="glass-card login-card" style="width:100%; max-width:450px; position:relative; padding:40px;">
+            <button onclick="closeModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+            <div id="modal-content"></div>
         </div>
-    </main>
+    </div>
+
+    <!-- Templates -->
+    <template id="manager-login-template">
+        <form id="manager-login-form">
+            <h2 style="margin-bottom:20px;">Manager Login</h2>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="manager-email" required placeholder="manager@company.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="manager-password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-primary">Login to Dashboard</button>
+        </form>
+    </template>
+
+    <template id="driver-login-template">
+        <form id="driver-login-form">
+            <h2 style="margin-bottom:20px;">Driver Login</h2>
+            <div class="input-group">
+                <label>Login ID</label>
+                <input type="text" id="driver-id" required placeholder="DRV-101">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="driver-password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-primary">Driver Login</button>
+        </form>
+    </template>
+
+    <template id="signup-template">
+        <form id="signup-form">
+            <h2 style="margin-bottom:20px;">Company Registration</h2>
+            <div id="step-1">
+                <div class="input-group">
+                    <label>Company Name</label>
+                    <input type="text" id="signup-name" required placeholder="FastLogistics Inc.">
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="signup-email" required placeholder="admin@fastlogistics.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="signup-password" required placeholder="••••••••">
+                </div>
+                <button type="button" class="btn-primary" onclick="requestOTP()">Request OTP</button>
+            </div>
+            <div id="step-2" style="display:none;">
+                <p class="info-text">OTP sent to console.</p>
+                <div class="input-group">
+                    <label>6-digit OTP</label>
+                    <input type="text" id="signup-otp" required placeholder="123456">
+                </div>
+                <button type="submit" class="btn-primary">Verify & Register</button>
+            </div>
+        </form>
+    </template>
 
     <script src="js/api.js"></script>
     <script src="js/auth.js"></script>
+    <script>
+        function openLoginModal(type) {
+            const modal = document.getElementById('auth-modal');
+            const content = document.getElementById('modal-content');
+            let templateId = (type === 'manager') ? 'manager-login-template' : (type === 'driver' ? 'driver-login-template' : 'signup-template');
+            content.innerHTML = '';
+            content.appendChild(document.getElementById(templateId).content.cloneNode(true));
+            modal.style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('auth-modal').style.display = 'none'; }
+
+        // Stats Counter Animation
+        function animateCounters() {
+            const counters = document.querySelectorAll('.stat-number');
+            counters.forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                let count = 0;
+                const inc = target / 200;
+                const updateCount = () => {
+                    if (count < target) {
+                        count += inc;
+                        counter.innerText = Math.ceil(count).toLocaleString() + (target === 98 ? '%' : '+');
+                        setTimeout(updateCount, 1);
+                    } else {
+                        counter.innerText = target.toLocaleString() + (target === 98 ? '%' : '+');
+                    }
+                };
+                updateCount();
+            });
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounters();
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+        observer.observe(document.querySelector('.stats-section'));
+    </script>
 </body>
 </html>

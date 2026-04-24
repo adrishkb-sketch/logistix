@@ -1,14 +1,4 @@
-function switchTab(tabId) {
-    // Update buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    // Update forms
-    document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
-    if (tabId === 'manager') document.getElementById('manager-login-form').classList.add('active');
-    if (tabId === 'driver') document.getElementById('driver-login-form').classList.add('active');
-    if (tabId === 'signup') document.getElementById('signup-form').classList.add('active');
-}
+// Auth Logic with Event Delegation for Modal-based forms
 
 async function requestOTP() {
     const email = document.getElementById('signup-email').value;
@@ -26,50 +16,67 @@ async function requestOTP() {
     }
 }
 
-// Signup Submission
-document.getElementById('signup-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('signup-name').value;
-    const email = document.getElementById('signup-email').value;
-    const password = document.getElementById('signup-password').value;
-    const otp = document.getElementById('signup-otp').value;
-    
-    try {
-        const res = await apiCall('/auth/company/verify-signup', 'POST', {
-            email,
-            otp,
-            company_data: { name, email, password }
-        });
-        alert("Signup successful! Please login.");
-        switchTab('manager');
-    } catch(e) {}
-});
+// Global Event Listener for form submissions (Delegation)
+document.addEventListener('submit', async (e) => {
+    const target = e.target;
 
-// Manager Login
-document.getElementById('manager-login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('manager-email').value;
-    const password = document.getElementById('manager-password').value;
-    
-    try {
-        const res = await apiCall('/auth/company/login', 'POST', { email, password });
-        localStorage.setItem('manager_id', res.company_id);
-        localStorage.setItem('company_id', res.company_id);
-        localStorage.setItem('manager_name', res.name);
-        window.location.href = 'pages/manager.html';
-    } catch(e) {}
-});
+    // Manager Login
+    if (target.id === 'manager-login-form' || target.closest('#manager-login-form-template') || target.querySelector('#manager-email')) {
+        // Since we are injecting innerHTML, IDs are duplicated in DOM if template exists.
+        // We find the active one in the modal.
+        const modal = document.getElementById('auth-modal');
+        if (modal.style.display === 'flex') {
+            e.preventDefault();
+            const email = modal.querySelector('#manager-email').value;
+            const password = modal.querySelector('#manager-password').value;
+            
+            try {
+                const res = await apiCall('/auth/company/login', 'POST', { email, password });
+                localStorage.setItem('manager_id', res.company_id);
+                localStorage.setItem('company_id', res.company_id);
+                localStorage.setItem('manager_name', res.name);
+                window.location.href = 'pages/manager.html';
+            } catch(e) {}
+        }
+    }
 
-// Driver Login
-document.getElementById('driver-login-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const login_id = document.getElementById('driver-id').value;
-    const password = document.getElementById('driver-password').value;
-    
-    try {
-        const res = await apiCall('/auth/driver/login', 'POST', { login_id, password });
-        localStorage.setItem('driver_id', res.driver_id);
-        localStorage.setItem('driver_name', res.name);
-        window.location.href = 'pages/driver.html';
-    } catch(e) {}
+    // Driver Login
+    if (target.querySelector('#driver-id')) {
+        const modal = document.getElementById('auth-modal');
+        if (modal.style.display === 'flex') {
+            e.preventDefault();
+            const login_id = modal.querySelector('#driver-id').value;
+            const password = modal.querySelector('#driver-password').value;
+            
+            try {
+                const res = await apiCall('/auth/driver/login', 'POST', { login_id, password });
+                localStorage.setItem('driver_id', res.driver_id);
+                localStorage.setItem('driver_name', res.name);
+                localStorage.setItem('company_id', res.company_id);
+                window.location.href = 'pages/driver.html';
+            } catch(e) {}
+        }
+    }
+
+    // Company Signup
+    if (target.querySelector('#signup-otp')) {
+        const modal = document.getElementById('auth-modal');
+        if (modal.style.display === 'flex') {
+            e.preventDefault();
+            const name = modal.querySelector('#signup-name').value;
+            const email = modal.querySelector('#signup-email').value;
+            const password = modal.querySelector('#signup-password').value;
+            const otp = modal.querySelector('#signup-otp').value;
+            
+            try {
+                await apiCall('/auth/company/verify-signup', 'POST', {
+                    email,
+                    otp,
+                    company_data: { name, email, password }
+                });
+                alert("Signup successful! Please login as Manager.");
+                closeModal();
+            } catch(e) {}
+        }
+    }
 });
