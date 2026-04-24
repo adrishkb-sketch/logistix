@@ -50,5 +50,15 @@
         "drone_count": 0,
         "contact_number": "",
         "manager_name": ""
+    },
+    {
+        "id": "7a2ae905-4b73-4a2b-9516-ab9e63aca918",
+        "company_id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5",
+        "name": "A4",
+        "lat": 12.700363598942246,
+        "lng": 81.34716756641866,
+        "drone_count": 2,
+        "contact_number": "5599",
+        "manager_name": "B1"
     }
 ]
