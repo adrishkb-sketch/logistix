@@ -68,7 +68,10 @@ def get_journey_review(shipment_id: str):
 # Drivers CRUD
 @router.post("/drivers")
 def create_driver(driver: Driver):
-    return drivers_db.insert(driver.model_dump())
+    from backend.services.driver_intel import calculate_driver_performance_score
+    driver_data = driver.model_dump()
+    driver_data["driving_score"] = calculate_driver_performance_score(driver_data)
+    return drivers_db.insert(driver_data)
 
 @router.get("/drivers")
 def get_drivers(company_id: str):
@@ -300,6 +303,9 @@ def link_driver_to_vehicle(driver_id: str, vehicle_id: str):
     # Validation
     if driver["license_type"] != vehicle["type"]:
         raise HTTPException(status_code=400, detail=f"License mismatch: {driver['name']} has {driver['license_type']} license, cannot drive {vehicle['type']}.")
+    
+    if driver.get("base_warehouse_id") != vehicle.get("base_warehouse_id"):
+        raise HTTPException(status_code=400, detail="Warehouse mismatch: Driver and Vehicle must belong to the same base hub.")
         
     # Unlink any existing
     if vehicle.get("assigned_driver_id"):
@@ -312,6 +318,19 @@ def link_driver_to_vehicle(driver_id: str, vehicle_id: str):
     vehicles_db.update(vehicle_id, {"assigned_driver_id": driver_id})
     
     return {"message": "Linked successfully"}
+
+@router.post("/unlink-vehicle")
+def unlink_vehicle(driver_id: str):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    v_id = driver.get("assigned_vehicle_id")
+    if v_id:
+        vehicles_db.update(v_id, {"assigned_driver_id": None})
+        drivers_db.update(driver_id, {"assigned_vehicle_id": None, "verification_status": "unverified"})
+        
+    return {"message": "Unlinked successfully"}
 
 @router.post("/verify-driver/{driver_id}")
 def manual_verify_driver(driver_id: str, status: str):

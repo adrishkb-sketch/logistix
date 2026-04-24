@@ -396,7 +396,7 @@ function showSection(id) {
         loadMapData();
     }
     if (id === 'shipments') loadShipments();
-    if (id === 'drivers') loadDrivers();
+    if (id === 'drivers') loadDriversAndVehicles();
     if (id === 'weather') initWeatherMap();
     if (id === 'leaderboard') loadLeaderboard();
     if (id === 'messages') loadAllConversations();
@@ -406,6 +406,10 @@ function showSection(id) {
     if (id === 'oracle') loadOracleInsights();
     if (id === 'strategy-plan') loadStrategyPlan();
     if (id === 'network-resilience') loadNetworkResilience();
+}
+
+function loadVerifications() {
+    loadDriversAndVehicles();
 }
 
 showSection('analytics');
@@ -782,6 +786,7 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
 let globalShipments = [];
 let globalDrivers = [];
 let globalVehicles = [];
+let globalWarehouses = [];
 
 async function loadShipments() {
     try {
@@ -1191,6 +1196,17 @@ async function openTrackModal(shipmentId) {
 document.getElementById('add-driver-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
+        const exp = parseFloat(document.getElementById('d-exp').value || 0);
+        const accidents = parseInt(document.getElementById('d-accidents').value || 0);
+        const challans = parseInt(document.getElementById('d-challans').value || 0);
+
+        // Algorithmic Safety Rating Logic
+        let safetyRating = 5.0;
+        safetyRating -= (accidents * 1.0); // Penalty for accidents (Backend aligned)
+        safetyRating -= (challans * 0.2);   // Penalty for challans
+        safetyRating += (exp * 0.1);       // Reward for years of experience
+        safetyRating = Math.max(1.0, Math.min(5.0, safetyRating)); // Cap between 1 and 5
+
         const driverData = {
             company_id: localStorage.getItem('manager_id'),
             name: document.getElementById('d-name').value,
@@ -1198,13 +1214,13 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             password: document.getElementById('d-pass').value,
             license_type: document.getElementById('d-license').value,
             base_warehouse_id: document.getElementById('d-base').value,
-            years_experience: parseFloat(document.getElementById('d-exp').value || 0),
-            past_accidents: parseInt(document.getElementById('d-accidents').value || 0),
-            traffic_violations: parseInt(document.getElementById('d-challans').value || 0),
-            challan_count: parseInt(document.getElementById('d-challans').value || 0),
-            driving_score: Math.floor(Math.random() * 20) + 80, // Mock 80-100 score
-            safety_rating: (Math.random() * 2 + 3).toFixed(1), // Mock 3.0-5.0
-            on_time_rate: Math.floor(Math.random() * 20) + 80, // Mock 80-100%
+            years_experience: exp,
+            past_accidents: accidents,
+            traffic_violations: challans,
+            challan_count: challans,
+            driving_score: 100.0, // New drivers start with a perfect score
+            safety_rating: safetyRating.toFixed(1),
+            on_time_rate: 100, // Initial perfect rate
             phone_number: document.getElementById('d-phone').value
         };
         await apiCall('/manager/drivers', 'POST', driverData);
@@ -1224,7 +1240,7 @@ document.getElementById('add-vehicle-form').addEventListener('submit', async (e)
             speed: 60,
             fuel_efficiency: parseFloat(document.getElementById('v-eff').value),
             base_warehouse_id: document.getElementById('v-base').value,
-            vehicle_health_score: Math.floor(Math.random() * 30) + 70 // Mock 70-100 score
+            vehicle_health_score: 100 // New vehicles start at perfect health
         };
         await apiCall('/manager/vehicles', 'POST', vehicleData);
         document.getElementById('add-vehicle-form').reset();
@@ -1237,6 +1253,13 @@ document.getElementById('link-form').addEventListener('submit', async (e) => {
     const dId = document.getElementById('link-driver').value;
     const vId = document.getElementById('link-vehicle').value;
     if (!dId || !vId) return alert("Select both driver and vehicle");
+
+    // Validation: Same Warehouse Base
+    const driver = globalDrivers.find(d => d.id === dId);
+    const vehicle = globalVehicles.find(v => v.id === vId);
+    if (driver && vehicle && driver.base_warehouse_id !== vehicle.base_warehouse_id) {
+        return alert("🚨 Hub Mismatch: Driver and Vehicle must belong to the same base hub for linkage.");
+    }
     
     try {
         await apiCall(`/manager/link-vehicle?driver_id=${dId}&vehicle_id=${vId}&company_id=${localStorage.getItem('manager_id')}`, 'POST');
@@ -1247,82 +1270,183 @@ document.getElementById('link-form').addEventListener('submit', async (e) => {
 
 async function loadDriversAndVehicles() {
     try {
-        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
-        const dtbody = document.getElementById('drivers-table-body');
-        const dSelect = document.getElementById('link-driver');
-        dtbody.innerHTML = '';
-        dSelect.innerHTML = '<option value="">Select Driver</option>';
+        const [drivers, vehicles, warehouses] = await Promise.all([
+            apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`),
+            apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`),
+            apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`)
+        ]);
+        globalDrivers = drivers;
+        globalVehicles = vehicles;
+        globalWarehouses = warehouses;
         
-        drivers.forEach(d => {
-            dtbody.innerHTML += `<tr>
-                <td>${d.name} <br><small>${d.login_id}</small></td>
-                <td><span class="badge" style="background:rgba(255,255,255,0.1)">${d.license_type}</span><br><small>OT: ${d.on_time_rate || 100}%</small></td>
-                <td>${d.driving_score.toFixed(1)}/100<br><small>Safety: ${d.safety_rating || 5.0}⭐</small></td>
-                <td><span style="color:${d.challan_count > 0 ? 'var(--danger)' : 'var(--success)'}">${d.challan_count}</span></td>
-                <td><strong style="color:var(--accent)">₹${d.reward_points || 0}</strong></td>
-                <td>
-                    ${d.assigned_vehicle_id ? `<small>Linked</small>` : `<small style="color:var(--warning)">Unlinked</small>`}
-                    <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:10px;" onclick="openEditModal('drivers', '${d.id}', '${d.name}', '${d.license_type}')" title="Edit">✏️</button>
-                    <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px; color:var(--danger);" onclick="deleteItem('drivers', '${d.id}')" title="Delete">🗑️</button>
-                </td>
-            </tr>`;
-            dSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.license_type})</option>`;
-        });
-        
-        const vehicles = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`);
-        const vtbody = document.getElementById('vehicles-table-body');
-        const vSelect = document.getElementById('link-vehicle');
-        vtbody.innerHTML = '';
-        vSelect.innerHTML = '<option value="">Select Vehicle</option>';
-        
-        vehicles.forEach(v => {
-            let healthColor = v.vehicle_health_score > 80 ? 'var(--success)' : (v.vehicle_health_score > 60 ? 'var(--warning)' : 'var(--danger)');
-            vtbody.innerHTML += `<tr>
-                <td><span class="badge" style="background:rgba(255,255,255,0.1)">${v.type}</span></td>
-                <td>${v.number_plate || '<span style="color:var(--text-muted)">Not Set</span>'}</td>
-                <td><span style="color:${healthColor}; font-weight:bold;">${v.vehicle_health_score || 100}%</span></td>
-                <td>${v.capacity}kg</td>
-                <td>
-                    ${v.assigned_driver_id ? `<small>Linked</small>` : `<small style="color:var(--warning)">Unlinked</small>`}
-                    <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:10px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}')" title="Edit">✏️</button>
-                    <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px; color:var(--danger);" onclick="deleteItem('vehicles', '${v.id}')" title="Delete">🗑️</button>
-                </td>
-            </tr>`;
-            vSelect.innerHTML += `<option value="${v.id}">${v.type} - ${v.number_plate} (${v.capacity}kg)</option>`;
-        });
-        
-        // Verifications Table
+        // Populate Hub Filters
+        const dHubFilter = document.getElementById('driver-filter-hub');
+        const vHubFilter = document.getElementById('vehicle-filter-hub');
+        const hubsHtml = '<option value="">All Hubs</option>' + warehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        if (dHubFilter) dHubFilter.innerHTML = hubsHtml;
+        if (vHubFilter) vHubFilter.innerHTML = hubsHtml;
+
+        renderDriversTable();
+        renderVehiclesTable();
+        renderLinkedPairs();
+
         const verifTbody = document.getElementById('verifications-table-body');
-        verifTbody.innerHTML = '';
-        let verifCount = 0;
-        
-        drivers.forEach(d => {
-            if (d.verification_status === "pending_manual") {
-                verifCount++;
-                const v = vehicles.find(vh => vh.id === d.assigned_vehicle_id);
-                const plate = v ? v.number_plate : 'Unknown';
-                
-                verifTbody.innerHTML += `<tr>
-                    <td>${d.name}</td>
-                    <td>${plate}</td>
-                    <td><img src="http://localhost:8000/images/${d.verification_image}" style="max-height:60px; border-radius:4px;"></td>
-                    <td>
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--success)" onclick="manualVerify('${d.id}', 'verified')">Approve</button>
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--danger)" onclick="manualVerify('${d.id}', 'unverified')">Reject</button>
-                    </td>
-                </tr>`;
+        if (verifTbody) {
+            verifTbody.innerHTML = '';
+            let verifCount = 0;
+            drivers.forEach(d => {
+                if (d.verification_status === "pending_manual") {
+                    verifCount++;
+                    const v = vehicles.find(vh => vh.id === d.assigned_vehicle_id);
+                    const plate = v ? v.number_plate : 'Unknown';
+                    
+                    verifTbody.innerHTML += `<tr>
+                        <td>${d.name}</td>
+                        <td>${plate}</td>
+                        <td><img src="http://localhost:8000/images/${d.verification_image}" style="max-height:60px; border-radius:4px;"></td>
+                        <td>
+                            <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--success)" onclick="manualVerify('${d.id}', 'verified')">Approve</button>
+                            <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--danger)" onclick="manualVerify('${d.id}', 'unverified')">Reject</button>
+                        </td>
+                    </tr>`;
+                }
+            });
+            
+            const badge = document.getElementById('verif-badge');
+            if (badge) {
+                badge.innerText = verifCount;
+                badge.style.display = verifCount > 0 ? 'inline-block' : 'none';
             }
-        });
-        
-        const badge = document.getElementById('verif-badge');
-        if (verifCount > 0) {
-            badge.style.display = 'inline-block';
-            badge.innerText = verifCount;
-        } else {
-            badge.style.display = 'none';
         }
-    } catch(e) {}
+    } catch(err) {
+        console.error("Dashboard load failed", err);
+    }
 }
+
+window.renderDriversTable = function() {
+    const dtbody = document.getElementById('drivers-table-body');
+    const dSelect = document.getElementById('link-driver');
+    if (!dtbody) return;
+    
+    dtbody.innerHTML = '';
+    if (dSelect) dSelect.innerHTML = '<option value="">Select Driver</option>';
+    
+    const searchTerm = (document.getElementById('driver-search')?.value || '').toLowerCase();
+    const typeFilter = document.getElementById('driver-filter-type')?.value || '';
+    const hubFilter = document.getElementById('driver-filter-hub')?.value || '';
+    const sortMode = document.getElementById('driver-sort')?.value || 'name';
+
+    let filtered = globalDrivers.filter(d => {
+        const matchesSearch = d.name.toLowerCase().includes(searchTerm) || d.system_id.toLowerCase().includes(searchTerm);
+        const matchesType = !typeFilter || d.license_type === typeFilter;
+        const matchesHub = !hubFilter || d.base_warehouse_id === hubFilter;
+        return matchesSearch && matchesType && matchesHub;
+    });
+
+    // Sorting
+    filtered.sort((a, b) => {
+        if (sortMode === 'score') return (b.driving_score || 0) - (a.driving_score || 0);
+        if (sortMode === 'points') return (b.reward_points || 0) - (a.reward_points || 0);
+        return a.name.localeCompare(b.name);
+    });
+
+    filtered.forEach(d => {
+        const joinDate = d.join_date ? new Date(d.join_date) : new Date();
+        const diffDays = Math.floor(Math.abs(new Date() - joinDate) / (1000 * 60 * 60 * 24));
+        const baseWh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
+        
+        dtbody.innerHTML += `<tr>
+            <td><b>${d.name}</b><br><small style="color:var(--accent); font-family:monospace;">${d.system_id || 'ID: ' + d.id.substring(0,8)}</small></td>
+            <td><span class="badge" style="background:rgba(255,255,255,0.1)">${d.license_type}</span><br><small>Tenure: ${diffDays} Days</small></td>
+            <td>${d.driving_score ? d.driving_score.toFixed(1) : '100.0'}/100<br><small>Safety: ${d.safety_rating || 5.0}⭐</small></td>
+            <td><span style="color:${d.challan_count > 0 ? 'var(--danger)' : 'var(--success)'}">${d.challan_count}</span></td>
+            <td><strong style="color:var(--accent)">${d.reward_points || 0}</strong></td>
+            <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
+            <td>
+                ${d.assigned_vehicle_id ? `<small>Linked</small>` : `<small style="color:var(--warning)">Unlinked</small>`}
+                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:10px;" onclick="openEditModal('drivers', '${d.id}', '${d.name}', '${d.license_type}', '${d.base_warehouse_id}')" title="Edit">✏️</button>
+                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px; color:var(--danger);" onclick="deleteItem('drivers', '${d.id}')" title="Delete">🗑️</button>
+            </td>
+        </tr>`;
+        if (dSelect) dSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
+    });
+};
+
+window.renderLinkedPairs = function() {
+    const tbody = document.getElementById('linked-pairs-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    globalDrivers.filter(d => d.assigned_vehicle_id).forEach(d => {
+        const vehicle = globalVehicles.find(v => v.id === d.assigned_vehicle_id);
+        const hub = globalWarehouses.find(w => w.id === d.base_warehouse_id);
+        
+        tbody.innerHTML += `<tr>
+            <td><b>${d.name}</b><br><small>${d.system_id}</small></td>
+            <td><b>${vehicle ? vehicle.type : 'Unknown'}</b><br><small>${vehicle ? vehicle.number_plate : 'N/A'}</small></td>
+            <td><small>${hub ? hub.name : 'N/A'}</small></td>
+            <td>
+                <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--danger)" onclick="unlinkVehicle('${d.id}')">Unlink</button>
+            </td>
+        </tr>`;
+    });
+};
+
+window.unlinkVehicle = async function(driverId) {
+    if (!confirm("Are you sure you want to unlink this vehicle and driver?")) return;
+    try {
+        await apiCall(`/manager/unlink-vehicle?driver_id=${driverId}`, 'POST');
+        loadDriversAndVehicles();
+    } catch(e) {
+        alert("Failed to unlink.");
+    }
+};
+
+window.renderVehiclesTable = function() {
+    const vtbody = document.getElementById('vehicles-table-body');
+    const vSelect = document.getElementById('link-vehicle');
+    if (!vtbody) return;
+    
+    vtbody.innerHTML = '';
+    if (vSelect) vSelect.innerHTML = '<option value="">Select Vehicle</option>';
+    
+    const searchTerm = (document.getElementById('vehicle-search')?.value || '').toLowerCase();
+    const typeFilter = document.getElementById('vehicle-filter-type')?.value || '';
+    const hubFilter = document.getElementById('vehicle-filter-hub')?.value || '';
+    const sortMode = document.getElementById('vehicle-sort')?.value || 'type';
+
+    let filtered = globalVehicles.filter(v => {
+        const matchesSearch = v.number_plate.toLowerCase().includes(searchTerm) || v.system_id.toLowerCase().includes(searchTerm);
+        const matchesType = !typeFilter || v.type === typeFilter;
+        const matchesHub = !hubFilter || v.base_warehouse_id === hubFilter;
+        return matchesSearch && matchesType && matchesHub;
+    });
+
+    // Sorting
+    filtered.sort((a, b) => {
+        if (sortMode === 'health') return (b.vehicle_health_score || 0) - (a.vehicle_health_score || 0);
+        if (sortMode === 'capacity') return (b.capacity || 0) - (a.capacity || 0);
+        return a.type.localeCompare(b.type);
+    });
+
+    filtered.forEach(v => {
+        const baseWh = globalWarehouses.find(w => w.id === v.base_warehouse_id);
+        let healthColor = v.vehicle_health_score > 80 ? 'var(--success)' : (v.vehicle_health_score > 60 ? 'var(--warning)' : 'var(--danger)');
+        vtbody.innerHTML += `<tr>
+            <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || 'ID: ' + v.id.substring(0,8)}</small></td>
+            <td>${v.number_plate || '<span style="color:var(--text-muted)">Not Set</span>'}</td>
+            <td><span style="color:${healthColor}; font-weight:bold;">${v.vehicle_health_score || 100}%</span></td>
+            <td>${v.capacity}kg<br><small>Eff: ${v.fuel_efficiency}km/l</small></td>
+            <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
+            <td>
+                ${v.assigned_driver_id ? `<small>Linked</small>` : `<small style="color:var(--warning)">Unlinked</small>`}
+                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:10px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}', '${v.base_warehouse_id}', '${v.fuel_efficiency}')" title="Edit">✏️</button>
+                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px; color:var(--danger);" onclick="deleteItem('vehicles', '${v.id}')" title="Delete">🗑️</button>
+            </td>
+        </tr>`;
+        if (vSelect) vSelect.innerHTML += `<option value="${v.id}">${v.type} - ${v.number_plate} (${v.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
+    });
+};
 
 async function manualVerify(driverId, status) {
     try {
@@ -1337,7 +1461,7 @@ let currentEditId = null;
 let currentSplitId = null;
 let currentAssignId = null;
 
-window.openEditModal = function(type, id, val1, val2) {
+window.openEditModal = function(type, id, val1, val2, val3, val4) {
     currentEditType = type;
     currentEditId = id;
     document.getElementById('edit-type').innerText = type.charAt(0).toUpperCase() + type.slice(1);
@@ -1346,12 +1470,22 @@ window.openEditModal = function(type, id, val1, val2) {
     if (type === 'shipments') {
         html = `<input type="text" id="edit-val1" value="${val1}" placeholder="Description" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">
                 <input type="text" id="edit-val2" value="${val2}" placeholder="Status" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">`;
-    } else if (type === 'drivers') {
-        html = `<input type="text" id="edit-val1" value="${val1}" placeholder="Name" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">
-                <input type="text" id="edit-val2" value="${val2}" placeholder="License Type" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">`;
-    } else if (type === 'vehicles') {
-        html = `<input type="text" id="edit-val1" value="${val1}" placeholder="Number Plate" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">
-                <input type="number" id="edit-val2" value="${val2}" placeholder="Capacity" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">`;
+    } else if (type === 'drivers' || type === 'vehicles') {
+        const placeholder1 = type === 'drivers' ? 'Name' : 'Number Plate';
+        const placeholder2 = type === 'drivers' ? 'License Type' : 'Capacity';
+        const inputType2 = type === 'drivers' ? 'text' : 'number';
+        
+        html = `<input type="text" id="edit-val1" value="${val1}" placeholder="${placeholder1}" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">
+                <input type="${inputType2}" id="edit-val2" value="${val2}" placeholder="${placeholder2}" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">`;
+        
+        if (type === 'vehicles') {
+            html += `<input type="number" id="edit-val4" value="${val4 || ''}" placeholder="Fuel Efficiency (km/l)" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">`;
+        }
+
+        html += `<select id="edit-val3" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">
+                    <option value="">Select Base Hub</option>
+                    ${globalWarehouses.map(w => `<option value="${w.id}" ${w.id === val3 ? 'selected' : ''}>${w.name}</option>`).join('')}
+                </select>`;
     }
     document.getElementById('edit-fields').innerHTML = html;
     document.getElementById('edit-modal').style.display = 'block';
@@ -1361,6 +1495,8 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const val1 = document.getElementById('edit-val1').value;
     const val2 = document.getElementById('edit-val2').value;
+    const val3 = document.getElementById('edit-val3')?.value;
+    const val4 = document.getElementById('edit-val4')?.value;
     
     let payload = { company_id: localStorage.getItem('manager_id') };
     let endpoint = `/${currentEditType}/${currentEditId}`;
@@ -1368,10 +1504,10 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     if (currentEditType === 'shipments') {
         payload = { ...payload, description: val1, status: val2 };
     } else if (currentEditType === 'drivers') {
-        payload = { ...payload, name: val1, license_type: val2 };
+        payload = { ...payload, name: val1, license_type: val2, base_warehouse_id: val3 };
         endpoint = `/manager/drivers/${currentEditId}`;
     } else if (currentEditType === 'vehicles') {
-        payload = { ...payload, number_plate: val1, capacity: parseFloat(val2) };
+        payload = { ...payload, number_plate: val1, capacity: parseFloat(val2), base_warehouse_id: val3, fuel_efficiency: parseFloat(val4) };
         endpoint = `/manager/vehicles/${currentEditId}`;
     }
     
@@ -1972,7 +2108,7 @@ async function systemReset(type) {
         loadMapData();
         loadInsights();
         if (type === 'drivers' || type === 'vehicles') {
-            loadDriversTable();
+            loadDriversAndVehicles();
             loadLeaderboard();
         }
     } catch(err) {

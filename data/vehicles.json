@@ -1,1 +1,38 @@
-[]
+[
+    {
+        "id": "5eb7f962-00a3-449a-b966-74b27aa05e27",
+        "company_id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5",
+        "type": "truck",
+        "number_plate": "WB12AQ4668",
+        "speed": 60.0,
+        "capacity": 10000.0,
+        "fuel_efficiency": 12.0,
+        "vehicle_health_score": 100.0,
+        "last_service_date": null,
+        "status": "available",
+        "assigned_driver_id": "411a8a42-7317-486f-a735-31a2e7fb5731",
+        "base_warehouse_id": "715302be-1677-438e-8a8c-98d223a26a7c",
+        "join_date": "2026-04-24T14:11:11.859479",
+        "total_distance_km": 0.0,
+        "efficiency_score": 100.0,
+        "system_id": "VEH-CL7C"
+    },
+    {
+        "id": "bd06663f-143a-4ad1-97ed-a18e0196fafb",
+        "system_id": "VEH-5OOV",
+        "company_id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5",
+        "type": "truck",
+        "number_plate": "WB12BC2345",
+        "speed": 60.0,
+        "capacity": 10000.0,
+        "fuel_efficiency": 13.0,
+        "vehicle_health_score": 100.0,
+        "last_service_date": null,
+        "status": "available",
+        "assigned_driver_id": "0f1b6768-7ba1-4961-862c-168503874577",
+        "base_warehouse_id": "1b0e0151-08d9-4bd8-8931-777affdced7b",
+        "join_date": "2026-04-24T14:44:35.846455",
+        "total_distance_km": 0.0,
+        "efficiency_score": 100.0
+    }
+]

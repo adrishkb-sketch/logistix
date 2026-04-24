@@ -263,6 +263,8 @@ def report_incident(driver_id: str, data: dict):
     # Update driver stats
     if incident_type == "challan":
         driver["challan_count"] = driver.get("challan_count", 0) + 1
+        from backend.services.driver_intel import calculate_driver_performance_score
+        driver["driving_score"] = calculate_driver_performance_score(driver)
         drivers_db.update(driver_id, driver)
     elif incident_type == "resting":
         # Resting reduces fatigue

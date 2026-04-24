@@ -34,8 +34,17 @@ class Location(BaseModel):
     lng: float
     address: Optional[str] = None
 
+import string
+import random
+
+def generate_system_id(prefix: str) -> str:
+    chars = string.ascii_uppercase + string.digits
+    suffix = ''.join(random.choices(chars, k=4))
+    return f"{prefix}-{suffix}"
+
 class Driver(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    system_id: str = Field(default_factory=lambda: generate_system_id("DRV"))
     company_id: str
     name: str
     login_id: str
@@ -81,6 +90,7 @@ class Driver(BaseModel):
 
 class Vehicle(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    system_id: str = Field(default_factory=lambda: generate_system_id("VEH"))
     company_id: str
     type: str # bike, van, truck
     number_plate: str # e.g. MH-12-AB-1234

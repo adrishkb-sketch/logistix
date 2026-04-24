@@ -631,6 +631,13 @@ async function loadProfileData() {
     document.getElementById('p-rating').innerText = `${avgRating} ⭐`;
     document.getElementById('p-wallet').innerText = `${p.reward_points || 0}`;
     
+    // Calculate Platform Tenure in Days
+    const joinDate = p.join_date ? new Date(p.join_date) : new Date();
+    const today = new Date();
+    const diffTime = Math.abs(today - joinDate);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    document.getElementById('p-experience').innerText = `${diffDays} Days`;
+    
     // Health Card Population
     if (p.health_metrics) {
         document.getElementById('h-rate').innerText = `${p.health_metrics.heart_rate} BPM`;

@@ -28,35 +28,48 @@ def calculate_fatigue(driver: Dict[str, Any]) -> float:
     new_fatigue = max(0.0, current_fatigue - recovered)
     return round(new_fatigue, 2)
 
+def calculate_safety_rating(driver: Dict[str, Any]) -> float:
+    """
+    Safety rating based on:
+    - Years of Experience: +0.1 per year (max 5.0)
+    - Accidents: -1.0 per accident
+    - Violations/Challans: -0.2 per violation
+    """
+    exp = float(driver.get("years_experience", 0.0))
+    accidents = int(driver.get("past_accidents", 0))
+    violations = int(driver.get("traffic_violations", 0))
+    
+    rating = 5.0
+    rating -= (accidents * 1.0)
+    rating -= (violations * 0.2)
+    rating += (exp * 0.1)
+    
+    return round(max(1.0, min(5.0, rating)), 1)
+
 def calculate_driver_performance_score(driver: Dict[str, Any]) -> float:
     """
-    Weighted Average General Leaderboard Score:
-    - Safety Index: 40%
+    Performance Score (driving_score):
+    - Starts at 100.
+    - Safety Rating (Experience/Accidents/Challans): 40%
     - Punctuality: 30%
-    - Average Rating: 20%
-    - Total Trips (Volume): 10%
+    - Customer Rating: 20%
+    - Volume (Trips): 10%
     """
-    # ML Feature: Dynamic Safety Index calculation
-    base_safety = driver.get("safety_index", 100.0)
-    accidents = driver.get("past_accidents", 0)
-    violations = driver.get("traffic_violations", 0)
-    
-    # Severe penalty for accidents, moderate for violations
-    dynamic_safety = max(0.0, base_safety - (accidents * 20.0) - (violations * 5.0))
-    safety = dynamic_safety
+    safety_rating = calculate_safety_rating(driver)
+    safety_component = (safety_rating / 5.0) * 100
     
     punctuality = driver.get("punctuality_rate", 100.0)
     
     ratings = driver.get("customer_ratings", [])
-    avg_rating = (sum(ratings) / len(ratings)) * 20 if ratings else 100.0 # Normalize 5 stars to 100
+    avg_rating = (sum(ratings) / len(ratings)) * 20 if ratings else 100.0
     
-    trips = min(100, driver.get("total_trips", 0)) # Cap trip volume contribution at 100
+    trips = min(100, driver.get("total_trips", 0))
     
-    # ML Feature: Heavy penalty for traffic violations / challans
+    # Base weighted score
+    score = (safety_component * 0.4) + (punctuality * 0.3) + (avg_rating * 0.2) + (trips * 0.1)
+    
+    # Additional penalty for active challans
     challans = driver.get("challan_count", 0)
-    challan_penalty = challans * 5.0 # -5% per challan
+    score -= (challans * 2.0)
     
-    score = (safety * 0.4) + (punctuality * 0.3) + (avg_rating * 0.2) + (trips * 0.1)
-    
-    final_score = max(0.0, score - challan_penalty)
-    return round(final_score, 2)
+    return round(max(0.0, min(100.0, score)), 2)

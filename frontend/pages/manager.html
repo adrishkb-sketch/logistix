@@ -274,6 +274,26 @@
                 </div>
 
                 <div class="glass-card section-card">
+                    <h3>Active Fleet Links</h3>
+                    <p class="subtitle">Currently active driver-vehicle pairs. Unlinking will free up both assets.</p>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Driver</th>
+                                    <th>Vehicle</th>
+                                    <th>Base Hub</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="linked-pairs-table-body">
+                                <!-- Pairs injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="glass-card section-card">
                     <h3>Add Driver</h3>
                     <form id="add-driver-form" class="form-grid">
                         <div class="input-group"><input type="text" id="d-name" placeholder="Name" required></div>
@@ -298,11 +318,29 @@
                         <div class="input-group"><input type="number" id="d-exp" placeholder="Years of Experience" step="0.5" required></div>
                         <div class="input-group"><input type="number" id="d-accidents" placeholder="Past Accidents (Count)" min="0" required></div>
                         <div class="input-group"><input type="number" id="d-challans" placeholder="Traffic Violations/Challans" min="0" required></div>
+                        <div class="input-group"><input type="text" id="d-phone" placeholder="Contact Number" required></div>
                         <div class="input-group" style="grid-column: span 2;"><button type="submit" class="btn-primary">Add Driver</button></div>
                     </form>
+                    <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
+                        <input type="text" id="driver-search" placeholder="Search by name or ID..." oninput="renderDriversTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                        <select id="driver-filter-type" onchange="renderDriversTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                            <option value="">All Types</option>
+                            <option value="bike">Bike</option>
+                            <option value="van">Van</option>
+                            <option value="truck">Truck</option>
+                        </select>
+                        <select id="driver-filter-hub" onchange="renderDriversTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                            <option value="">All Hubs</option>
+                        </select>
+                        <select id="driver-sort" onchange="renderDriversTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                            <option value="name">Sort by Name</option>
+                            <option value="score">Sort by Score</option>
+                            <option value="points">Sort by Reward Points</option>
+                        </select>
+                    </div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Name</th><th>Metrics</th><th>Score/Safety</th><th>Challans</th><th>Reward Points</th><th>Linked Vehicle</th></tr></thead>
+                            <thead><tr><th>Name / System ID</th><th>Metrics</th><th>Driving Score / Safety</th><th>Challans</th><th>Reward Points</th><th>Base Hub</th><th>Linked Vehicle</th></tr></thead>
                             <tbody id="drivers-table-body"></tbody>
                         </table>
                     </div>
@@ -332,9 +370,30 @@
                         <div class="input-group"><input type="number" id="v-eff" placeholder="Fuel Eff (km/l)" required></div>
                         <div class="input-group" style="grid-column: span 2;"><button type="submit" class="btn-primary">Add Vehicle</button></div>
                     </form>
+                    <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
+                        <input type="text" id="vehicle-search" placeholder="Search by plate or ID..." oninput="renderVehiclesTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                        <select id="vehicle-filter-type" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                            <option value="">All Types</option>
+                            <option value="bike">Bike</option>
+                            <option value="scooty">Scooty</option>
+                            <option value="3 wheeled (battery)">3 Wheeled (Battery)</option>
+                            <option value="3 wheeled (non EV)">3 Wheeled (Non EV)</option>
+                            <option value="small van">Small Van</option>
+                            <option value="large van">Large Van</option>
+                            <option value="truck">Truck</option>
+                        </select>
+                        <select id="vehicle-filter-hub" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                            <option value="">All Hubs</option>
+                        </select>
+                        <select id="vehicle-sort" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                            <option value="type">Sort by Type</option>
+                            <option value="health">Sort by Health</option>
+                            <option value="capacity">Sort by Capacity</option>
+                        </select>
+                    </div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Type</th><th>Plate</th><th>Health</th><th>Capacity</th><th>Linked Driver</th></tr></thead>
+                            <thead><tr><th>Type / System ID</th><th>Plate</th><th>Health</th><th>Capacity</th><th>Base Hub</th><th>Linked Driver</th></tr></thead>
                             <tbody id="vehicles-table-body"></tbody>
                         </table>
                     </div>
