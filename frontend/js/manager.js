@@ -1428,3 +1428,57 @@ async function triggerDisaster(type, lat, lng) {
         alert("Failed to simulate disaster.");
     }
 }
+
+async function systemReset(type) {
+    if (!confirm(`CRITICAL WARNING: Are you sure you want to delete all ${type} data? This action is permanent and cannot be reversed.`)) {
+        return;
+    }
+    
+    try {
+        const res = await apiCall(`/manager/system/reset-${type}`, 'POST');
+        alert(res.message);
+        // Reload the UI
+        loadShipments();
+        loadMapData();
+        loadInsights();
+        if (type === 'drivers' || type === 'vehicles') {
+            loadDriversTable();
+            loadLeaderboard();
+        }
+    } catch(err) {
+        alert(`Failed to reset ${type}.`);
+    }
+}
+
+async function requestDeleteAccount() {
+    if (!confirm("Are you absolutely sure? Your account and all company data will be permanently deleted.")) {
+        return;
+    }
+    
+    try {
+        const companyId = localStorage.getItem('company_id');
+        const res = await apiCall(`/manager/system/delete-account-request?company_id=${companyId}`, 'POST');
+        alert(res.message);
+        document.getElementById('delete-account-step1').style.display = 'none';
+        document.getElementById('delete-account-step2').style.display = 'block';
+    } catch(err) {
+        alert("Failed to request account deletion.");
+    }
+}
+
+async function confirmDeleteAccount() {
+    const otp = document.getElementById('delete-otp').value;
+    if (!otp || otp.length < 6) {
+        alert("Please enter a valid 6-digit OTP.");
+        return;
+    }
+    
+    try {
+        const companyId = localStorage.getItem('company_id');
+        const res = await apiCall(`/manager/system/delete-account-confirm?company_id=${companyId}&otp=${otp}`, 'POST');
+        alert(res.message);
+        logout(); // Force logout after deletion
+    } catch(err) {
+        alert("Incorrect OTP or account already deleted.");
+    }
+}

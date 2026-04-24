@@ -152,6 +152,12 @@ def get_driver_profile(driver_id: str):
         "recent_shipments": shipments[:10]
     }
 
+import random
+from backend.database import JSONDatabase
+
+# Temporary in-memory OTP store for deletion
+deletion_otp_store = {}
+
 @router.get("/vehicles/{vehicle_id}/profile")
 def get_vehicle_profile(vehicle_id: str):
     vehicle = vehicles_db.get_by_id(vehicle_id)
@@ -166,3 +172,59 @@ def get_vehicle_profile(vehicle_id: str):
         "profile": vehicle,
         "recent_shipments": shipments[:10]
     }
+
+# System Reset Features
+@router.post("/system/reset-shipments")
+def reset_shipments():
+    s_db = JSONDatabase("shipments")
+    s_db.clear_all()
+    return {"message": "All shipment data has been cleared."}
+
+@router.post("/system/reset-drivers")
+def reset_drivers():
+    drivers_db.clear_all()
+    # Also clear vehicle assignments
+    v_all = vehicles_db.get_all()
+    for v in v_all:
+        vehicles_db.update(v["id"], {"assigned_driver_id": None})
+    return {"message": "All driver data has been cleared and vehicles unlinked."}
+
+@router.post("/system/reset-vehicles")
+def reset_vehicles():
+    vehicles_db.clear_all()
+    # Also clear driver assignments
+    d_all = drivers_db.get_all()
+    for d in d_all:
+        drivers_db.update(d["id"], {"assigned_vehicle_id": None})
+    return {"message": "All vehicle data has been cleared and drivers unlinked."}
+
+# Account Deletion with OTP
+@router.post("/system/delete-account-request")
+def request_account_deletion(company_id: str):
+    c_db = JSONDatabase("companies")
+    company = c_db.get_by_id(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    otp = str(random.randint(100000, 999999))
+    deletion_otp_store[company_id] = otp
+    
+    print(f"\n--- [DELETE ACCOUNT OTP] ---")
+    print(f"To: {company['email']}")
+    print(f"Your OTP for permanent account deletion is: {otp}")
+    print(f"WARNING: This action cannot be undone.")
+    print(f"----------------------------\n")
+    
+    return {"message": "OTP sent to your registered email."}
+
+@router.post("/system/delete-account-confirm")
+def confirm_account_deletion(company_id: str, otp: str):
+    if deletion_otp_store.get(company_id) != otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+        
+    c_db = JSONDatabase("companies")
+    if c_db.delete(company_id):
+        del deletion_otp_store[company_id]
+        return {"message": "Account deleted successfully."}
+    
+    raise HTTPException(status_code=404, detail="Account not found")

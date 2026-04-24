@@ -42,5 +42,16 @@
         "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
         "created_at": "2026-04-24T07:20:53.999855",
         "status": "active"
+    },
+    {
+        "id": "9fa1da05-1525-409b-bb13-193570d83cbf",
+        "type": "breakdown",
+        "description": "CRITICAL: Vehicle breakdown reported by amal at 22.594207788682894,88.29885865495076.",
+        "severity": "critical",
+        "suggestion": "Rescue needed. Nearby available: None found",
+        "shipment_id": "189b3ae8-8394-4693-8bee-51daa331f1d5",
+        "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "created_at": "2026-04-24T08:16:57.445284",
+        "status": "active"
     }
 ]

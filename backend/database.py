@@ -62,3 +62,6 @@ class JSONDatabase:
             self.write(data)
             return True
         return False
+
+    def clear_all(self):
+        self.write([])
