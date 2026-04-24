@@ -18,6 +18,15 @@ class DriverLogin(BaseModel):
     login_id: str
     password: str
 
+class SmartContractTx(BaseModel):
+    tx_hash: str = Field(default_factory=lambda: f"0x{uuid.uuid4().hex}")
+    from_address: str = "Logistix_Escrow"
+    to_address: str
+    points_awarded: float
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    shipment_id: str
+    leg_id: Optional[str] = None
+
 # Data Models
 
 class Driver(BaseModel):
@@ -38,6 +47,19 @@ class Driver(BaseModel):
     base_warehouse_id: Optional[str] = None
     verification_status: str = "unverified" # unverified, pending_manual, verified
     verification_image: Optional[str] = None
+    join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    total_trips: int = 0
+    safety_index: float = 100.0
+    punctuality_rate: float = 100.0
+    last_rest_start: Optional[str] = None
+    profile_pic: Optional[str] = None
+    customer_ratings: List[float] = Field(default_factory=list)
+    work_hours_today: float = 0.0
+    # ML Tracking Fields
+    years_experience: float = 0.0
+    past_accidents: int = 0
+    traffic_violations: int = 0
+    reward_points: float = 0.0
 
 class Vehicle(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -51,6 +73,9 @@ class Vehicle(BaseModel):
     status: str = "available" # available, assigned, maintenance
     assigned_driver_id: Optional[str] = None
     base_warehouse_id: Optional[str] = None
+    join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    total_distance_km: float = 0.0
+    efficiency_score: float = 100.0
 
 class Warehouse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -62,6 +87,13 @@ class Location(BaseModel):
     lat: float
     lng: float
     address: Optional[str] = None
+
+class ShipmentEvent(BaseModel):
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    status: str
+    message: str
+    reason: Optional[str] = None # 'weather', 'traffic', 'challan', 'mechanical'
+    location: Optional[Location] = None
 
 class Shipment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -82,6 +114,7 @@ class Shipment(BaseModel):
     parent_id: Optional[str] = None # For multi-leg shipments
     is_leg: bool = False
     leg_order: int = 0
+    logs: List[ShipmentEvent] = Field(default_factory=list)
 
 class ShipmentCreate(BaseModel):
     pickup: Location
@@ -100,3 +133,23 @@ class Alert(BaseModel):
     driver_id: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     status: str = "active" # active, ignored, resolved
+
+class Message(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    shipment_id: Optional[str] = None
+    sender_id: str # company_id or driver_id
+    receiver_id: str # company_id or driver_id
+    content: str
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    sender_type: str # manager, driver
+
+class JourneyReview(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    shipment_id: str
+    driver_id: str
+    punctuality_score: float
+    safety_score: float
+    challan_penalty: float
+    total_score: float
+    feedback_message: str
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())

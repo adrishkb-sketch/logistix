@@ -8,7 +8,9 @@ if (!localStorage.getItem('manager_id')) {
 document.getElementById('welcome-msg').innerText = `Dashboard - ${localStorage.getItem('manager_name')}`;
 
 let map;
+let weatherMap;
 let markers = [];
+let weatherMarkers = [];
 
 function initMap() {
     // Default to a central location (e.g., India center)
@@ -117,7 +119,7 @@ function showSection(sectionId) {
     document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     document.getElementById(sectionId).style.display = 'block';
-    if(event && event.target) {
+    if(typeof event !== 'undefined' && event && event.target) {
         event.target.classList.add('active');
     }
     
@@ -129,8 +131,17 @@ function showSection(sectionId) {
         loadInsights();
     } else if (sectionId === 'shipments') {
         loadShipments();
+    } else if (sectionId === 'weather') {
+        setTimeout(initWeatherMap, 300);
+    } else if (sectionId === 'messages') {
+        loadMessages();
+    } else if (sectionId === 'leaderboard') {
+        loadLeaderboard();
     } else if (sectionId === 'drivers' || sectionId === 'verifications') {
         loadDriversAndVehicles();
+    } else if (sectionId === 'ledger') {
+        document.getElementById('sec-ledger').style.display = 'block';
+        loadLedger();
     }
 }
 
@@ -142,21 +153,27 @@ function logout() {
 async function loadInsights() {
     try {
         const container = document.getElementById('alerts-container');
-        // Fetch all alerts (we'd realistically need an endpoint for this, we'll simulate fetching alerts DB)
-        // Wait, I need an endpoint for alerts or I can mock fetch
-        const res = await fetch('http://localhost:8000/api/shipments/'); // Just a dummy check to verify server is up
+        const alerts = await apiCall('/tracking/alerts/active');
         
-        // Since we don't have a GET /alerts endpoint, let's just make it visually represent the concept using dummy alerts or if we had them.
-        // Actually I should add GET /alerts, but for now we'll simulate the topup info based on what we discussed.
-        container.innerHTML = `
-            <div style="background: rgba(255, 75, 75, 0.1); border-left: 3px solid var(--danger); padding: 10px; margin-bottom: 10px; border-radius: 4px;">
-                <p style="margin:0; font-size: 0.9rem;"><strong>⚠️ Weather Warning:</strong> Heavy rain expected on Route 4. <em>Suggestion: Delay dispatch by 30 mins.</em></p>
+        if (alerts.length === 0) {
+            container.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted);">No active system alerts.</p>`;
+            return;
+        }
+
+        container.innerHTML = alerts.map(a => `
+            <div style="background: rgba(255, 255, 255, 0.05); border-left: 3px solid ${a.severity==='critical'?'var(--danger)':'var(--warning)'}; padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+                <p style="margin:0; font-size: 0.9rem;"><strong>${a.type.toUpperCase()}:</strong> ${a.description}<br>
+                <em style="color:var(--accent)">Suggestion: ${a.suggestion}</em></p>
+                <button class="btn-primary" style="padding:2px 8px; font-size:0.7rem; margin-top:5px;" onclick="resolveAlert('${a.id}')">Resolve</button>
             </div>
-            <div style="background: rgba(246, 173, 85, 0.1); border-left: 3px solid var(--warning); padding: 10px; border-radius: 4px;">
-                <p style="margin:0; font-size: 0.9rem;"><strong>⚠️ Driver Fatigue:</strong> Amal has been driving for 4+ hours. <em>Suggestion: Mandate rest stop.</em></p>
-            </div>
-        `;
+        `).join('');
     } catch(e) {}
+}
+
+async function resolveAlert(id) {
+    // In a real app we'd mark it resolved in DB. For demo we'll just mock it.
+    alert("Alert Resolved");
+    loadInsights();
 }
 
 // Shipments
@@ -181,22 +198,112 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
 });
 
 // Shipments Table Rendering
+let globalShipments = [];
+let globalDrivers = [];
+let globalVehicles = [];
+
 async function loadShipments() {
     try {
-        const [shipments, drivers] = await Promise.all([
+        const [shipments, drivers, vehicles] = await Promise.all([
             apiCall('/shipments/'),
-            apiCall('/manager/drivers') // Needed to lookup assigned driver names
+            apiCall('/manager/drivers'),
+            apiCall('/manager/vehicles')
         ]);
-        const tbody = document.getElementById('shipments-table-body');
-        tbody.innerHTML = '';
+        globalShipments = shipments;
+        globalDrivers = drivers;
+        globalVehicles = vehicles;
         
-        const parents = shipments.filter(s => !s.is_leg);
-        const legs = shipments.filter(s => s.is_leg);
+        applyShipmentFilters();
+    } catch(e) {
+        console.error("Failed to load shipments:", e);
+    }
+}
+
+function applyShipmentFilters() {
+    const searchTerm = (document.getElementById('shipment-search')?.value || '').toLowerCase();
+    const sortMode = document.getElementById('shipment-sort')?.value || 'newest';
+    
+    let parents = globalShipments.filter(s => !s.is_leg);
+    const legs = globalShipments.filter(s => s.is_leg);
+    
+    // Apply search filter
+    if (searchTerm) {
+        parents = parents.filter(s => 
+            s.id.toLowerCase().includes(searchTerm) || 
+            s.description.toLowerCase().includes(searchTerm)
+        );
+    }
+    
+    // Apply sorting
+    parents.sort((a, b) => {
+        if (sortMode === 'newest') {
+            return new Date(b.created_at) - new Date(a.created_at);
+        } else if (sortMode === 'oldest') {
+            return new Date(a.created_at) - new Date(b.created_at);
+        } else if (sortMode === 'eta') {
+            const etaA = a.expected_delivery ? new Date(a.expected_delivery).getTime() : Infinity;
+            const etaB = b.expected_delivery ? new Date(b.expected_delivery).getTime() : Infinity;
+            return etaA - etaB;
+        } else if (sortMode === 'status') {
+            return a.status.localeCompare(b.status);
+        }
+        return 0;
+    });
+    
+    renderShipmentsTable(parents, legs, globalDrivers, globalVehicles);
+}
+
+function renderShipmentsTable(parents, legs, drivers, vehicles) {
+        const tbody = document.getElementById('shipments-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
         
         parents.forEach(s => {
             const etaFormatted = s.expected_delivery ? new Date(s.expected_delivery).toLocaleString() : 'N/A';
             let tr = document.createElement('tr');
             
+            // Check weather impact for specific shipments
+            let weatherIndicator = '';
+            if (s.status === 'in_transit') {
+                weatherIndicator = '<span style="font-size:0.7rem; color:var(--accent); display:block;">Checking AI ETA...</span>';
+            }
+
+            const d = drivers.find(drv => drv.id === s.assigned_driver_id);
+            const v = vehicles.find(vh => vh.id === s.assigned_vehicle_id);
+            
+            const driverName = d ? d.name : 'Unassigned';
+            const vehiclePlate = v ? v.number_plate : '';
+            
+            let fatigueClass = 'low-fatigue';
+            if (d && d.fatigue_score > 80) fatigueClass = 'high-fatigue';
+            else if (d && d.fatigue_score > 50) fatigueClass = 'mid-fatigue';
+
+            const driverHtml = d ? `
+                <div class="driver-name-hover" style="position:relative; cursor:pointer; color:var(--primary); font-weight:600;" onclick="viewFullProfile('driver', '${d.id}')">
+                    ${driverName} ${vehiclePlate ? `<small style="color:var(--text-muted)">[${vehiclePlate}]</small>` : ''}
+                    <div class="hover-card ${fatigueClass}">
+                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                            <img src="${d.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}`}" style="width:40px; height:40px; border-radius:50%;">
+                            <div>
+                                <div style="font-size:0.9rem; color:white;">${d.name}</div>
+                                <div style="font-size:0.7rem; color:var(--text-muted);">Exp: ${d.years_experience || 1.2} years</div>
+                                <div style="font-size:0.7rem; color:var(--warning);">Rating: ${((d.customer_ratings && d.customer_ratings.length) ? (d.customer_ratings.reduce((a,b)=>a+b,0)/d.customer_ratings.length).toFixed(1) : 5.0)}⭐</div>
+                            </div>
+                        </div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">
+                            Trips: ${d.total_trips || 0} | Score: ${d.driving_score || 100}%
+                        </div>
+                        <div style="margin-top:8px;">
+                            <small>Fatigue: ${d.fatigue_score.toFixed(0)}%</small>
+                            <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px;">
+                                <div style="width:${d.fatigue_score}%; height:100%; background:${d.fatigue_score > 80 ? 'var(--danger)' : 'var(--warning)'};"></div>
+                            </div>
+                        </div>
+                        <div style="margin-top:10px; font-size:0.7rem; color:var(--accent);">Click for full profile →</div>
+                    </div>
+                </div>
+            ` : 'Unassigned';
+
             let actionHtml = '';
             if (s.status === 'split') {
                 actionHtml = `<small style="color:var(--warning)">Route Split</small>`;
@@ -212,21 +319,63 @@ async function loadShipments() {
                     </div>
                 `;
             } else {
-                let dName = s.assigned_driver_id ? (drivers.find(d => d.id === s.assigned_driver_id)?.name || 'Driver') : '';
-                actionHtml = `<small style="color:var(--success)">Assigned: ${dName}</small><br><small>${s.stage}</small>`;
+                actionHtml = `<div style="display:flex; align-items:center; gap:5px; font-size:0.8rem;"><span style="color:var(--success)">Assigned:</span> ${driverHtml}</div><small>${s.stage}</small>`;
             }
             
+
+            // Check logs for delay or early status
+            let rowClass = '';
+            let statusTooltip = 'On Schedule';
+            
+            if (s.logs && s.logs.length > 0) {
+                const delayedLog = s.logs.find(l => l.status === 'delayed');
+                const earlyLog = s.logs.find(l => l.status === 'early');
+                
+                if (delayedLog) {
+                    rowClass = 'status-delayed';
+                    statusTooltip = `🔴 Delayed: ${delayedLog.message || delayedLog.reason}`;
+                } else if (earlyLog) {
+                    rowClass = 'status-early';
+                    statusTooltip = `🟢 Early: ${earlyLog.message || earlyLog.reason}`;
+                } else if (s.status === 'delivered') {
+                    rowClass = 'status-ontime';
+                    statusTooltip = `🔵 Delivered On-Time`;
+                }
+            }
+            
+            tr.className = rowClass;
+
             tr.innerHTML = `
                 <td><strong>${s.description}</strong><br><small>ID: ${s.id.substring(0,8)}</small></td>
-                <td><span class="badge" style="background: ${s.status==='delivered'?'var(--success)':'rgba(255,255,255,0.1)'}">${s.status}</span></td>
-                <td>${s.route_type || 'direct'} <br><small>ETA: ${etaFormatted}</small></td>
+                <td class="table-status-cell">
+                    <span class="badge" style="background: ${s.status==='delivered'?'var(--success)':'rgba(255,255,255,0.1)'}">${s.status}</span>
+                    <div class="table-hover-card">
+                        <strong>Status Detail</strong><br>
+                        <span style="font-size:0.85rem; color:var(--text-muted);">${statusTooltip}</span><br>
+                        <hr style="border-color:rgba(255,255,255,0.1); margin:8px 0;">
+                        <strong>Driver Info</strong><br>
+                        <span style="font-size:0.85rem; color:var(--text-muted);">${driverName} ${vehiclePlate ? `[${vehiclePlate}]` : ''}</span>
+                    </div>
+                </td>
+                <td>
+                    <div style="font-size:0.85rem;">${s.route_type || 'direct'}</div>
+                    <div id="eta-${s.id}" style="font-size:0.75rem; color:var(--text-muted); margin-top:5px;">Sch: ${etaFormatted}</div>
+                    ${weatherIndicator}
+                </td>
                 <td>
                     ${actionHtml}
                     <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openTrackModal('${s.id}')" title="Live Track">📍</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px;" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" title="Message Driver">💬</button>
                     <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:5px;" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')" title="Edit">✏️</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:5px;" onclick="openLogsModal('${s.id}')" title="View Logs">📜</button>
                 </td>
             `;
             tbody.appendChild(tr);
+
+            // Fetch dynamic ETA if in transit
+            if (s.status === 'in_transit') {
+                updateDynamicEta(s.id);
+            }
             
             // Render child legs if split
             if (s.status === 'split') {
@@ -236,6 +385,29 @@ async function loadShipments() {
                     let legTr = document.createElement('tr');
                     legTr.style.background = 'rgba(255,255,255,0.02)';
                     
+                    const legD = drivers.find(drv => drv.id === leg.assigned_driver_id);
+                    const legV = vehicles.find(vh => vh.id === leg.assigned_vehicle_id);
+                    let legFatigueClass = 'low-fatigue';
+                    if (legD && legD.fatigue_score > 80) legFatigueClass = 'high-fatigue';
+                    else if (legD && legD.fatigue_score > 50) legFatigueClass = 'mid-fatigue';
+
+                    const legDriverHtml = legD ? `
+                        <div class="driver-name-hover" style="position:relative; cursor:pointer; color:var(--primary); font-size:0.8rem;" onclick="viewFullProfile('driver', '${legD.id}')">
+                            ${legD.name} [${legV ? legV.number_plate : ''}]
+                            <div class="hover-card ${legFatigueClass}">
+                                <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                                    <img src="${legD.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${legD.name}`}" style="width:40px; height:40px; border-radius:50%;">
+                                    <div>
+                                        <div style="font-size:0.9rem; color:white;">${legD.name}</div>
+                                        <div style="font-size:0.7rem; color:var(--text-muted);">Fatigue: ${(legD.fatigue_score || 0).toFixed(0)}%</div>
+                                        <div style="font-size:0.7rem; color:var(--warning);">Rating: ${((legD.customer_ratings && legD.customer_ratings.length) ? (legD.customer_ratings.reduce((a,b)=>a+b,0)/legD.customer_ratings.length).toFixed(1) : 5.0)}⭐</div>
+                                    </div>
+                                </div>
+                                <div style="font-size:0.7rem; color:var(--accent);">Click for full profile →</div>
+                            </div>
+                        </div>
+                    ` : 'Unassigned';
+
                     let legActionHtml = '';
                     if (leg.status === 'pending') {
                         legActionHtml = `
@@ -245,25 +417,37 @@ async function loadShipments() {
                             </div>
                         `;
                     } else {
-                        let ldName = leg.assigned_driver_id ? (drivers.find(d => d.id === leg.assigned_driver_id)?.name || 'Driver') : '';
-                        legActionHtml = `<small style="color:var(--success)">Assigned: ${ldName}</small><br><small>${leg.stage}</small>`;
+                        legActionHtml = `<div style="display:flex; align-items:center; gap:5px; font-size:0.8rem;"><span style="color:var(--success)">Assigned:</span> ${legDriverHtml}</div><small>${leg.stage}</small>`;
                     }
-                        
+
+
                     legTr.innerHTML = `
                         <td style="padding-left:30px;">↳ ${leg.description} <br><small>Drop: ${leg.drop.address || 'Location'}</small></td>
                         <td><span class="badge" style="background: rgba(255,255,255,0.1); font-size:0.7rem;">${leg.status}</span></td>
-                        <td>direct <br><small>Sch: ${legEta}</small></td>
+                        <td>
+                            <div style="font-size:0.85rem;">leg</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Sch: ${legEta}</div>
+                        </td>
                         <td>
                             ${legActionHtml}
                             <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openTrackModal('${leg.id}')" title="Live Track">📍</button>
+                            <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px;" onclick="openMessageModal('${leg.id}', '${leg.assigned_driver_id}')" title="Message Driver">💬</button>
+                            <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:5px;" onclick="openLogsModal('${leg.id}')" title="View Logs">📜</button>
                         </td>
                     `;
                     tbody.appendChild(legTr);
                 });
             }
         });
-    } catch(err) {
-        console.error(err);
+}
+
+async function optimizeFleet() {
+    try {
+        const res = await apiCall('/shipments/consolidate', 'POST');
+        alert(res.message);
+        loadShipments();
+    } catch(e) {
+        alert("Consolidation failed.");
     }
 }
 
@@ -474,8 +658,11 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             password: document.getElementById('d-pass').value,
             license_type: document.getElementById('d-license').value,
             base_warehouse_id: document.getElementById('d-base').value,
+            years_experience: parseFloat(document.getElementById('d-exp').value || 0),
+            past_accidents: parseInt(document.getElementById('d-accidents').value || 0),
+            traffic_violations: parseInt(document.getElementById('d-challans').value || 0),
+            challan_count: parseInt(document.getElementById('d-challans').value || 0),
             driving_score: Math.floor(Math.random() * 20) + 80, // Mock 80-100 score
-            challan_count: Math.floor(Math.random() * 3), // Mock 0-2 challans
             safety_rating: (Math.random() * 2 + 3).toFixed(1), // Mock 3.0-5.0
             on_time_rate: Math.floor(Math.random() * 20) + 80 // Mock 80-100%
         });
@@ -669,6 +856,477 @@ function simulateAlert() {
     setTimeout(() => alertDiv.remove(), 10000);
 }
 
+async function updateDynamicEta(sid) {
+    try {
+        const data = await apiCall(`/tracking/${sid}`);
+        const el = document.getElementById(`eta-${sid}`);
+        if (el && data.dynamic_eta) {
+            const deta = data.dynamic_eta;
+            el.innerHTML = `
+                <span style="color:var(--accent)">${deta.weather_icon} ${deta.weather}</span><br>
+                <span style="font-weight:bold; color:var(--warning)">Adjusted: ${deta.adjusted_mins}m</span><br>
+                <small>(+${deta.delay_mins}m AI penalty)</small>
+            `;
+        }
+    } catch(e) {}
+}
+
+let drawControl;
+let drawnItems;
+let baseLayers;
+
+function initWeatherMap() {
+    if (weatherMap) {
+        weatherMap.remove();
+    }
+    
+    // Define Map Layers
+    const standard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    const terrain = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png', {
+        attribution: 'Map tiles by Stamen Design'
+    });
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri'
+    });
+    
+    baseLayers = {
+        "standard": standard,
+        "terrain": terrain,
+        "satellite": satellite
+    };
+
+    weatherMap = L.map('weather-map', {
+        layers: [standard]
+    }).setView([20.5937, 78.9629], 5);
+    
+    // Initialize Draw FeatureGroup
+    drawnItems = new L.FeatureGroup();
+    weatherMap.addLayer(drawnItems);
+    
+    // Setup Draw Control but don't add it globally visible
+    drawControl = new L.Control.Draw({
+        edit: { featureGroup: drawnItems },
+        draw: {
+            polygon: false,
+            rectangle: false,
+            marker: false,
+            circlemarker: false,
+            circle: true,
+            polyline: true
+        }
+    });
+
+    weatherMap.on(L.Draw.Event.CREATED, function (e) {
+        const type = e.layerType;
+        const layer = e.layer;
+        drawnItems.addLayer(layer);
+        
+        handleCustomDisaster(type, layer);
+    });
+    
+    // Add real-time precipitation radar via RainViewer
+    fetch('https://api.rainviewer.com/public/weather-maps.json')
+        .then(res => res.json())
+        .then(data => {
+            const past = data.radar.past;
+            if (past && past.length > 0) {
+                const latest = past[past.length - 1].path;
+                L.tileLayer(`https://tilecache.rainviewer.com${latest}/256/{z}/{x}/{y}/2/1_1.png`, {
+                    opacity: 0.6,
+                    zIndex: 10
+                }).addTo(weatherMap);
+            }
+        })
+        .catch(e => console.log("Radar not loaded", e));
+
+    loadWeatherFleetData();
+    setInterval(loadWeatherFleetData, 10000); // Update every 10s
+}
+
+function changeMapLayer() {
+    const layerType = document.getElementById('map-layer').value;
+    // Remove existing layers
+    Object.values(baseLayers).forEach(layer => weatherMap.removeLayer(layer));
+    // Add selected layer
+    baseLayers[layerType].addTo(weatherMap);
+}
+
+let currentDrawHandler = null;
+function toggleDrawMode() {
+    const type = document.getElementById('disaster-type').value;
+    if (currentDrawHandler) {
+        currentDrawHandler.disable();
+    }
+    
+    if (type === 'cyclone' || type === 'flood') {
+        currentDrawHandler = new L.Draw.Circle(weatherMap, drawControl.options.draw.circle);
+    } else {
+        currentDrawHandler = new L.Draw.Polyline(weatherMap, drawControl.options.draw.polyline);
+    }
+    currentDrawHandler.enable();
+}
+
+async function handleCustomDisaster(shapeType, layer) {
+    const disasterType = document.getElementById('disaster-type').value;
+    let payload = { type: disasterType, shapeType: shapeType };
+    
+    if (shapeType === 'circle') {
+        payload.lat = layer.getLatLng().lat;
+        payload.lng = layer.getLatLng().lng;
+        payload.radius = layer.getRadius() / 1000; // convert meters to km
+    } else if (shapeType === 'polyline') {
+        payload.coordinates = layer.getLatLngs().map(ll => ({lat: ll.lat, lng: ll.lng}));
+    }
+    
+    try {
+        const res = await apiCall('/simulation/disaster/custom', 'POST', payload);
+        
+        // Show Simulation Panel
+        const panel = document.getElementById('simulation-panel');
+        document.getElementById('sim-affected-count').innerText = res.affected_count || 0;
+        document.getElementById('sim-ai-recommendation').innerText = res.recommendation || "No action needed.";
+        
+        const listContainer = document.getElementById('sim-affected-list');
+        if (res.affected_list && res.affected_list.length > 0) {
+            listContainer.innerHTML = res.affected_list.map(s => `
+                <div style="font-size:0.75rem; margin-bottom:10px; padding:8px; background:rgba(255,255,255,0.05); border-radius:4px; border-left:3px solid var(--warning);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <strong>${s.description}</strong>
+                        <span style="color:var(--accent);">${s.id.substring(0,8)}</span>
+                    </div>
+                    <div style="margin:4px 0; color:var(--text-muted);">
+                        Driver: ${s.driver_name} [${s.vehicle_plate}]
+                    </div>
+                    <div style="color:var(--success); font-weight:600;">AI Solution: ${s.ai_action}</div>
+                    <div style="font-style:italic; font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.driver_instruction}</div>
+                    <div style="margin-top:5px; display:flex; gap:5px;">
+                        <button style="padding:2px 6px; font-size:0.7rem; background:var(--primary); border:none; color:white; border-radius:3px; cursor:pointer;" onclick="executeAIAction('${s.id}')">Apply AI Solution</button>
+                        <button style="padding:2px 6px; font-size:0.7rem; background:rgba(255,255,255,0.1); border:1px solid white; color:white; border-radius:3px; cursor:pointer;" onclick="manualDivert('${s.id}')">Manual Divert</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.75rem;">No active shipments in path.</p>';
+        }
+        
+        panel.style.display = 'block';
+        
+        loadWeatherFleetData();
+    } catch(err) {
+        alert("Failed to create custom disaster.");
+    }
+}
+
+function applySimulationFixes() {
+    alert("Executing AI contingency protocols for all affected shipments. Rerouting in progress...");
+    document.getElementById('simulation-panel').style.display = 'none';
+}
+
+function executeAIAction(shipmentId) {
+    alert(`AI contingecy applied for shipment ${shipmentId.substring(0,8)}. Diverting via OSRM bypass.`);
+}
+
+function manualDivert(shipmentId) {
+    const reason = prompt("Enter custom diversion reason:");
+    if (reason) alert(`Manual diversion logged for ${shipmentId.substring(0,8)}: ${reason}`);
+}
+
+async function clearDisasters() {
+    try {
+        await apiCall('/simulation/disaster/clear', 'POST');
+        drawnItems.clearLayers();
+        loadWeatherFleetData();
+        loadShipments(); // Reload shipments to reflect reverted logs
+        document.getElementById('simulation-panel').style.display = 'none';
+    } catch(err) {
+        alert("Failed to clear disasters.");
+    }
+}
+
+async function stopSimulation(simId) {
+    try {
+        await apiCall(`/simulation/disaster/${simId}`, 'DELETE');
+        loadWeatherFleetData();
+        loadShipments();
+        alert("Simulation stopped. Impact reverted.");
+    } catch(err) {
+        alert("Failed to stop simulation.");
+    }
+}
+
+async function dispatchRescueVehicle() {
+    const shipmentId = document.getElementById('logs-shipment-id').innerText;
+    if(!shipmentId) return;
+    
+    document.getElementById('rescue-btn').innerText = "Assigning Rescue...";
+    document.getElementById('rescue-btn').disabled = true;
+    
+    try {
+        const res = await apiCall(`/shipments/${shipmentId}/rescue`, 'POST');
+        alert("Rescue vehicle dispatched successfully! " + (res.message || ""));
+        document.getElementById('logs-modal').style.display = 'none';
+        loadShipments();
+    } catch (err) {
+        alert("Failed to dispatch rescue vehicle. Ensure idle vehicles are available.");
+    } finally {
+        document.getElementById('rescue-btn').innerText = "🚨 Dispatch Rescue Vehicle";
+        document.getElementById('rescue-btn').disabled = false;
+    }
+}
+
+async function loadWeatherFleetData() {
+    try {
+        const data = await apiCall('/tracking/fleet/weather');
+        
+        // Clear old markers
+        weatherMarkers.forEach(m => weatherMap.removeLayer(m));
+        weatherMarkers = [];
+        
+        // Render Active Simulations Table
+        const simsContainer = document.getElementById('active-sims-container');
+        const simsBody = document.getElementById('sims-body');
+        const activeSims = data.cells.filter(c => c.is_simulation);
+        
+        if (activeSims.length > 0) {
+            simsContainer.style.display = 'block';
+            simsBody.innerHTML = activeSims.map(c => `
+                <tr>
+                    <td>${c.type.toUpperCase()}</td>
+                    <td>${c.shapeType}</td>
+                    <td><button style="background:var(--danger); border:none; color:white; padding:2px 5px; border-radius:3px; cursor:pointer;" onclick="stopSimulation('${c.id}')">Stop</button></td>
+                </tr>
+            `).join('');
+        } else {
+            simsContainer.style.display = 'none';
+        }
+        
+        // Draw Weather Cells
+        data.cells.forEach(cell => {
+            let animClass = '';
+            let type = (cell.type || '').toLowerCase();
+            if (type === 'cyclone') animClass = 'anim-cyclone';
+            else if (type === 'flood') animClass = 'anim-flood';
+            else if (type === 'blockade') animClass = 'anim-blockade';
+            else animClass = 'anim-rain';
+            
+            if (cell.shapeType === 'polyline') {
+                // Polylines don't support divIcon natively without plugins, so we draw an animated line using SVG
+                const polyline = L.polyline(cell.coordinates, {
+                    color: '#dd6b20', weight: 8, opacity: 0.8, className: 'anim-blockade'
+                }).addTo(weatherMap).bindPopup(`<b>${cell.type} System</b>`);
+                weatherMarkers.push(polyline);
+            } else {
+                // Standard circle radius conversion to bounds
+                const radiusMeters = (cell.radius || 50) * 1000;
+                // Calculate rough size in pixels (Leaflet doesn't natively support divIcon with geographic radius, so we approximate or just use a fixed size divIcon that looks massive, or use SVG circle)
+                // Actually, L.circle has a className option!
+                const circle = L.circle([cell.lat, cell.lng], {
+                    color: 'transparent',
+                    fillColor: 'transparent',
+                    radius: radiusMeters,
+                    className: animClass
+                }).addTo(weatherMap).bindPopup(`<b>${cell.type || cell.condition} System</b>`);
+                weatherMarkers.push(circle);
+            }
+        });
+        
+        // Plot Fleet
+        data.fleet.forEach(v => {
+            const icon = L.divIcon({
+                html: `<div style="background:var(--primary); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px var(--primary);"></div>`,
+                className: 'fleet-dot'
+            });
+            const m = L.marker([v.lat, v.lng], {icon: icon}).addTo(weatherMap)
+                .bindPopup(`
+                    <b>Driver:</b> ${v.driver}<br>
+                    <b>Local Weather:</b> ${v.weather.icon} ${v.weather.condition}<br>
+                    <b>Fatigue:</b> ${v.fatigue}%
+                `);
+            weatherMarkers.push(m);
+        });
+        
+    } catch(e) {
+        console.error("Fleet fetch error", e);
+    }
+}
+
+let activeMessageShipmentId = null;
+let activeMessageDriverId = null;
+
+async function openMessageModal(shipmentId, driverId) {
+    if (!driverId) {
+        alert("Shipment not assigned to any driver.");
+        return;
+    }
+    activeMessageShipmentId = shipmentId;
+    activeMessageDriverId = driverId;
+    
+    const drivers = await apiCall('/manager/drivers');
+    const driver = drivers.find(d => d.id === driverId);
+    document.getElementById('msg-driver-name').innerText = driver ? driver.name : 'Unknown';
+    document.getElementById('message-modal').style.display = 'block';
+}
+
+async function submitMessage() {
+    const content = document.getElementById('msg-content').value;
+    if (!content) return;
+    
+    try {
+        await apiCall('/tracking/messages', 'POST', {
+            shipment_id: activeMessageShipmentId,
+            sender_id: localStorage.getItem('manager_id'),
+            receiver_id: activeMessageDriverId,
+            content: content,
+            sender_type: 'manager'
+        });
+        document.getElementById('message-modal').style.display = 'none';
+        document.getElementById('msg-content').value = '';
+        alert("Message sent!");
+    } catch(e) {
+        alert("Failed to send message.");
+    }
+}
+
+async function loadMessages() {
+    try {
+        const msgs = await apiCall(`/tracking/messages/${localStorage.getItem('manager_id')}`);
+        const container = document.getElementById('messages-container');
+        container.innerHTML = msgs.length === 0 ? '<p>No messages yet.</p>' : msgs.reverse().map(m => `
+            <div style="margin-bottom:10px; padding:10px; background:${m.sender_type==='manager'?'rgba(49, 130, 206, 0.2)':'rgba(72, 187, 120, 0.2)'}; border-radius:8px; border-left:4px solid ${m.sender_type==='manager'?'var(--primary)':'var(--success)'}">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:5px;">
+                    <b>${m.sender_type==='manager'?'You':'Driver'}</b>
+                    <span>${new Date(m.created_at).toLocaleString()}</span>
+                </div>
+                <p style="margin:0; font-size:0.9rem;">${m.content}</p>
+            </div>
+        `).join('');
+    } catch(e) {}
+}
+
+async function loadLeaderboard() {
+    const category = document.getElementById('leader-type').value;
+    const sortSelect = document.getElementById('leader-sort');
+    
+    // Update sort options based on category
+    if (category === 'vehicle' && !sortSelect.dataset.isVehicle) {
+        sortSelect.innerHTML = `
+            <option value="overall">General Ranking</option>
+            <option value="vehicle_health_score">Health Score</option>
+            <option value="fuel_efficiency">Fuel Efficiency</option>
+        `;
+        sortSelect.dataset.isVehicle = "true";
+    } else if (category === 'driver' && sortSelect.dataset.isVehicle) {
+        sortSelect.innerHTML = `
+            <option value="overall">General Ranking</option>
+            <option value="safety_index">Safety Index</option>
+            <option value="punctuality_rate">Punctuality</option>
+            <option value="rating">Customer Rating</option>
+        `;
+        sortSelect.removeAttribute('data-is-vehicle');
+    }
+    
+    const sortBy = sortSelect.value;
+    
+    try {
+        const data = await apiCall(`/manager/leaderboard?category=${category}&sort_by=${sortBy}`);
+        const tbody = document.getElementById('leaderboard-body');
+        
+        tbody.innerHTML = data.map((item, index) => {
+            let scoreVal = 0;
+            if (category === 'driver') {
+                scoreVal = sortBy === 'overall' ? (item.overall_score || 100) : (item[sortBy] !== undefined ? item[sortBy] : 100);
+            } else {
+                scoreVal = sortBy === 'overall' ? (item.efficiency_score || 100) : (item[sortBy] !== undefined ? item[sortBy] : 100);
+            }
+            // Format score correctly
+            const displayScore = typeof scoreVal === 'number' ? scoreVal.toFixed(1) : scoreVal;
+
+            return `
+            <tr>
+                <td>#${index + 1}</td>
+                <td>
+                    <div style="display:flex; gap:10px; align-items:center; cursor:pointer;" onclick="viewFullProfile('${category}', '${item.id}')">
+                        <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name || item.number_plate}`}" style="width:30px; height:30px; border-radius:50%;">
+                        <div>
+                            <strong>${item.name || item.number_plate}</strong>
+                            ${category === 'driver' ? `<br><small style="color:var(--text-muted)">Trips: ${item.total_trips}</small>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td><span style="color:var(--accent); font-weight:bold;">${displayScore}</span></td>
+                <td><span class="badge" style="font-size:0.7rem;">${item.status}</span></td>
+                <td><button class="btn-primary" style="padding:4px 8px; font-size:0.7rem;" onclick="viewFullProfile('${category}', '${item.id}')">View Profile</button></td>
+            </tr>
+            `;
+        }).join('');
+    } catch(e) {
+        console.error("Leaderboard error:", e);
+    }
+}
+
+async function viewFullProfile(type, id) {
+    try {
+        const data = await apiCall(`/manager/${type}s/${id}/profile`);
+        const p = data.profile;
+        const shipments = data.recent_shipments;
+        
+        const modal = document.getElementById('profile-modal');
+        document.getElementById('prof-image').src = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name || p.number_plate}`;
+        document.getElementById('prof-name').innerText = p.name || p.number_plate;
+        document.getElementById('prof-sub').innerText = type === 'driver' ? `@${p.login_id || 'user'} | ${(p.license_type || 'regular').toUpperCase()} License` : `${(p.type || 'vehicle').toUpperCase()} | Health: ${p.vehicle_health_score || 100}%`;
+        
+        if (type === 'driver') {
+            document.getElementById('prof-stat-1').innerText = `${(p.safety_index || 100).toFixed(1)}%`;
+            document.getElementById('prof-stat-2').innerText = `${(p.punctuality_rate || 100).toFixed(1)}%`;
+            
+            let expMonths = 0;
+            if (p.join_date) {
+                expMonths = Math.floor((new Date() - new Date(p.join_date)) / (1000 * 60 * 60 * 24 * 30));
+            }
+            document.getElementById('prof-stat-3').innerText = `${expMonths || 0} months`;
+            document.getElementById('prof-stat-4').innerText = `${p.total_trips || 0}`;
+            
+            let avgRating = 5.0;
+            if (p.customer_ratings && p.customer_ratings.length > 0) {
+                avgRating = p.customer_ratings.reduce((a,b)=>a+b,0) / p.customer_ratings.length;
+            } else if (p.rating !== undefined) {
+                avgRating = p.rating;
+            }
+            document.getElementById('prof-stat-5').innerText = `${avgRating.toFixed(1)}⭐`;
+            document.getElementById('prof-stat-5').style.display = 'block';
+            
+            document.getElementById('prof-meter-label').innerText = `Fatigue Level: ${(p.fatigue_score || 0).toFixed(0)}%`;
+            const meter = document.getElementById('prof-meter-bar');
+            meter.style.width = `${p.fatigue_score || 0}%`;
+            meter.style.background = (p.fatigue_score || 0) > 80 ? 'var(--danger)' : 'var(--primary)';
+        } else {
+            document.getElementById('prof-stat-1').innerText = `${(p.efficiency_score || 100).toFixed(1)}%`;
+            document.getElementById('prof-stat-2').innerText = `${p.vehicle_health_score || 100}%`;
+            document.getElementById('prof-stat-3').innerText = `${(p.total_distance_km || 0).toFixed(0)} km`;
+            document.getElementById('prof-stat-4').innerText = 'Grade A';
+            document.getElementById('prof-stat-5').innerText = ''; // Hide or leave blank for vehicle
+            
+            document.getElementById('prof-meter-label').innerText = `Fuel Efficiency Index`;
+            document.getElementById('prof-meter-bar').style.width = '85%';
+        }
+        
+        const tripsBody = document.getElementById('prof-trips-body');
+        tripsBody.innerHTML = shipments.map(s => `
+            <tr>
+                <td>${s.id.substring(0,8)}</td>
+                <td>${s.pickup.address.split(',')[0]} → ${s.drop.address.split(',')[0]}</td>
+                <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                <td><span class="badge" style="font-size:0.7rem;">${s.status}</span></td>
+            </tr>
+        `).join('');
+        
+        modal.style.display = 'block';
+    } catch(e) {
+        console.error("Profile view error:", e);
+        alert("Could not load full profile data.");
+    }
+}
+
 // Init
 window.onload = () => {
     initMap();
@@ -677,3 +1335,118 @@ window.onload = () => {
         if(map) map.invalidateSize(true);
     }, 500);
 };
+
+async function openLogsModal(shipmentId) {
+    document.getElementById('logs-modal').style.display = 'block';
+    document.getElementById('logs-shipment-id').innerText = shipmentId;
+    const timeline = document.getElementById('manager-timeline');
+    timeline.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">Loading logs...</p>';
+    
+    try {
+        const data = await apiCall(`/tracking/${shipmentId}`);
+        const shipment = data.shipment;
+        
+        // Setup Journey Review Button
+        const btn = document.getElementById('view-review-btn');
+        const revContainer = document.getElementById('review-container');
+        revContainer.style.display = 'none'; // reset
+        
+        if (shipment.status === 'delivered') {
+            btn.style.display = 'block';
+            // Save shipmentId to button dataset for fetch
+            btn.dataset.sid = shipmentId;
+        } else {
+            btn.style.display = 'none';
+        }
+        
+        // Show Rescue Button if Breakdown
+        const rescueContainer = document.getElementById('rescue-container');
+        if (shipment.stage === 'Vehicle Breakdown') {
+            rescueContainer.style.display = 'block';
+        } else {
+            rescueContainer.style.display = 'none';
+        }
+        
+        if (shipment.logs && shipment.logs.length > 0) {
+            const sortedLogs = [...shipment.logs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+            timeline.innerHTML = sortedLogs.map(log => `
+                <div class="timeline-event ${log.status === 'delivered' ? 'delivered' : ''}">
+                    <div class="timeline-time">${new Date(log.timestamp).toLocaleString()}</div>
+                    <div class="timeline-msg">${log.message}</div>
+                    ${log.reason ? `<div class="timeline-reason">Reason: ${log.reason}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            timeline.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">No history available.</p>';
+        }
+    } catch(err) {
+        console.error(err);
+        timeline.innerHTML = '<p style="color:var(--danger); font-size:0.85rem;">Failed to load logs.</p>';
+    }
+}
+
+async function fetchJourneyReview() {
+    const btn = document.getElementById('view-review-btn');
+    const sid = btn.dataset.sid;
+    const revContainer = document.getElementById('review-container');
+    
+    try {
+        const review = await apiCall(`/manager/reviews/${sid}`);
+        document.getElementById('rev-punct').innerText = `${review.punctuality_score}%`;
+        document.getElementById('rev-safety').innerText = `${review.safety_score}%`;
+        document.getElementById('rev-challan').innerText = `-${review.challan_penalty}`;
+        document.getElementById('rev-total').innerText = `${review.total_score}%`;
+        document.getElementById('rev-feedback').innerText = `"${review.feedback_message}"`;
+        
+        revContainer.style.display = 'block';
+        btn.style.display = 'none'; // Hide button after showing
+    } catch(err) {
+        alert("Scorecard not available yet or error fetching.");
+    }
+}
+async function loadLedger() {
+    const tbody = document.getElementById('ledger-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading Blockchain Ledger...</td></tr>';
+    
+    try {
+        const txs = await apiCall('/manager/ledger');
+        if (txs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No Smart Contract transactions found.</td></tr>';
+            return;
+        }
+        
+        txs.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+        tbody.innerHTML = txs.map(tx => `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:10px; color:#00f2fe; font-family:monospace; font-size:0.8rem;">${tx.tx_hash}</td>
+                <td style="padding:10px; font-size:0.8rem;">${new Date(tx.timestamp).toLocaleString()}</td>
+                <td style="padding:10px;">${tx.shipment_id.substring(0,8)}</td>
+                <td style="padding:10px;">${tx.to_address.substring(0,8)}...</td>
+                <td style="padding:10px; color:var(--success); font-weight:bold;">🏆 ${tx.points_awarded}</td>
+            </tr>
+        `).join('');
+    } catch(err) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--danger);">Error loading ledger.</td></tr>';
+    }
+}
+
+async function triggerDisaster(type, lat, lng) {
+    try {
+        const payload = {
+            type: type,
+            lat: lat,
+            lng: lng,
+            radius: 150
+        };
+        const res = await apiCall('/simulation/disaster', 'POST', payload);
+        alert(res.message);
+        
+        // Reload map and alerts immediately
+        loadMapData();
+        loadInsights();
+        loadShipments();
+    } catch(err) {
+        alert("Failed to simulate disaster.");
+    }
+}

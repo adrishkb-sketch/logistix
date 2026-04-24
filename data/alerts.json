@@ -1,1 +1,35 @@
-[]
+[
+    {
+        "id": "3ad0c179-46ad-49cb-b666-e1ba83d59669",
+        "type": "disaster",
+        "description": "CRITICAL: Vehicle intersected custom CYCLONE.",
+        "severity": "critical",
+        "suggestion": "IMMEDIATE ACTION REQUIRED: Reroute or halt vehicle at nearest safe point.",
+        "shipment_id": "4a26d201-38b9-4603-8696-62a461857496",
+        "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "created_at": "2026-04-24T06:16:06.869625",
+        "status": "active"
+    },
+    {
+        "id": "b2789926-8ad6-42c1-91cd-d5a0155774ea",
+        "type": "disaster",
+        "description": "CRITICAL: Vehicle intersected custom CYCLONE.",
+        "severity": "critical",
+        "suggestion": "IMMEDIATE ACTION REQUIRED: Reroute or halt vehicle at nearest safe point.",
+        "shipment_id": "189b3ae8-8394-4693-8bee-51daa331f1d5",
+        "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "created_at": "2026-04-24T06:16:06.870787",
+        "status": "active"
+    },
+    {
+        "id": "4ef5fbba-cf3f-45d8-bd77-9cf44c5a5f89",
+        "type": "weather",
+        "description": "Vehicle entered cyclone zone at 22.594207764036756, 88.29885864275327",
+        "severity": "critical",
+        "suggestion": "Heavy cyclone detected. Suggest slowing down or holding position for 30m.",
+        "shipment_id": "4a26d201-38b9-4603-8696-62a461857496",
+        "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "created_at": "2026-04-24T06:51:43.554478",
+        "status": "active"
+    }
+]

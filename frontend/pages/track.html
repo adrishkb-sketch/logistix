@@ -5,15 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Track Shipment | Logistix</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="../css/style.css">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-        .track-container { max-width: 600px; width: 100%; text-align: center; }
+        body { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 20px; }
+        .track-container { max-width: 600px; width: 100%; text-align: center; margin-top: 50px; }
         .results-card { margin-top: 2rem; display: none; text-align: left; animation: fadeIn 0.5s ease-out forwards; }
         .otp-box { background: rgba(49, 130, 206, 0.2); border: 2px dashed #3182ce; border-radius: 8px; padding: 20px; text-align: center; margin-top: 20px; }
         .otp-code { font-size: 3rem; font-weight: 700; letter-spacing: 5px; color: #63b3ed; margin: 10px 0; }
         .home-link { position: absolute; top: 20px; left: 20px; color: var(--text-muted); text-decoration: none; transition: color 0.3s; }
         .home-link:hover { color: white; }
+        #track-map { width: 100%; height: 250px; border-radius: 8px; margin-top: 20px; border: 1px solid rgba(255,255,255,0.1); z-index: 1; }
+        .timeline { position: relative; padding-left: 20px; margin-top: 20px; }
+        .timeline::before { content: ''; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.2); }
+        .timeline-event { position: relative; margin-bottom: 15px; }
+        .timeline-event::before { content: ''; position: absolute; left: -21px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); }
+        .timeline-event.delivered::before { background: var(--success); }
+        .timeline-time { font-size: 0.75rem; color: var(--text-muted); }
+        .timeline-msg { font-size: 0.9rem; }
+        .timeline-reason { font-size: 0.8rem; color: var(--danger); margin-top: 2px; }
+        .eta-alert { margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 0.85rem; text-align: center; display: none; }
     </style>
 </head>
 <body>
@@ -47,15 +58,25 @@
                     <strong id="res-eta" style="font-size: 1.1rem; color: var(--warning);">Pending...</strong>
                 </div>
             </div>
+            
+            <div id="eta-alert" class="eta-alert"></div>
 
-            <div class="otp-box">
+            <div id="track-map"></div>
+
+            <div class="otp-box" id="otp-container">
                 <p style="margin:0; font-size: 0.9rem; color: var(--text-muted);">Secure Delivery OTP</p>
                 <div class="otp-code" id="res-otp">----</div>
                 <p style="margin:0; font-size: 0.85rem;">Provide this 4-digit code to the driver upon arrival.</p>
             </div>
+            
+            <h4 style="margin-top:25px; margin-bottom:5px;">Shipment History</h4>
+            <div id="timeline" class="timeline">
+                <!-- Logs injected here -->
+            </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../js/api.js"></script>
     <script>
         console.log("Track page loaded directly.");
@@ -69,28 +90,25 @@
             }
         });
 
+        let map = null;
+        let routeLayer = null;
+        let marker = null;
+
         async function searchShipment() {
-            console.log("searchShipment called!");
             const trackingId = document.getElementById('tracking-id').value.trim();
-            if (!trackingId) {
-                alert("Please enter a tracking ID");
-                return;
-            }
+            if (!trackingId) return;
             
             const resultsDiv = document.getElementById('results');
             const errorMsg = document.getElementById('error-msg');
             const btn = document.getElementById('track-btn');
             
-            if (btn) {
-                btn.innerText = 'Searching...';
-            }
-            
+            if (btn) btn.innerText = 'Searching...';
             errorMsg.style.display = 'none';
             resultsDiv.style.display = 'none';
 
             try {
-                const shipment = await apiCall(`/shipments/${trackingId}`);
-                console.log("Found shipment:", shipment);
+                const data = await apiCall(`/tracking/${trackingId}`);
+                const shipment = data.shipment;
                 
                 document.getElementById('res-desc').innerText = shipment.description || 'N/A';
                 document.getElementById('res-id').innerText = shipment.id;
@@ -102,29 +120,120 @@
                 else statusEl.style.color = 'white';
                 
                 const etaEl = document.getElementById('res-eta');
+                let targetDate = null;
+                
                 if (shipment.status === 'delivered') {
                     etaEl.innerText = 'Delivered';
                     etaEl.style.color = 'var(--success)';
-                } else if (shipment.expected_delivery) {
-                    const dt = new Date(shipment.expected_delivery);
-                    etaEl.innerText = dt.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
-                    etaEl.style.color = 'var(--warning)';
+                    document.getElementById('otp-container').style.display = 'none';
                 } else {
-                    etaEl.innerText = 'Calculating...';
+                    document.getElementById('otp-container').style.display = 'block';
+                    document.getElementById('res-otp').innerText = shipment.delivery_otp || 'N/A';
+                    
+                    if (data.dynamic_eta) {
+                        targetDate = new Date(data.dynamic_eta.estimated_arrival);
+                    } else if (shipment.expected_delivery) {
+                        targetDate = new Date(shipment.expected_delivery);
+                    }
+                    
+                    if (targetDate) {
+                        etaEl.innerText = targetDate.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'});
+                        etaEl.style.color = 'var(--warning)';
+                    } else {
+                        etaEl.innerText = 'Calculating...';
+                    }
                 }
                 
-                document.getElementById('res-otp').innerText = shipment.delivery_otp || 'N/A';
+                // ETA Alerts comparison
+                const alertEl = document.getElementById('eta-alert');
+                alertEl.style.display = 'none';
+                if (shipment.expected_delivery && targetDate && shipment.status !== 'delivered') {
+                    const diffMins = (targetDate - new Date(shipment.expected_delivery)) / 60000;
+                    if (diffMins > 15) {
+                        alertEl.style.display = 'block';
+                        alertEl.style.background = 'rgba(239, 68, 68, 0.2)';
+                        alertEl.style.border = '1px solid var(--danger)';
+                        alertEl.style.color = 'var(--danger)';
+                        
+                        let reason = 'unexpected delays';
+                        if (data.dynamic_eta && data.dynamic_eta.weather_impact && data.dynamic_eta.weather_impact.severity !== 'None') {
+                            reason = data.dynamic_eta.weather_impact.severity.toLowerCase() + ' weather';
+                        }
+                        alertEl.innerText = `⚠️ Delayed by ${Math.round(diffMins)} mins due to ${reason}.`;
+                    } else if (diffMins < -15) {
+                        alertEl.style.display = 'block';
+                        alertEl.style.background = 'rgba(16, 185, 129, 0.2)';
+                        alertEl.style.border = '1px solid var(--success)';
+                        alertEl.style.color = 'var(--success)';
+                        alertEl.innerText = `🚀 Good news! Arriving ${Math.abs(Math.round(diffMins))} mins early.`;
+                    }
+                }
+                
+                // Render Timeline
+                const timeline = document.getElementById('timeline');
+                timeline.innerHTML = '';
+                if (shipment.logs && shipment.logs.length > 0) {
+                    const sortedLogs = [...shipment.logs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    timeline.innerHTML = sortedLogs.map(log => `
+                        <div class="timeline-event ${log.status === 'delivered' ? 'delivered' : ''}">
+                            <div class="timeline-time">${new Date(log.timestamp).toLocaleString()}</div>
+                            <div class="timeline-msg">${log.message}</div>
+                            ${log.reason ? `<div class="timeline-reason">Reason: ${log.reason}</div>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    timeline.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">No history available.</p>';
+                }
                 
                 resultsDiv.style.display = 'block';
+                
+                // Init Map
+                setTimeout(() => {
+                    initMap(shipment.pickup, shipment.drop, shipment.current_location);
+                }, 100);
+                
             } catch(err) {
-                console.error("API Error caught:", err);
                 errorMsg.innerText = err.message || "Shipment not found. Please check your ID.";
                 errorMsg.style.display = 'block';
             } finally {
-                if (btn) {
-                    btn.innerText = 'Track';
-                }
+                if (btn) btn.innerText = 'Track';
             }
+        }
+        
+        async function initMap(pickup, drop, current) {
+            if (!map) {
+                map = L.map('track-map', {zoomControl: false}).setView([pickup.lat, pickup.lng], 10);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+            }
+            
+            if (routeLayer) map.removeLayer(routeLayer);
+            if (marker) map.removeLayer(marker);
+            
+            // Draw Route
+            try {
+                const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}?geometries=geojson`);
+                const data = await res.json();
+                if (data.routes && data.routes.length > 0) {
+                    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                    routeLayer = L.polyline(coords, {color: '#3182ce', weight: 4, opacity: 0.7}).addTo(map);
+                    map.fitBounds(routeLayer.getBounds(), {padding: [20, 20]});
+                }
+            } catch(e) {
+                console.error("OSRM Route Error", e);
+            }
+            
+            // Plot Current or Pickup
+            const loc = current || pickup;
+            marker = L.circleMarker([loc.lat, loc.lng], {
+                radius: 8,
+                fillColor: '#00f2fe',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 1
+            }).addTo(map);
         }
     </script>
 </body>

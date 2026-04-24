@@ -6,6 +6,20 @@ router = APIRouter()
 drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")
 warehouses_db = JSONDatabase("warehouses")
+ledger_db = JSONDatabase("ledger")
+reviews_db = JSONDatabase("journey_reviews")
+
+@router.get("/ledger")
+def get_ledger():
+    return ledger_db.get_all()
+
+@router.get("/reviews/{shipment_id}")
+def get_journey_review(shipment_id: str):
+    reviews = reviews_db.get_all()
+    for r in reviews:
+        if r.get("shipment_id") == shipment_id:
+            return r
+    raise HTTPException(status_code=404, detail="Journey review not found")
 
 # Drivers CRUD
 @router.post("/drivers")
@@ -97,3 +111,58 @@ def manual_verify_driver(driver_id: str, status: str):
         
     drivers_db.update(driver_id, {"verification_status": status})
     return {"message": f"Driver marked as {status}"}
+
+@router.get("/leaderboard")
+def get_leaderboard(category: str = "driver", sort_by: str = "overall"):
+    from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue
+    
+    if category == "driver":
+        drivers = drivers_db.get_all()
+        processed = []
+        for d in drivers:
+            d["fatigue_score"] = calculate_fatigue(d)
+            d["overall_score"] = calculate_driver_performance_score(d)
+            processed.append(d)
+            
+        if sort_by == "overall":
+            return sorted(processed, key=lambda x: x["overall_score"], reverse=True)
+        return sorted(processed, key=lambda x: x.get(sort_by, 0), reverse=True)
+    else:
+        vehicles = vehicles_db.get_all()
+        if sort_by == "overall":
+            return sorted(vehicles, key=lambda x: x.get("efficiency_score", 0), reverse=True)
+        return sorted(vehicles, key=lambda x: x.get(sort_by, 0), reverse=True)
+
+@router.get("/drivers/{driver_id}/profile")
+def get_driver_profile(driver_id: str):
+    from backend.services.driver_intel import calculate_fatigue, calculate_driver_performance_score
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    driver["fatigue_score"] = calculate_fatigue(driver)
+    driver["overall_score"] = calculate_driver_performance_score(driver)
+    
+    # Fetch recent shipments for this driver
+    shipments_db = JSONDatabase("shipments")
+    shipments = [s for s in shipments_db.get_all() if s.get("assigned_driver_id") == driver_id]
+    
+    return {
+        "profile": driver,
+        "recent_shipments": shipments[:10]
+    }
+
+@router.get("/vehicles/{vehicle_id}/profile")
+def get_vehicle_profile(vehicle_id: str):
+    vehicle = vehicles_db.get_by_id(vehicle_id)
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+        
+    # Fetch maintenance history or recent trips
+    shipments_db = JSONDatabase("shipments")
+    shipments = [s for s in shipments_db.get_all() if s.get("assigned_vehicle_id") == vehicle_id]
+    
+    return {
+        "profile": vehicle,
+        "recent_shipments": shipments[:10]
+    }

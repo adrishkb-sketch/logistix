@@ -22,6 +22,9 @@
             display: none;
             animation: pulse 2s infinite;
         }
+        .timeline { border-left: 3px solid var(--primary); padding-left: 20px; margin-left: 15px; margin-top: 20px;}
+        .timeline-node { position: relative; margin-bottom: 20px; }
+        .timeline-dot { position: absolute; left: -29px; top: 0; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--bg-dark); }
     </style>
 </head>
 <body>
@@ -35,12 +38,13 @@
 
         <div class="tabs" style="display:flex; gap:10px; margin-bottom: 20px;">
             <button class="btn-primary" id="btn-tab-active" style="flex:1;" onclick="switchDriverTab('active')">Active Route</button>
-            <button class="btn-primary" id="btn-tab-completed" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('completed')">Completed Orders</button>
+            <button class="btn-primary" id="btn-tab-completed" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('completed')">History</button>
+            <button class="btn-primary" id="btn-tab-profile" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('profile')">Profile</button>
         </div>
 
         <div id="active-tab">
             <div id="instruction-banner" class="instruction-banner">
-                ⚠️ Traffic ahead. Taking alternate route (+5 mins).
+                <!-- Injected via JS -->
             </div>
 
             <div id="verification-overlay" class="glass-card" style="display:none; text-align:center; margin-bottom: 20px;">
@@ -63,12 +67,98 @@
             </div>
             
             <div id="alert-container"></div>
+
+            <div class="glass-card" style="margin-top:20px;">
+                <h3>Message Manager</h3>
+                <div id="driver-messages" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                    <!-- Messages from manager -->
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="manager-msg-content" placeholder="Type a message..." style="flex:1; padding:10px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">
+                    <button class="btn-primary" style="width:auto; padding:0 20px;" onclick="sendMessageToManager()">Send</button>
+                </div>
+            </div>
         </div>
 
         <div id="completed-tab" style="display:none;">
             <div id="completed-container">
                 <!-- Dynamically injected -->
             </div>
+        </div>
+
+        <div id="profile-tab" style="display:none;">
+            <div class="glass-card" style="text-align:center; padding:30px;">
+                <div id="p-pic-container" style="position:relative; width:120px; height:120px; margin:0 auto 20px;">
+                    <img id="profile-img" src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver" style="width:100%; height:100%; border-radius:50%; border:4px solid var(--primary); object-fit:cover;">
+                    <button class="btn-primary" style="position:absolute; bottom:0; right:0; width:35px; height:35px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;" onclick="document.getElementById('profile-upload').click()">📷</button>
+                </div>
+                <input type="file" id="profile-upload" style="display:none;" accept="image/*" onchange="uploadProfilePic()">
+                
+                <h2 id="p-name">Driver Name</h2>
+                <p id="p-login" style="color:var(--text-muted); margin-bottom:20px;">@login_id</p>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left;">
+                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                        <small style="color:var(--text-muted)">Total Trips</small>
+                        <h4 id="p-trips">0</h4>
+                    </div>
+                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                        <small style="color:var(--text-muted)">Safety Score</small>
+                        <h4 id="p-safety">100%</h4>
+                    </div>
+                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                        <small style="color:var(--text-muted)">Punctuality</small>
+                        <h4 id="p-punct">100%</h4>
+                    </div>
+                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
+                        <small style="color:var(--text-muted)">Avg Rating</small>
+                        <h4 id="p-rating">5.0 ⭐</h4>
+                    </div>
+                    <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05); grid-column: span 2; text-align:center;">
+                        <small style="color:var(--text-muted)">Reward Points 🏆</small>
+                        <h3 id="p-wallet" style="color:var(--success); font-size:1.5rem; margin-top:5px;">0</h3>
+                    </div>
+                </div>
+
+                <div style="margin-top:25px; text-align:left;">
+                    <label style="font-size:0.85rem; color:var(--text-muted)">Fatigue Meter</label>
+                    <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; margin-top:5px; overflow:hidden;">
+                        <div id="p-fatigue-bar" style="width:0%; height:100%; background:var(--primary); transition:width 0.5s ease;"></div>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" style="margin-top:30px; background:var(--secondary);" onclick="startRest()">Start 12h Rest Period</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Persistent Report Issue Button -->
+    <button onclick="openIncidentModal()" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--danger); color:white; border:none; padding:12px 24px; border-radius:30px; font-weight:bold; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 15px rgba(229,62,62,0.6); z-index:1000;">
+        🚨 Report Issue
+    </button>
+
+    <!-- Incident Modal -->
+    <div id="incident-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); text-align:center;">
+        <h2 style="color:var(--danger); margin-bottom:10px;">Report an Incident</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">This will instantly notify the manager and update your logs.</p>
+        
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown')">🛠️ Vehicle Breakdown</button>
+            <button class="btn-primary" style="background:#3182ce;" onclick="submitIncident('challan')">👮 Police Challan</button>
+            <button class="btn-primary" style="background:#d69e2e;" onclick="submitIncident('traffic')">🚗 Severe Traffic Jam</button>
+        </div>
+        <button class="btn-primary" style="margin-top:20px; background:transparent; border:1px solid white;" onclick="document.getElementById('incident-modal').style.display='none'">Cancel</button>
+    </div>
+
+    <!-- Stationary Warning Modal -->
+    <div id="stationary-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); text-align:center; border:2px solid var(--warning);">
+        <h2 style="color:var(--warning); margin-bottom:10px;">Are you okay?</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">We noticed you haven't moved in a while. Do you need to report an issue?</p>
+        
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown', true)">🛠️ Yes, Breakdown</button>
+            <button class="btn-primary" style="background:#3182ce;" onclick="submitIncident('challan', true)">👮 Yes, Challan / Stopped</button>
+            <button class="btn-primary" style="background:var(--success);" onclick="document.getElementById('stationary-modal').style.display='none'">👍 I'm Fine (Just resting/traffic)</button>
         </div>
     </div>
 

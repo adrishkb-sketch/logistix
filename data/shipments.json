@@ -78,12 +78,21 @@
         "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
         "assigned_vehicle_id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
         "current_location": {
-            "lat": 22.594169891282757,
-            "lng": 88.29892939327728
+            "lat": 22.594337146436473,
+            "lng": 88.2988066958172
         },
         "parent_id": "5a2c0df8-9b15-4da9-8463-7a9403a9eaf2",
         "is_leg": true,
-        "leg_order": 1
+        "leg_order": 1,
+        "logs": [
+            {
+                "timestamp": "2026-04-24T06:16:06.870196",
+                "status": "delayed",
+                "message": "Caught in custom cyclone.",
+                "reason": "Disaster Simulation: cyclone",
+                "location": null
+            }
+        ]
     },
     {
         "id": "189b3ae8-8394-4693-8bee-51daa331f1d5",
@@ -111,7 +120,16 @@
         "current_location": null,
         "parent_id": "5a2c0df8-9b15-4da9-8463-7a9403a9eaf2",
         "is_leg": true,
-        "leg_order": 2
+        "leg_order": 2,
+        "logs": [
+            {
+                "timestamp": "2026-04-24T06:16:06.870974",
+                "status": "delayed",
+                "message": "Caught in custom cyclone.",
+                "reason": "Disaster Simulation: cyclone",
+                "location": null
+            }
+        ]
     },
     {
         "id": "fa581fe4-7af0-4419-9b1f-ad8b170821f6",

@@ -7,7 +7,6 @@ if (!localStorage.getItem('driver_id')) {
 const dId = localStorage.getItem('driver_id');
 document.getElementById('driver-name').innerText = `Hello, ${localStorage.getItem('driver_name')}`;
 
-let currentMission = null;
 let map;
 let marker;
 let watchId;
@@ -15,23 +14,22 @@ let routeCoords = [];
 let simIndex = 0;
 let hasSetInitialView = false;
 
+// Stationary Tracking Variables
+let lastMovedTimestamp = Date.now();
+let lastLocation = null;
+let stationaryAlertShown = false;
+
 function switchDriverTab(tab) {
-    if (tab === 'active') {
-        document.getElementById('active-tab').style.display = 'block';
-        document.getElementById('completed-tab').style.display = 'none';
-        document.getElementById('btn-tab-active').style.background = 'var(--primary)';
-        document.getElementById('btn-tab-active').style.color = 'white';
-        document.getElementById('btn-tab-completed').style.background = 'rgba(255,255,255,0.1)';
-        document.getElementById('btn-tab-completed').style.color = 'var(--text-muted)';
-        if (map) map.invalidateSize();
-    } else {
-        document.getElementById('active-tab').style.display = 'none';
-        document.getElementById('completed-tab').style.display = 'block';
-        document.getElementById('btn-tab-completed').style.background = 'var(--primary)';
-        document.getElementById('btn-tab-completed').style.color = 'white';
-        document.getElementById('btn-tab-active').style.background = 'rgba(255,255,255,0.1)';
-        document.getElementById('btn-tab-active').style.color = 'var(--text-muted)';
-    }
+    document.getElementById('active-tab').style.display = tab === 'active' ? 'block' : 'none';
+    document.getElementById('completed-tab').style.display = tab === 'completed' ? 'block' : 'none';
+    document.getElementById('profile-tab').style.display = tab === 'profile' ? 'block' : 'none';
+    
+    document.getElementById('btn-tab-active').style.background = tab === 'active' ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+    document.getElementById('btn-tab-completed').style.background = tab === 'completed' ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+    document.getElementById('btn-tab-profile').style.background = tab === 'profile' ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+
+    if (tab === 'profile') loadProfileData();
+    if (tab === 'active' && map) map.invalidateSize();
 }
 
 async function loadMissions(autoStartNext = false) {
@@ -87,95 +85,145 @@ async function loadMissions(autoStartNext = false) {
         
         if (activeShipments.length === 0) {
             container.innerHTML = `<div class="glass-card"><p>No active shipments currently. You're all caught up!</p></div>`;
+            document.getElementById('route-map').style.display = 'none';
+            document.getElementById('fullscreen-btn').style.display = 'none';
             return;
         }
 
-        // TSP Route Optimization (Nearest Neighbor Heuristic)
-        // Sort active shipments based on closest pickup to previous dropoff
-        let unassigned = [...activeShipments];
-        let optimizedRoute = [];
-        let currentLocation = null; // In real life, use driver's GPS. Here we just pick the first in list.
+        // Decompose into stops
+        let stops = [];
+        activeShipments.forEach(s => {
+            if (s.status === 'assigned' || s.status === 'pending') {
+                stops.push({ type: 'pickup', shipment: s, lat: s.pickup.lat, lng: s.pickup.lng, id: s.id + '_pickup' });
+                stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' });
+            } else if (s.status === 'in_transit') {
+                stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' });
+            }
+        });
         
-        if (unassigned.length > 0) {
-            currentLocation = unassigned[0].pickup;
+        // TSP Route Optimization with Capacity Constraint
+        let unvisited = [...stops];
+        let orderedStops = [];
+        let carrying = new Set();
+        activeShipments.filter(s => s.status === 'in_transit').forEach(s => carrying.add(s.id));
+        
+        let currentLocation = null;
+        if (marker) {
+             currentLocation = {lat: marker.getLatLng().lat, lng: marker.getLatLng().lng};
+        } else if (unvisited.length > 0) {
+             currentLocation = {lat: unvisited[0].lat, lng: unvisited[0].lng};
         }
-        
-        while (unassigned.length > 0) {
-            // Find closest pickup to current location
-            let closestIdx = 0;
+
+        while (unvisited.length > 0) {
+            let validStops = unvisited.filter(stop => {
+                if (stop.type === 'pickup') return true;
+                if (stop.type === 'drop') return carrying.has(stop.shipment.id);
+            });
+            
+            // If somehow no valid stops (shouldn't happen unless bad state), fallback to all
+            if (validStops.length === 0) validStops = unvisited;
+            
+            let closestIdx = -1;
             let minDistance = Infinity;
             
-            for (let i = 0; i < unassigned.length; i++) {
-                const s = unassigned[i];
-                // Simple Euclidean dist for heuristic sorting
-                const dist = Math.sqrt(Math.pow(s.pickup.lat - currentLocation.lat, 2) + Math.pow(s.pickup.lng - currentLocation.lng, 2));
+            for (let i = 0; i < validStops.length; i++) {
+                const stop = validStops[i];
+                const dist = Math.sqrt(Math.pow(stop.lat - currentLocation.lat, 2) + Math.pow(stop.lng - currentLocation.lng, 2));
                 if (dist < minDistance) {
                     minDistance = dist;
                     closestIdx = i;
                 }
             }
             
-            const nextShipment = unassigned.splice(closestIdx, 1)[0];
-            optimizedRoute.push(nextShipment);
-            currentLocation = nextShipment.drop; // Next step starts from this dropoff
+            const nextStop = validStops[closestIdx];
+            orderedStops.push(nextStop);
+            
+            if (nextStop.type === 'pickup') carrying.add(nextStop.shipment.id);
+            if (nextStop.type === 'drop') carrying.delete(nextStop.shipment.id);
+            
+            currentLocation = {lat: nextStop.lat, lng: nextStop.lng};
+            unvisited = unvisited.filter(s => s.id !== nextStop.id);
         }
         
-        // Take the first active shipment as current
-        currentMission = optimizedRoute[0];
-        
-        // Hide start button if not verified
-        let startBtnHtml = '';
-        if (me && me.verification_status === "verified") {
-            startBtnHtml = `
-                <button id="start-btn" class="btn-primary" style="margin-top:20px;" onclick="startJourney()">🚀 Start Journey</button>
-                <button id="deliver-btn" class="btn-primary" style="margin-top:10px; background:var(--success); display:none;" onclick="confirmDelivery('${currentMission.id}', '${currentMission.delivery_otp}')">✅ Confirm Delivery (OTP)</button>
-            `;
-        }
-        
-        // Render Itinerary
-        let html = `<h3>Optimized Itinerary (${optimizedRoute.length} Stops)</h3>`;
-        
-        optimizedRoute.forEach((s, idx) => {
-            const isCurrent = idx === 0;
-            const isWarehouseHandoff = s.is_leg && s.drop.address;
-            const dropTitle = isWarehouseHandoff ? `Warehouse Handoff: ${s.drop.address}` : 'Customer Delivery';
+        // Render Timeline
+        if (orderedStops.length > 0 && me && me.verification_status === "verified") {
+            let html = `<h3>Multi-Stop Roadmap (${orderedStops.length} Stops)</h3><div class="timeline">`;
             
-            const expectedTime = s.expected_delivery ? new Date(s.expected_delivery) : new Date();
-            const windowStart = new Date(expectedTime.getTime() - 60*60000).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            const windowEnd = expectedTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            
-            html += `
-                <div class="glass-card mission-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.7;'} margin-bottom:15px;">
-                    <h4 style="margin-bottom:10px;">Stop ${idx + 1}: ${isCurrent ? '(Current)' : ''} ${s.description}</h4>
-                    <p style="margin-bottom:5px;"><b>Shipment ID:</b> ${s.id.slice(0,8)}</p>
-                    <p style="margin-bottom:5px; color:var(--warning); font-weight:bold;"><b>Schedule:</b> ${windowStart} - ${windowEnd}</p>
-                    <p style="margin-bottom:5px;"><b>Type:</b> ${dropTitle}</p>
-                    <p style="margin-bottom:5px;"><b>Labels:</b> ${(s.labels || []).join(', ') || 'Standard'}</p>
-                    <div style="display:flex; justify-content:space-between; margin-top:10px;">
-                        <div>
-                            <small style="color:var(--text-muted)">Pickup</small>
-                            <p>${s.pickup.lat.toFixed(4)}, ${s.pickup.lng.toFixed(4)}</p>
-                        </div>
-                        <div>
-                            <small style="color:var(--text-muted)">Drop</small>
-                            <p>${s.drop.lat.toFixed(4)}, ${s.drop.lng.toFixed(4)}</p>
+            orderedStops.forEach((stop, idx) => {
+                const isCurrent = idx === 0;
+                const dotColor = stop.type === 'pickup' ? '#f6ad55' : '#48bb78';
+                const actionText = stop.type === 'pickup' ? '📦 Pickup' : '📍 Drop';
+                const s = stop.shipment;
+                
+                let actionBtn = '';
+                if (isCurrent) {
+                     if (stop.type === 'pickup') {
+                         actionBtn = `
+                            <input type="file" id="scan-file-${s.id}" style="display:none;" accept="image/*" onchange="scanCargo('${s.id}')">
+                            <button id="scan-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--warning); color:#000;" onclick="document.getElementById('scan-file-${s.id}').click()">📷 Scan Cargo (Required)</button>
+                            <button id="pickup-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; display:none;" onclick="confirmPickup('${s.id}')">Confirm Pickup</button>
+                            <div id="scan-result-${s.id}" style="margin-top:5px; font-size:0.8rem; font-weight:bold;"></div>
+                         `;
+                    } else {
+                         actionBtn = `<button class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--success);" onclick="confirmDelivery('${s.id}', '${s.delivery_otp}')">Confirm Delivery (OTP)</button>`;
+                    }
+                }
+                
+                html += `
+                    <div class="timeline-node">
+                        <div class="timeline-dot" style="background:${dotColor};"></div>
+                        <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.7;'}">
+                            <h4 style="margin-bottom:5px; color:${dotColor}">${actionText}</h4>
+                            <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Shipment:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
+                            <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Location:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
+                            ${actionBtn}
                         </div>
                     </div>
-                    ${isCurrent ? startBtnHtml : ''}
-                </div>
-            `;
-        });
-        
-        container.innerHTML = html;
-        
-        // Auto-start next mission if requested
-        if (autoStartNext && optimizedRoute.length > 0) {
-            setTimeout(startJourney, 1000); // start the new journey automatically
-        } else if (optimizedRoute.length === 0) {
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+            
+            // Map Setup
+            document.getElementById('route-map').style.display = 'block';
+            document.getElementById('fullscreen-btn').style.display = 'block';
+            
+            if (!map) {
+                map = L.map('route-map').setView([orderedStops[0].lat, orderedStops[0].lng], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                
+                if (navigator.geolocation) {
+                    watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
+                } else {
+                    handleError();
+                }
+            } else {
+                map.eachLayer((layer) => {
+                    if (layer instanceof L.Polyline || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+                        map.removeLayer(layer);
+                    }
+                });
+            }
+            
+            setTimeout(() => { if (map) map.invalidateSize(true); }, 300);
+            drawMultiStopRoute(orderedStops);
+            
+        } else if (me && me.verification_status !== "verified") {
+            container.innerHTML = `<div class="glass-card"><p>Awaiting vehicle verification before roadmap can be loaded.</p></div>`;
             document.getElementById('route-map').style.display = 'none';
-            document.getElementById('deliver-btn').style.display = 'none';
+            document.getElementById('fullscreen-btn').style.display = 'none';
+        } else {
+            container.innerHTML = `<div class="glass-card"><p>No valid stops to route currently.</p></div>`;
+            document.getElementById('route-map').style.display = 'none';
+            document.getElementById('fullscreen-btn').style.display = 'none';
         }
-    } catch(e) {}
+        // Fetch and show dynamic alerts/messages
+        loadAlertsAndMessages();
+        
+    } catch(e) {
+        console.error("Error in loadMissions:", e);
+        document.getElementById('mission-container').innerHTML = `<div class="glass-card"><p style="color:red">Error loading route: ${e.message}</p></div>`;
+    }
 }
 
 document.getElementById('verify-form').addEventListener('submit', async (e) => {
@@ -206,33 +254,7 @@ document.getElementById('verify-form').addEventListener('submit', async (e) => {
     }
 });
 
-async function startJourney() {
-    document.getElementById('start-btn').disabled = true;
-    document.getElementById('start-btn').innerText = 'Journey in Progress';
-    document.getElementById('deliver-btn').style.display = 'block';
-    document.getElementById('route-map').style.display = 'block';
-    document.getElementById('fullscreen-btn').style.display = 'block';
-    
-    // Init map
-    map = L.map('route-map').setView([currentMission.pickup.lat, currentMission.pickup.lng], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    
-    // Force resize since it was hidden
-    setTimeout(() => { if (map) map.invalidateSize(true); }, 300);
-    
-    // Add Drop Marker
-    L.marker([currentMission.drop.lat, currentMission.drop.lng], {title: 'Destination'}).addTo(map).bindPopup("Drop");
-
-    // Draw route with traffic
-    await drawRouteWithTraffic(currentMission.pickup, currentMission.drop);
-
-    // Start GPS Tracking Simulation
-    if (navigator.geolocation) {
-        watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
-    } else {
-        alert("Geolocation not supported.");
-    }
-}
+// Removed old startJourney as map init is now auto-triggered in loadMissions
 
 async function updateLocation(position) {
     const lat = position.coords.latitude;
@@ -248,6 +270,23 @@ async function updateLocation(position) {
         map.setView([lat, lng], 15);
         hasSetInitialView = true;
     }
+    
+    // Stationary Detection Logic
+    if (lastLocation) {
+        const dist = Math.sqrt(Math.pow(lat - lastLocation.lat, 2) + Math.pow(lng - lastLocation.lng, 2)) * 111000; // rough meters
+        if (dist > 5) {
+            lastMovedTimestamp = Date.now();
+            stationaryAlertShown = false;
+        } else {
+            const idleTime = (Date.now() - lastMovedTimestamp) / 1000;
+            // Trigger if idle for > 20s
+            if (idleTime > 20 && !stationaryAlertShown) {
+                document.getElementById('stationary-modal').style.display = 'block';
+                stationaryAlertShown = true;
+            }
+        }
+    }
+    lastLocation = {lat, lng};
     
     // Send to backend
     try {
@@ -287,55 +326,66 @@ function handleError() {
     }, 1000);
 }
 
-async function drawRouteWithTraffic(start, end) {
+async function drawMultiStopRoute(stops) {
+    if (stops.length === 0) return;
+    
+    // Re-add current driver marker if exists
+    if (marker) {
+        marker.addTo(map);
+    }
+    
+    // Draw markers
+    stops.forEach((stop, idx) => {
+        const isCurrent = idx === 0;
+        const color = stop.type === 'pickup' ? '#f6ad55' : '#48bb78';
+        const m = L.circleMarker([stop.lat, stop.lng], {color: color, radius: isCurrent ? 8 : 5, fillOpacity: 1}).addTo(map);
+        
+        let popupHtml = `<b>${stop.type === 'pickup' ? '📦 Pickup' : '📍 Drop'}</b><br>${stop.shipment.description}`;
+        if (isCurrent) {
+            if (stop.type === 'pickup') {
+                 popupHtml += `<br><button style="margin-top:5px; background:var(--primary); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmPickup('${stop.shipment.id}')">Confirm Pickup</button>`;
+            } else {
+                 popupHtml += `<br><button style="margin-top:5px; background:var(--success); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmDelivery('${stop.shipment.id}', '${stop.shipment.delivery_otp}')">Confirm Drop (OTP)</button>`;
+            }
+        }
+        m.bindPopup(popupHtml);
+        if (isCurrent) m.openPopup();
+    });
+    
+    // OSRM handles up to 100 coordinates
+    let coordsString = stops.map(s => `${s.lng},${s.lat}`).join(';');
+    if (marker) {
+        coordsString = `${marker.getLatLng().lng},${marker.getLatLng().lat};` + coordsString;
+    }
+    
     try {
-        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`);
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`);
         const data = await res.json();
         if(data.routes && data.routes[0]) {
-            routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]); // Leaflet uses Lat,Lng
+            routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
             
-            let hasTraffic = false;
-            
-            // Chunk the coordinates to simulate traffic segments
             const chunkSize = Math.ceil(routeCoords.length / 5);
             for(let i=0; i<routeCoords.length; i+=chunkSize) {
                 const chunk = routeCoords.slice(i, i+chunkSize+1);
-                // Randomly assign traffic color: 70% Green, 20% Orange, 10% Red
                 const rand = Math.random();
-                let color = '#48bb78'; // Green
-                if (rand > 0.9) {
-                    color = '#ff4b4b'; // Red
-                    hasTraffic = true;
-                }
-                else if (rand > 0.7) color = '#f6ad55'; // Orange
+                let color = '#3182ce'; 
+                if (rand > 0.9) color = '#ff4b4b'; 
+                else if (rand > 0.7) color = '#f6ad55'; 
                 
                 L.polyline(chunk, {color: color, weight: 5, opacity: 0.7}).addTo(map);
             }
-            
-            if (hasTraffic) {
-                // Extend ETA by 30 mins
-                let dt = new Date(currentMission.expected_delivery || new Date());
-                dt.setMinutes(dt.getMinutes() + 30);
-                const newExpected = dt.toISOString();
-                
-                try {
-                    await apiCall(`/shipments/${currentMission.id}`, 'PUT', {expected_delivery: newExpected});
-                    currentMission.expected_delivery = newExpected;
-                    showDynamicAlert('traffic', "Heavy Traffic Detected! Redrawing route and extending deadline by 30 mins to ensure safety.");
-                    
-                    // Refresh the left panel itinerary to show new time
-                    loadMissions(false); 
-                } catch(e) {}
-            }
-            
-            // Simulate random weather or fatigue alert after 8s
-            setTimeout(() => {
-                const r = Math.random();
-                if (r < 0.3) showDynamicAlert('weather', '⚠️ Severe weather warning: Heavy rain ahead. Proceed slowly.');
-                else if (r > 0.8) showDynamicAlert('fatigue', '⚠️ Fatigue Alert: You have been driving for over 4 hours. Please take a rest stop.');
-            }, 8000);
         }
     } catch(err) {}
+}
+
+async function confirmPickup(shipmentId) {
+    try {
+        await apiCall(`/shipments/${shipmentId}`, 'PUT', {status: 'in_transit', stage: 'Picked Up'});
+        showPopupAlert("Package Picked Up! Recalculating roadmap...");
+        loadMissions();
+    } catch(e) {
+        alert("Failed to confirm pickup.");
+    }
 }
 
 function showDynamicAlert(type, msg) {
@@ -356,21 +406,11 @@ async function confirmDelivery(shipmentId, correctOtp) {
             await apiCall(`/shipments/${shipmentId}`, 'PUT', {status: 'delivered', stage: 'Completed'});
             showPopupAlert("Delivery Successful! Loading next destination...");
             
-            // Clear current map tracking state
-            if (map) {
-                map.eachLayer((layer) => {
-                    if (layer instanceof L.Polyline || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
-                        map.removeLayer(layer);
-                    }
-                });
-            }
-            marker = null;
+            // Clear old simulated movement
             routeCoords = [];
             simIndex = 0;
-            hasSetInitialView = false;
             
-            // Load next missions and automatically start the next route
-            await loadMissions(true);
+            await loadMissions();
             
         } catch(e) {
             alert("Failed to update status.");
@@ -416,6 +456,127 @@ function toggleFullscreen() {
     }
 }
 
+async function loadAlertsAndMessages() {
+    try {
+        const dId = localStorage.getItem('driver_id');
+        const shipments = await apiCall(`/driver/${dId}/shipments`);
+        const activeShipment = shipments.find(s => s.status === 'in_transit');
+        
+        if (activeShipment) {
+            // Fetch real alerts for this shipment
+            const data = await apiCall(`/tracking/${activeShipment.id}`);
+            const banner = document.getElementById('instruction-banner');
+            const weatherAlert = data.alerts.find(a => a.type === 'weather');
+            
+            if (weatherAlert) {
+                banner.innerText = `⚠️ ${weatherAlert.description}. ${weatherAlert.suggestion}`;
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+        
+        // Fetch Messages
+        const msgs = await apiCall(`/tracking/messages/${dId}`);
+        const container = document.getElementById('driver-messages');
+        container.innerHTML = msgs.length === 0 ? '<p style="font-size:0.8rem; color:var(--text-muted)">No messages from manager.</p>' : msgs.map(m => `
+            <div style="margin-bottom:8px; padding:8px; background:${m.sender_type==='driver'?'rgba(49, 130, 206, 0.1)':'rgba(72, 187, 120, 0.1)'}; border-radius:6px; border-left:3px solid ${m.sender_type==='driver'?'var(--primary)':'var(--success)'}">
+                <div style="font-size:0.7rem; color:var(--text-muted);">${m.sender_type==='manager'?'Manager':'You'} - ${new Date(m.created_at).toLocaleTimeString()}</div>
+                <div style="font-size:0.85rem;">${m.content}</div>
+            </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+        
+    } catch(e) {}
+}
+
+async function sendMessageToManager() {
+    const content = document.getElementById('manager-msg-content').value;
+    if (!content) return;
+    
+    const dId = localStorage.getItem('driver_id');
+    const shipments = await apiCall(`/driver/${dId}/shipments`);
+    const activeShipment = shipments.find(s => s.status === 'in_transit' || s.status === 'assigned');
+    
+    try {
+        await apiCall('/tracking/messages', 'POST', {
+            shipment_id: activeShipment ? activeShipment.id : null,
+            sender_id: dId,
+            receiver_id: 'manager', // In a multi-company app this would be specific
+            content: content,
+            sender_type: 'driver'
+        });
+        document.getElementById('manager-msg-content').value = '';
+        loadAlertsAndMessages();
+    } catch(e) {
+        alert("Failed to send message.");
+    }
+}
+
+// Polling for updates
+setInterval(loadAlertsAndMessages, 5000);
+
+async function loadProfileData() {
+    const dId = localStorage.getItem('driver_id');
+    const data = await apiCall(`/manager/drivers/${dId}/profile`);
+    const p = data.profile;
+    
+    document.getElementById('p-name').innerText = p.name || "Driver";
+    document.getElementById('p-login').innerText = `@${p.login_id || 'user'}`;
+    document.getElementById('p-trips').innerText = p.total_trips || 0;
+    document.getElementById('p-safety').innerText = `${(p.safety_index || 100).toFixed(1)}%`;
+    document.getElementById('p-punct').innerText = `${(p.punctuality_rate || 100).toFixed(1)}%`;
+    
+    const avgRating = (p.customer_ratings && p.customer_ratings.length > 0) ? (p.customer_ratings.reduce((a,b)=>a+b,0)/p.customer_ratings.length).toFixed(1) : "5.0";
+    document.getElementById('p-rating').innerText = `${avgRating} ⭐`;
+    document.getElementById('p-wallet').innerText = `${p.reward_points || 0}`;
+    
+    const fBar = document.getElementById('p-fatigue-bar');
+    fBar.style.width = `${p.fatigue_score}%`;
+    fBar.style.background = p.fatigue_score > 80 ? 'var(--danger)' : p.fatigue_score > 50 ? 'var(--warning)' : 'var(--primary)';
+    
+    if (p.profile_pic) {
+        document.getElementById('profile-img').src = p.profile_pic;
+    } else {
+        document.getElementById('profile-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+    }
+}
+
+async function uploadProfilePic() {
+    const file = document.getElementById('profile-upload').files[0];
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const dId = localStorage.getItem('driver_id');
+        // Re-use vehicle verification endpoint for image upload or create new
+        // For demo, we'll just convert to base64 and update driver profile
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64 = e.target.result;
+            await apiCall(`/manager/drivers/${dId}`, 'PUT', { profile_pic: base64 });
+            loadProfileData();
+        };
+        reader.readAsDataURL(file);
+    } catch(e) {
+        alert("Upload failed");
+    }
+}
+
+async function startRest() {
+    const dId = localStorage.getItem('driver_id');
+    if (confirm("Starting a 12-hour rest period will reset your fatigue level once completed. Ready to clock out?")) {
+        await apiCall(`/manager/drivers/${dId}`, 'PUT', { 
+            last_rest_start: new Date().toISOString(),
+            status: 'available' 
+        });
+        alert("Rest period started. Fatigue will recover over time.");
+        loadProfileData();
+    }
+}
+
 function logout() {
     if (watchId) navigator.geolocation.clearWatch(watchId);
     localStorage.clear();
@@ -423,3 +584,65 @@ function logout() {
 }
 
 window.onload = loadMissions;
+
+async function scanCargo(shipmentId) {
+    const fileInput = document.getElementById(`scan-file-${shipmentId}`);
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const resDiv = document.getElementById(`scan-result-${shipmentId}`);
+    const scanBtn = document.getElementById(`scan-btn-${shipmentId}`);
+    const pickupBtn = document.getElementById(`pickup-btn-${shipmentId}`);
+    
+    resDiv.innerText = "Analyzing cargo image...";
+    resDiv.style.color = "var(--text-muted)";
+    scanBtn.style.display = "none";
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch(`${API_BASE}/driver/${currentDriverId}/scan-cargo/${shipmentId}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        
+        if (data.status === 'pass') {
+            resDiv.innerText = "✅ Quality Verified. Safe to pickup.";
+            resDiv.style.color = "var(--success)";
+            pickupBtn.style.display = "inline-block";
+        } else {
+            resDiv.innerText = "❌ Damage Detected: " + data.message;
+            resDiv.style.color = "var(--danger)";
+            // Do not show pickup button, force reload to see 'disputed' state
+            setTimeout(loadMissions, 2000);
+        }
+    } catch(err) {
+        resDiv.innerText = "Error scanning image.";
+        resDiv.style.color = "var(--danger)";
+        scanBtn.style.display = "inline-block";
+    }
+}
+
+function openIncidentModal() {
+    document.getElementById('incident-modal').style.display = 'block';
+}
+
+async function submitIncident(type, fromStationary = false) {
+    if (fromStationary) document.getElementById('stationary-modal').style.display = 'none';
+    else document.getElementById('incident-modal').style.display = 'none';
+    
+    try {
+        await apiCall(`/driver/${dId}/incident`, 'POST', {
+            type: type,
+            description: `Driver reported a ${type} issue.`
+        });
+        alert(`🚨 Incident reported: ${type.toUpperCase()}. Manager has been notified.`);
+        
+        // Force refresh missions to show UI updates if vehicle is locked out
+        loadMissions();
+    } catch(err) {
+        alert("Failed to report incident.");
+    }
+}

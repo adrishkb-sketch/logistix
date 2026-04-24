@@ -5,30 +5,49 @@ from backend.models import Alert
 alerts_db = JSONDatabase("alerts")
 shipments_db = JSONDatabase("shipments")
 
-def generate_mock_alerts():
-    active_shipments = [s for s in shipments_db.get_all() if s.get("status") == "in_transit"]
-    if not active_shipments:
-        return
-        
-    # 30% chance to generate an alert for a random active shipment
-    if random.random() < 0.3:
-        shipment = random.choice(active_shipments)
-        
-        alert_types = [
-            {"type": "traffic", "desc": "Heavy traffic detected ahead", "sev": "medium", "sugg": "Dynamic Reroute generated. Switch to Alternate Path B"},
-            {"type": "weather", "desc": "Severe weather warning (Heavy Rain/Flooding)", "sev": "high", "sugg": "Delay route by 30 mins to avoid storm cell"},
-            {"type": "fatigue", "desc": "Driver continuous driving without breaks", "sev": "critical", "sugg": "Force mandatory 15m rest stop"},
-            {"type": "breakdown", "desc": "Vehicle telemetry indicates engine stress", "sev": "high", "sugg": "Dispatch backup vehicle immediately"}
+alerts_db = JSONDatabase("alerts")
+shipments_db = JSONDatabase("shipments")
+
+def check_weather_alerts(shipment: dict, lat: float, lng: float):
+    """
+    Checks if a vehicle's current location intersects with simulated weather cells.
+    """
+    from backend.services.route_engine import haversine
+    
+    weather_db = JSONDatabase("weather_cells")
+    cells = weather_db.get_all()
+    if not cells:
+        cells = [
+            {"lat": 28.6, "lng": 77.2, "radius": 50, "condition": "Storm", "severity": "critical"},
+            {"lat": 19.1, "lng": 72.9, "radius": 80, "condition": "Rain", "severity": "high"},
+            {"lat": 13.0, "lng": 80.2, "radius": 60, "condition": "Rain", "severity": "medium"}
         ]
         
-        chosen = random.choice(alert_types)
-        new_alert = Alert(
-            type=chosen["type"],
-            description=chosen["desc"],
-            severity=chosen["sev"],
-            suggestion=chosen["sugg"],
-            shipment_id=shipment["id"],
-            driver_id=shipment.get("assigned_driver_id")
-        )
-        
-        alerts_db.insert(new_alert.model_dump())
+    for cell in cells:
+        intersects = False
+        if cell.get("shapeType") == "polyline":
+            # Check proximity to any point in the polyline
+            for pt in cell.get("coordinates", []):
+                if haversine(lat, lng, pt["lat"], pt["lng"]) <= 5: # 5km proximity
+                    intersects = True
+                    break
+        else:
+            # Default to circle
+            dist = haversine(lat, lng, cell.get("lat", 0), cell.get("lng", 0))
+            if dist <= cell.get("radius", 50):
+                intersects = True
+                
+        if intersects and not cell.get("is_simulation"):
+            # Intersection! Check if alert already exists
+            existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "weather" and a.get("status") == "active"]
+            if not existing:
+                cond = cell.get('condition') or cell.get('type') or 'Weather Anomaly'
+                new_alert = Alert(
+                    type="weather",
+                    description=f"Vehicle entered {cond} zone at {lat}, {lng}",
+                    severity=cell.get("severity", "medium"),
+                    suggestion=f"Heavy {cond} detected. Suggest slowing down or holding position for 30m.",
+                    shipment_id=shipment["id"],
+                    driver_id=shipment.get("assigned_driver_id")
+                )
+                alerts_db.insert(new_alert.model_dump())

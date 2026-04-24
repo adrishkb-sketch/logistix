@@ -10,8 +10,11 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     # 2. Check current load of vehicle (for multi-shipment)
     # 3. Apply constraints: short legs (<30km) -> prefer bike/van. Long legs (>50km) -> prefer truck.
     
-    from backend.services.route_engine import haversine
+    from backend.services.route_engine import haversine, predict_weather_impact
     dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+    
+    # Predict weather for the route (pickup point)
+    weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
     
     drivers = drivers_db.get_all()
     vehicles = vehicles_db.get_all()
@@ -61,8 +64,15 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     v_type_short = vehicle.get("type", "")
                     if dist > 50 and v_type_short in ["bike", "scooty", "3 wheeled (battery)", "3 wheeled (non EV)"]:
                         continue # Skip short range vehicles for long distance routes
-                        
+                    
+                    # WEATHER BLOCK: Safety constraint
+                    if weather["condition"] in ["Storm", "Rain"] and v_type_short in ["bike", "scooty"]:
+                        if d.get("safety_rating", 5) < 4: continue # Unsafe bikes in rain
+                    
                     score_modifier = 0
+                    if weather["condition"] in ["Storm", "Rain"]:
+                        if v_type_short in ["truck", "large van"]: score_modifier += 20
+                        if v_type_short in ["bike", "scooty"]: score_modifier -= 30
                     if dist < 30 and v_type_short in ["bike", "scooty"]: score_modifier += 10
                     if dist > 50 and v_type_short == "truck": score_modifier += 10
                     
