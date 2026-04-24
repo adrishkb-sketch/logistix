@@ -19,7 +19,9 @@ def create_shipment(shipment_data: ShipmentCreate):
     
     # Calculate ETA based on avg speed 40km/h
     eta_hours = dist / 40.0
-    expected_delivery = (datetime.utcnow() + timedelta(hours=eta_hours)).isoformat()
+    now = datetime.utcnow()
+    expected_delivery = (now + timedelta(hours=eta_hours)).isoformat()
+    pickup_deadline = (now + timedelta(hours=1)).isoformat() # Deadline to pick up is 1 hour from now
     
     # Generate random 4-digit OTP for delivery security
     otp = str(random.randint(1000, 9999))
@@ -35,6 +37,7 @@ def create_shipment(shipment_data: ShipmentCreate):
         **shipment_data.model_dump(),
         route_type="direct",
         expected_delivery=expected_delivery,
+        pickup_deadline=pickup_deadline,
         delivery_otp=otp,
         logs=[initial_log]
     )

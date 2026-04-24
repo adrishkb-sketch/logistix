@@ -79,3 +79,42 @@ def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigu
             "health_impact": round((h_mult - 1) * 100)
         }
     }
+
+def check_shipment_performance(shipment: dict, driver: dict = None, vehicle: dict = None) -> dict:
+    from datetime import datetime, timezone, timedelta
+    
+    now = datetime.now(timezone.utc)
+    try:
+        expected = datetime.fromisoformat(shipment["expected_delivery"].replace('Z', '+00:00'))
+        if expected.tzinfo is None:
+            expected = expected.replace(tzinfo=timezone.utc)
+    except Exception:
+        return {"status": "on_time", "diff_mins": 0}
+    
+    curr_loc = shipment.get("current_location") or shipment.get("pickup")
+    dest = shipment["drop"]
+    
+    dist = haversine(curr_loc["lat"], curr_loc["lng"], dest["lat"], dest["lng"])
+    
+    # Get impact factors
+    weather = predict_weather_impact(curr_loc["lat"], curr_loc["lng"])
+    v_type = vehicle["type"] if vehicle else "van"
+    fatigue = driver.get("fatigue_score", 0) if driver else 0
+    health = vehicle.get("vehicle_health_score", 100) if vehicle else 100
+    
+    eta_info = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
+    
+    predicted_arrival = now + timedelta(minutes=eta_info["adjusted_mins"])
+    diff = (predicted_arrival - expected).total_seconds() / 60.0
+    
+    status = "on_time"
+    if diff > 10: status = "delayed"
+    elif diff < -10: status = "early"
+    
+    return {
+        "status": status,
+        "diff_mins": round(diff),
+        "predicted_arrival": predicted_arrival.isoformat(),
+        "weather": weather["condition"],
+        "dist_remaining_km": round(dist, 1)
+    }

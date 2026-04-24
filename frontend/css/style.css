@@ -377,22 +377,25 @@ th {
 }
 
 /* Shipment Status Row Coloring */
-.status-delayed {
-    background: rgba(229, 62, 62, 0.15) !important;
+.status-delayed td {
+    background: rgba(229, 62, 62, 0.12) !important;
+    border-left: 4px solid #e53e3e;
 }
-.status-delayed:hover {
-    background: rgba(229, 62, 62, 0.25) !important;
-}
-
-.status-early {
-    background: rgba(72, 187, 120, 0.15) !important;
-}
-.status-early:hover {
-    background: rgba(72, 187, 120, 0.25) !important;
+.status-delayed:hover td {
+    background: rgba(229, 62, 62, 0.18) !important;
 }
 
-.status-ontime {
-    background: rgba(66, 153, 225, 0.1) !important;
+.status-early td {
+    background: rgba(72, 187, 120, 0.12) !important;
+    border-left: 4px solid #48bb78;
+}
+.status-early:hover td {
+    background: rgba(72, 187, 120, 0.18) !important;
+}
+
+.status-ontime td {
+    background: rgba(66, 153, 225, 0.08) !important;
+    border-left: 4px solid #4299e1;
 }
 
 /* Status Cell Tooltip (Hover Card) */

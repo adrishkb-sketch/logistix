@@ -253,20 +253,13 @@ function applyShipmentFilters() {
 }
 
 function renderShipmentsTable(parents, legs, drivers, vehicles) {
-        const tbody = document.getElementById('shipments-table-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        
-        parents.forEach(s => {
-            const etaFormatted = s.expected_delivery ? new Date(s.expected_delivery).toLocaleString() : 'N/A';
-            let tr = document.createElement('tr');
-            
-            // Check weather impact for specific shipments
-            let weatherIndicator = '';
-            if (s.status === 'in_transit') {
-                weatherIndicator = '<span style="font-size:0.7rem; color:var(--accent); display:block;">Checking AI ETA...</span>';
-            }
-
+    const tbody = document.getElementById('shipments-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    parents.forEach(s => {
+        try {
+            const tr = document.createElement('tr');
             const d = drivers.find(drv => drv.id === s.assigned_driver_id);
             const v = vehicles.find(vh => vh.id === s.assigned_vehicle_id);
             
@@ -293,7 +286,7 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                             Trips: ${d.total_trips || 0} | Score: ${d.driving_score || 100}%
                         </div>
                         <div style="margin-top:8px;">
-                            <small>Fatigue: ${d.fatigue_score.toFixed(0)}%</small>
+                            <small>Fatigue: ${(d.fatigue_score || 0).toFixed(0)}%</small>
                             <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px;">
                                 <div style="width:${d.fatigue_score}%; height:100%; background:${d.fatigue_score > 80 ? 'var(--danger)' : 'var(--warning)'};"></div>
                             </div>
@@ -312,132 +305,112 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem;" onclick="autoAssign('${s.id}')">Auto Assign</button>
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--secondary);" onclick="openManualAssign('${s.id}')">👨‍✈️ Manual</button>
                     </div>
-                    <div style="display:flex; gap:5px;">
-                        <button style="background:rgba(255,255,255,0.1); border:1px solid #fff; color:#fff; border-radius:4px; cursor:pointer; font-size:0.75rem; padding:2px 5px;" onclick="autoSplit('${s.id}')">🤖 AI Split</button>
-                        <button style="background:rgba(255,255,255,0.1); border:1px solid #fff; color:#fff; border-radius:4px; cursor:pointer; font-size:0.75rem; padding:2px 5px;" onclick="openManualSplit('${s.id}')">🛠️ Manual Split</button>
-                    </div>
                 `;
             } else {
                 actionHtml = `<div style="display:flex; align-items:center; gap:5px; font-size:0.8rem;"><span style="color:var(--success)">Assigned:</span> ${driverHtml}</div><small>${s.stage}</small>`;
             }
-            
 
-            // Check logs for delay or early status
+            // Performance Tracking Logic
             let rowClass = '';
             let statusTooltip = 'On Schedule';
+            let performanceMsg = '';
             
-            if (s.logs && s.logs.length > 0) {
-                const delayedLog = s.logs.find(l => l.status === 'delayed');
-                const earlyLog = s.logs.find(l => l.status === 'early');
-                
-                if (delayedLog) {
+            if (s.performance_stats) {
+                const ps = s.performance_stats;
+                if (ps.status === 'delayed') {
                     rowClass = 'status-delayed';
-                    statusTooltip = `🔴 Delayed: ${delayedLog.message || delayedLog.reason}`;
-                } else if (earlyLog) {
+                    performanceMsg = `<br><span style="color:var(--danger); font-weight:bold; font-size:0.75rem;">⚠️ Delay: ${ps.diff_mins}m</span>`;
+                    statusTooltip = `🔴 Delayed by ${ps.diff_mins} mins. Remaining: ${ps.dist_remaining_km}km. Weather: ${ps.weather}`;
+                } else if (ps.status === 'early') {
                     rowClass = 'status-early';
-                    statusTooltip = `🟢 Early: ${earlyLog.message || earlyLog.reason}`;
-                } else if (s.status === 'delivered' || s.status === 'in_transit' || s.status === 'assigned') {
+                    performanceMsg = `<br><span style="color:var(--success); font-weight:bold; font-size:0.75rem;">⚡ Early: ${Math.abs(ps.diff_mins)}m</span>`;
+                    statusTooltip = `🟢 Tracking early by ${Math.abs(ps.diff_mins)} mins. Remaining: ${ps.dist_remaining_km}km. Weather: ${ps.weather}`;
+                } else {
                     rowClass = 'status-ontime';
-                    statusTooltip = `🔵 On Schedule`;
+                    performanceMsg = `<br><span style="color:var(--accent); font-size:0.75rem;">✅ On Track</span>`;
+                    statusTooltip = `🔵 On Schedule. Remaining: ${ps.dist_remaining_km}km. Weather: ${ps.weather}`;
+                }
+            } else {
+                const now = new Date();
+                const deadline = new Date(s.status === 'pending' || s.status === 'assigned' ? s.pickup_deadline : s.expected_delivery);
+                const diffMins = Math.round((now - deadline) / (1000 * 60));
+                if (diffMins > 0 && s.status !== 'delivered') {
+                    rowClass = 'status-delayed';
+                    performanceMsg = `<br><span style="color:var(--danger); font-weight:bold; font-size:0.75rem;">⏰ Overdue: ${diffMins}m</span>`;
+                    statusTooltip = `🔴 Shipment is ${diffMins}m past its deadline.`;
                 }
             }
+
+            // Leg Information Summary
+            const isLeg = s.is_leg;
+            const legInfoTag = isLeg ? `<span style="color:var(--accent); font-weight:bold;">[Leg ${s.leg_order}]</span> ` : '';
             
+            let legSummary = '';
+            if (s.route_type === 'multi-leg' && !isLeg) {
+                const sLegs = legs.filter(l => l.parent_id === s.id).sort((a,b) => a.leg_order - b.leg_order);
+                if (sLegs.length > 0) {
+                    legSummary = `<div style="margin-top:8px; display:flex; gap:3px;">`;
+                    sLegs.forEach(l => {
+                        let dotColor = '#a0aec0';
+                        if (l.status === 'delivered') dotColor = 'var(--success)';
+                        else if (l.status === 'in_transit') dotColor = (l.performance_stats && l.performance_stats.status === 'delayed') ? 'var(--danger)' : 'var(--primary)';
+                        else if (l.status === 'assigned') dotColor = 'var(--warning)';
+                        legSummary += `<div title="Leg ${l.leg_order}: ${l.status}" style="width:12px; height:12px; border-radius:50%; background:${dotColor}; border:1px solid rgba(255,255,255,0.2);"></div>`;
+                    });
+                    legSummary += `</div>`;
+                    const delayedLeg = sLegs.find(l => l.performance_stats && l.performance_stats.status === 'delayed');
+                    if (delayedLeg) performanceMsg = `<br><span style="color:var(--danger); font-size:0.7rem;">⚠️ Delay in Leg ${delayedLeg.leg_order}</span>`;
+                }
+            }
+
             tr.className = rowClass;
+            const etaFormatted = s.expected_delivery ? new Date(s.expected_delivery).toLocaleString() : 'N/A';
 
             tr.innerHTML = `
-                <td><strong>${s.description}</strong><br><small>ID: ${s.id.substring(0,8)}</small></td>
+                <td><strong>${legInfoTag}${s.description}</strong><br><small>ID: ${s.id.substring(0,8)} ${isLeg && s.parent_id ? `(Part of ${s.parent_id.substring(0,6)})` : ''}</small>${legSummary}</td>
                 <td class="table-status-cell">
                     <span class="badge" style="background: ${s.status==='delivered'?'var(--success)':'rgba(255,255,255,0.1)'}">${s.status}</span>
                     <div class="table-hover-card">
                         <strong>Status Detail</strong><br>
-                        <span style="font-size:0.85rem; color:var(--text-muted);">${statusTooltip}</span><br>
-                        <hr style="border-color:rgba(255,255,255,0.1); margin:8px 0;">
-                        <strong>Driver Info</strong><br>
-                        <span style="font-size:0.85rem; color:var(--text-muted);">${driverName} ${vehiclePlate ? `[${vehiclePlate}]` : ''}</span>
+                        <span style="font-size:0.85rem; color:var(--text-muted);">${statusTooltip}</span>
                     </div>
                 </td>
                 <td>
                     <div style="font-size:0.85rem;">${s.route_type || 'direct'}</div>
-                    <div id="eta-${s.id}" style="font-size:0.75rem; color:var(--text-muted); margin-top:5px;">Sch: ${etaFormatted}</div>
-                    ${weatherIndicator}
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:5px;">Sch: ${etaFormatted}${performanceMsg}</div>
                 </td>
                 <td>
                     ${actionHtml}
                     <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openTrackModal('${s.id}')" title="Live Track">📍</button>
                     <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px;" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" title="Message Driver">💬</button>
-                    <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:5px;" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')" title="Edit">✏️</button>
                     <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:5px;" onclick="openLogsModal('${s.id}')" title="View Logs">📜</button>
                 </td>
             `;
             tbody.appendChild(tr);
 
-            // Fetch dynamic ETA if in transit
-            if (s.status === 'in_transit') {
-                updateDynamicEta(s.id);
-            }
-            
-            // Render child legs if split
-            if (s.status === 'split') {
+            // If split, also render child legs indented below
+            if (s.status === 'split' && !isLeg) {
                 const childLegs = legs.filter(l => l.parent_id === s.id).sort((a,b) => a.leg_order - b.leg_order);
                 childLegs.forEach(leg => {
-                    const legEta = leg.expected_delivery ? new Date(leg.expected_delivery).toLocaleString() : 'N/A';
-                    let legTr = document.createElement('tr');
+                    const legTr = document.createElement('tr');
                     legTr.style.background = 'rgba(255,255,255,0.02)';
+                    const legEta = leg.expected_delivery ? new Date(leg.expected_delivery).toLocaleString() : 'N/A';
                     
-                    const legD = drivers.find(drv => drv.id === leg.assigned_driver_id);
-                    const legV = vehicles.find(vh => vh.id === leg.assigned_vehicle_id);
-                    let legFatigueClass = 'low-fatigue';
-                    if (legD && legD.fatigue_score > 80) legFatigueClass = 'high-fatigue';
-                    else if (legD && legD.fatigue_score > 50) legFatigueClass = 'mid-fatigue';
-
-                    const legDriverHtml = legD ? `
-                        <div class="driver-name-hover" style="position:relative; cursor:pointer; color:var(--primary); font-size:0.8rem;" onclick="viewFullProfile('driver', '${legD.id}')">
-                            ${legD.name} [${legV ? legV.number_plate : ''}]
-                            <div class="hover-card ${legFatigueClass}">
-                                <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
-                                    <img src="${legD.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${legD.name}`}" style="width:40px; height:40px; border-radius:50%;">
-                                    <div>
-                                        <div style="font-size:0.9rem; color:white;">${legD.name}</div>
-                                        <div style="font-size:0.7rem; color:var(--text-muted);">Fatigue: ${(legD.fatigue_score || 0).toFixed(0)}%</div>
-                                        <div style="font-size:0.7rem; color:var(--warning);">Rating: ${((legD.customer_ratings && legD.customer_ratings.length) ? (legD.customer_ratings.reduce((a,b)=>a+b,0)/legD.customer_ratings.length).toFixed(1) : 5.0)}⭐</div>
-                                    </div>
-                                </div>
-                                <div style="font-size:0.7rem; color:var(--accent);">Click for full profile →</div>
-                            </div>
-                        </div>
-                    ` : 'Unassigned';
-
-                    let legActionHtml = '';
-                    if (leg.status === 'pending') {
-                        legActionHtml = `
-                            <div style="display:flex; gap:5px;">
-                                <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem" onclick="autoAssign('${leg.id}')">Auto Assign</button>
-                                <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; background:var(--secondary);" onclick="openManualAssign('${leg.id}')">👨‍✈️ Manual</button>
-                            </div>
-                        `;
-                    } else {
-                        legActionHtml = `<div style="display:flex; align-items:center; gap:5px; font-size:0.8rem;"><span style="color:var(--success)">Assigned:</span> ${legDriverHtml}</div><small>${leg.stage}</small>`;
-                    }
-
-
                     legTr.innerHTML = `
-                        <td style="padding-left:30px;">↳ ${leg.description} <br><small>Drop: ${leg.drop.address || 'Location'}</small></td>
+                        <td style="padding-left:30px;">↳ Leg ${leg.leg_order}: ${leg.description}</td>
                         <td><span class="badge" style="background: rgba(255,255,255,0.1); font-size:0.7rem;">${leg.status}</span></td>
+                        <td><div style="font-size:0.7rem; color:var(--text-muted);">Sch: ${legEta}</div></td>
                         <td>
-                            <div style="font-size:0.85rem;">leg</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">Sch: ${legEta}</div>
-                        </td>
-                        <td>
-                            ${legActionHtml}
-                            <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:10px;" onclick="openTrackModal('${leg.id}')" title="Live Track">📍</button>
-                            <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px;" onclick="openMessageModal('${leg.id}', '${leg.assigned_driver_id}')" title="Message Driver">💬</button>
-                            <button style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left:5px;" onclick="openLogsModal('${leg.id}')" title="View Logs">📜</button>
+                            <button style="background:none; border:none; cursor:pointer; font-size:1rem;" onclick="openTrackModal('${leg.id}')">📍</button>
                         </td>
                     `;
                     tbody.appendChild(legTr);
                 });
             }
-        });
+        } catch (err) {
+            console.error("Error rendering shipment row:", err, s);
+        }
+    });
 }
 
 async function optimizeFleet() {

@@ -175,7 +175,21 @@ async function loadMissions(autoStartNext = false) {
                         <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.7;'}">
                             <h4 style="margin-bottom:5px; color:${dotColor}">${actionText}</h4>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Shipment:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
+                            <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ Deadline:</b> ${new Date(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery).toLocaleString()}</p>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Location:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
+                            ${s.performance_stats ? `
+                                <div style="margin:8px 0; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                                        <span style="font-size:0.75rem; color:var(--text-muted);">Journey Status:</span>
+                                        <span class="badge" style="background:${s.performance_stats.status === 'delayed' ? 'var(--danger)' : (s.performance_stats.status === 'early' ? 'var(--success)' : 'var(--primary)')}; font-size:0.7rem;">
+                                            ${s.performance_stats.status.toUpperCase()} (${s.performance_stats.diff_mins}m)
+                                        </span>
+                                    </div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+                                         ${s.performance_stats.dist_remaining_km}km left | Weather: ${s.performance_stats.weather}
+                                    </div>
+                                </div>
+                            ` : ''}
                             ${actionBtn}
                         </div>
                     </div>
@@ -567,12 +581,9 @@ async function uploadProfilePic() {
 
 async function startRest() {
     const dId = localStorage.getItem('driver_id');
-    if (confirm("Starting a 12-hour rest period will reset your fatigue level once completed. Ready to clock out?")) {
-        await apiCall(`/manager/drivers/${dId}`, 'PUT', { 
-            last_rest_start: new Date().toISOString(),
-            status: 'available' 
-        });
-        alert("Rest period started. Fatigue will recover over time.");
+    if (confirm("Starting a rest period will reduce your fatigue level. Ready to clock out for a break?")) {
+        await submitIncident('resting');
+        alert("Rest period logged. Your fatigue level has been reduced.");
         loadProfileData();
     }
 }
@@ -587,6 +598,7 @@ window.onload = loadMissions;
 
 async function scanCargo(shipmentId) {
     const fileInput = document.getElementById(`scan-file-${shipmentId}`);
+    if (!fileInput) return;
     const file = fileInput.files[0];
     if (!file) return;
 
@@ -602,7 +614,7 @@ async function scanCargo(shipmentId) {
     formData.append('file', file);
     
     try {
-        const response = await fetch(`${API_BASE}/driver/${currentDriverId}/scan-cargo/${shipmentId}`, {
+        const response = await fetch(`${API_BASE}/driver/${localStorage.getItem('driver_id')}/scan-cargo/${shipmentId}`, {
             method: 'POST',
             body: formData
         });
@@ -615,7 +627,6 @@ async function scanCargo(shipmentId) {
         } else {
             resDiv.innerText = "❌ Damage Detected: " + data.message;
             resDiv.style.color = "var(--danger)";
-            // Do not show pickup button, force reload to see 'disputed' state
             setTimeout(loadMissions, 2000);
         }
     } catch(err) {
@@ -633,15 +644,30 @@ async function submitIncident(type, fromStationary = false) {
     if (fromStationary) document.getElementById('stationary-modal').style.display = 'none';
     else document.getElementById('incident-modal').style.display = 'none';
     
+    // Get current location if available
+    let lat = null;
+    let lng = null;
+    if (navigator.geolocation) {
+        const pos = await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(resolve, () => resolve(null));
+        });
+        if (pos) {
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+        }
+    }
+
     try {
+        const dId = localStorage.getItem('driver_id');
         await apiCall(`/driver/${dId}/incident`, 'POST', {
             type: type,
-            description: `Driver reported a ${type} issue.`
+            description: `Driver reported a ${type} issue.`,
+            lat: lat,
+            lng: lng
         });
         alert(`🚨 Incident reported: ${type.toUpperCase()}. Manager has been notified.`);
-        
-        // Force refresh missions to show UI updates if vehicle is locked out
         loadMissions();
+        loadProfileData();
     } catch(err) {
         alert("Failed to report incident.");
     }

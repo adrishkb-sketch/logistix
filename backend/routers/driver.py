@@ -20,14 +20,43 @@ def update_driver_location(driver_id: str, location: Dict[str, Any]):
     # In a real app we might update driver's current location.
     # Here we update the shipment's current location if they are carrying one.
     from backend.services.alert_engine import check_weather_alerts
+    from backend.services.route_engine import check_shipment_performance
+    
     all_shipments = shipments_db.get_all()
     for s in all_shipments:
         if s.get("assigned_driver_id") == driver_id and s.get("status") in ["in_transit", "assigned"]:
-            shipments_db.update(s["id"], {"current_location": location, "status": "in_transit"})
+            # Recalculate Performance
+            driver = drivers_db.get_by_id(driver_id)
+            vehicles_db = JSONDatabase("vehicles")
+            vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"]) if driver.get("assigned_vehicle_id") else None
+            
+            perf = check_shipment_performance(s, driver, vehicle)
+            
+            # Check for status change to log it
+            prev_perf = s.get("performance_stats", {})
+            if perf["status"] != prev_perf.get("status"):
+                from backend.models import ShipmentEvent
+                status_emoji = "🔴" if perf["status"] == "delayed" else ("🟢" if perf["status"] == "early" else "🔵")
+                log_msg = f"{status_emoji} Performance changed to {perf['status'].upper()}. Predicted Delay: {perf['diff_mins']}m."
+                log = ShipmentEvent(
+                    status=perf["status"],
+                    message=log_msg,
+                    reason=f"AI recalculated ETA based on GPS at {location['lat']}, {location['lng']}. Weather: {perf['weather']}",
+                    location=location
+                )
+                s["logs"] = s.get("logs", []) + [log.model_dump()]
+
+            shipments_db.update(s["id"], {
+                "current_location": location, 
+                "status": "in_transit",
+                "performance_stats": perf,
+                "logs": s["logs"]
+            })
+            
             # Real-time weather alerting
             check_weather_alerts(s, location["lat"], location["lng"])
-            return {"message": "Location updated for shipment", "shipment_id": s["id"]}
-    return {"message": "Location updated", "driver_id": driver_id}
+            return {"message": "Location updated", "performance": perf}
+    return {"message": "Location updated"}
 
 @router.post("/{driver_id}/verify")
 async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
@@ -103,29 +132,59 @@ def report_incident(driver_id: str, data: dict):
         
     incident_type = data.get("type", "unknown")
     desc = data.get("description", "")
+    lat = data.get("lat")
+    lng = data.get("lng")
+    
+    from backend.models import ShipmentEvent, Alert
+    from backend.database import JSONDatabase
+    from backend.services.route_engine import haversine
+    alerts_db = JSONDatabase("alerts")
+    vehicles_db = JSONDatabase("vehicles")
     
     # Update driver stats
     if incident_type == "challan":
         driver["challan_count"] = driver.get("challan_count", 0) + 1
         drivers_db.update(driver_id, driver)
+    elif incident_type == "resting":
+        # Resting reduces fatigue
+        new_fatigue = max(0, driver.get("fatigue_score", 0) - 40)
+        drivers_db.update(driver_id, {"fatigue_score": new_fatigue, "last_rest_start": datetime.utcnow().isoformat()})
         
     # Find active shipment
     all_shipments = shipments_db.get_all()
     active = next((s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
     
-    from backend.models import ShipmentEvent, Alert
-    from backend.database import JSONDatabase
-    alerts_db = JSONDatabase("alerts")
-    vehicles_db = JSONDatabase("vehicles")
-    
     if active:
-        # Append log to shipment
-        log = ShipmentEvent(status="delayed", message=f"Driver reported: {incident_type.upper()}.", reason=desc)
+        # Append log to shipment with location info
+        loc_obj = {"lat": lat, "lng": lng} if lat and lng else None
+        log = ShipmentEvent(
+            status="delayed" if incident_type in ["breakdown", "challan"] else active["status"], 
+            message=f"ISSUE: {incident_type.upper()} at {lat or 'unknown'}, {lng or 'unknown'}.", 
+            reason=desc,
+            location=loc_obj
+        )
         active["logs"] = active.get("logs", []) + [log.model_dump()]
         
         if incident_type == "breakdown":
             active["status"] = "delayed"
             active["stage"] = "Vehicle Breakdown"
+            
+            # Find nearby available vehicles for recovery
+            all_v = vehicles_db.get_all()
+            nearby_v = []
+            if lat and lng:
+                # Mock location for vehicles if they don't have it (usually they are at warehouses)
+                warehouses_db = JSONDatabase("warehouses")
+                all_w = warehouses_db.get_all()
+                for v in all_v:
+                    if v.get("status") == "available":
+                        w = next((wh for wh in all_w if wh["id"] == v.get("base_warehouse_id")), None)
+                        if w:
+                            d = haversine(lat, lng, w["lat"], w["lng"])
+                            if d < 50: # within 50km
+                                nearby_v.append(f"{v['type']} [{v['number_plate']}] - {round(d, 1)}km away")
+            
+            v_suggestion = f"Rescue needed. Nearby available: {', '.join(nearby_v[:3]) if nearby_v else 'None found'}"
             
             # Update vehicle status
             v_id = driver.get("assigned_vehicle_id")
@@ -135,9 +194,9 @@ def report_incident(driver_id: str, data: dict):
             # Create Critical Alert for Manager
             new_alert = Alert(
                 type="breakdown",
-                description=f"CRITICAL: Vehicle breakdown reported by {driver['name']}.",
+                description=f"CRITICAL: Vehicle breakdown reported by {driver['name']} at {lat},{lng}.",
                 severity="critical",
-                suggestion="Assign Rescue Vehicle immediately to recover shipment.",
+                suggestion=v_suggestion,
                 shipment_id=active["id"],
                 driver_id=driver_id
             )

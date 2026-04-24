@@ -108,6 +108,8 @@ class Shipment(BaseModel):
     route_type: Optional[str] = None # direct, warehouse
     stage: str = "Awaiting Assignment"
     expected_delivery: Optional[str] = None
+    pickup_deadline: Optional[str] = None
+    performance_stats: Optional[dict] = None
     assigned_driver_id: Optional[str] = None
     assigned_vehicle_id: Optional[str] = None
     current_location: Optional[Location] = None
