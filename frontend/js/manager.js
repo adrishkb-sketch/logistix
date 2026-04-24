@@ -337,9 +337,9 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                 } else if (earlyLog) {
                     rowClass = 'status-early';
                     statusTooltip = `🟢 Early: ${earlyLog.message || earlyLog.reason}`;
-                } else if (s.status === 'delivered') {
+                } else if (s.status === 'delivered' || s.status === 'in_transit' || s.status === 'assigned') {
                     rowClass = 'status-ontime';
-                    statusTooltip = `🔵 Delivered On-Time`;
+                    statusTooltip = `🔵 On Schedule`;
                 }
             }
             
@@ -1083,21 +1083,24 @@ async function loadWeatherFleetData() {
         weatherMarkers = [];
         
         // Render Active Simulations Table
-        const simsContainer = document.getElementById('active-sims-container');
+        const simsTable = document.getElementById('sims-table');
         const simsBody = document.getElementById('sims-body');
+        const emptyMsg = document.getElementById('sims-empty-msg');
         const activeSims = data.cells.filter(c => c.is_simulation);
         
         if (activeSims.length > 0) {
-            simsContainer.style.display = 'block';
+            simsTable.style.display = 'table';
+            emptyMsg.style.display = 'none';
             simsBody.innerHTML = activeSims.map(c => `
-                <tr>
-                    <td>${c.type.toUpperCase()}</td>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td style="padding:5px 0;">${c.type.toUpperCase()}</td>
                     <td>${c.shapeType}</td>
-                    <td><button style="background:var(--danger); border:none; color:white; padding:2px 5px; border-radius:3px; cursor:pointer;" onclick="stopSimulation('${c.id}')">Stop</button></td>
+                    <td><button style="background:var(--danger); border:none; color:white; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.7rem;" onclick="stopSimulation('${c.id}')">STOP</button></td>
                 </tr>
             `).join('');
         } else {
-            simsContainer.style.display = 'none';
+            simsTable.style.display = 'none';
+            emptyMsg.style.display = 'block';
         }
         
         // Draw Weather Cells

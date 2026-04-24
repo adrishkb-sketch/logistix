@@ -265,20 +265,21 @@
                                         <option value="satellite">Satellite Map</option>
                                     </select>
                                 </div>
-                                <div id="active-sims-container" style="margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; display:none;">
-                                    <h5 style="margin:0 0 10px 0; font-size:0.8rem; color:var(--text-muted);">Active Sandboxes</h5>
-                                    <table style="width:100%; font-size:0.75rem;">
-                                        <thead>
-                                            <tr style="text-align:left; color:var(--accent);">
-                                                <th>Type</th>
-                                                <th>Shape</th>
-                                                <th>Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="sims-body"></tbody>
-                                    </table>
-                                </div>
                             </div>
+                        </div>
+                        <div id="active-sims-container" class="glass-card" style="margin-top:15px; padding:15px; border:1px solid var(--warning); min-width:300px;">
+                            <h4 style="margin:0 0 10px 0; color:var(--warning);">📡 Active Simulation Control</h4>
+                            <div id="sims-empty-msg" style="color:var(--text-muted); font-size:0.8rem;">No active sandboxes detected. Draw on the map to start testing.</div>
+                            <table id="sims-table" style="width:100%; font-size:0.75rem; display:none;">
+                                <thead>
+                                    <tr style="text-align:left; color:var(--accent); border-bottom:1px solid rgba(255,255,255,0.1);">
+                                        <th>Disaster</th>
+                                        <th>Geometry</th>
+                                        <th>Control</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sims-body"></tbody>
+                            </table>
                         </div>
                         <div style="font-size:0.85rem; color:var(--text-muted); text-align:right;">
                             <span style="color:#3182ce;">●</span> Rain Cell 

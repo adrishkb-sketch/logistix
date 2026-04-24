@@ -78,8 +78,8 @@
         "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
         "assigned_vehicle_id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
         "current_location": {
-            "lat": 22.594337146436473,
-            "lng": 88.2988066958172
+            "lat": 22.594207719493646,
+            "lng": 88.29885863816028
         },
         "parent_id": "5a2c0df8-9b15-4da9-8463-7a9403a9eaf2",
         "is_leg": true,
