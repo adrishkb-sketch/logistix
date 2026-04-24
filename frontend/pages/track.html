@@ -48,14 +48,18 @@
             <h3 id="res-desc" style="margin-bottom: 5px;">Shipment Name</h3>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">ID: <span id="res-id"></span></p>
             
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-                <div>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Status</p>
-                    <strong id="res-status" style="font-size: 1.1rem; text-transform: capitalize;">Pending</strong>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                <div class="glass-card" style="flex: 1; min-width: 150px; padding: 15px; background: rgba(0,0,0,0.2);">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Status</p>
+                    <strong id="res-status" style="font-size: 1rem; text-transform: capitalize;">Pending</strong>
                 </div>
-                <div style="text-align: right;">
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">Estimated Arrival</p>
-                    <strong id="res-eta" style="font-size: 1.1rem; color: var(--warning);">Pending...</strong>
+                <div class="glass-card" style="flex: 1; min-width: 150px; padding: 15px; background: rgba(0,0,0,0.2);">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Vehicle</p>
+                    <strong id="res-vehicle" style="font-size: 1rem;">N/A</strong>
+                </div>
+                <div class="glass-card" style="flex: 1; min-width: 150px; padding: 15px; background: rgba(0,0,0,0.2);">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">ETA</p>
+                    <strong id="res-eta" style="font-size: 1rem; color: var(--warning);">Pending...</strong>
                 </div>
             </div>
             
@@ -115,6 +119,18 @@
                 
                 const statusEl = document.getElementById('res-status');
                 statusEl.innerText = shipment.status || 'Pending';
+                
+                const vehicleEl = document.getElementById('res-vehicle');
+                if (shipment.assigned_vehicle_id) {
+                    try {
+                        const vData = await apiCall(`/manager/vehicles`);
+                        const vehicle = vData.find(v => v.id === shipment.assigned_vehicle_id);
+                        vehicleEl.innerText = vehicle ? `${vehicle.type} [${vehicle.number_plate}]` : 'Assigned';
+                    } catch(e) { vehicleEl.innerText = 'Assigned'; }
+                } else {
+                    vehicleEl.innerText = 'Pending';
+                }
+
                 if (shipment.status === 'delivered') statusEl.style.color = 'var(--success)';
                 else if (shipment.status === 'in_transit') statusEl.style.color = '#00f2fe';
                 else statusEl.style.color = 'white';

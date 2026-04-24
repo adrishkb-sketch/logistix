@@ -228,3 +228,38 @@ def confirm_account_deletion(company_id: str, otp: str):
         return {"message": "Account deleted successfully."}
     
     raise HTTPException(status_code=404, detail="Account not found")
+@router.post("/rescue-shipment")
+def rescue_shipment(shipment_id: str, driver_id: str, vehicle_id: str):
+    from backend.models import ShipmentEvent
+    shipments_db = JSONDatabase("shipments")
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    old_driver_id = shipment.get("assigned_driver_id")
+    old_vehicle_id = shipment.get("assigned_vehicle_id")
+    
+    # Update new driver and vehicle status
+    drivers_db.update(driver_id, {"assigned_vehicle_id": vehicle_id})
+    vehicles_db.update(vehicle_id, {"assigned_driver_id": driver_id, "status": "in_transit"})
+    
+    # Update shipment
+    log = ShipmentEvent(
+        status="in_transit",
+        message=f"RESCUE: Shipment assigned to new vehicle [{vehicle_id[:6]}] and driver.",
+        reason="Recovery from vehicle breakdown."
+    )
+    
+    shipments_db.update(shipment_id, {
+        "assigned_driver_id": driver_id,
+        "assigned_vehicle_id": vehicle_id,
+        "status": "in_transit",
+        "stage": "Recovered - In Transit",
+        "logs": shipment.get("logs", []) + [log.model_dump()]
+    })
+    
+    # If there was an old driver, free them (their vehicle is already in maintenance)
+    if old_driver_id:
+        drivers_db.update(old_driver_id, {"assigned_vehicle_id": None})
+        
+    return {"message": "Rescue mission initiated. Shipment is back on track."}

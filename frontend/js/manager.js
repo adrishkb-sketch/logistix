@@ -1482,3 +1482,38 @@ async function confirmDeleteAccount() {
         alert("Incorrect OTP or account already deleted.");
     }
 }
+async function dispatchRescueVehicle() {
+    const sid = document.getElementById('logs-shipment-id').innerText;
+    if (!sid) return;
+    
+    // Open the manual assignment modal but for rescue
+    // We'll reuse openManualAssign but with a flag or special handling
+    // For now, let's just use a simple flow: suggest a nearby driver/vehicle
+    
+    const drivers = await apiCall('/manager/drivers');
+    const vehicles = await apiCall('/manager/vehicles');
+    
+    // Simple logic: find an available driver and vehicle
+    const freeDriver = drivers.find(d => !d.assigned_vehicle_id && d.verification_status === 'verified');
+    const freeVehicle = vehicles.find(v => !v.assigned_driver_id && v.status === 'available');
+    
+    if (!freeDriver || !freeVehicle) {
+        alert("No available drivers or vehicles found for rescue. Please add more fleet resources.");
+        return;
+    }
+    
+    if (confirm(`Rescue Proposal:\nAssign ${freeDriver.name} with vehicle ${freeVehicle.number_plate} to recover Shipment ${sid.substring(0,8)}?\n\nThis will resume the journey.`)) {
+        try {
+            await apiCall('/manager/rescue-shipment', 'POST', {
+                shipment_id: sid,
+                driver_id: freeDriver.id,
+                vehicle_id: freeVehicle.id
+            });
+            alert("Rescue mission dispatched! The shipment status has been restored.");
+            document.getElementById('logs-modal').style.display = 'none';
+            loadShipments();
+        } catch(err) {
+            alert("Failed to dispatch rescue.");
+        }
+    }
+}

@@ -177,24 +177,24 @@
         "labels": [],
         "delivery_otp": null,
         "created_at": "2026-04-23T12:06:01.535464",
-        "status": "in_transit",
+        "status": "delayed",
         "route_type": "direct",
-        "stage": "Assigned to Driver",
+        "stage": "Vehicle Breakdown",
         "expected_delivery": "2026-04-24T02:58:00.202468",
         "pickup_deadline": "2026-04-24T01:58:00.202468",
         "assigned_driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
         "assigned_vehicle_id": "ed6224be-94cc-4e75-ad1a-1c5dd0dd0aa4",
         "current_location": {
-            "lat": 22.594214379870348,
-            "lng": 88.29885460069309
+            "lat": 22.59447507708869,
+            "lng": 88.29889257729245
         },
         "parent_id": "5a2c0df8-9b15-4da9-8463-7a9403a9eaf2",
         "is_leg": true,
         "leg_order": 3,
         "performance_stats": {
             "status": "delayed",
-            "diff_mins": 1062,
-            "predicted_arrival": "2026-04-24T20:40:05.592469+00:00",
+            "diff_mins": 1069,
+            "predicted_arrival": "2026-04-24T20:47:30.191355+00:00",
             "weather": "Clear",
             "dist_remaining_km": 494.1
         },
@@ -207,6 +207,17 @@
                 "location": {
                     "lat": 22.594207763467452,
                     "lng": 88.29885864247697,
+                    "address": null
+                }
+            },
+            {
+                "timestamp": "2026-04-24T08:26:30.193400",
+                "status": "delayed",
+                "message": "ISSUE: BREAKDOWN at 22.59447507708869, 88.29889257729245.",
+                "reason": "Driver reported a breakdown issue.",
+                "location": {
+                    "lat": 22.59447507708869,
+                    "lng": 88.29889257729245,
                     "address": null
                 }
             }

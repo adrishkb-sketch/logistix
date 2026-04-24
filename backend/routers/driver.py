@@ -46,11 +46,35 @@ def update_driver_location(driver_id: str, location: Dict[str, Any]):
                 )
                 s["logs"] = s.get("logs", []) + [log.model_dump()]
 
+            # Automatic Warehouse Checkpoint Logging
+            from backend.services.route_engine import haversine
+            warehouses = JSONDatabase("warehouses").get_all()
+            in_warehouse = False
+            for w in warehouses:
+                dist = haversine(location["lat"], location["lng"], w["lat"], w["lng"])
+                if dist < 0.5: # within 500m
+                    in_warehouse = True
+                    if s.get("at_warehouse_id") != w["id"]:
+                        from backend.models import ShipmentEvent
+                        checkpoint_log = ShipmentEvent(
+                            status="in_transit",
+                            message=f"📍 Reached Hub: {w['name']}",
+                            reason="Automatic GPS Checkpoint",
+                            location=location
+                        )
+                        s["logs"] = s.get("logs", []) + [checkpoint_log.model_dump()]
+                        s["at_warehouse_id"] = w["id"]
+                    break
+            
+            if not in_warehouse and s.get("at_warehouse_id"):
+                s["at_warehouse_id"] = None # left warehouse
+
             shipments_db.update(s["id"], {
                 "current_location": location, 
                 "status": "in_transit",
                 "performance_stats": perf,
-                "logs": s["logs"]
+                "logs": s["logs"],
+                "at_warehouse_id": s.get("at_warehouse_id")
             })
             
             # Real-time weather alerting
@@ -155,6 +179,9 @@ def report_incident(driver_id: str, data: dict):
     active = next((s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
     
     if active:
+        # Re-fetch to ensure we have the latest version (including any logs added by background tasks)
+        active = shipments_db.get_by_id(active["id"])
+        
         # Append log to shipment with location info
         loc_obj = {"lat": lat, "lng": lng} if lat and lng else None
         log = ShipmentEvent(
@@ -163,7 +190,9 @@ def report_incident(driver_id: str, data: dict):
             reason=desc,
             location=loc_obj
         )
-        active["logs"] = active.get("logs", []) + [log.model_dump()]
+        logs = active.get("logs", [])
+        logs.append(log.model_dump())
+        active["logs"] = logs
         
         if incident_type == "breakdown":
             active["status"] = "delayed"
@@ -173,7 +202,6 @@ def report_incident(driver_id: str, data: dict):
             all_v = vehicles_db.get_all()
             nearby_v = []
             if lat and lng:
-                # Mock location for vehicles if they don't have it (usually they are at warehouses)
                 warehouses_db = JSONDatabase("warehouses")
                 all_w = warehouses_db.get_all()
                 for v in all_v:
@@ -181,17 +209,16 @@ def report_incident(driver_id: str, data: dict):
                         w = next((wh for wh in all_w if wh["id"] == v.get("base_warehouse_id")), None)
                         if w:
                             d = haversine(lat, lng, w["lat"], w["lng"])
-                            if d < 50: # within 50km
-                                nearby_v.append(f"{v['type']} [{v['number_plate']}] - {round(d, 1)}km away")
+                            if d < 100: # expanded to 100km
+                                nearby_v.append(f"{v['type']} [{v['number_plate']}] - {round(d, 1)}km")
             
-            v_suggestion = f"Rescue needed. Nearby available: {', '.join(nearby_v[:3]) if nearby_v else 'None found'}"
+            v_suggestion = f"Rescue needed. Nearby: {', '.join(nearby_v[:3]) if nearby_v else 'None'}"
             
             # Update vehicle status
             v_id = driver.get("assigned_vehicle_id")
             if v_id:
                 vehicles_db.update(v_id, {"status": "maintenance"})
                 
-            # Create Critical Alert for Manager
             new_alert = Alert(
                 type="breakdown",
                 description=f"CRITICAL: Vehicle breakdown reported by {driver['name']} at {lat},{lng}.",

@@ -1,17 +1,16 @@
 [
     {
-        "id": "3ad0c179-46ad-49cb-b666-e1ba83d59669",
-        "type": "disaster",
-        "description": "CRITICAL: Vehicle intersected custom CYCLONE.",
+        "id": "de1d05e7-388d-4655-b9f2-eeef38bcde60",
+        "type": "breakdown",
+        "description": "CRITICAL: Vehicle breakdown reported by amal at 22.59447507708869,88.29889257729245.",
         "severity": "critical",
-        "suggestion": "IMMEDIATE ACTION REQUIRED: Reroute or halt vehicle at nearest safe point.",
-        "shipment_id": "4a26d201-38b9-4603-8696-62a461857496",
+        "suggestion": "Rescue needed. Nearby available: None found",
+        "shipment_id": "fa581fe4-7af0-4419-9b1f-ad8b170821f6",
         "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
-        "created_at": "2026-04-24T06:16:06.869625",
+        "created_at": "2026-04-24T08:26:30.194343",
         "status": "active"
-    },
-    {
-        "id": "b2789926-8ad6-42c1-91cd-d5a0155774ea",
+    }
+]    "id": "b2789926-8ad6-42c1-91cd-d5a0155774ea",
         "type": "disaster",
         "description": "CRITICAL: Vehicle intersected custom CYCLONE.",
         "severity": "critical",
@@ -52,6 +51,17 @@
         "shipment_id": "189b3ae8-8394-4693-8bee-51daa331f1d5",
         "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
         "created_at": "2026-04-24T08:16:57.445284",
+        "status": "active"
+    },
+    {
+        "id": "5f49d250-2318-44e0-bbd4-eb91bb1f65e4",
+        "type": "breakdown",
+        "description": "CRITICAL: Vehicle breakdown reported by amal at 22.59447507708869,88.29889257729245.",
+        "severity": "critical",
+        "suggestion": "Rescue needed. Nearby available: None found",
+        "shipment_id": "fa581fe4-7af0-4419-9b1f-ad8b170821f6",
+        "driver_id": "0818f05f-87fb-4002-9bbb-b1b4a7bed05f",
+        "created_at": "2026-04-24T08:26:30.193637",
         "status": "active"
     }
 ]
