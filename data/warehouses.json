@@ -40,5 +40,15 @@
         "drone_count": 4,
         "contact_number": "1357",
         "manager_name": "B4"
+    },
+    {
+        "id": "1f506f4e-92be-4eb2-a29f-7d66c282d013",
+        "company_id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5",
+        "name": "Chennai",
+        "lat": 13.102808750045932,
+        "lng": 80.24992538254604,
+        "drone_count": 0,
+        "contact_number": "2345",
+        "manager_name": "M1"
     }
 ]

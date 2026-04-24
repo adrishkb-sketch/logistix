@@ -267,7 +267,6 @@ async function submitEditWarehouse() {
         });
         document.getElementById('wh-edit-modal').style.display = 'none';
         loadMapData();
-        loadWarehouses();
     } catch(e) {
         alert("Failed to update warehouse.");
     }
@@ -283,7 +282,6 @@ async function decommissionWarehouse() {
         await apiCall(`/manager/warehouses/${id}?company_id=${localStorage.getItem('manager_id')}`, 'DELETE');
         document.getElementById('wh-edit-modal').style.display = 'none';
         loadMapData();
-        loadWarehouses();
     } catch(e) {
         alert("Failed to decommission warehouse.");
     }
@@ -320,7 +318,6 @@ async function createWarehouse(name, lat, lng, droneCount = 0, manager = '', con
             manager_name: manager, contact_number: contact
         });
         loadMapData();
-        loadWarehouses();
     } catch(e) {}
 }
 
