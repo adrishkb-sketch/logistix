@@ -291,6 +291,7 @@ async function loadMissions(autoStartNext = false) {
             if (!map) {
                 map = L.map('route-map').setView([orderedStops[0].lat, orderedStops[0].lng], 13);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                applyOfficialBorders(map);
                 
                 if (navigator.geolocation) {
                     watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
@@ -1008,4 +1009,18 @@ async function uploadFile(file) {
         reader.onloadend = () => resolve(reader.result);
         reader.readAsDataURL(file);
     });
+}
+
+async function applyOfficialBorders(mapInstance) {
+    const boundaryUrl = 'https://raw.githubusercontent.com/datameet/maps/master/Country/india-osm.geojson';
+    try {
+        const response = await fetch(boundaryUrl);
+        const data = await response.json();
+        L.geoJSON(data, {
+            style: { color: '#3182ce', weight: 3, fillOpacity: 0, dashArray: '5, 5' },
+            interactive: false
+        }).addTo(mapInstance);
+    } catch(e) {
+        console.warn("Sovereignty overlay failed to load");
+    }
 }

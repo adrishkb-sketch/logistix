@@ -952,9 +952,47 @@
             <label>Drone Fleet Size</label>
             <input type="number" id="wh-drone-count" value="0" min="0" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
         </div>
+        
+        <div style="margin-top:15px; padding:10px; background:rgba(229, 62, 62, 0.1); border-left:3px solid var(--danger); border-radius:4px;">
+            <p style="margin:0; font-size:0.75rem; color:var(--danger); line-height:1.4;">
+                ⚠️ <b>Warning:</b> Geographic coordinates are permanent once chosen. To change the location, you must decommission this hub and create a new one.
+            </p>
+        </div>
         <div style="margin-top:20px; display:flex; gap:10px;">
             <button class="btn-primary" onclick="submitNewWarehouse()">Create Hub</button>
             <button class="btn-primary" style="background:transparent; border:1px solid white;" onclick="document.getElementById('wh-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Edit Warehouse Modal -->
+    <div id="wh-edit-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10003; width:400px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid var(--accent);">
+        <h3 style="margin-top:0; color:var(--accent);">✏️ Edit Warehouse</h3>
+        <input type="hidden" id="edit-wh-id">
+        <div class="input-group">
+            <label>Warehouse Name</label>
+            <input type="text" id="edit-wh-name" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+        </div>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <div class="input-group" style="flex:1;">
+                <label>Manager Name</label>
+                <input type="text" id="edit-wh-manager" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+            <div class="input-group" style="flex:1;">
+                <label>Contact Number</label>
+                <input type="text" id="edit-wh-contact" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+        </div>
+        <div class="input-group" style="margin-top:15px;">
+            <label>Drone Fleet Size</label>
+            <input type="number" id="edit-wh-drone" min="0" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+        </div>
+        
+        <p style="margin-top:15px; font-size:0.75rem; color:var(--text-muted);">Note: Location coordinates are locked for this hub.</p>
+
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button class="btn-primary" style="background:var(--accent);" onclick="submitEditWarehouse()">Save Changes</button>
+            <button class="btn-primary" style="background:var(--danger);" onclick="decommissionWarehouse()">Decommission Hub</button>
+            <button class="btn-primary" style="background:transparent; border:1px solid white;" onclick="document.getElementById('wh-edit-modal').style.display='none'">Cancel</button>
         </div>
     </div>
 

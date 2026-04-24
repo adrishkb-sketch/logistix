@@ -20,9 +20,35 @@ function initMap() {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    // Apply Official Indian Boundaries (SOI Compliant Overlay)
+    applyOfficialBorders(map);
+
     // Map click to add warehouse
     map.on('click', async function(e) {
         const { lat, lng } = e.latlng;
+        
+        // WATER CHECK: Hardened detection for Oceans and Seas
+        try {
+            const terrain = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`).then(r => r.json());
+            const dName = (terrain.display_name || "").toLowerCase();
+            const isWater = terrain.type === 'water' || 
+                            terrain.type === 'river' ||
+                            terrain.category === 'natural' || 
+                            dName.includes('ocean') || 
+                            dName.includes('sea') || 
+                            dName.includes('bay') ||
+                            dName.includes('river') ||
+                            dName.includes('canal') ||
+                            dName.includes('waterway') ||
+                            !terrain.address; // Deep ocean has no address object
+
+            if (isWater) {
+                return alert("🚨 Invalid Deployment Zone: Warehouse cannot be created in the middle of a water body.");
+            }
+        } catch(e) {
+            console.warn("Terrain check skipped due to API timeout");
+        }
+
         pendingWhLoc = { lat, lng };
         
         // AI Check
@@ -45,6 +71,25 @@ function initMap() {
     });
     
     loadMapData();
+}
+
+async function applyOfficialBorders(mapInstance) {
+    const boundaryUrl = 'https://raw.githubusercontent.com/datameet/maps/master/Country/india-osm.geojson';
+    try {
+        const response = await fetch(boundaryUrl);
+        const data = await response.json();
+        L.geoJSON(data, {
+            style: { 
+                color: '#3182ce', 
+                weight: 3, 
+                fillOpacity: 0,
+                dashArray: '5, 5'
+            },
+            interactive: false
+        }).addTo(mapInstance);
+    } catch(e) {
+        console.warn("Sovereignty overlay failed to load");
+    }
 }
 
 async function confirmSuggestedLocation() {
@@ -95,7 +140,8 @@ async function loadMapData() {
         const warehouses = await apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`);
         warehouses.forEach(w => {
             const m = L.marker([w.lat, w.lng], {title: w.name}).addTo(map)
-                .bindPopup(`<b>Warehouse:</b> ${w.name}`);
+                .bindPopup(`<b>Warehouse:</b> ${w.name}<br><small>Manager: ${w.manager_name}</small>`);
+            m.whId = w.id;
             markers.push(m);
         });
 
@@ -145,25 +191,102 @@ function loadWarehousesList(warehouses) {
     if (!tbody) return;
     
     if (warehouses.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No warehouses deployed yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No warehouses deployed yet.</td></tr>';
         return;
     }
     
     tbody.innerHTML = warehouses.map(w => `
-        <tr>
+        <tr id="row-wh-${w.id}">
             <td style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${w.id.substring(0,8)}</td>
-            <td><strong>${w.name}</strong></td>
+            <td><strong id="wh-name-display-${w.id}">${w.name}</strong></td>
             <td>
-                <div style="font-size:0.85rem; font-weight:bold; color:var(--primary);">${w.manager_name || 'N/A'}</div>
-                <div style="font-size:0.75rem; color:var(--text-muted);">📞 ${w.contact_number || 'N/A'}</div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--primary);" id="wh-manager-display-${w.id}">${w.manager_name || 'N/A'}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);" id="wh-contact-display-${w.id}">📞 ${w.contact_number || 'N/A'}</div>
             </td>
             <td>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}</td>
-            <td><span style="color:var(--primary); font-weight:bold;">${w.drone_count || 0}</span> 🛰️</td>
+            <td><span style="color:var(--primary); font-weight:bold;" id="wh-drone-display-${w.id}">${w.drone_count || 0}</span> 🛰️</td>
             <td>
-                <button class="btn-primary" style="padding:4px 10px; font-size:0.8rem; background:var(--danger);" onclick="deleteWarehouse('${w.id}')">Decommission</button>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; background:var(--accent);" onclick="openEditWarehouse('${w.id}')">✏️ Edit</button>
+                    <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; background:var(--primary);" onclick="locateWarehouse('${w.id}')">📍 Locate</button>
+                </div>
             </td>
         </tr>
     `).join('');
+}
+
+let highlightCircle = null;
+function locateWarehouse(id) {
+    const marker = markers.find(m => m.whId === id);
+    if (marker) {
+        map.setView(marker.getLatLng(), 15);
+        marker.openPopup();
+        
+        // Visual highlight
+        if (highlightCircle) map.removeLayer(highlightCircle);
+        highlightCircle = L.circle(marker.getLatLng(), {
+            radius: 200,
+            color: 'var(--accent)',
+            fillColor: 'var(--accent)',
+            fillOpacity: 0.3,
+            className: 'pulse-animation'
+        }).addTo(map);
+        
+        setTimeout(() => { if (highlightCircle) map.removeLayer(highlightCircle); }, 5000);
+    }
+}
+
+async function openEditWarehouse(id) {
+    try {
+        const whs = await apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`);
+        const w = whs.find(item => item.id === id);
+        if (!w) return;
+
+        document.getElementById('edit-wh-id').value = w.id;
+        document.getElementById('edit-wh-name').value = w.name;
+        document.getElementById('edit-wh-manager').value = w.manager_name;
+        document.getElementById('edit-wh-contact').value = w.contact_number;
+        document.getElementById('edit-wh-drone').value = w.drone_count;
+
+        document.getElementById('wh-edit-modal').style.display = 'block';
+    } catch(e) {}
+}
+
+async function submitEditWarehouse() {
+    const id = document.getElementById('edit-wh-id').value;
+    const name = document.getElementById('edit-wh-name').value;
+    const manager = document.getElementById('edit-wh-manager').value;
+    const contact = document.getElementById('edit-wh-contact').value;
+    const drones = parseInt(document.getElementById('edit-wh-drone').value || 0);
+
+    if (!name || !manager || !contact) return alert("All fields are required.");
+
+    try {
+        await apiCall(`/manager/warehouses/${id}?company_id=${localStorage.getItem('manager_id')}`, 'PUT', {
+            name, manager_name: manager, contact_number: contact, drone_count: drones
+        });
+        document.getElementById('wh-edit-modal').style.display = 'none';
+        loadMapData();
+        loadWarehouses();
+    } catch(e) {
+        alert("Failed to update warehouse.");
+    }
+}
+
+async function decommissionWarehouse() {
+    const id = document.getElementById('edit-wh-id').value;
+    if (!id) return;
+    
+    if (!confirm("⚠️ WARNING: Location coordinates are permanent. Once decommissioned, this hub and its operational history will be archived. Continue?")) return;
+    
+    try {
+        await apiCall(`/manager/warehouses/${id}?company_id=${localStorage.getItem('manager_id')}`, 'DELETE');
+        document.getElementById('wh-edit-modal').style.display = 'none';
+        loadMapData();
+        loadWarehouses();
+    } catch(e) {
+        alert("Failed to decommission warehouse.");
+    }
 }
 
 function openWhModal(lat, lng) {
@@ -176,7 +299,13 @@ async function submitNewWarehouse() {
     const manager = document.getElementById('wh-manager-input').value;
     const contact = document.getElementById('wh-contact-input').value;
     const drones = parseInt(document.getElementById('wh-drone-count').value || 0);
-    if (!name) return alert("Name is required");
+    
+    if (!name || !manager || !contact) {
+        return alert("Error: Warehouse Name, Manager Name, and Contact Number are all required.");
+    }
+    if (isNaN(drones) || drones < 0) {
+        return alert("Error: Please provide a valid Drone Fleet Size.");
+    }
     
     await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, drones, manager, contact);
     document.getElementById('wh-modal').style.display = 'none';
@@ -199,6 +328,10 @@ async function confirmSuggestedLocation() {
     const drones = parseInt(document.getElementById('sug-drone-count').value || 0);
     const manager = document.getElementById('sug-manager').value;
     const contact = document.getElementById('sug-contact').value;
+    
+    if (!manager || !contact) {
+        return alert("Error: Manager Name and Contact Number are required for AI-suggested hubs.");
+    }
     const name = prompt("Enter Warehouse Name for Strategic Hub:");
     if (name) {
         await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, drones, manager, contact);
