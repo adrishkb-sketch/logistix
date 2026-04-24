@@ -9,6 +9,7 @@ document.getElementById('driver-name').innerText = `Hello, ${localStorage.getIte
 
 let map;
 let marker;
+let driverPerfChart;
 let watchId;
 let routeCoords = [];
 let simIndex = 0;
@@ -19,17 +20,74 @@ let lastMovedTimestamp = Date.now();
 let lastLocation = null;
 let stationaryAlertShown = false;
 
-function switchDriverTab(tab) {
-    document.getElementById('active-tab').style.display = tab === 'active' ? 'block' : 'none';
-    document.getElementById('completed-tab').style.display = tab === 'completed' ? 'block' : 'none';
-    document.getElementById('profile-tab').style.display = tab === 'profile' ? 'block' : 'none';
-    
-    document.getElementById('btn-tab-active').style.background = tab === 'active' ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
-    document.getElementById('btn-tab-completed').style.background = tab === 'completed' ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
-    document.getElementById('btn-tab-profile').style.background = tab === 'profile' ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+// Zen Mode & Motion Tracking
+let isZenMode = false;
+let motionThreshold = 15; // G-force threshold for erratic driving
+let lastMotionAlert = 0;
 
+function switchDriverTab(tab) {
+    const tabs = ['dash', 'active', 'completed', 'profile'];
+    tabs.forEach(t => {
+        const el = document.getElementById(`${t}-tab`);
+        const btn = document.getElementById(`btn-tab-${t}`);
+        if (el) el.style.display = t === tab ? 'block' : 'none';
+        if (btn) {
+            btn.style.background = t === tab ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
+            btn.style.color = t === tab ? '#000' : 'var(--text-muted)';
+        }
+    });
+
+    if (tab === 'dash') loadDashStats();
     if (tab === 'profile') loadProfileData();
-    if (tab === 'active' && map) map.invalidateSize();
+    if (tab === 'active' && map) setTimeout(() => map.invalidateSize(), 200);
+}
+
+async function loadDashStats() {
+    try {
+        const stats = await apiCall(`/driver/${localStorage.getItem('driver_id')}/dashboard/stats`);
+        
+        document.getElementById('d-stat-earned').innerText = `$${stats.total_earned.toLocaleString()}`;
+        document.getElementById('d-stat-ontime').innerText = `${stats.timely_percent}%`;
+        document.getElementById('d-stat-safety').innerText = (5 - (stats.fatigue_score/100)).toFixed(1);
+
+        renderDriverChart(stats.perf_history);
+        
+        // Mini vehicle details
+        const drivers = await apiCall(`/manager/drivers`);
+        const me = drivers.find(d => d.id === localStorage.getItem('driver_id'));
+        if (me && me.assigned_vehicle_id) {
+            document.getElementById('vehicle-mini-details').innerText = `Active Vehicle: ${me.assigned_vehicle_id}`;
+        }
+    } catch(e) {}
+}
+
+function renderDriverChart(history) {
+    const ctx = document.getElementById('driverPerfChart')?.getContext('2d');
+    if (!ctx) return;
+
+    if (driverPerfChart) driverPerfChart.destroy();
+
+    driverPerfChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['T-4', 'T-3', 'T-2', 'T-1', 'Latest'],
+            datasets: [{
+                label: 'Score',
+                data: history,
+                backgroundColor: 'rgba(0, 242, 254, 0.5)',
+                borderColor: '#00f2fe',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { grid: { display: false } } 
+            }
+        }
+    });
 }
 
 async function loadMissions(autoStartNext = false) {
@@ -175,6 +233,25 @@ async function loadMissions(autoStartNext = false) {
                         <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.7;'}">
                             <h4 style="margin-bottom:5px; color:${dotColor}">${actionText}</h4>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Shipment:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
+                            
+                            ${s.is_perishable ? `
+                                <div style="background:rgba(0,242,254,0.1); padding:10px; border-radius:8px; border:1px solid var(--primary); margin:10px 0;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                        <span style="font-size:0.75rem; color:var(--primary); font-weight:bold;">❄️ COLD CHAIN CARGO</span>
+                                        <span style="font-size:0.75rem; font-weight:bold; color:${(s.vitality||100) < 60 ? 'var(--danger)' : 'var(--success)'}">${(s.vitality||100).toFixed(0)}% Vitality</span>
+                                    </div>
+                                    <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                                        <div style="width:${s.vitality||100}%; height:100%; background:${(s.vitality||100) < 60 ? 'var(--danger)' : 'var(--primary)'};"></div>
+                                    </div>
+                                    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:5px;">AI Warning: Perishable items detected. Maintain speed and avoid high-temperature delays.</p>
+                                </div>
+                            ` : ''}
+
+                            <div style="display:flex; gap:10px; margin: 10px 0;">
+                                <button class="btn-primary" style="flex:1; padding:8px; font-size:0.8rem;" onclick="openLoadingOptimizer('${s.id}')">🏗️ Optimize Loading (AR)</button>
+                                <button class="btn-primary" style="flex:1; padding:8px; font-size:0.8rem; background:rgba(255,255,255,0.1);" onclick="openScanner('${s.id}')">📷 Scan Cargo</button>
+                            </div>
+
                             <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ Deadline:</b> ${new Date(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery).toLocaleString()}</p>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Location:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
                             ${s.performance_stats ? `
@@ -190,6 +267,15 @@ async function loadMissions(autoStartNext = false) {
                                     </div>
                                 </div>
                             ` : ''}
+                            
+                            ${(stop.type === 'drop' && s.receiver_name) ? `
+                                <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(72, 187, 120, 0.1); border:1px solid var(--success); border-left: 4px solid var(--success);">
+                                    <p style="margin:0; font-size:0.75rem; color:var(--success); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Recipient Details</p>
+                                    <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">👤 ${s.receiver_name}</p>
+                                    <p style="margin:2px 0 0 0; font-size:1rem; color:var(--text-muted);">📞 ${s.receiver_phone}</p>
+                                </div>
+                            ` : ''}
+
                             ${actionBtn}
                         </div>
                     </div>
@@ -393,13 +479,7 @@ async function drawMultiStopRoute(stops) {
 }
 
 async function confirmPickup(shipmentId) {
-    try {
-        await apiCall(`/shipments/${shipmentId}`, 'PUT', {status: 'in_transit', stage: 'Picked Up'});
-        showPopupAlert("Package Picked Up! Recalculating roadmap...");
-        loadMissions();
-    } catch(e) {
-        alert("Failed to confirm pickup.");
-    }
+    openVerifyModal(shipmentId);
 }
 
 function showDynamicAlert(type, msg) {
@@ -485,6 +565,11 @@ async function loadAlertsAndMessages() {
             if (weatherAlert) {
                 banner.innerText = `⚠️ ${weatherAlert.description}. ${weatherAlert.suggestion}`;
                 banner.style.display = 'block';
+            } else if (activeShipment.is_perishable) {
+                const v = activeShipment.vitality || 100;
+                banner.innerHTML = `❄️ <b>Cold Chain Active:</b> Product Vitality at <b>${v.toFixed(0)}%</b>. Avoid delays.`;
+                banner.style.background = v < 60 ? 'linear-gradient(90deg, #e53e3e, #c53030)' : 'linear-gradient(90deg, #3182ce, #2b6cb0)';
+                banner.style.display = 'block';
             } else {
                 banner.style.display = 'none';
             }
@@ -545,6 +630,23 @@ async function loadProfileData() {
     document.getElementById('p-rating').innerText = `${avgRating} ⭐`;
     document.getElementById('p-wallet').innerText = `${p.reward_points || 0}`;
     
+    // Health Card Population
+    if (p.health_metrics) {
+        document.getElementById('h-rate').innerText = `${p.health_metrics.heart_rate} BPM`;
+        document.getElementById('h-bp').innerText = p.health_metrics.blood_pressure;
+        document.getElementById('h-o2').innerText = `${p.health_metrics.oxygen}%`;
+        document.getElementById('h-stress').innerText = p.health_metrics.stress_index;
+        
+        const hStatus = document.getElementById('h-status');
+        if (p.health_metrics.stress_index > 80 || p.health_metrics.heart_rate > 120) {
+            hStatus.innerText = "REST REQUIRED";
+            hStatus.style.background = "var(--danger)";
+        } else {
+            hStatus.innerText = "FIT TO DRIVE";
+            hStatus.style.background = "var(--success)";
+        }
+    }
+
     const fBar = document.getElementById('p-fatigue-bar');
     fBar.style.width = `${p.fatigue_score}%`;
     fBar.style.background = p.fatigue_score > 80 ? 'var(--danger)' : p.fatigue_score > 50 ? 'var(--warning)' : 'var(--primary)';
@@ -671,4 +773,239 @@ async function submitIncident(type, fromStationary = false) {
     } catch(err) {
         alert("Failed to report incident.");
     }
+}
+
+async function requestSensorPermission() {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        // iOS 13+ requires explicit permission
+        try {
+            const permissionState = await DeviceMotionEvent.requestPermission();
+            if (permissionState === 'granted') {
+                window.addEventListener('devicemotion', handleMotion);
+                document.getElementById('sensor-btn').innerText = "🛡️ Safety Active";
+                document.getElementById('sensor-btn').style.background = "var(--success)";
+                alert("Safety Sensors Calibrated & Active.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Sensor access denied. Safety monitoring disabled.");
+        }
+    } else {
+        // Android / Desktop non-standard
+        window.addEventListener('devicemotion', handleMotion);
+        document.getElementById('sensor-btn').innerText = "🛡️ Safety Active";
+        document.getElementById('sensor-btn').style.background = "var(--success)";
+        alert("Safety Sensors Active.");
+    }
+}
+
+function handleMotion(event) {
+    if (isZenMode) return;
+    const acc = event.accelerationIncludingGravity;
+    if (!acc) return;
+    
+    const force = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
+    
+    // Erratic detection (Sudden Braking / Swerving)
+    if (force > motionThreshold && (Date.now() - lastMotionAlert > 5000)) {
+        console.log("Erratic driving detected! Force:", force);
+        lastMotionAlert = Date.now();
+        triggerZenMode("erratic_driving");
+    }
+}
+
+// ZEN MODE & MOTION DETECTION
+// Initial check (Android often doesn't need click, but we added button for safety)
+if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission !== 'function') {
+    window.addEventListener('devicemotion', handleMotion);
+}
+
+async function triggerZenMode(reason) {
+    if (isZenMode) return;
+    isZenMode = true;
+    
+    const overlay = document.getElementById('zen-overlay');
+    overlay.style.display = 'flex';
+    
+    // Get current loc for rest stop search
+    const pos = await new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(resolve, () => resolve({coords:{latitude:20.59, longitude:78.96}}));
+    });
+    
+    try {
+        const stops = await apiCall(`/driver/safety/rest-stops?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+        const bestStop = stops[0]; // Nearest high rated
+        
+        document.getElementById('zen-rest-stop-name').innerText = `Nearest: ${bestStop.name} (${bestStop.rating}⭐)`;
+        document.getElementById('zen-rest-stop-amenities').innerText = `Facilities: ${bestStop.amenities.join(", ")}`;
+        
+        // Notify Backend
+        await apiCall(`/driver/${localStorage.getItem('driver_id')}/zen`, 'POST', {
+            is_active: true,
+            reason: reason,
+            destination: bestStop
+        });
+        
+        // Update mission roadmap temporarily (visual only for now)
+        const banner = document.getElementById('instruction-banner');
+        banner.innerHTML = `🧘 <b>Zen Mode Active:</b> Safety reroute to ${bestStop.name}. Take a break.`;
+        banner.style.background = 'linear-gradient(90deg, #6b46c1, #553c9a)';
+        banner.style.display = 'block';
+        
+    } catch(e) {
+        console.error("Zen Mode error:", e);
+    }
+}
+
+async function deactivateZen() {
+    isZenMode = false;
+    document.getElementById('zen-overlay').style.display = 'none';
+    await apiCall(`/driver/${localStorage.getItem('driver_id')}/zen`, 'POST', { is_active: false });
+    loadMissions();
+}
+
+async function confirmArrival() {
+    alert("Safety rest logged. Fatigue score will be reduced. Take your time.");
+    await submitIncident('resting');
+    deactivateZen();
+}
+
+// Predictive Fatigue check
+setInterval(async () => {
+    const dId = localStorage.getItem('driver_id');
+    const drivers = await apiCall('/manager/drivers');
+    const me = drivers.find(d => d.id === dId);
+    if (me && me.fatigue_score > 90 && !isZenMode) {
+        triggerZenMode("extreme_fatigue");
+    }
+}, 10000);
+
+async function openLoadingOptimizer(shipmentId) {
+    document.getElementById('loader-modal').style.display = 'flex';
+    document.getElementById('loader-step-1').style.display = 'block';
+    document.getElementById('loader-result').style.display = 'none';
+}
+
+async function analyzeLoading() {
+    const fileInput = document.getElementById('vehicle-photo');
+    if (!fileInput.files[0]) {
+        alert("Please take a photo of the vehicle cargo area first.");
+        return;
+    }
+
+    const btn = event.target;
+    const originalText = btn.innerText;
+    btn.innerText = "🌀 AI Calculating Space...";
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/driver/${localStorage.getItem('driver_id')}/optimize-loading`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        
+        btn.innerText = originalText;
+        btn.disabled = false;
+
+        if (data.status === 'success') {
+            document.getElementById('loader-step-1').style.display = 'none';
+            document.getElementById('loader-result').style.display = 'block';
+            
+            const blueprintContainer = document.getElementById('stacking-blueprint');
+            blueprintContainer.innerHTML = data.blueprint.map(b => `
+                <div style="margin-bottom:15px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border-left:3px solid var(--primary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.7rem; color:var(--accent); font-weight:bold;">LAYER ${b.layer}</span>
+                        <span style="font-size:0.7rem; color:var(--text-muted);">${b.position}</span>
+                    </div>
+                    <div style="margin:5px 0; font-size:0.9rem; font-weight:bold;">${b.items.join(", ")}</div>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin:0;">${b.instruction}</p>
+                </div>
+            `).join('');
+        }
+    } catch(e) {
+        alert("Spatial analysis failed. Please try again.");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+let html5QrScanner = null;
+let currentVerifyId = null;
+let qrVerified = false;
+
+async function openVerifyModal(shipmentId) {
+    currentVerifyId = shipmentId;
+    qrVerified = false;
+    document.getElementById('verify-modal').style.display = 'block';
+    document.getElementById('qr-success-msg').style.display = 'none';
+    document.getElementById('btn-submit-verify').disabled = true;
+    
+    // Fetch shipment to get qr_code_data
+    const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id') || ''}`); // Driver context
+    const s = shipments.find(item => item.id === shipmentId);
+    if (!s) return;
+
+    if (!html5QrScanner) {
+        html5QrScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+    }
+    
+    html5QrScanner.render((decodedText) => {
+        if (decodedText === s.qr_code_data) {
+            qrVerified = true;
+            document.getElementById('qr-success-msg').style.display = 'block';
+            document.getElementById('btn-submit-verify').disabled = false;
+            html5QrScanner.clear();
+        } else {
+            alert("QR Code Mismatch! Please scan the correct package.");
+        }
+    }, (err) => {
+        // console.error(err);
+    });
+}
+
+function closeVerifyModal() {
+    if (html5QrScanner) html5QrScanner.clear();
+    document.getElementById('verify-modal').style.display = 'none';
+}
+
+async function submitVerification() {
+    if (!qrVerified) return alert("QR verification required");
+    
+    const fileInput = document.getElementById('v-photo');
+    if (!fileInput.files || !fileInput.files[0]) return alert("Please upload a photo of the shipment");
+    
+    const photoUrl = await uploadFile(fileInput.files[0]);
+    if (!photoUrl) return alert("Photo upload failed");
+    
+    try {
+        // We update status and add log with photo
+        await apiCall(`/shipments/${currentVerifyId}`, 'PUT', {
+            status: 'in_transit', 
+            stage: 'Picked Up',
+            log_entry: {
+                status: 'in_transit',
+                message: `📦 PICKUP VERIFIED: QR scanned and photo uploaded by driver.`,
+                photo_url: photoUrl
+            }
+        });
+        
+        closeVerifyModal();
+        showPopupAlert("Verification Successful! Package Picked Up.");
+        loadMissions();
+    } catch(e) {
+        alert("Failed to complete pickup.");
+    }
+}
+
+async function uploadFile(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+    });
 }

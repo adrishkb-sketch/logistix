@@ -15,6 +15,48 @@ def get_driver_shipments(driver_id: str):
     assigned = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id]
     return assigned
 
+@router.get("/safety/rest-stops")
+def get_rest_stops(lat: float, lng: float):
+    # Mocked Rest Stop database
+    # In a real app this would query Google Places or a safety DB
+    stops = [
+        {"name": "Zen Haven Rest Stop", "lat": lat + 0.015, "lng": lng + 0.01, "rating": 4.8, "amenities": ["Parking", "Cafe", "Sleep Pods"]},
+        {"name": "Highway Oasis", "lat": lat - 0.02, "lng": lng + 0.025, "rating": 4.5, "amenities": ["Fuel", "Shower", "24/7 Food"]},
+        {"name": "Driver Relief Point", "lat": lat + 0.03, "lng": lng - 0.01, "rating": 4.2, "amenities": ["Mechanic", "Clean Restrooms"]}
+    ]
+    return stops
+
+@router.post("/{driver_id}/zen")
+def toggle_zen(driver_id: str, data: dict):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    is_active = data.get("is_active", False)
+    dest = data.get("destination")
+    
+    drivers_db.update(driver_id, {
+        "is_zen_mode": is_active,
+        "zen_destination": dest
+    })
+    
+    if is_active:
+        # Create a safety alert for the manager
+        from backend.models import Alert
+        from backend.database import JSONDatabase
+        alerts_db = JSONDatabase("alerts")
+        new_alert = Alert(
+            company_id=driver["company_id"],
+            type="fatigue",
+            description=f"SAFETY: Driver {driver['name']} has entered ZEN MODE due to erratic patterns/fatigue. Rerouted to {dest.get('address') if dest else 'Rest Stop'}.",
+            severity="high",
+            suggestion="Monitor driver status and verify arrival at rest stop.",
+            driver_id=driver_id
+        )
+        alerts_db.insert(new_alert.model_dump())
+        
+    return {"message": "Zen Mode updated", "is_zen_mode": is_active}
+
 @router.post("/{driver_id}/location")
 def update_driver_location(driver_id: str, location: Dict[str, Any]):
     # In a real app we might update driver's current location.
@@ -64,7 +106,29 @@ def update_driver_location(driver_id: str, location: Dict[str, Any]):
                         )
                         s["logs"] = s.get("logs", []) + [checkpoint_log.model_dump()]
                         s["at_warehouse_id"] = w["id"]
+                        
+                        # DRONE-LEG INTEGRATION
+                        from backend.services.route_engine import check_drone_viability
+                        drone_intel = check_drone_viability(w["lat"], w["lng"], s["drop"]["lat"], s["drop"]["lng"])
+                        if drone_intel["viable"] and w.get("drone_count", 0) > 0:
+                            from backend.models import ShipmentEvent
+                            drone_log = ShipmentEvent(
+                                status="in_transit",
+                                message=f"🛰️ DRONE DISPATCHED (ID: D-{w['id'][:4]}): Last-mile air segment initiated.",
+                                reason=drone_intel["reason"],
+                                location={"lat": w["lat"], "lng": w["lng"]}
+                            )
+                            s["logs"] = s.get("logs", []) + [drone_log.model_dump()]
+                            s["status"] = "in_transit"
+                            s["stage"] = "Drone Air Delivery"
+                            s["route_type"] = "drone-leg"
+                            
+                            # Decrement drone count in warehouse
+                            w["drone_count"] -= 1
+                            warehouses_db.update(w["id"], {"drone_count": w["drone_count"]})
+                        
                     break
+
             
             if not in_warehouse and s.get("at_warehouse_id"):
                 s["at_warehouse_id"] = None # left warehouse
@@ -148,6 +212,37 @@ async def scan_cargo(driver_id: str, shipment_id: str, file: UploadFile = File(.
     
     return {"status": "pass", "message": "Cargo quality verified. Safe for pickup."}
 
+@router.post("/{driver_id}/optimize-loading")
+async def optimize_loading(driver_id: str, file: UploadFile = File(...)):
+    # In a real app, this would use Computer Vision (CV) to:
+    # 1. Detect vehicle dimensions from the photo
+    # 2. Detect cargo volume from the photo
+    # 3. Calculate 3D Bin Packing
+    
+    import random
+    # Mocked Stacking Blueprint
+    blueprint = [
+        {"layer": 1, "items": ["Heavy Box A", "Crate B", "Medicine Cooler"], "position": "Floor - Rear", "instruction": "Stack heaviest items first at the base against the cabin wall."},
+        {"layer": 2, "items": ["Perishable Box C", "Light Parcel D"], "position": "Mid - Center", "instruction": "Place cold chain items in the center for optimal temperature stability."},
+        {"layer": 3, "items": ["Fragile Envelopes"], "position": "Top - Front", "instruction": "Secure fragile envelopes on top using elastic nets."}
+    ]
+    
+    utilization = random.uniform(85, 98)
+    
+    # Save to active shipment for manager visibility
+    all_shipments = shipments_db.get_all()
+    active = next((s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
+    if active:
+        shipments_db.update(active["id"], {"loading_blueprint": blueprint})
+
+    return {
+        "status": "success",
+        "utilization_boost": "22%",
+        "total_utilization": f"{utilization:.1f}%",
+        "blueprint": blueprint,
+        "message": "AI Spatial Optimization Complete. 3D Blueprint Generated."
+    }
+
 @router.post("/{driver_id}/incident")
 def report_incident(driver_id: str, data: dict):
     driver = drivers_db.get_by_id(driver_id)
@@ -173,6 +268,9 @@ def report_incident(driver_id: str, data: dict):
         # Resting reduces fatigue
         new_fatigue = max(0, driver.get("fatigue_score", 0) - 40)
         drivers_db.update(driver_id, {"fatigue_score": new_fatigue, "last_rest_start": datetime.utcnow().isoformat()})
+    elif incident_type in ["toll", "refuel"]:
+        # Minor stop log
+        pass
         
     # Find active shipment
     all_shipments = shipments_db.get_all()
@@ -232,3 +330,28 @@ def report_incident(driver_id: str, data: dict):
         shipments_db.update(active["id"], active)
         
     return {"message": "Incident logged successfully"}
+
+@router.get("/{driver_id}/dashboard/stats")
+def get_driver_stats(driver_id: str):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    all_ships = shipments_db.get_all()
+    my_ships = [s for s in all_ships if s.get("assigned_driver_id") == driver_id]
+    
+    delivered = [s for s in my_ships if s["status"] == "delivered"]
+    timely = [s for s in delivered if s.get("actual_delivery", "") <= s.get("expected_delivery", "9999")]
+    timely_percent = (len(timely) / len(delivered) * 100) if delivered else 100
+    
+    total_earned = sum([s.get("weight", 0) * 5 for s in delivered]) # Mock earnings
+    
+    return {
+        "total_trips": len(my_ships),
+        "delivered_count": len(delivered),
+        "timely_percent": round(timely_percent, 1),
+        "total_earned": total_earned,
+        "reward_points": driver.get("reward_points", 0),
+        "fatigue_score": driver.get("fatigue_score", 0),
+        "perf_history": [random.randint(70, 100) for _ in range(5)] # Last 5 trips mock
+    }

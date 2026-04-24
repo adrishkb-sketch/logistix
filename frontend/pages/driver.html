@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .driver-layout { max-width: 600px; margin: 0 auto; padding: 20px; }
         .top-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
@@ -25,6 +26,26 @@
         .timeline { border-left: 3px solid var(--primary); padding-left: 20px; margin-left: 15px; margin-top: 20px;}
         .timeline-node { position: relative; margin-bottom: 20px; }
         .timeline-dot { position: absolute; left: -29px; top: 0; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--bg-dark); }
+        
+        /* Zen Mode Styles */
+        .zen-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: rgba(10, 25, 41, 0.95); backdrop-filter: blur(20px);
+            z-index: 20000; display: none; flex-direction: column; 
+            align-items: center; justify-content: center; text-align: center;
+            color: #fff; padding: 40px;
+        }
+        .zen-breathing {
+            width: 150px; height: 150px; border-radius: 50%;
+            background: radial-gradient(circle, var(--primary), transparent);
+            animation: breathe 8s infinite ease-in-out;
+            margin-bottom: 30px; opacity: 0.6;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(0.8); opacity: 0.3; }
+            50% { transform: scale(1.5); opacity: 0.8; }
+        }
+        .pulse-warning { animation: pulse 1s infinite; }
     </style>
 </head>
 <body>
@@ -33,16 +54,48 @@
     <div class="driver-layout">
         <div class="top-bar">
             <h2 id="driver-name">Driver App</h2>
-            <button class="btn-primary" style="width:auto; padding: 5px 15px;" onclick="logout()">Exit</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="sensor-btn" class="btn-primary" style="width:auto; padding: 5px 15px; background:var(--warning); color:#000; font-size:0.8rem;" onclick="requestSensorPermission()">🛡️ Safety Sync</button>
+                <button class="btn-primary" style="width:auto; padding: 5px 15px;" onclick="logout()">Exit</button>
+            </div>
         </div>
 
         <div class="tabs" style="display:flex; gap:10px; margin-bottom: 20px;">
-            <button class="btn-primary" id="btn-tab-active" style="flex:1;" onclick="switchDriverTab('active')">Active Route</button>
+            <button class="btn-primary" id="btn-tab-dash" style="flex:1;" onclick="switchDriverTab('dash')">Dashboard</button>
+            <button class="btn-primary" id="btn-tab-active" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('active')">My Route</button>
             <button class="btn-primary" id="btn-tab-completed" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('completed')">History</button>
             <button class="btn-primary" id="btn-tab-profile" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('profile')">Profile</button>
         </div>
 
-        <div id="active-tab">
+        <div id="dash-tab" style="display:block;">
+            <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                <div class="glass-card" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
+                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Earned</div>
+                    <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-earned">$0</div>
+                </div>
+                <div class="glass-card" style="padding:1rem; border-top:4px solid var(--success); text-align:center;">
+                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">On-Time</div>
+                    <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-ontime">0%</div>
+                </div>
+                <div class="glass-card" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
+                    <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Score</div>
+                    <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-safety">5.0</div>
+                </div>
+            </div>
+            
+            <div class="glass-card" style="padding:1rem; margin-bottom:1.5rem;">
+                <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Performance Velocity</h4>
+                <canvas id="driverPerfChart" height="180"></canvas>
+            </div>
+
+            <div class="glass-card" style="padding:1rem; text-align:center; background:linear-gradient(135deg, rgba(0,242,254,0.1), rgba(0,0,0,0));">
+                <h4 style="margin:0;">Active vehicle details</h4>
+                <div id="vehicle-mini-details" style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Loading...</div>
+                <button class="btn-primary" style="margin-top:10px; width:auto; padding:5px 15px; background:var(--success);" onclick="switchDriverTab('active')">View Live Route →</button>
+            </div>
+        </div>
+
+        <div id="active-tab" style="display:none;">
             <div id="instruction-banner" class="instruction-banner">
                 <!-- Injected via JS -->
             </div>
@@ -121,6 +174,34 @@
                 </div>
 
                 <div style="margin-top:25px; text-align:left;">
+                    <div class="glass-card" style="padding:15px; background:linear-gradient(135deg, rgba(245,101,101,0.1), rgba(0,0,0,0)); border: 1px solid rgba(245,101,101,0.2);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h4 style="margin:0; color:var(--danger);">🛡️ Medical Health Card</h4>
+                            <span id="h-status" class="badge" style="background:var(--success); font-size:0.7rem;">FIT TO DRIVE</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:0.7rem; color:var(--text-muted);">HEART RATE</div>
+                                <div style="font-size:1.2rem; font-weight:bold; color:var(--danger);" id="h-rate">-- BPM</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.7rem; color:var(--text-muted);">BLOOD PRESSURE</div>
+                                <div style="font-size:1.2rem; font-weight:bold;" id="h-bp">--/--</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.7rem; color:var(--text-muted);">OXYGEN (SpO2)</div>
+                                <div style="font-size:1.2rem; font-weight:bold; color:var(--accent);" id="h-o2">--%</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:0.7rem; color:var(--text-muted);">STRESS INDEX</div>
+                                <div style="font-size:1.2rem; font-weight:bold;" id="h-stress">--</div>
+                            </div>
+                        </div>
+                        <p style="margin-top:10px; font-size:0.7rem; color:var(--text-muted); text-align:center;">Last Sync: <span id="h-sync">Just now</span> via Wearable AI</p>
+                    </div>
+                </div>
+
+                <div style="margin-top:25px; text-align:left;">
                     <label style="font-size:0.85rem; color:var(--text-muted)">Fatigue Meter</label>
                     <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; margin-top:5px; overflow:hidden;">
                         <div id="p-fatigue-bar" style="width:0%; height:100%; background:var(--primary); transition:width 0.5s ease;"></div>
@@ -142,10 +223,13 @@
         <h2 style="color:var(--danger); margin-bottom:10px;">Report an Incident</h2>
         <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">This will instantly notify the manager and update your logs.</p>
         
-        <div style="display:flex; flex-direction:column; gap:10px;">
-            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown')">🛠️ Vehicle Breakdown</button>
-            <button class="btn-primary" style="background:#3182ce;" onclick="submitIncident('challan')">👮 Police Challan</button>
-            <button class="btn-primary" style="background:#d69e2e;" onclick="submitIncident('traffic')">🚗 Severe Traffic Jam</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown')">🛠️ Breakdown</button>
+            <button class="btn-primary" style="background:#3182ce;" onclick="submitIncident('challan')">👮 Challan</button>
+            <button class="btn-primary" style="background:#d69e2e;" onclick="submitIncident('traffic')">🚦 Traffic</button>
+            <button class="btn-primary" style="background:var(--accent);" onclick="submitIncident('toll')">🎫 Toll Plaza</button>
+            <button class="btn-primary" style="background:#48bb78;" onclick="submitIncident('refuel')">⛽ Refuel</button>
+            <button class="btn-primary" style="background:#805ad5;" onclick="submitIncident('weather')">⛈️ Weather</button>
         </div>
         <button class="btn-primary" style="margin-top:20px; background:transparent; border:1px solid white;" onclick="document.getElementById('incident-modal').style.display='none'">Cancel</button>
     </div>
@@ -155,15 +239,88 @@
         <h2 style="color:var(--warning); margin-bottom:10px;">Are you okay?</h2>
         <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">We noticed you haven't moved in a while. Do you need to report an issue?</p>
         
-        <div style="display:flex; flex-direction:column; gap:10px;">
-            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown', true)">🛠️ Yes, Breakdown</button>
-            <button class="btn-primary" style="background:#3182ce;" onclick="submitIncident('challan', true)">👮 Yes, Challan / Stopped</button>
-            <button class="btn-primary" style="background:var(--success);" onclick="document.getElementById('stationary-modal').style.display='none'">👍 I'm Fine (Just resting/traffic)</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown', true)">🛠️ Breakdown</button>
+            <button class="btn-primary" style="background:var(--warning); color:#000;" onclick="submitIncident('toll', true)">🎫 Toll Plaza</button>
+            <button class="btn-primary" style="background:var(--accent);" onclick="submitIncident('refuel', true)">⛽ Refuel</button>
+            <button class="btn-primary" style="background:var(--success);" onclick="document.getElementById('stationary-modal').style.display='none'">👍 I'm Fine</button>
+        </div>
+    </div>
+
+    <!-- Zen Mode Overlay -->
+    <div id="zen-overlay" class="zen-overlay">
+        <div class="zen-breathing"></div>
+        <h1 style="color:var(--primary); font-size:2.5rem; margin-bottom:10px;">ZEN MODE ACTIVE</h1>
+        <p style="font-size:1.2rem; margin-bottom:30px; line-height:1.6;">AI detected high fatigue or erratic patterns.<br>Your safety is our priority. Take a deep breath.</p>
+        
+        <div class="glass-card" style="width:100%; max-width:400px; border: 1px solid var(--primary);">
+            <h3 style="color:var(--primary); margin-bottom:15px;">📍 Rerouting to Safety</h3>
+            <p id="zen-rest-stop-name" style="font-size:1.1rem; font-weight:bold;"></p>
+            <p id="zen-rest-stop-amenities" style="color:var(--text-muted); font-size:0.9rem; margin-top:5px;"></p>
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <button class="btn-primary" style="flex:1;" onclick="confirmArrival()">I have Arrived & Resting</button>
+                <button class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="deactivateZen()">I'm Fine, Resume Route</button>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Loading Optimizer Modal -->
+    <div id="loader-modal" class="zen-overlay" style="padding:20px; display:none; background:rgba(10,25,41,0.98);">
+        <div style="width:100%; max-width:500px; text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="color:var(--primary); margin:0;">🏗️ AR Cargo Optimizer</h2>
+                <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('loader-modal').style.display='none'">✖</button>
+            </div>
+            
+            <div id="loader-step-1" class="glass-card" style="margin-bottom:20px; border:1px dashed var(--primary);">
+                <h3>Step 1: Scan Cargo Hold</h3>
+                <p style="font-size:0.9rem; color:var(--text-muted);">Photograph your vehicle's empty cargo area for AI volume analysis.</p>
+                <input type="file" id="vehicle-photo" accept="image/*" style="margin-top:15px; color:white;">
+                <button class="btn-primary" style="margin-top:15px;" onclick="analyzeLoading()">Analyze & Generate Blueprint</button>
+            </div>
+
+            <div id="loader-result" style="display:none;">
+                <div class="glass-card" style="background:rgba(0,242,254,0.05); border:1px solid var(--primary); padding:15px; margin-bottom:20px; text-align:center;">
+                    <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:5px;">🚀 SPACE UTILIZATION BOOST</div>
+                    <div style="font-size:2rem; font-weight:bold; color:var(--primary);">+22% Efficiency</div>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;">AI has packed 14 items into 3 optimized layers.</p>
+                </div>
+
+                <h4 style="color:var(--primary); margin-bottom:10px;">3D STACKING BLUEPRINT</h4>
+                <div id="stacking-blueprint" style="margin-bottom:20px; border-left:2px solid var(--primary); padding-left:15px;">
+                    <!-- Blueprint nodes injected -->
+                </div>
+
+                <button class="btn-primary" onclick="document.getElementById('loader-modal').style.display='none'">Confirm & Start Loading</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Modal (QR + Photo) -->
+    <div id="verify-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:350px; text-align:center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+        <h3 style="margin-top:0;">🛡️ Shipment Verification</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;">Scan package QR and upload proof.</p>
+        
+        <div id="qr-reader" style="width:100%; border-radius:8px; overflow:hidden; border:1px solid var(--primary); margin-bottom:15px;"></div>
+        
+        <div id="qr-success-msg" style="display:none; color:var(--success); font-weight:bold; margin-bottom:15px;">✅ QR Code Matched!</div>
+        
+        <div class="input-group" style="margin-top:10px;">
+            <label>Pickup Evidence (Photo)</label>
+            <input type="file" id="v-photo" accept="image/*" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); padding:5px; border-radius:4px;">
+        </div>
+        
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button class="btn-primary" id="btn-submit-verify" disabled onclick="submitVerification()">Complete Pickup</button>
+            <button class="btn-primary" style="background:transparent; border:1px solid white;" onclick="closeVerifyModal()">Cancel</button>
         </div>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="../js/api.js"></script>
     <script src="../js/driver.js"></script>
 </body>

@@ -1,0 +1,121 @@
+[
+    {
+        "summary": {
+            "net_profit": 1165755,
+            "efficiency_score": 88.4,
+            "carbon_reduction": 0,
+            "total_trips": 7200,
+            "roi_percentage": 52.5
+        },
+        "monthly_forecast": [
+            {
+                "month": 1,
+                "revenue": 571950,
+                "cost": 374945,
+                "profit": 197005
+            },
+            {
+                "month": 2,
+                "revenue": 582750,
+                "cost": 382025,
+                "profit": 200725
+            },
+            {
+                "month": 3,
+                "revenue": 577800,
+                "cost": 378780,
+                "profit": 199020
+            },
+            {
+                "month": 4,
+                "revenue": 560700,
+                "cost": 367570,
+                "profit": 193130
+            },
+            {
+                "month": 5,
+                "revenue": 545850,
+                "cost": 357835,
+                "profit": 188015
+            },
+            {
+                "month": 6,
+                "revenue": 545400,
+                "cost": 357540,
+                "profit": 187860
+            }
+        ],
+        "ai_recommendation": "EXCELLENT GROWTH PLAN",
+        "risk_level": "Medium",
+        "breakdown": "Revenue: 3384k (Trips: 7200). Cost/Trip: \u20b9295 (Saved: \u20b925 from optimizations, +\u20b90 rent premium).",
+        "params": {
+            "months": 6,
+            "wh": 2,
+            "whLoc": "tier2",
+            "fleet": 0,
+            "green": 0,
+            "auto": 0,
+            "incentive": 0
+        }
+    },
+    {
+        "summary": {
+            "net_profit": 1044952.5,
+            "efficiency_score": 85.2,
+            "carbon_reduction": 0,
+            "total_trips": 7200,
+            "roi_percentage": 46.3
+        },
+        "monthly_forecast": [
+            {
+                "month": 1,
+                "revenue": 564750,
+                "cost": 385912.5,
+                "profit": 178837.5
+            },
+            {
+                "month": 2,
+                "revenue": 552150,
+                "cost": 377302.5,
+                "profit": 174847.5
+            },
+            {
+                "month": 3,
+                "revenue": 543600,
+                "cost": 371460,
+                "profit": 172140
+            },
+            {
+                "month": 4,
+                "revenue": 550800,
+                "cost": 376380,
+                "profit": 174420
+            },
+            {
+                "month": 5,
+                "revenue": 549900,
+                "cost": 375765,
+                "profit": 174135
+            },
+            {
+                "month": 6,
+                "revenue": 538650,
+                "cost": 368077.5,
+                "profit": 170572.5
+            }
+        ],
+        "ai_recommendation": "EXCELLENT GROWTH PLAN",
+        "risk_level": "Medium",
+        "breakdown": "Revenue: 3299k (Trips: 7200). Cost/Trip: \u20b9307 (Saved: \u20b912 from optimizations, +\u20b90 rent premium).",
+        "params": {
+            "months": 6,
+            "wh": 1,
+            "whLoc": "tier2",
+            "fleet": 0,
+            "green": 0,
+            "auto": 0,
+            "incentive": 0
+        },
+        "company_id": "a8e4bafa-7f23-458c-bdc1-6834c464d2db"
+    }
+]

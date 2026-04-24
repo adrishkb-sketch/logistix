@@ -118,3 +118,24 @@ def check_shipment_performance(shipment: dict, driver: dict = None, vehicle: dic
         "weather": weather["condition"],
         "dist_remaining_km": round(dist, 1)
     }
+
+def check_drone_viability(lat: float, lng: float, dest_lat: float, dest_lng: float) -> dict:
+    """
+    AI model to decide if the last-mile should be a drone leg.
+    Criteria: Distance < 5km and High Traffic/Congestion area.
+    """
+    dist = haversine(lat, lng, dest_lat, dest_lng)
+    
+    # Mock Traffic Engine
+    # In a real app, this would query Google Traffic or TomTom
+    seed = int((dest_lat + dest_lng) * 100) % 100
+    is_congested = seed > 60 # 40% of urban areas marked as congested
+    
+    viable = dist < 5.0 and is_congested
+    
+    return {
+        "viable": viable,
+        "distance": round(dist, 2),
+        "is_congested": is_congested,
+        "reason": "Traffic congestion detected in destination zone. Drone delivery recommended." if is_congested else "Direct truck delivery is optimal."
+    }

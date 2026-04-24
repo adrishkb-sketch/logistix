@@ -29,8 +29,14 @@ class SmartContractTx(BaseModel):
 
 # Data Models
 
+class Location(BaseModel):
+    lat: float
+    lng: float
+    address: Optional[str] = None
+
 class Driver(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
     name: str
     login_id: str
     password: str
@@ -51,6 +57,13 @@ class Driver(BaseModel):
     total_trips: int = 0
     safety_index: float = 100.0
     punctuality_rate: float = 100.0
+    health_metrics: Optional[dict] = {
+        "heart_rate": 72,
+        "blood_pressure": "120/80",
+        "oxygen": 98,
+        "stress_index": 15
+    }
+    last_health_check: Optional[str] = None
     last_rest_start: Optional[str] = None
     profile_pic: Optional[str] = None
     customer_ratings: List[float] = Field(default_factory=list)
@@ -60,9 +73,15 @@ class Driver(BaseModel):
     past_accidents: int = 0
     traffic_violations: int = 0
     reward_points: float = 0.0
+    phone_number: Optional[str] = None
+    
+    # Zen Mode Fields
+    is_zen_mode: bool = False
+    zen_destination: Optional[Location] = None
 
 class Vehicle(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
     type: str # bike, van, truck
     number_plate: str # e.g. MH-12-AB-1234
     speed: float # avg km/h
@@ -79,14 +98,13 @@ class Vehicle(BaseModel):
 
 class Warehouse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
     name: str
     lat: float
     lng: float
-
-class Location(BaseModel):
-    lat: float
-    lng: float
-    address: Optional[str] = None
+    drone_count: int = 0
+    contact_number: Optional[str] = None
+    manager_name: Optional[str] = None
 
 class ShipmentEvent(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
@@ -94,9 +112,11 @@ class ShipmentEvent(BaseModel):
     message: str
     reason: Optional[str] = None # 'weather', 'traffic', 'challan', 'mechanical'
     location: Optional[Location] = None
+    photo_url: Optional[str] = None
 
 class Shipment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
     pickup: Location
     drop: Location
     weight: float
@@ -117,6 +137,15 @@ class Shipment(BaseModel):
     is_leg: bool = False
     leg_order: int = 0
     logs: List[ShipmentEvent] = Field(default_factory=list)
+    
+    # Cold Chain 2.0 Fields
+    is_perishable: bool = False
+    vitality: float = 100.0 # 0 to 100
+    temperature_last_recorded: Optional[float] = None
+    loading_blueprint: Optional[List[dict]] = None
+    qr_code_data: Optional[str] = None
+    receiver_name: Optional[str] = None
+    receiver_phone: Optional[str] = None
 
 class ShipmentCreate(BaseModel):
     pickup: Location
@@ -124,9 +153,13 @@ class ShipmentCreate(BaseModel):
     weight: float
     description: str
     labels: Optional[List[str]] = []
+    is_perishable: bool = False
+    receiver_name: str
+    receiver_phone: str
 
 class Alert(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
     type: str # traffic, weather, delay, fatigue
     description: str
     severity: str # low, medium, high, critical
@@ -138,6 +171,7 @@ class Alert(BaseModel):
 
 class Message(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
     shipment_id: Optional[str] = None
     sender_id: str # company_id or driver_id
     receiver_id: str # company_id or driver_id

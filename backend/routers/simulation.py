@@ -167,3 +167,118 @@ def stop_simulation(sim_id: str):
             shipments_db.update(s["id"], s)
             
     return {"message": f"Simulation {sim_id} stopped. System reverted to normal."}
+
+@router.post("/strategy-oracle")
+def run_strategy_oracle(data: dict):
+    # Inputs:
+    # months: simulation duration
+    # wh_expansion: number of new warehouses
+    # wh_location: "tier1" or "tier2" (Tier 1 has higher demand but higher cost)
+    # fleet_expansion: percentage increase in fleet size
+    # green_policy: 0 to 100 (percentage of fleet converted to EV)
+    # automation_level: 0 to 100 (warehouse automation investment)
+    # driver_incentive: 0 to 100 (investment in driver retention)
+    
+    import random
+    months = data.get("months", 6)
+    wh_plus = data.get("wh_expansion", 0)
+    wh_loc = data.get("wh_location", "tier2")
+    fleet_plus = data.get("fleet_expansion", 0)
+    green_val = data.get("green_policy", 0)
+    auto_val = data.get("automation_level", 0)
+    incentive = data.get("driver_incentive", 0)
+    
+    # Baseline stats
+    avg_trips_per_month = 1200
+    avg_revenue_per_trip = 450
+    avg_cost_per_trip = 320
+    
+    # Tier modifiers
+    demand_mult = 1.25 if wh_loc == "tier1" else 1.0
+    rent_premium = 45 if wh_loc == "tier1" else 0
+    
+    # 1. Cost Impact Calculation
+    # New warehouses reduce distance but increase rent premium in Tier 1
+    # Automation reduces labor cost. Incentive reduces turnover/accident costs.
+    cost_saving_per_trip = (wh_plus * 12.5) + (auto_val * 0.8) + (green_val * 0.4) + (incentive * 0.5)
+    new_cost_per_trip = max(200, avg_cost_per_trip - cost_saving_per_trip + rent_premium)
+    
+    # 2. Efficiency Impact (ETA success rate)
+    # Incentive = better drivers = faster delivery
+    efficiency_gain = (wh_plus * 3.2) + (fleet_plus * 0.15) + (auto_val * 0.1) + (incentive * 0.12)
+    new_eta_success = min(99.5, 82.0 + efficiency_gain)
+    
+    # 3. Environmental Impact (CO2)
+    carbon_reduction = (green_val * 0.85) + (auto_val * 0.05)
+    
+    # 4. ROI Simulation
+    total_revenue = 0
+    total_cost = 0
+    monthly_data = []
+    
+    for m in range(months):
+        # Scale demand
+        monthly_trips = int(avg_trips_per_month * (1 + (fleet_plus/200.0) + (wh_plus/50.0)) * demand_mult)
+        monthly_trips = int(monthly_trips * (0.95 + random.random() * 0.1))
+        
+        m_rev = monthly_trips * avg_revenue_per_trip
+        m_cost = monthly_trips * new_cost_per_trip
+        
+        total_revenue += m_rev
+        total_cost += m_cost
+        
+        monthly_data.append({
+            "month": m + 1,
+            "revenue": m_rev,
+            "cost": m_cost,
+            "profit": m_rev - m_cost
+        })
+        
+    net_profit = total_revenue - total_cost
+    
+    # Breakdown for UI tooltip
+    breakdown = f"Revenue: {int(total_revenue/1000)}k (Trips: {int(avg_trips_per_month*months*demand_mult)}). Cost/Trip: ₹{int(new_cost_per_trip)} (Saved: ₹{int(cost_saving_per_trip)} from optimizations, +₹{rent_premium} rent premium)."
+
+    return {
+        "summary": {
+            "net_profit": net_profit,
+            "efficiency_score": new_eta_success,
+            "carbon_reduction": carbon_reduction,
+            "total_trips": int(avg_trips_per_month * months),
+            "roi_percentage": round((net_profit / (total_cost or 1)) * 100, 1)
+        },
+        "monthly_forecast": monthly_data,
+        "ai_recommendation": "Maintain current operations." if net_profit < 500000 else "EXCELLENT GROWTH PLAN",
+        "risk_level": "Low" if new_eta_success > 90 else "Medium",
+        "breakdown": breakdown
+    }
+
+@router.post("/strategy/save")
+def save_strategy(data: dict):
+    strategy_db = JSONDatabase("strategy_plans")
+    company_id = data.get("company_id")
+    if not company_id:
+        return {"error": "Missing company_id"}
+        
+    all_plans = strategy_db.get_all()
+    # Replace existing plan for this company if it exists, otherwise add new
+    new_plans = [p for p in all_plans if p.get("company_id") != company_id]
+    new_plans.append(data)
+    strategy_db.write(new_plans)
+    return {"message": "Strategy plan activated!"}
+
+@router.get("/strategy/active")
+def get_active_strategy(company_id: str):
+    strategy_db = JSONDatabase("strategy_plans")
+    plans = strategy_db.get_all()
+    # Find the active plan for this specific company
+    company_plan = next((p for p in plans if p.get("company_id") == company_id), None)
+    return company_plan
+
+@router.delete("/strategy/active")
+def delete_strategy(company_id: str):
+    strategy_db = JSONDatabase("strategy_plans")
+    all_plans = strategy_db.get_all()
+    remaining = [p for p in all_plans if p.get("company_id") != company_id]
+    strategy_db.write(remaining)
+    return {"message": "Strategy plan cleared."}

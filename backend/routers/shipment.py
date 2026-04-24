@@ -35,11 +35,15 @@ def create_shipment(shipment_data: ShipmentCreate):
     
     new_shipment = Shipment(
         **shipment_data.model_dump(),
+        company_id=shipment_data.company_id if hasattr(shipment_data, 'company_id') else "unknown",
         route_type="direct",
         expected_delivery=expected_delivery,
         pickup_deadline=pickup_deadline,
         delivery_otp=otp,
-        logs=[initial_log]
+        logs=[initial_log],
+        is_perishable=shipment_data.is_perishable,
+        vitality=100.0,
+        qr_code_data=str(uuid.uuid4())
     )
     
     shipments_db.insert(new_shipment.model_dump())
@@ -47,8 +51,20 @@ def create_shipment(shipment_data: ShipmentCreate):
     return new_shipment
 
 @router.get("/")
-def get_shipments():
-    return shipments_db.get_all()
+def get_shipments(company_id: str):
+    from backend.services.cold_chain import calculate_shipment_vitality
+    all_ships = shipments_db.get_all()
+    company_ships = [s for s in all_ships if s.get("company_id") == company_id]
+    
+    # Recalculate vitality for perishables
+    for s in company_ships:
+        if s.get("is_perishable"):
+            new_v = calculate_shipment_vitality(s)
+            if new_v != s.get("vitality"):
+                s["vitality"] = new_v
+                shipments_db.update(s["id"], {"vitality": new_v})
+                
+    return company_ships
 
 @router.get("/{shipment_id}")
 def get_shipment(shipment_id: str):
@@ -422,3 +438,14 @@ def _generate_legs(parent_shipment, leg_data):
         
         # Next leg starts after a 1 hour buffer (for warehouse processing)
         current_time = expected_time + timedelta(hours=1)
+@router.delete("/{shipment_id}")
+def delete_shipment(shipment_id: str):
+    if shipments_db.delete(shipment_id):
+        return {"message": "Shipment deleted successfully"}
+    # Try prefix match for short IDs
+    all_ships = shipments_db.get_all()
+    target = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+    if target and shipments_db.delete(target["id"]):
+        return {"message": "Shipment deleted successfully"}
+        
+    raise HTTPException(status_code=404, detail="Shipment not found")

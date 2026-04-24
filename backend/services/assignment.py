@@ -16,10 +16,11 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     # Predict weather for the route (pickup point)
     weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
     
-    drivers = drivers_db.get_all()
-    vehicles = vehicles_db.get_all()
+    company_id = shipment.get("company_id")
+    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
+    vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id]
     warehouses_db = JSONDatabase("warehouses")
-    warehouses = warehouses_db.get_all()
+    warehouses = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
     
     # We need to calculate current load for multi-shipment logic
     from backend.database import JSONDatabase

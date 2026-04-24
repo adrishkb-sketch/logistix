@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from backend.models import Driver, Vehicle, Warehouse
 from backend.database import JSONDatabase
+import uuid
+import random
 
 router = APIRouter()
 drivers_db = JSONDatabase("drivers")
@@ -8,10 +10,50 @@ vehicles_db = JSONDatabase("vehicles")
 warehouses_db = JSONDatabase("warehouses")
 ledger_db = JSONDatabase("ledger")
 reviews_db = JSONDatabase("journey_reviews")
+shipments_db = JSONDatabase("shipments")
 
 @router.get("/ledger")
-def get_ledger():
-    return ledger_db.get_all()
+def get_ledger(company_id: str):
+    txs = ledger_db.get_all()
+    return [t for t in txs if t.get("company_id") == company_id]
+
+@router.post("/ledger/boost")
+def boost_points(data: dict):
+    company_id = data.get("company_id")
+    percentage = data.get("percentage", 0)
+    
+    if not company_id:
+        raise HTTPException(status_code=400, detail="Missing company_id")
+        
+    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
+    for d in drivers:
+        current_points = d.get("reward_points", 0)
+        boost = int(current_points * (percentage / 100.0))
+        if boost > 0:
+            drivers_db.update(d["id"], {"reward_points": current_points + boost})
+            # Log to ledger
+            ledger_db.insert({
+                "company_id": company_id,
+                "driver_id": d["id"],
+                "points": boost,
+                "timestamp": "Now", # In a real app use datetime
+                "hash": f"0x{uuid.uuid4().hex[:16]}",
+                "shipment_id": "BULK_BOOST"
+            })
+            
+    return {"message": f"Successfully boosted points for {len(drivers)} drivers by {percentage}%."}
+
+@router.get("/system/baseline-stats")
+def get_baseline_stats(company_id: str):
+    wh = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
+    vh = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id]
+    ev = [v for v in vh if v.get("type") in ["bike", "scooty", "3 wheeled (battery)"]]
+    
+    return {
+        "warehouse_count": len(wh),
+        "vehicle_count": len(vh),
+        "ev_count": len(ev)
+    }
 
 @router.get("/reviews/{shipment_id}")
 def get_journey_review(shipment_id: str):
@@ -27,8 +69,9 @@ def create_driver(driver: Driver):
     return drivers_db.insert(driver.model_dump())
 
 @router.get("/drivers")
-def get_drivers():
-    return drivers_db.get_all()
+def get_drivers(company_id: str):
+    drivers = drivers_db.get_all()
+    return [d for d in drivers if d.get("company_id") == company_id]
 
 @router.delete("/drivers/{driver_id}")
 def delete_driver(driver_id: str):
@@ -42,8 +85,9 @@ def create_vehicle(vehicle: Vehicle):
     return vehicles_db.insert(vehicle.model_dump())
 
 @router.get("/vehicles")
-def get_vehicles():
-    return vehicles_db.get_all()
+def get_vehicles(company_id: str):
+    vehicles = vehicles_db.get_all()
+    return [v for v in vehicles if v.get("company_id") == company_id]
 
 @router.delete("/vehicles/{vehicle_id}")
 def delete_vehicle(vehicle_id: str):
@@ -57,8 +101,137 @@ def create_warehouse(warehouse: Warehouse):
     return warehouses_db.insert(warehouse.model_dump())
 
 @router.get("/warehouses")
-def get_warehouses():
-    return warehouses_db.get_all()
+def get_warehouses(company_id: str):
+    warehouses = warehouses_db.get_all()
+    return [w for w in warehouses if w.get("company_id") == company_id]
+
+@router.delete("/warehouses/{warehouse_id}")
+def delete_warehouse(warehouse_id: str):
+    if warehouses_db.delete(warehouse_id):
+        return {"message": "Warehouse deleted successfully"}
+    raise HTTPException(status_code=404, detail="Warehouse not found")
+
+@router.post("/alerts/{alert_id}/resolve")
+def resolve_alert(alert_id: str):
+    alerts_db.update(alert_id, {"status": "resolved"})
+    return {"message": "Alert resolved"}
+
+@router.post("/warehouses/suggest")
+def suggest_warehouse_location(data: dict):
+    # Mocking a "strategic" suggestion
+    # In a real app, this would use a demand heat-map or clustering AI
+    lat = data.get("lat")
+    lng = data.get("lng")
+    
+    # Suggest a point 0.05 degrees away (approx 5km) towards a "hub"
+    # Logic: Offset slightly towards "Metro" coordinates (deterministic for demo)
+    s_lat = lat + 0.02
+    s_lng = lng + 0.02
+    
+    # Calculate distance (rough estimate for demo)
+    from math import sqrt
+    dist_km = sqrt((s_lat - lat)**2 + (s_lng - lng)**2) * 111
+    
+    reasons = [
+        "30% higher proximity to Tier-1 delivery hubs.",
+        "Optimal node for cross-docking operations in this sector.",
+        "Reduces average last-mile delivery time by 12 minutes.",
+        "Lower historical traffic congestion for large vehicles."
+    ]
+    
+    return {
+        "suggested_lat": s_lat,
+        "suggested_lng": s_lng,
+        "distance_km": round(dist_km, 2),
+        "reason": random.choice(reasons)
+    }
+
+@router.get("/dashboard/stats")
+def get_manager_stats(company_id: str):
+    s_db = JSONDatabase("shipments")
+    v_db = JSONDatabase("vehicles")
+    d_db = JSONDatabase("drivers")
+    
+    shipments = [s for s in s_db.get_all() if s.get("company_id") == company_id]
+    vehicles = [v for v in v_db.get_all() if v.get("company_id") == company_id]
+    drivers = [d for d in d_db.get_all() if d.get("company_id") == company_id]
+    
+    # 1. Timely Delivery %
+    delivered = [s for s in shipments if s["status"] == "delivered"]
+    timely = [s for s in delivered if s.get("actual_delivery", "") <= s.get("expected_delivery", "9999")]
+    timely_percent = (len(timely) / len(delivered) * 100) if delivered else 100
+    
+    # 2. Avg Delay
+    delays = []
+    for s in delivered:
+        if s.get("actual_delivery") and s.get("expected_delivery"):
+            from datetime import datetime
+            try:
+                actual = datetime.fromisoformat(s["actual_delivery"])
+                expected = datetime.fromisoformat(s["expected_delivery"])
+                diff = (actual - expected).total_seconds() / 60
+                if diff > 0: delays.append(diff)
+            except: pass
+    avg_delay = sum(delays) / len(delays) if delays else 0
+    
+    # 3. Fleet Distribution
+    fleet_dist = {
+        "in_transit": len([v for v in vehicles if v.get("status") == "in_transit"]),
+        "available": len([v for v in vehicles if v.get("status") == "available"]),
+        "maintenance": len([v for v in vehicles if v.get("status") == "maintenance"])
+    }
+    
+    return {
+        "total_shipments": len(shipments),
+        "active_shipments": len([s for s in shipments if s["status"] != "delivered"]),
+        "timely_percent": round(timely_percent, 1),
+        "avg_delay_mins": round(avg_delay, 1),
+        "fleet_dist": fleet_dist,
+        "revenue": sum([s.get("weight", 0) * 10 for s in delivered]), # Mock revenue
+        "perf_history": [random.randint(85, 100) for _ in range(7)]
+    }
+
+@router.get("/analytics/cascade")
+def get_cascading_impact(company_id: str):
+    all_shipments = shipments_db.get_all()
+    my_ships = [s for s in all_shipments if s.get("company_id") == company_id]
+    
+    delayed_ships = [s for s in my_ships if s.get("performance_stats", {}).get("status") == "delayed" and s["status"] == "in_transit"]
+    
+    risks = []
+    total_impact_hours = 0
+    
+    for s in delayed_ships:
+        delay_mins = s["performance_stats"].get("diff_mins", 0)
+        total_impact_hours += delay_mins / 60
+        
+        # Predictive cascading to hubs or final legs
+        impact_hubs = []
+        if s.get("is_leg"):
+            # Find subsequent legs
+            subs = [ls for ls in my_ships if ls.get("parent_id") == s.get("parent_id") and ls.get("leg_order", 0) > s.get("leg_order", 0)]
+            for sub in subs:
+                impact_hubs.append({
+                    "id": sub["id"],
+                    "location": sub["drop"].get("address", "Final Destination"),
+                    "risk_level": "critical" if delay_mins > 60 else "moderate",
+                    "est_delay_mins": delay_mins + 15 # +15m overhead per cascade
+                })
+        
+        risks.append({
+            "source_shipment_id": s["id"],
+            "description": s["description"],
+            "current_delay": f"{delay_mins}m",
+            "impact_hubs": impact_hubs or [{"id": "direct", "location": "Final Receiver", "risk_level": "moderate", "est_delay_mins": delay_mins}],
+            "severity": "high" if delay_mins > 45 else "medium"
+        })
+        
+    return {
+        "active_risk_count": len(risks),
+        "total_impact_hours": round(total_impact_hours, 1),
+        "risks": risks,
+        "recommendation": "Divert high-priority cargo to regional air-legs if delays exceed 90 mins."
+    }
 
 @router.put("/drivers/{driver_id}")
 def update_driver(driver_id: str, data: dict):
@@ -223,9 +396,23 @@ def confirm_account_deletion(company_id: str, otp: str):
         raise HTTPException(status_code=400, detail="Invalid OTP")
         
     c_db = JSONDatabase("companies")
+    
+    # 1. Wipe all associated data
+    # Helper to wipe table by company_id
+    def wipe_by_company(table_name):
+        db = JSONDatabase(table_name)
+        all_items = db.get_all()
+        remaining = [item for item in all_items if item.get("company_id") != company_id]
+        db.write(remaining)
+
+    tables_to_wipe = ["drivers", "vehicles", "warehouses", "shipments", "alerts", "ledger", "messages", "strategy_plans"]
+    for table in tables_to_wipe:
+        wipe_by_company(table)
+
     if c_db.delete(company_id):
-        del deletion_otp_store[company_id]
-        return {"message": "Account deleted successfully."}
+        if company_id in deletion_otp_store:
+            del deletion_otp_store[company_id]
+        return {"message": "Account and all associated data deleted successfully."}
     
     raise HTTPException(status_code=404, detail="Account not found")
 @router.post("/rescue-shipment")

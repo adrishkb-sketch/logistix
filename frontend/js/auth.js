@@ -54,6 +54,7 @@ document.getElementById('manager-login-form').addEventListener('submit', async (
     try {
         const res = await apiCall('/auth/company/login', 'POST', { email, password });
         localStorage.setItem('manager_id', res.company_id);
+        localStorage.setItem('company_id', res.company_id);
         localStorage.setItem('manager_name', res.name);
         window.location.href = 'pages/manager.html';
     } catch(e) {}

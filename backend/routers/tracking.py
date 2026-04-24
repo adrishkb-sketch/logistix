@@ -60,7 +60,7 @@ def track_shipment(shipment_id: str):
     }
 
 @router.get("/fleet/weather")
-def get_fleet_weather():
+def get_fleet_weather(company_id: str):
     """
     Returns simulated weather cells and active vehicle locations for the manager map.
     """
@@ -69,8 +69,8 @@ def get_fleet_weather():
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
     
-    drivers = drivers_db.get_all()
-    shipments = shipments_db.get_all()
+    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
+    shipments = [s for s in shipments_db.get_all() if s.get("company_id") == company_id]
     
     fleet = []
     for d in drivers:
@@ -90,6 +90,9 @@ def get_fleet_weather():
     
     weather_db = JSONDatabase("weather_cells")
     cells = weather_db.get_all()
+    # For local dev, filter weather cells by company_id if we want multi-tenancy for simulations too
+    cells = [c for c in cells if c.get("company_id") == company_id or c.get("company_id") is None]
+
     if not cells:
         cells = [
             {"lat": 28.6, "lng": 77.2, "radius": 50, "condition": "Storm", "color": "#e53e3e"},
@@ -99,15 +102,21 @@ def get_fleet_weather():
     else:
         for c in cells:
             c["color"] = "#e53e3e" if c.get("severity") == "critical" else "#3182ce"
+            # Add dynamic weather icon based on condition
+            cond = c.get("condition", "").lower()
+            if "storm" in cond: c["icon"] = "⛈️"
+            elif "rain" in cond: c["icon"] = "🌧️"
+            elif "cloud" in cond: c["icon"] = "☁️"
+            else: c["icon"] = "🌦️"
             
     return {"fleet": fleet, "cells": cells}
 
 @router.get("/messages/{user_id}")
-def get_messages(user_id: str):
+def get_messages(user_id: str, company_id: str):
     messages_db = JSONDatabase("messages")
     all_msgs = messages_db.get_all()
-    # Return messages where user is either sender or receiver
-    user_msgs = [m for m in all_msgs if m.get("sender_id") == user_id or m.get("receiver_id") == user_id]
+    # Filter by company_id AND then sender/receiver
+    user_msgs = [m for m in all_msgs if m.get("company_id") == company_id and (m.get("sender_id") == user_id or m.get("receiver_id") == user_id)]
     return sorted(user_msgs, key=lambda x: x["created_at"])
 
 @router.post("/messages")
@@ -118,6 +127,6 @@ def send_message(msg: dict):
     return messages_db.insert(new_msg.model_dump())
 
 @router.get("/alerts/active")
-def get_active_alerts():
+def get_active_alerts(company_id: str):
     alerts_db = JSONDatabase("alerts")
-    return [a for a in alerts_db.get_all() if a.get("status") == "active"]
+    return [a for a in alerts_db.get_all() if a.get("company_id") == company_id and a.get("status") == "active"]
