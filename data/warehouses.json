@@ -12,24 +12,14 @@
         "lng": 88.41796875000001
     },
     {
-        "id": "0c54eb8f-1163-45ae-8fa3-b51744e6ad94",
-        "company_id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5",
-        "name": "A1",
-        "lat": 28.603557006723307,
-        "lng": 77.23850575879217,
-        "drone_count": 0,
-        "contact_number": "",
-        "manager_name": ""
-    },
-    {
         "id": "715302be-1677-438e-8a8c-98d223a26a7c",
         "company_id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5",
         "name": "A2",
         "lat": 22.54067604418958,
         "lng": 88.39622050195932,
-        "drone_count": 0,
-        "contact_number": "",
-        "manager_name": ""
+        "drone_count": 2,
+        "contact_number": "5678",
+        "manager_name": "B2"
     },
     {
         "id": "1b0e0151-08d9-4bd8-8931-777affdced7b",
@@ -37,9 +27,9 @@
         "name": "A3",
         "lat": 18.86599281173137,
         "lng": 73.06589763283729,
-        "drone_count": 0,
-        "contact_number": "",
-        "manager_name": ""
+        "drone_count": 3,
+        "contact_number": "2468",
+        "manager_name": "B3"
     },
     {
         "id": "f6bfdf59-6817-4d56-8cd3-c70b5a10ec7b",
@@ -47,18 +37,8 @@
         "name": "A4",
         "lat": 12.870364540677162,
         "lng": 77.58787069141866,
-        "drone_count": 0,
-        "contact_number": "",
-        "manager_name": ""
-    },
-    {
-        "id": "7a2ae905-4b73-4a2b-9516-ab9e63aca918",
-        "company_id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5",
-        "name": "A4",
-        "lat": 12.700363598942246,
-        "lng": 81.34716756641866,
-        "drone_count": 2,
-        "contact_number": "5599",
-        "manager_name": "B1"
+        "drone_count": 4,
+        "contact_number": "1357",
+        "manager_name": "B4"
     }
 ]
