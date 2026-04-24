@@ -4,5 +4,11 @@
         "email": "1@g.com",
         "password": "1234",
         "id": "a8e4bafa-7f23-458c-bdc1-6834c464d2db"
+    },
+    {
+        "name": "ryuga",
+        "email": "2@g.com",
+        "password": "123",
+        "id": "e39fd711-8bbb-40b5-8a9c-80493b1b52d5"
     }
 ]
