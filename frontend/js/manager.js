@@ -440,6 +440,9 @@ async function loadInsights() {
         document.getElementById('stat-timely').innerText = `${stats.timely_percent}%`;
         document.getElementById('stat-delay').innerText = `${stats.avg_delay_mins}m`;
         document.getElementById('stat-active').innerText = stats.active_shipments;
+        document.getElementById('stat-drivers').innerText = stats.total_drivers;
+        document.getElementById('stat-warehouses').innerText = stats.total_warehouses;
+        document.getElementById('stat-vehicles').innerText = stats.total_vehicles;
 
         // Render Charts & Cascade
         renderManagerCharts(stats);

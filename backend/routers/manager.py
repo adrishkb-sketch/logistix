@@ -233,9 +233,15 @@ def get_manager_stats(company_id: str):
         "maintenance": len([v for v in vehicles if v.get("status") == "maintenance"])
     }
     
+    # 4. Warehouse Count
+    warehouses = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
+    
     return {
         "total_shipments": len(shipments),
         "active_shipments": len([s for s in shipments if s["status"] != "delivered"]),
+        "total_drivers": len(drivers),
+        "total_vehicles": len(vehicles),
+        "total_warehouses": len(warehouses),
         "timely_percent": round(timely_percent, 1),
         "avg_delay_mins": round(avg_delay, 1),
         "fleet_dist": fleet_dist,
