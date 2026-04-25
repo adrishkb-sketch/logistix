@@ -214,9 +214,9 @@ function loadWarehousesList(warehouses) {
             <td>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}</td>
             <td><span style="color:var(--primary); font-weight:bold;" id="wh-drone-display-${w.id}">${w.drone_count || 0}</span> 🛰️</td>
             <td>
-                <div style="display:flex; gap:5px;">
-                    <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; background:var(--accent);" onclick="openEditWarehouse('${w.id}')">✏️ Edit</button>
-                    <button class="btn-primary" style="padding:4px 8px; font-size:0.75rem; background:var(--primary);" onclick="locateWarehouse('${w.id}')">📍 Locate</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-primary btn-accent" style="padding:6px 12px; font-size:0.75rem;" onclick="openEditWarehouse('${w.id}')">✏️ Edit</button>
+                    <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="locateWarehouse('${w.id}')">📍 Locate</button>
                 </div>
             </td>
         </tr>

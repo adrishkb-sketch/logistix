@@ -177,18 +177,20 @@
             <!-- Warehouses Section -->
             <section id="warehouses" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
                         <div>
-                            <h3 style="margin:0;">Network Infrastructure Map</h3>
-                            <p class="subtitle">Click on map to deploy new regional hub</p>
+                            <h2 style="margin:0; font-size:1.8rem; font-weight:800; color:var(--primary); letter-spacing:-0.02em;">Network Infrastructure</h2>
+                            <p style="margin:8px 0 0 0; color:var(--text-muted); font-size:0.95rem; line-height:1.6; max-width:600px;">Visualize and manage your regional hubs. Click anywhere on the map to deploy a new infrastructure node and expand your logistics reach.</p>
                         </div>
-                        <button class="btn-primary" style="width:auto; padding:5px 15px;" onclick="loadMapData()">🔄 Refresh Map</button>
+                        <button class="btn-primary" style="width:auto; padding:12px 24px; font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:10px; border-radius:12px; background:rgba(79, 140, 255, 0.1); color:var(--primary); border:1px solid rgba(79, 140, 255, 0.2);" onclick="loadMapData()">
+                            <span style="font-size:1.1rem;">🔄</span> Refresh Map
+                        </button>
                     </div>
                     <div id="map"></div>
                 </div>
 
-                <div class="glass-card section-card">
-                    <h3>Warehouse Registry</h3>
+                <div class="glass-card section-card" style="margin-top:24px;">
+                    <h3 style="margin:0 0 24px 0; font-size:1.5rem; font-weight:700;">Global Infrastructure Registry</h3>
                     <div class="table-container">
                         <table>
                             <thead>
@@ -1112,7 +1114,7 @@
     </div>
 
     <!-- Edit Warehouse Modal -->
-    <div id="wh-edit-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10003; width:400px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid var(--accent);">
+    <div id="wh-edit-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10003; width:480px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); border: 1px solid var(--accent); padding:32px;">
         <h3 style="margin-top:0; color:var(--accent);">✏️ Edit Warehouse</h3>
         <input type="hidden" id="edit-wh-id">
         <div class="input-group">
@@ -1136,10 +1138,10 @@
         
         <p style="margin-top:15px; font-size:0.75rem; color:var(--text-muted);">Note: Location coordinates are locked for this hub.</p>
 
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button class="btn-primary" style="background:var(--accent);" onclick="submitEditWarehouse()">Save Changes</button>
-            <button class="btn-primary" style="background:var(--danger);" onclick="decommissionWarehouse()">Decommission Hub</button>
-            <button class="btn-primary" style="background:transparent; border:1px solid white;" onclick="document.getElementById('wh-edit-modal').style.display='none'">Cancel</button>
+        <div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="btn-primary btn-accent" style="flex:1; min-width:140px; padding:12px;" onclick="submitEditWarehouse()">Save Changes</button>
+            <button class="btn-primary btn-danger" style="flex:1; min-width:140px; padding:12px;" onclick="decommissionWarehouse()">Decommission Hub</button>
+            <button class="btn-primary btn-outline" style="flex:1; min-width:140px; padding:12px;" onclick="document.getElementById('wh-edit-modal').style.display='none'">Cancel</button>
         </div>
     </div>
 
