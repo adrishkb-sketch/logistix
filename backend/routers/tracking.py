@@ -130,3 +130,31 @@ def send_message(msg: dict):
 def get_active_alerts(company_id: str):
     alerts_db = JSONDatabase("alerts")
     return [a for a in alerts_db.get_all() if a.get("company_id") == company_id and a.get("status") == "active"]
+
+@router.post("/broadcast")
+def broadcast_message(data: dict):
+    from datetime import datetime
+    company_id = data.get("company_id")
+    sender_id = data.get("sender_id")
+    content = data.get("content")
+    
+    if not all([company_id, sender_id, content]):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+        
+    from backend.database import JSONDatabase
+    drivers_db = JSONDatabase("drivers")
+    messages_db = JSONDatabase("messages")
+    
+    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
+    
+    for d in drivers:
+        m = {
+            "sender_id": sender_id,
+            "receiver_id": d["id"],
+            "content": f"📢 [BROADCAST]: {content}",
+            "company_id": company_id,
+            "created_at": datetime.utcnow().isoformat() + "Z"
+        }
+        messages_db.insert(m)
+        
+    return {"message": f"Broadcast sent to {len(drivers)} drivers"}

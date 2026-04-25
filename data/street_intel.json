@@ -1,0 +1,6 @@
+[
+    {"id": "zone-1", "name": "Old Delhi - Narrow Lanes", "lat": 28.6506, "lng": 77.2303, "radius": 1.5, "max_vehicle_type": "scooty"},
+    {"id": "zone-2", "name": "Dadar Market - High Congestion", "lat": 19.0178, "lng": 72.8478, "radius": 1.0, "max_vehicle_type": "van"},
+    {"id": "zone-3", "name": "Bada Bazaar Kolkata", "lat": 22.5855, "lng": 88.3516, "radius": 1.2, "max_vehicle_type": "bike"},
+    {"id": "zone-4", "name": "Chickpet Bangalore", "lat": 12.9698, "lng": 77.5794, "radius": 0.8, "max_vehicle_type": "scooty"}
+]

@@ -126,6 +126,7 @@ async function loadDashStats() {
                 <div style="display:flex; justify-content:space-between;"><span>⏱️ Punctuality Bonus:</span> <span>+${b.punctuality_bonus}</span></div>
                 <div style="display:flex; justify-content:space-between;"><span>🛡️ Safety Incentive:</span> <span>+${b.safety_incentive}</span></div>
                 <div style="display:flex; justify-content:space-between;"><span>🧘 Wellness Bonus:</span> <span>+${b.wellness_bonus}</span></div>
+                ${b.customer_rating_bonus !== undefined ? `<div style="display:flex; justify-content:space-between;"><span>🌟 Receiver Rating Bonus:</span> <span>${b.customer_rating_bonus >= 0 ? '+' : ''}${b.customer_rating_bonus}</span></div>` : ''}
                 <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:8px 0;">
                 <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--success);"><span>Total Points:</span> <span>${b.total}</span></div>
             `;

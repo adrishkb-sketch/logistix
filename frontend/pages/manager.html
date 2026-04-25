@@ -65,6 +65,49 @@
             background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
                         radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
         }
+        /* AI Optimize Button */
+        .ai-optimize-btn {
+            background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
+            color: white !important;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .ai-optimize-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
+            filter: brightness(1.1);
+        }
+        .ai-optimize-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        .ai-optimize-btn:hover::before {
+            left: 100%;
+        }
+        .ai-optimize-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
     </style>
 </head>
 <body>
@@ -229,16 +272,25 @@
             <!-- Shipments Section -->
             <section id="shipments" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
-                    <h3>Create Shipment</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="margin:0;">Create Shipment</h3>
+                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openBulkUploadModal()">📤 Bulk Upload (Excel/Sheets)</button>
+                    </div>
                     <form id="create-shipment-form">
                         <div class="form-grid">
                             <div class="input-group">
                                 <label>Pickup Location (Lat, Lng)</label>
-                                <input type="text" id="pickup-loc" placeholder="e.g. 28.7041, 77.1025" required>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="text" id="pickup-loc" placeholder="e.g. 28.7041, 77.1025" required>
+                                    <button type="button" class="btn-primary" style="width:auto; padding:0 12px; font-size:1.1rem; background:rgba(79, 140, 255, 0.1); border:1px solid rgba(79, 140, 255, 0.2); color:var(--primary);" onclick="openMapPicker('pickup-loc')" title="Select on Map">📍</button>
+                                </div>
                             </div>
                             <div class="input-group">
                                 <label>Drop Location (Lat, Lng)</label>
-                                <input type="text" id="drop-loc" placeholder="e.g. 19.0760, 72.8777" required>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="text" id="drop-loc" placeholder="e.g. 19.0760, 72.8777" required>
+                                    <button type="button" class="btn-primary" style="width:auto; padding:0 12px; font-size:1.1rem; background:rgba(79, 140, 255, 0.1); border:1px solid rgba(79, 140, 255, 0.2); color:var(--primary);" onclick="openMapPicker('drop-loc')" title="Select on Map">📍</button>
+                                </div>
                             </div>
                             <div class="input-group">
                                 <label>Weight (kg)</label>
@@ -255,6 +307,14 @@
                             <div class="input-group">
                                 <label>Receiver Phone</label>
                                 <input type="text" id="receiver-phone" placeholder="+91 9876543210" required>
+                            </div>
+                            <div class="input-group">
+                                <label>E-Way Bill Number 📄</label>
+                                <input type="text" id="eway-no" placeholder="e.g. 121012345678">
+                            </div>
+                            <div class="input-group">
+                                <label>E-Way Bill Expiry ⏰</label>
+                                <input type="datetime-local" id="eway-expiry">
                             </div>
                             <div class="input-group span-2" style="display:flex; flex-direction:row; align-items:center; gap:12px; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border);">
                                 <input type="checkbox" id="is-perishable" style="width:20px; height:20px; cursor:pointer; margin:0;">
@@ -277,7 +337,10 @@
                                 <option value="eta">Expected ETA</option>
                             </select>
                             <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:5px 15px;">⚡ Auto Bulk Assign</button>
-                            <button class="btn-primary" onclick="optimizeFleet()" style="width:auto; padding:5px 15px; background:var(--warning); color:#000;">🚛 Optimize Fleet (AI Consolidate)</button>
+                            <button class="ai-optimize-btn" onclick="optimizeFleet()">
+                                <span style="font-size:0.95rem;">🚛</span> 
+                                <span>Optimize Fleet</span>
+                            </button>
                         </div>
                     </div>
                     <div class="table-container">
@@ -286,8 +349,9 @@
                                 <tr>
                                     <th>ID / Desc</th>
                                     <th>Vitality / Health</th>
-                                    <th>Status</th>
-                                    <th>Route Type</th>
+                                    <th>Status / Perf</th>
+                                    <th>Compliance 📄</th>
+                                    <th>Assigned Fleet</th>
                                     <th>Actions & Intel</th>
                                 </tr>
                             </thead>
@@ -299,11 +363,13 @@
                 </div>
             </section>
 
-            <!-- Drivers & Vehicles Section -->
-            <section id="drivers" class="section-content" style="display:none;">
-                <div class="side-by-side">
+                <!-- Drivers & Vehicles Section -->
+                <section id="drivers" class="section-content" style="display:none;">
                     <div class="glass-card section-card">
-                        <h3>Link Driver to Vehicle</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0;">Link Driver to Vehicle</h3>
+                            <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="autoAssignFleet()">🚀 Auto Assign All</button>
+                        </div>
                         <p class="subtitle">Assign a driver to a vehicle based on license compatibility.</p>
                         <form id="link-form" class="form-grid">
                             <div class="input-group">
@@ -343,10 +409,13 @@
                             </table>
                         </div>
                     </div>
-                </div>
+
 
                 <div class="glass-card section-card">
-                    <h3>Add Driver</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="margin:0;">Add Driver</h3>
+                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openDriverBulkModal()">📤 Bulk Upload Drivers</button>
+                    </div>
                     <form id="add-driver-form" class="form-grid">
                         <div class="input-group">
                             <label>Full Name</label>
@@ -424,7 +493,10 @@
                 </div>
 
                 <div class="glass-card section-card">
-                    <h3>Add Vehicle</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="margin:0;">Add Vehicle</h3>
+                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openVehicleBulkModal()">📤 Bulk Upload Vehicles</button>
+                    </div>
                     <form id="add-vehicle-form" class="form-grid">
                         <div class="input-group">
                             <label>Vehicle Type</label>
@@ -617,11 +689,12 @@
                             <div style="width:40px; height:3px; background:var(--primary); margin:12px 0; border-radius:2px;"></div>
                             <p style="margin:0; font-size:0.85rem; color:var(--muted); line-height:1.4;">Real-time chat with active drivers.</p>
                         </div>
-                        <div style="padding:12px 24px; border-bottom:1px solid var(--border);">
+                        <div style="padding:12px 24px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
                             <div style="position:relative;">
                                 <input type="text" id="driver-chat-search" placeholder="🔍 Search driver by name..." oninput="filterDriverChatList()" style="padding:10px 10px 10px 35px; font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); width:100%; color:white;">
                                 <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:0.5; pointer-events:none;"></span>
                             </div>
+                            <button class="btn-primary" style="width:100%; padding:8px; font-size:0.8rem; background:var(--accent);" onclick="openBroadcastModal()">📢 Message Everyone (Broadcast)</button>
                         </div>
                         <div id="chat-driver-list" style="flex:1; overflow-y:auto;">
                             <!-- Drivers list injected here -->
@@ -1365,6 +1438,152 @@
         <button id="view-review-btn" class="btn-primary" style="display:none; margin-top:20px;" onclick="fetchJourneyReview()">View Journey Scorecard</button>
     </div>
 
+    <!-- Map Picker Modal -->
+    <div id="map-picker-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:800px; max-width:95%; height:600px; max-height:90vh; padding:24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid var(--primary);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 id="map-picker-title" style="margin:0; font-size:1.4rem;">Select Location on Map</h3>
+            <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="closeMapPicker()">✖</button>
+        </div>
+        <div id="picking-map" style="height: calc(100% - 110px); width:100%; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,0.2);"></div>
+        <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+            <div id="current-pick-display" style="font-size:1rem; color:var(--primary); font-weight:600; background:rgba(79, 140, 255, 0.1); padding:8px 16px; border-radius:8px;">Click on map to pick a location...</div>
+            <button class="btn-primary" style="width:auto; padding:12px 32px;" onclick="confirmMapPick()">Confirm Selection</button>
+        </div>
+    </div>
+
+    <!-- Bulk Upload Modal -->
+    <div id="bulk-upload-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 30px 60px rgba(0,0,0,0.7); overflow-y:auto; border:1px solid var(--accent); background: #0a0d14;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h2 style="margin:0; font-size:1.8rem; color:var(--accent);">Bulk Shipment Upload</h2>
+            <button style="background:none; border:none; color:white; font-size:1.8rem; cursor:pointer;" onclick="closeBulkUploadModal()">✖</button>
+        </div>
+
+        <!-- Format Guide -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:32px;">
+            <h4 style="margin:0 0 12px 0; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem;">Required Spreadsheet Format</h4>
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:15px;">Please ensure your file has the following columns in order (No header required):</p>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:0.8rem; color:var(--text);">
+                <div><b>1.</b> Pickup Lat</div>
+                <div><b>2.</b> Pickup Lng</div>
+                <div><b>3.</b> Drop Lat</div>
+                <div><b>4.</b> Drop Lng</div>
+                <div><b>5.</b> Weight (kg)</div>
+                <div><b>6.</b> Description</div>
+                <div><b>7.</b> Receiver Name</div>
+                <div><b>8.</b> Receiver Phone</div>
+                <div><b>9.</b> Perishable (Yes/No)</div>
+                <div><b>10.</b> E-Way Bill No</div>
+                <div><b>11.</b> E-Way Bill Expiry (YYYY-MM-DD HH:MM)</div>
+            </div>
+        </div>
+
+        <!-- Upload Options -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center; background:rgba(255,255,255,0.01);">
+                <p style="margin-bottom:15px; font-weight:700;">Option A: Upload File</p>
+                <input type="file" id="bulk-file-input" accept=".xlsx, .xls, .csv" style="display:none;" onchange="handleBulkFileSelect(event)">
+                <button class="btn-primary" style="width:auto; padding:12px 24px;" onclick="document.getElementById('bulk-file-input').click()">📁 Choose Excel/CSV</button>
+                <p id="file-name-display" style="margin-top:10px; font-size:0.8rem; color:var(--primary);"></p>
+            </div>
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center; background:rgba(255,255,255,0.01);">
+                <p style="margin-bottom:15px; font-weight:700;">Option B: Google Sheets</p>
+                <input type="text" id="sheets-url" placeholder="Paste Public Link..." style="margin-bottom:15px; width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white;">
+                <button class="btn-primary" style="width:auto; padding:12px 24px; background:var(--success);" onclick="previewGoogleSheets()">🔗 Fetch Data</button>
+            </div>
+        </div>
+
+        <!-- Preview Area -->
+        <div id="bulk-preview-section" style="display:none;">
+            <h4 style="margin:0 0 15px 0; border-top:1px solid var(--border); padding-top:20px;">Review Shipments (<span id="bulk-count">0</span>)</h4>
+            <div class="table-container" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead style="position:sticky; top:0; background:var(--bg); z-index:1;">
+                        <tr style="text-align:left; border-bottom:2px solid var(--border);">
+                            <th style="padding:12px;">Pickup</th>
+                            <th style="padding:12px;">Drop</th>
+                            <th style="padding:12px;">Weight</th>
+                            <th style="padding:12px;">Description</th>
+                            <th style="padding:12px;">Receiver</th>
+                            <th style="padding:12px;">Perish?</th>
+                            <th style="padding:12px;">E-Way Bill</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulk-preview-body"></tbody>
+                </table>
+            </div>
+            <div style="margin-top:32px; display:flex; justify-content:flex-end; gap:15px;">
+                <button class="btn-primary" style="background:rgba(255,255,255,0.05); color:var(--text); width:auto; padding:12px 32px;" onclick="closeBulkUploadModal()">Cancel</button>
+                <button class="btn-primary" id="confirm-bulk-btn" style="width:auto; padding:12px 48px;" onclick="confirmBulkUpload()">Confirm & Create Shipments</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Driver Upload Modal -->
+    <div id="bulk-driver-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 30px 60px rgba(0,0,0,0.7); overflow-y:auto; border:1px solid var(--accent); background: #0a0d14;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h2 style="margin:0; font-size:1.8rem; color:var(--accent);">Bulk Driver Upload</h2>
+            <button style="background:none; border:none; color:white; font-size:1.8rem; cursor:pointer;" onclick="closeDriverBulkModal()">✖</button>
+        </div>
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:32px;">
+            <h4 style="margin:0 0 12px 0; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem;">Required Format</h4>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:0.8rem; color:var(--text);">
+                <div>1. Full Name</div><div>2. Login ID</div><div>3. Password</div>
+                <div>4. License Type</div><div>5. Hub ID</div><div>6. Exp (Years)</div>
+                <div>7. Accidents</div><div>8. Challans</div><div>9. Phone</div>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+                <input type="file" id="bulk-driver-file" accept=".xlsx, .csv" style="display:none;" onchange="handleDriverBulkFile(event)">
+                <button class="btn-primary" style="width:auto;" onclick="document.getElementById('bulk-driver-file').click()">📁 Excel/CSV</button>
+            </div>
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+                <input type="text" id="driver-sheets-url" placeholder="Google Sheets Link..." style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white; margin-bottom:10px;">
+                <button class="btn-primary" style="width:auto; background:var(--success);" onclick="previewDriverSheets()">🔗 Fetch</button>
+            </div>
+        </div>
+        <div id="driver-preview-section" style="display:none;">
+            <h4>Preview (<span id="driver-bulk-count">0</span>)</h4>
+            <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+                <table><thead><tr><th>Name</th><th>Type</th><th>Hub ID</th><th>Phone</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
+            </div>
+            <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-driver-bulk-btn" onclick="confirmDriverBulk()">Confirm Upload</button></div>
+        </div>
+    </div>
+
+    <!-- Bulk Vehicle Upload Modal -->
+    <div id="bulk-vehicle-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 30px 60px rgba(0,0,0,0.7); overflow-y:auto; border:1px solid var(--accent); background: #0a0d14;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h2 style="margin:0; font-size:1.8rem; color:var(--accent);">Bulk Vehicle Upload</h2>
+            <button style="background:none; border:none; color:white; font-size:1.8rem; cursor:pointer;" onclick="closeVehicleBulkModal()">✖</button>
+        </div>
+        <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:32px;">
+            <h4 style="margin:0 0 12px 0; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem;">Required Format</h4>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:0.8rem; color:var(--text);">
+                <div>1. Type</div><div>2. Hub ID</div><div>3. Plate No</div>
+                <div>4. Capacity (kg)</div><div>5. Fuel Eff (km/l)</div>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+                <input type="file" id="bulk-vehicle-file" accept=".xlsx, .csv" style="display:none;" onchange="handleVehicleBulkFile(event)">
+                <button class="btn-primary" style="width:auto;" onclick="document.getElementById('bulk-vehicle-file').click()">📁 Excel/CSV</button>
+            </div>
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+                <input type="text" id="vehicle-sheets-url" placeholder="Google Sheets Link..." style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white; margin-bottom:10px;">
+                <button class="btn-primary" style="width:auto; background:var(--success);" onclick="previewVehicleSheets()">🔗 Fetch</button>
+            </div>
+        </div>
+        <div id="vehicle-preview-section" style="display:none;">
+            <h4>Preview (<span id="vehicle-bulk-count">0</span>)</h4>
+            <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+                <table><thead><tr><th>Type</th><th>Hub ID</th><th>Plate</th><th>Cap</th></tr></thead><tbody id="vehicle-preview-body"></tbody></table>
+            </div>
+            <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-vehicle-bulk-btn" onclick="confirmVehicleBulk()">Confirm Upload</button></div>
+        </div>
+    </div>
+
+
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
@@ -1393,5 +1612,15 @@ btn.onclick = () => {
 // Initial state
 setTheme(localStorage.getItem('theme') || 'dark');
 </script>
+    <!-- Broadcast Modal -->
+    <div id="broadcast-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:450px; padding:32px; box-shadow: 0 30px 60px rgba(0,0,0,0.7); border:1px solid var(--accent); background: var(--bg);">
+        <h3 style="margin:0 0 10px 0; color:var(--accent);">📢 Broadcast Message</h3>
+        <p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px;">This message will be sent to <b>ALL</b> drivers in your fleet immediately.</p>
+        <textarea id="broadcast-input" placeholder="Type your announcement here..." style="width:100%; height:120px; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); padding:12px; color:var(--text); font-family:inherit; margin-bottom:20px; resize:none;"></textarea>
+        <div style="display:flex; gap:12px;">
+            <button id="broadcast-confirm-btn" class="btn-primary" style="flex:1;" onclick="sendBroadcast()">Send Announcement 🚀</button>
+            <button class="btn-primary" style="flex:1; background:rgba(255,255,255,0.05); color:var(--text);" onclick="closeBroadcastModal()">Cancel</button>
+        </div>
+    </div>
 </body>
 </html>

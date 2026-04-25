@@ -19,71 +19,64 @@ async function requestOTP() {
 // Global Event Listener for form submissions (Delegation)
 document.addEventListener('submit', async (e) => {
     const target = e.target;
-    console.log("Form submitted:", target.id);
-
+    
     // Identify our forms
     const isManagerForm = target.id === 'manager-login-form';
     const isDriverForm = target.id === 'driver-login-form';
     const isSignupForm = target.id === 'signup-form';
 
-    if (isManagerForm || isDriverForm || isSignupForm) {
-        e.preventDefault();
-        console.log("Prevented default submission for:", target.id);
-    } else {
-        return; // Not our form
+    if (!isManagerForm && !isDriverForm && !isSignupForm) return;
+
+    e.preventDefault();
+    console.log("Processing form submission for:", target.id);
+
+    const submitBtn = target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn ? submitBtn.innerText : 'Submit';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Authenticating...';
     }
 
-    // Find active modal container
-    const activeModal = document.getElementById('auth-modal') || document.getElementById('modal');
-    if (!activeModal) {
-        console.error("No active modal found for submission");
-        return;
-    }
+    try {
+        // Manager Login
+        if (isManagerForm) {
+            const email = document.getElementById('manager-email')?.value;
+            const password = document.getElementById('manager-password')?.value;
+            
+            if (!email || !password) throw new Error("Email and password are required");
 
-    // Manager Login
-    if (isManagerForm) {
-        const email = activeModal.querySelector('#manager-email').value;
-        const password = activeModal.querySelector('#manager-password').value;
-        console.log("Attempting Manager login for:", email);
-        
-        try {
             const res = await apiCall('/auth/company/login', 'POST', { email, password });
-            console.log("Login successful, redirecting...");
+            console.log("Login successful, storing credentials...");
+            
             localStorage.setItem('manager_id', res.company_id);
             localStorage.setItem('company_id', res.company_id);
             localStorage.setItem('manager_name', res.name);
+            
             window.location.href = 'pages/manager.html';
-        } catch(err) {
-            console.error("Manager login failed:", err);
         }
-    }
 
-    // Driver Login
-    if (isDriverForm) {
-        const login_id = activeModal.querySelector('#driver-id').value;
-        const password = activeModal.querySelector('#driver-password').value;
-        console.log("Attempting Driver login for:", login_id);
-        
-        try {
+        // Driver Login
+        if (isDriverForm) {
+            const login_id = document.getElementById('driver-id')?.value;
+            const password = document.getElementById('driver-password')?.value;
+            
+            if (!login_id || !password) throw new Error("ID and password are required");
+
             const res = await apiCall('/auth/driver/login', 'POST', { login_id, password });
-            console.log("Login successful, redirecting...");
             localStorage.setItem('driver_id', res.driver_id);
             localStorage.setItem('driver_name', res.name);
             localStorage.setItem('company_id', res.company_id);
+            
             window.location.href = 'pages/driver.html';
-        } catch(err) {
-            console.error("Driver login failed:", err);
         }
-    }
 
-    // Company Signup
-    if (isSignupForm) {
-        const name = activeModal.querySelector('#signup-name').value;
-        const email = activeModal.querySelector('#signup-email').value;
-        const password = activeModal.querySelector('#signup-password').value;
-        const otp = activeModal.querySelector('#signup-otp').value;
-        
-        try {
+        // Company Signup
+        if (isSignupForm) {
+            const name = document.getElementById('signup-name')?.value;
+            const email = document.getElementById('signup-email')?.value;
+            const password = document.getElementById('signup-password')?.value;
+            const otp = document.getElementById('signup-otp')?.value;
+            
             await apiCall('/auth/company/verify-signup', 'POST', {
                 email,
                 otp,
@@ -91,9 +84,18 @@ document.addEventListener('submit', async (e) => {
             });
             alert("Signup successful! Please login as Manager.");
             if (window.closeModal) window.closeModal();
-            else activeModal.style.display = 'none';
-        } catch(err) {
-            console.error("Signup failed:", err);
+            else {
+                const m = document.getElementById('modal');
+                if (m) m.style.display = 'none';
+            }
+        }
+    } catch (err) {
+        console.error("Auth Action Failed:", err);
+        // Error is already alerted in apiCall, but we handle button reset here
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = originalBtnText;
         }
     }
 });

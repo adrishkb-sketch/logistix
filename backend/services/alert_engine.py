@@ -51,3 +51,91 @@ def check_weather_alerts(shipment: dict, lat: float, lng: float):
                     driver_id=shipment.get("assigned_driver_id")
                 )
                 alerts_db.insert(new_alert.model_dump())
+
+def check_street_intel_alerts(shipment: dict):
+    """
+    Checks if a vehicle is too large for the destination zone (Hyper-local gully mapping).
+    """
+    from backend.services.route_engine import haversine
+    from backend.database import JSONDatabase
+    
+    street_db = JSONDatabase("street_intel")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    zones = street_db.get_all()
+    drop = shipment.get("drop", {})
+    if not drop: return
+
+    v_id = shipment.get("assigned_vehicle_id")
+    if not v_id: return
+    
+    vehicle = vehicles_db.get_by_id(v_id)
+    if not vehicle: return
+    
+    v_type = vehicle.get("type", "truck")
+    
+    # Priority for vehicle types (higher index = larger)
+    types_rank = ["bike", "scooty", "3 wheeled (battery)", "3 wheeled (non EV)", "small van", "large van", "truck"]
+    try:
+        v_rank = types_rank.index(v_type.lower())
+    except ValueError:
+        v_rank = 6 # Default to truck rank
+        
+    for zone in zones:
+        dist = haversine(drop["lat"], drop["lng"], zone["lat"], zone["lng"])
+        if dist <= zone.get("radius", 1.0):
+            max_type = zone.get("max_vehicle_type", "truck")
+            try:
+                max_rank = types_rank.index(max_type.lower())
+            except ValueError:
+                max_rank = 6
+                
+            if v_rank > max_rank:
+                # Alert!
+                existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "street_intel" and a.get("status") == "active"]
+                if not existing:
+                    new_alert = Alert(
+                        type="street_intel",
+                        description=f"Vehicle '{v_type}' is too large for delivery zone '{zone['name']}'.",
+                        severity="high",
+                        suggestion=f"This zone only allows {max_type} or smaller. Consider transshipment at a nearby hub.",
+                        shipment_id=shipment["id"],
+                        driver_id=shipment.get("assigned_driver_id")
+                    )
+                    alerts_db.insert(new_alert.model_dump())
+
+def check_compliance_alerts(shipment: dict):
+    """
+    Checks if ETA exceeds E-Way Bill expiry (Compliance Guardian).
+    """
+    from datetime import datetime, timedelta
+    from backend.database import JSONDatabase
+    
+    expiry_str = shipment.get("eway_bill_expiry")
+    if not expiry_str: return
+    
+    try:
+        expiry_dt = datetime.fromisoformat(expiry_str.replace("Z", ""))
+    except Exception: return
+    
+    # Check current ETA
+    eta_str = shipment.get("expected_delivery")
+    if not eta_str: return
+    
+    try:
+        eta_dt = datetime.fromisoformat(eta_str.replace("Z", ""))
+    except Exception: return
+    
+    # If ETA is within 2 hours of expiry, or already exceeded
+    if eta_dt > expiry_dt - timedelta(hours=2):
+        existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "compliance" and a.get("status") == "active"]
+        if not existing:
+            new_alert = Alert(
+                type="compliance",
+                description=f"E-Way Bill {shipment.get('eway_bill_no')} is at risk of expiry before delivery.",
+                severity="critical" if eta_dt > expiry_dt else "high",
+                suggestion="Initiate E-Way Bill extension immediately to avoid penalties at highway checkpoints.",
+                shipment_id=shipment["id"],
+                driver_id=shipment.get("assigned_driver_id")
+            )
+            alerts_db.insert(new_alert.model_dump())

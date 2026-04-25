@@ -1,11 +1,16 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from backend.models import Driver, Vehicle, Warehouse
 from backend.database import JSONDatabase
 from datetime import datetime
+from typing import List, Optional
+from pydantic import BaseModel
 import uuid
 import random
 import requests
 import math
+import pandas as pd
+import io
+import re
 
 router = APIRouter()
 drivers_db = JSONDatabase("drivers")
@@ -14,6 +19,102 @@ warehouses_db = JSONDatabase("warehouses")
 ledger_db = JSONDatabase("ledger")
 reviews_db = JSONDatabase("journey_reviews")
 shipments_db = JSONDatabase("shipments")
+
+@router.post("/drivers/bulk-parse")
+async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
+    df = None
+    if file:
+        content = await file.read()
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(content))
+        else:
+            df = pd.read_excel(io.BytesIO(content))
+    elif url_req:
+        match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
+        if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
+        sheet_id = match.group(1)
+        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        resp = requests.get(csv_url)
+        if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
+        df = pd.read_csv(io.StringIO(resp.text))
+    
+    if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
+    
+    drivers = []
+    for _, row in df.iterrows():
+        try:
+            vals = row.values.tolist()
+            if len(vals) < 9: continue
+            d = {
+                "name": str(vals[0]),
+                "login_id": str(vals[1]),
+                "password": str(vals[2]),
+                "license_type": str(vals[3]).lower(),
+                "base_warehouse_id": str(vals[4]),
+                "years_experience": float(vals[5]),
+                "past_accidents": int(vals[6]),
+                "traffic_violations": int(vals[7]),
+                "phone_number": str(vals[8]),
+                "company_id": company_id
+            }
+            drivers.append(d)
+        except: continue
+    return {"drivers": drivers, "count": len(drivers)}
+
+@router.post("/drivers/bulk-confirm")
+async def bulk_confirm_drivers(drivers: List[Driver]):
+    for d in drivers:
+        # Use calculate_driver_performance_score if needed
+        from backend.services.driver_intel import calculate_driver_performance_score
+        d_dict = d.model_dump()
+        d_dict["driving_score"] = calculate_driver_performance_score(d_dict)
+        drivers_db.insert(d_dict)
+    return {"message": f"Successfully created {len(drivers)} drivers."}
+
+@router.post("/vehicles/bulk-parse")
+async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
+    df = None
+    if file:
+        content = await file.read()
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(content))
+        else:
+            df = pd.read_excel(io.BytesIO(content))
+    elif url_req:
+        match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
+        if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
+        sheet_id = match.group(1)
+        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        resp = requests.get(csv_url)
+        if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
+        df = pd.read_csv(io.StringIO(resp.text))
+    
+    if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
+    
+    vehicles = []
+    for _, row in df.iterrows():
+        try:
+            vals = row.values.tolist()
+            if len(vals) < 5: continue
+            v = {
+                "type": str(vals[0]).lower(),
+                "base_warehouse_id": str(vals[1]),
+                "number_plate": str(vals[2]).upper(),
+                "capacity": float(vals[3]),
+                "fuel_efficiency": float(vals[4]),
+                "company_id": company_id,
+                "status": "available",
+                "speed": 40.0 # Default speed for legacy code
+            }
+            vehicles.append(v)
+        except: continue
+    return {"vehicles": vehicles, "count": len(vehicles)}
+
+@router.post("/vehicles/bulk-confirm")
+async def bulk_confirm_vehicles(vehicles: List[Vehicle]):
+    for v in vehicles:
+        vehicles_db.insert(v.model_dump())
+    return {"message": f"Successfully created {len(vehicles)} vehicles."}
 
 @router.get("/ledger")
 def get_ledger(company_id: str):
@@ -349,6 +450,29 @@ def link_driver_to_vehicle(driver_id: str, vehicle_id: str):
     vehicles_db.update(vehicle_id, {"assigned_driver_id": driver_id})
     
     return {"message": "Linked successfully"}
+
+@router.post("/auto-assign-fleet")
+def auto_assign_fleet(company_id: str):
+    # Find all unassigned drivers for this company
+    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
+    # Find all available and unassigned vehicles for this company
+    vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id and v.get("status") == "available" and not v.get("assigned_driver_id")]
+    
+    assigned_count = 0
+    for d in drivers:
+        # Find matching vehicle: same hub AND same type
+        match = next((v for v in vehicles if v.get("base_warehouse_id") == d.get("base_warehouse_id") and v.get("type") == d.get("license_type")), None)
+        
+        if match:
+            # Link
+            drivers_db.update(d["id"], {"assigned_vehicle_id": match["id"], "verification_status": "unverified"})
+            vehicles_db.update(match["id"], {"assigned_driver_id": d["id"]})
+            
+            # Remove from pool to prevent double assignment
+            vehicles.remove(match)
+            assigned_count += 1
+            
+    return {"message": f"Successfully auto-assigned {assigned_count} driver-vehicle pairs.", "count": assigned_count}
 
 @router.post("/unlink-vehicle")
 def unlink_vehicle(driver_id: str):

@@ -37,6 +37,10 @@
 
         .back-btn { background: transparent; border: none; color: var(--primary); font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
         .back-btn:hover { text-decoration: underline; }
+        
+        .rating-star { background: none; border: none; font-size: 2.5rem; cursor: pointer; transition: transform 0.2s; filter: grayscale(100%); padding: 0; }
+        .rating-star:hover { transform: scale(1.2); }
+        .rating-star.active { filter: grayscale(0%); transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -109,6 +113,21 @@
 
                 <h4 style="margin-top:32px; margin-bottom:16px;">Journey Timeline</h4>
                 <div id="det-timeline" class="timeline"></div>
+
+                <!-- Rating Box -->
+                <div id="rating-box" class="glass-card" style="display:none; margin-top:32px; text-align:center; padding:32px; border: 1px solid var(--success); background: rgba(16, 185, 129, 0.05);">
+                    <h3 style="font-size:1.5rem; margin-bottom:8px;">How was your delivery? 🌟</h3>
+                    <p style="color:var(--muted); margin-bottom:24px;">Rate your experience with our driver.</p>
+                    <div style="display:flex; justify-content:center; gap:16px; margin-bottom:32px;">
+                        <button class="rating-star" data-value="1" onclick="setRating(1)">⭐</button>
+                        <button class="rating-star" data-value="2" onclick="setRating(2)">⭐</button>
+                        <button class="rating-star" data-value="3" onclick="setRating(3)">⭐</button>
+                        <button class="rating-star" data-value="4" onclick="setRating(4)">⭐</button>
+                        <button class="rating-star" data-value="5" onclick="setRating(5)">⭐</button>
+                    </div>
+                    <input type="hidden" id="selected-rating" value="0">
+                    <button class="btn-primary" id="submit-rating-btn" style="background:var(--success); width:100%; font-weight:800; font-size:1.1rem; box-shadow:0 4px 15px rgba(16, 185, 129, 0.3);" onclick="submitRating()">Submit Rating</button>
+                </div>
             </div>
         </div>
     </div>

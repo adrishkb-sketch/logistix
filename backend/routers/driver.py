@@ -176,6 +176,7 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = f"data/images/{filename}"
     
+    os.makedirs("data/images", exist_ok=True)
     with open(filepath, "wb") as buffer:
         buffer.write(await file.read())
         

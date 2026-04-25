@@ -476,6 +476,7 @@ function loadVerifications() {
 }
 
 showSection('analytics');
+loadDriversAndVehicles(); // Pre-load fleet data
 
 function logout() {
     localStorage.clear();
@@ -885,6 +886,8 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
         is_perishable: document.getElementById('is-perishable').checked,
         receiver_name: document.getElementById('receiver-name').value,
         receiver_phone: document.getElementById('receiver-phone').value,
+        eway_bill_no: document.getElementById('eway-no').value,
+        eway_bill_expiry: document.getElementById('eway-expiry').value,
         labels: [] // Ensure labels is present as expected by ShipmentCreate
     };
     
@@ -1016,6 +1019,15 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     ${performanceMsg}
                 </td>
                 <td>
+                    <div style="font-size:0.8rem; font-weight:600;">E-Way: ${s.eway_bill_no || 'N/A'}</div>
+                    <div style="font-size:0.65rem; color:var(--text-muted);">
+                        Exp: ${s.eway_bill_expiry ? new Date(s.eway_bill_expiry).toLocaleString() : 'N/A'}
+                    </div>
+                    ${s.eway_bill_expiry ? `
+                        <button class="btn-primary" style="padding:2px 6px; font-size:0.6rem; margin-top:4px; background:rgba(79, 140, 255, 0.1); color:var(--primary);" onclick="extendEwayBill('${s.id}')">Extend ➕</button>
+                    ` : ''}
+                </td>
+                <td>
                     <div style="font-size:0.8rem; font-weight:600; color:var(--primary);">${driverName}</div>
                     <div style="font-size:0.7rem; color:var(--text-muted); cursor:${s.loading_blueprint ? 'pointer' : 'default'};" onclick="${s.loading_blueprint ? `viewCargoPlan('${s.id}')` : ''}">
                         ${v ? v.number_plate : 'No Vehicle'}
@@ -1031,7 +1043,6 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                         ${s.status === 'pending' ? `
                             <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--success);" onclick="autoAssign('${s.id}')">🤖 Auto</button>
                             <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:#3182ce;" onclick="openManualAssign('${s.id}')">👤 Manual</button>
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--warning); color:#000;" onclick="openManualSplit('${s.id}')">✂️ Split</button>
                         ` : ''}
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:rgba(0,0,0,0.2);" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')">✏️</button>
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--danger);" onclick="deleteItem('shipments', '${s.id}')">🗑️</button>
@@ -1741,7 +1752,7 @@ window.renderDriversTable = function() {
     const sortMode = document.getElementById('driver-sort')?.value || 'name';
 
     let filtered = globalDrivers.filter(d => {
-        const matchesSearch = d.name.toLowerCase().includes(searchTerm) || d.system_id.toLowerCase().includes(searchTerm);
+        const matchesSearch = (d.name || '').toLowerCase().includes(searchTerm) || (d.system_id || '').toLowerCase().includes(searchTerm);
         const matchesType = !typeFilter || d.license_type === typeFilter;
         const matchesHub = !hubFilter || d.base_warehouse_id === hubFilter;
         return matchesSearch && matchesType && matchesHub;
@@ -1791,8 +1802,8 @@ window.renderLinkedPairs = function() {
             <td><b>${d.name}</b><br><small>${d.system_id}</small></td>
             <td><b>${vehicle ? vehicle.type : 'Unknown'}</b><br><small>${vehicle ? vehicle.number_plate : 'N/A'}</small></td>
             <td><small>${hub ? hub.name : 'N/A'}</small></td>
-            <td>
-                <button class="btn-primary btn-danger" style="padding:6px 16px; font-size:0.75rem;" onclick="unlinkVehicle('${d.id}')">Unlink Assets</button>
+            <td style="text-align: center;">
+                <button class="btn-primary btn-danger" style="padding:6px 16px; font-size:0.75rem;" onclick="unlinkVehicle('${d.id}')">Unlink</button>
             </td>
         </tr>`;
     });
@@ -1823,7 +1834,7 @@ window.renderVehiclesTable = function() {
     const sortMode = document.getElementById('vehicle-sort')?.value || 'type';
 
     let filtered = globalVehicles.filter(v => {
-        const matchesSearch = v.number_plate.toLowerCase().includes(searchTerm) || (v.system_id || '').toLowerCase().includes(searchTerm);
+        const matchesSearch = (v.number_plate || '').toLowerCase().includes(searchTerm) || (v.system_id || '').toLowerCase().includes(searchTerm);
         const matchesType = !typeFilter || v.type === typeFilter;
         const matchesHub = !hubFilter || v.base_warehouse_id === hubFilter;
         const matchesStatus = !statusFilter || v.status === statusFilter;
@@ -3214,4 +3225,310 @@ function showInfoTip(el) {
         }
     };
     setTimeout(() => document.addEventListener('click', closer), 100);
+}
+
+// --- MAP PICKER LOGIC ---
+let pickingMap = null;
+let pickingMarker = null;
+let currentPickerTarget = null;
+let pickedCoords = null;
+
+function openMapPicker(targetId) {
+    currentPickerTarget = targetId;
+    const modal = document.getElementById('map-picker-modal');
+    modal.style.display = 'block';
+    
+    document.getElementById('map-picker-title').innerText = targetId === 'pickup-loc' ? 'Select Pickup Location' : 'Select Drop Location';
+    document.getElementById('current-pick-display').innerText = 'Click on map to pick a location...';
+    pickedCoords = null;
+
+    if (!pickingMap) {
+        pickingMap = L.map('picking-map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(pickingMap);
+        
+        applyOfficialBorders(pickingMap);
+
+        pickingMap.on('click', function(e) {
+            const { lat, lng } = e.latlng;
+            pickedCoords = { lat, lng };
+            
+            if (pickingMarker) {
+                pickingMarker.setLatLng(e.latlng);
+            } else {
+                pickingMarker = L.marker(e.latlng).addTo(pickingMap);
+            }
+            
+            document.getElementById('current-pick-display').innerText = `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        });
+    } else {
+        setTimeout(() => pickingMap.invalidateSize(), 100);
+        if (pickingMarker) {
+            pickingMap.removeLayer(pickingMarker);
+            pickingMarker = null;
+        }
+    }
+
+    // Pre-fill if exists
+    const currentVal = document.getElementById(targetId).value;
+    if (currentVal && currentVal.includes(',')) {
+        const [lat, lng] = currentVal.split(',').map(s => parseFloat(s.trim()));
+        if (!isNaN(lat) && !isNaN(lng)) {
+            const ll = L.latLng(lat, lng);
+            pickingMap.setView(ll, 12);
+            pickingMarker = L.marker(ll).addTo(pickingMap);
+            pickedCoords = { lat, lng };
+            document.getElementById('current-pick-display').innerText = `Current: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        }
+    }
+}
+
+function confirmMapPick() {
+    if (!pickedCoords) return alert("Please select a location on the map first.");
+    
+    const val = `${pickedCoords.lat.toFixed(6)}, ${pickedCoords.lng.toFixed(6)}`;
+    document.getElementById(currentPickerTarget).value = val;
+    closeMapPicker();
+}
+
+function closeMapPicker() {
+    document.getElementById('map-picker-modal').style.display = 'none';
+    currentPickerTarget = null;
+    pickedCoords = null;
+}
+
+async function autoAssignFleet() {
+    if (!confirm("Are you sure you want to automatically link all unassigned drivers and vehicles? This will match them based on base hub and vehicle type.")) return;
+    
+    try {
+        const res = await apiCall(`/manager/auto-assign-fleet?company_id=${localStorage.getItem('manager_id')}`, 'POST');
+        alert(res.message);
+        loadDriversAndVehicles();
+    } catch (e) {
+        console.error("Auto-assign failed:", e);
+    }
+}
+
+let currentBulkData = [];
+
+function openBulkUploadModal() {
+    document.getElementById('bulk-upload-modal').style.display = 'block';
+    document.getElementById('bulk-preview-section').style.display = 'none';
+    document.getElementById('sheets-url').value = '';
+    document.getElementById('file-name-display').innerText = '';
+}
+
+function closeBulkUploadModal() {
+    document.getElementById('bulk-upload-modal').style.display = 'none';
+}
+
+async function handleBulkFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    document.getElementById('file-name-display').innerText = `Selected: ${file.name}`;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const res = await fetch(`${API_BASE}/shipments/bulk-parse?company_id=${localStorage.getItem('manager_id')}`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok) renderBulkPreview(data.shipments);
+        else alert(data.detail || "Failed to parse file");
+    } catch (e) {
+        alert("Upload failed.");
+    }
+}
+
+async function previewGoogleSheets() {
+    const url = document.getElementById('sheets-url').value.trim();
+    if (!url) return alert("Please enter a Google Sheets URL");
+    
+    try {
+        const res = await apiCall(`/shipments/bulk-parse?company_id=${localStorage.getItem('manager_id')}&url_req=${encodeURIComponent(url)}`, 'POST');
+        renderBulkPreview(res.shipments);
+    } catch (e) {
+        alert("Failed to fetch Google Sheet data.");
+    }
+}
+
+function renderBulkPreview(shipments) {
+    currentBulkData = shipments;
+    document.getElementById('bulk-count').innerText = shipments.length;
+    document.getElementById('bulk-preview-section').style.display = 'block';
+    
+    const tbody = document.getElementById('bulk-preview-body');
+    tbody.innerHTML = shipments.map(s => `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="padding:10px; font-size:0.8rem;">${s.pickup.lat.toFixed(3)}, ${s.pickup.lng.toFixed(3)}</td>
+            <td style="padding:10px; font-size:0.8rem;">${s.drop.lat.toFixed(3)}, ${s.drop.lng.toFixed(3)}</td>
+            <td style="padding:10px;">${s.weight}kg</td>
+            <td style="padding:10px;">${s.description}</td>
+            <td style="padding:10px; font-size:0.8rem;">${s.receiver_name}<br><small>${s.receiver_phone}</small></td>
+            <td style="padding:10px; text-align:center;">${s.is_perishable ? '✅' : '❌'}</td>
+            <td style="padding:10px; font-size:0.8rem;">
+                <b>${s.eway_bill_no || 'N/A'}</b><br>
+                <small>${s.eway_bill_expiry || ''}</small>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function confirmBulkUpload() {
+    const btn = document.getElementById('confirm-bulk-btn');
+    btn.disabled = true;
+    btn.innerText = 'Creating Shipments...';
+    
+    try {
+        const res = await apiCall('/shipments/bulk-confirm', 'POST', currentBulkData);
+        
+        let msg = `Successfully created ${res.success.length} shipments.`;
+        if (res.errors.length > 0) {
+            msg += `\n\nFailed: ${res.errors.length}\nErrors:\n${res.errors.map(e => `- ${e.description}: ${e.error}`).join('\n')}`;
+        }
+        
+        alert(msg);
+        closeBulkUploadModal();
+        loadShipments();
+    } catch (e) {
+        alert("Bulk creation failed.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = 'Confirm & Create Shipments';
+    }
+}
+
+// Bulk Driver Upload
+let currentBulkDrivers = [];
+function openDriverBulkModal() {
+    document.getElementById('bulk-driver-modal').style.display = 'block';
+    document.getElementById('driver-preview-section').style.display = 'none';
+}
+function closeDriverBulkModal() { document.getElementById('bulk-driver-modal').style.display = 'none'; }
+
+async function handleDriverBulkFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const fd = new FormData(); fd.append('file', file);
+    try {
+        const res = await fetch(`${API_BASE}/manager/drivers/bulk-parse?company_id=${localStorage.getItem('manager_id')}`, { method:'POST', body:fd });
+        const data = await res.json(); renderDriverBulkPreview(data.drivers);
+    } catch(err) { alert("Failed to parse drivers."); }
+}
+async function previewDriverSheets() {
+    const url = document.getElementById('driver-sheets-url').value;
+    try {
+        const res = await apiCall(`/manager/drivers/bulk-parse?company_id=${localStorage.getItem('manager_id')}&url_req=${encodeURIComponent(url)}`, 'POST');
+        renderDriverBulkPreview(res.drivers);
+    } catch(err) { alert("Failed to fetch driver data."); }
+}
+function renderDriverBulkPreview(drivers) {
+    currentBulkDrivers = drivers;
+    document.getElementById('driver-bulk-count').innerText = drivers.length;
+    document.getElementById('driver-preview-section').style.display = 'block';
+    document.getElementById('driver-preview-body').innerHTML = drivers.map(d => `<tr><td>${d.name}</td><td>${d.license_type}</td><td>${d.base_warehouse_id}</td><td>${d.phone_number}</td></tr>`).join('');
+}
+async function confirmDriverBulk() {
+    try {
+        await apiCall('/manager/drivers/bulk-confirm', 'POST', currentBulkDrivers);
+        alert("Drivers uploaded successfully!"); closeDriverBulkModal(); loadDriversAndVehicles();
+    } catch(err) { alert("Bulk upload failed."); }
+}
+
+// Bulk Vehicle Upload
+let currentBulkVehicles = [];
+function openVehicleBulkModal() {
+    document.getElementById('bulk-vehicle-modal').style.display = 'block';
+    document.getElementById('vehicle-preview-section').style.display = 'none';
+}
+function closeVehicleBulkModal() { document.getElementById('bulk-vehicle-modal').style.display = 'none'; }
+
+async function handleVehicleBulkFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const fd = new FormData(); fd.append('file', file);
+    try {
+        const res = await fetch(`${API_BASE}/manager/vehicles/bulk-parse?company_id=${localStorage.getItem('manager_id')}`, { method:'POST', body:fd });
+        const data = await res.json(); renderVehicleBulkPreview(data.vehicles);
+    } catch(err) { alert("Failed to parse vehicles."); }
+}
+async function previewVehicleSheets() {
+    const url = document.getElementById('vehicle-sheets-url').value;
+    try {
+        const res = await apiCall(`/manager/vehicles/bulk-parse?company_id=${localStorage.getItem('manager_id')}&url_req=${encodeURIComponent(url)}`, 'POST');
+        renderVehicleBulkPreview(res.vehicles);
+    } catch(err) { alert("Failed to fetch vehicle data."); }
+}
+function renderVehicleBulkPreview(vehicles) {
+    currentBulkVehicles = vehicles;
+    document.getElementById('vehicle-bulk-count').innerText = vehicles.length;
+    document.getElementById('vehicle-preview-section').style.display = 'block';
+    document.getElementById('vehicle-preview-body').innerHTML = vehicles.map(v => `<tr><td>${v.type}</td><td>${v.base_warehouse_id}</td><td>${v.number_plate}</td><td>${v.capacity}kg</td></tr>`).join('');
+}
+async function confirmVehicleBulk() {
+    try {
+        await apiCall('/manager/vehicles/bulk-confirm', 'POST', currentBulkVehicles);
+        alert("Vehicles uploaded successfully!"); closeVehicleBulkModal(); loadDriversAndVehicles();
+    } catch(err) { alert("Bulk upload failed."); }
+}
+
+async function extendEwayBill(shipmentId) {
+    if (!confirm("Are you sure you want to request an E-Way Bill extension for 24 hours?")) return;
+    
+    try {
+        await apiCall(`/shipments/${shipmentId}/extend-eway`, 'POST');
+        alert("E-Way Bill extension requested successfully!");
+        loadShipments();
+    } catch (e) {
+        alert("Failed to extend E-Way Bill.");
+    }
+}
+
+function openBroadcastModal() {
+    const modal = document.getElementById('broadcast-modal');
+    const input = document.getElementById('broadcast-input');
+    if (modal) modal.style.display = 'block';
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+}
+
+function closeBroadcastModal() {
+    const modal = document.getElementById('broadcast-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function sendBroadcast() {
+    const input = document.getElementById('broadcast-input');
+    const btn = document.getElementById('broadcast-confirm-btn');
+    const text = input ? input.value.trim() : "";
+    
+    if (!text) return alert("Please type a message to broadcast.");
+    
+    const managerId = localStorage.getItem('manager_id');
+    const originalText = btn.innerText;
+    
+    try {
+        btn.disabled = true;
+        btn.innerText = "Sending... ⏳";
+        
+        await apiCall('/tracking/broadcast', 'POST', {
+            company_id: managerId,
+            sender_id: managerId,
+            content: text
+        });
+        
+        alert("Broadcast sent successfully to all drivers!");
+        closeBroadcastModal();
+    } catch (e) {
+        console.error("Broadcast failed:", e);
+        alert("Failed to send broadcast. " + (e.message || "Please check your connection."));
+    } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
 }

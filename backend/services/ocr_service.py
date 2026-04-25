@@ -11,8 +11,14 @@ def get_reader():
     if _reader is None:
         try:
             import easyocr
+            print("[OCR] Initializing EasyOCR Reader...")
             _reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+            print("[OCR] Reader initialized successfully.")
         except ImportError:
+            print("[OCR] Failed to import easyocr. Is it installed?")
+            return None
+        except Exception as e:
+            print(f"[OCR] Error initializing reader: {e}")
             return None
     return _reader
 
@@ -21,7 +27,20 @@ def get_reader():
 
 def normalize(s: str) -> str:
     """Strip everything except alphanumeric chars and uppercase."""
-    return re.sub(r'[^A-Z0-9]', '', s.upper())
+    s = re.sub(r'[^A-Z0-9]', '', s.upper())
+    # Handle common OCR confusions for more robust matching
+    replacements = {
+        'O': '0',
+        'I': '1',
+        'L': '1',
+        'Z': '2',
+        'S': '5',
+        'B': '8',
+        'G': '6'
+    }
+    for old, new in replacements.items():
+        s = s.replace(old, new)
+    return s
 
 
 def fuzzy_score(a: str, b: str) -> float:
@@ -112,7 +131,6 @@ def run_ocr_on_variants(image_path: str, expected_plate: str) -> Dict[str, Any]:
     """
     import cv2
     import numpy as np
-    import tempfile
 
     ocr = get_reader()
     if ocr is None:
@@ -137,41 +155,51 @@ def run_ocr_on_variants(image_path: str, expected_plate: str) -> Dict[str, Any]:
     best_match = None
     best_score = 0.0
     all_candidates: List[str] = []
-    tmp_files = []
 
-    try:
-        for label, variant in variants:
-            # Save variant to a temp file for EasyOCR
-            suffix = ".png"
-            tmp_path = tempfile.mktemp(suffix=suffix)
-            tmp_files.append(tmp_path)
-            cv2.imwrite(tmp_path, variant)
+    expected_norm = normalize(expected_plate)
 
-            try:
-                results = ocr.readtext(tmp_path, detail=1, paragraph=False)
-            except Exception as e:
-                print(f"[OCR] variant '{label}' failed: {e}")
-                continue
+    for label, variant in variants:
+        try:
+            # EasyOCR can read from numpy array directly (much faster!)
+            results = ocr.readtext(variant, detail=1, paragraph=False)
+        except Exception as e:
+            print(f"[OCR] variant '{label}' failed: {e}")
+            continue
 
-            for (_, text, conf) in results:
-                text_norm = text.upper().strip()
-                all_candidates.append(text_norm)
+        if not results:
+            continue
 
-                score = fuzzy_score(normalize(text_norm), normalize(expected_plate))
-                # Boost score if it's a substring match
-                if is_partial_match(text_norm, expected_plate, threshold=0.0):
-                    score = max(score, 0.70)
+        # Sort results by Y-coordinate first (lines), then X-coordinate (order in line)
+        # result format: ([[x,y],[x,y],[x,y],[x,y]], text, confidence)
+        results.sort(key=lambda r: (r[0][0][1] // 10, r[0][0][0])) 
 
-                if score > best_score:
-                    best_score = score
-                    best_match = (text_norm, conf, label)
+        # 1. Join all text fragments to handle multi-line or split boxes
+        joined_text = "".join([r[1] for r in results]).upper().strip()
+        joined_norm = normalize(joined_text)
+        
+        # Calculate score for joined text
+        score = fuzzy_score(joined_norm, expected_norm)
+        if is_partial_match(joined_text, expected_plate, threshold=0.0):
+            score = max(score, 0.70)
+        
+        all_candidates.append(joined_text)
+        
+        if score > best_score:
+            best_score = score
+            best_match = (joined_text, sum(r[2] for r in results)/len(results), label)
 
-    finally:
-        for f in tmp_files:
-            try:
-                os.remove(f)
-            except Exception:
-                pass
+        # 2. Also check individual fragments just in case joined text is too noisy
+        for (_, text, conf) in results:
+            text_norm = text.upper().strip()
+            all_candidates.append(text_norm)
+
+            score = fuzzy_score(normalize(text_norm), expected_norm)
+            if is_partial_match(text_norm, expected_plate, threshold=0.0):
+                score = max(score, 0.70)
+
+            if score > best_score:
+                best_score = score
+                best_match = (text_norm, conf, label)
 
     # Deduplicate candidates for logging
     seen = set()
@@ -185,7 +213,7 @@ def run_ocr_on_variants(image_path: str, expected_plate: str) -> Dict[str, Any]:
     print(f"[OCR] Expected: '{expected_plate}' | Best: {best_match} | Score: {best_score:.2f}")
     print(f"[OCR] All candidates: {unique_candidates[:10]}")
 
-    # Accept if score >= 0.55 (generous but not trivial)
+    # Accept if score >= 0.55
     ACCEPT_THRESHOLD = 0.55
     if best_match and best_score >= ACCEPT_THRESHOLD:
         matched_text, conf, variant_label = best_match
@@ -205,7 +233,7 @@ def run_ocr_on_variants(image_path: str, expected_plate: str) -> Dict[str, Any]:
             "message": (
                 f"Plate not matched. Expected '{expected_plate}' but best OCR read was "
                 f"'{best_match[0] if best_match else 'nothing'}' (score: {best_score:.0%}). "
-                f"Please retake photo in good lighting with the plate clearly visible and centered."
+                f"Please retake photo in good lighting."
             ),
             "all_candidates": unique_candidates[:8]
         }

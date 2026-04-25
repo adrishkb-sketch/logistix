@@ -157,6 +157,10 @@ class Shipment(BaseModel):
     qr_code_data: Optional[str] = None
     receiver_name: Optional[str] = None
     receiver_phone: Optional[str] = None
+    
+    # Compliance Guardian Fields
+    eway_bill_no: Optional[str] = None
+    eway_bill_expiry: Optional[str] = None # ISO format
 
 class ShipmentCreate(BaseModel):
     pickup: Location
@@ -168,6 +172,8 @@ class ShipmentCreate(BaseModel):
     is_perishable: bool = False
     receiver_name: str
     receiver_phone: str
+    eway_bill_no: Optional[str] = None
+    eway_bill_expiry: Optional[str] = None
 
 class Alert(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

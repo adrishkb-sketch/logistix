@@ -1,28 +1,215 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from backend.models import ShipmentCreate, Shipment, Location, ShipmentEvent
 from backend.database import JSONDatabase
 from backend.services.assignment import auto_assign_shipment
 from backend.services.route_engine import calculate_route_type, haversine
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import uuid
 import random
+import pandas as pd
+import io
+import requests
+import re
 
 router = APIRouter()
 shipments_db = JSONDatabase("shipments")
 warehouses_db = JSONDatabase("warehouses")
 
+class ShipmentRating(BaseModel):
+    rating: float # 1-5
+
+class BulkParseRequest(BaseModel):
+    url: str
+    company_id: str
+
+@router.post("/bulk-parse")
+async def bulk_parse(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
+    df = None
+    if file:
+        content = await file.read()
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(io.BytesIO(content))
+        else:
+            df = pd.read_excel(io.BytesIO(content))
+    elif url_req:
+        # Extract Google Sheets ID
+        match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
+        if not match:
+            raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
+        sheet_id = match.group(1)
+        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+        resp = requests.get(csv_url)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet. Ensure it is public.")
+        df = pd.read_csv(io.StringIO(resp.text))
+    
+    if df is None or df.empty:
+        raise HTTPException(status_code=400, detail="No data found in file or spreadsheet")
+
+    # Standardizing to 11 columns:
+    # Pickup Lat | Pickup Lng | Drop Lat | Drop Lng | Weight | Description | Name | Phone | Perishable | E-Way No | E-Way Expiry
+    
+    shipments = []
+    for _, row in df.iterrows():
+        try:
+            # Handle possible header or no-header by checking numeric values
+            vals = row.values.tolist()
+            if len(vals) < 9: continue
+            
+            s = {
+                "pickup": {"lat": float(vals[0]), "lng": float(vals[1])},
+                "drop": {"lat": float(vals[2]), "lng": float(vals[3])},
+                "weight": float(vals[4]),
+                "description": str(vals[5]),
+                "receiver_name": str(vals[6]),
+                "receiver_phone": str(vals[7]),
+                "is_perishable": str(vals[8]).lower() in ['yes', 'y', 'true', '1'],
+                "eway_bill_no": str(vals[9]) if len(vals) > 9 else None,
+                "eway_bill_expiry": str(vals[10]) if len(vals) > 10 else None,
+                "company_id": company_id
+            }
+            shipments.append(s)
+        except Exception as e:
+            continue
+            
+    return {"shipments": shipments, "count": len(shipments)}
+
+@router.post("/bulk-confirm")
+async def bulk_confirm(shipments: List[ShipmentCreate]):
+    results = {"success": [], "errors": []}
+    for s_data in shipments:
+        try:
+            res = create_shipment(s_data)
+            results["success"].append(res.id)
+        except HTTPException as e:
+            results["errors"].append({"description": s_data.description, "error": e.detail})
+        except Exception as e:
+            results["errors"].append({"description": s_data.description, "error": str(e)})
+            
+    return results
+
+class ShipmentRating(BaseModel):
+    rating: float # 1-5
+
+@router.post("/{shipment_id}/rate")
+def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    if shipment.get("status") != "delivered":
+        raise HTTPException(status_code=400, detail="Only delivered shipments can be rated")
+        
+    if shipment.get("customer_rating"):
+        raise HTTPException(status_code=400, detail="Shipment already rated")
+        
+    driver_id = shipment.get("assigned_driver_id")
+    if not driver_id:
+        raise HTTPException(status_code=400, detail="No driver assigned to this shipment")
+        
+    drivers_db = JSONDatabase("drivers")
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    # Update driver rating
+    old_rating = driver.get("rating", 5.0)
+    # Use total_deliveries from model
+    count = driver.get("total_deliveries", 0)
+    new_rating = ((old_rating * count) + rating_data.rating) / (count + 1)
+    
+    # Update reward points based on rating
+    # Bonus: (Rating - 3) * 20. 5=40, 4=20, 3=0, 2=-20, 1=-40
+    rating_bonus = (rating_data.rating - 3) * 20
+    new_points = driver.get("reward_points", 0.0) + rating_bonus
+    
+    drivers_db.update(driver_id, {
+        "rating": round(new_rating, 2),
+        "total_deliveries": count + 1,
+        "reward_points": new_points
+    })
+    
+    # Store rating in shipment and update breakdown
+    breakdown = shipment.get("points_breakdown", {})
+    breakdown["customer_rating_bonus"] = rating_bonus
+    breakdown["total"] = breakdown.get("total", 0) + rating_bonus
+    
+    shipments_db.update(shipment_id, {
+        "customer_rating": rating_data.rating,
+        "points_breakdown": breakdown
+    })
+    
+    # Log the event
+    log = ShipmentEvent(
+        status="delivered",
+        message=f"Receiver rated the delivery: {rating_data.rating}⭐. Driver earned {rating_bonus} bonus points.",
+        location=shipment.get("drop")
+    )
+    history = shipment.get("logs", [])
+    history.append(log.model_dump())
+    shipments_db.update(shipment_id, {"logs": history})
+    
+    return {"message": "Rating submitted", "bonus_points": rating_bonus}
+
 @router.post("/")
 def create_shipment(shipment_data: ShipmentCreate):
     dist = haversine(shipment_data.pickup.lat, shipment_data.pickup.lng, shipment_data.drop.lat, shipment_data.drop.lng)
     
-    # Cold Chain Distance Validation
-    if shipment_data.is_perishable and dist > 500:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Cold Chain distance limit exceeded ({round(dist, 1)}km). Max allowed is 500km for perishable goods."
-        )
+    # Cold Chain Feasibility Validation
+    if shipment_data.is_perishable:
+        # Distance check (legacy)
+        if dist > 100:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Cold Chain distance limit exceeded ({round(dist, 1)}km). Max allowed is 100km for perishable goods."
+            )
+            
+        # Advanced Fleet Availability Check
+        drivers_db = JSONDatabase("drivers")
+        vehicles_db = JSONDatabase("vehicles")
+        warehouses_db = JSONDatabase("warehouses")
+        
+        available_drivers = [d for d in drivers_db.get_all() if d.get("company_id") == shipment_data.company_id and d.get("status") == "available" and d.get("assigned_vehicle_id")]
+        
+        if not available_drivers:
+            raise HTTPException(
+                status_code=400,
+                detail="No available fleet found to handle this perishable shipment. Please ensure drivers are on standby."
+            )
+            
+        from backend.services.route_engine import predict_weather_impact
+        weather = predict_weather_impact(shipment_data.pickup.lat, shipment_data.pickup.lng)
+        w_mult = weather.get("multiplier", 1.0)
+        
+        min_total_mins = float('inf')
+        
+        for d in available_drivers:
+            # Estimate time from base warehouse to pickup
+            base_wh = warehouses_db.get_by_id(d.get("base_warehouse_id"))
+            if not base_wh: continue
+            
+            v = vehicles_db.get_by_id(d["assigned_vehicle_id"])
+            if not v: continue
+            
+            speed = v.get("speed", 40)
+            
+            dist_to_pickup = haversine(base_wh["lat"], base_wh["lng"], shipment_data.pickup.lat, shipment_data.pickup.lng)
+            dist_to_drop = dist # Pickup to Drop
+            
+            total_dist = dist_to_pickup + dist_to_drop
+            # Time in minutes = (dist / speed) * 60 * weather_multiplier
+            est_mins = (total_dist / speed) * 60 * w_mult
+            
+            if est_mins < min_total_mins:
+                min_total_mins = est_mins
+        
+        if min_total_mins > 60:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Perishable Violation: It is impossible to deliver this within the 1-hour window. Best estimated time with current fleet: {round(min_total_mins)} minutes (including traffic/weather)."
+            )
 
     # Calculate ETA based on avg speed 40km/h
     eta_hours = dist / 40.0
@@ -60,13 +247,18 @@ def get_shipments(company_id: str):
     all_ships = shipments_db.get_all()
     company_ships = [s for s in all_ships if s.get("company_id") == company_id]
     
-    # Recalculate vitality for perishables
+    # Recalculate vitality and check compliance/street intel
+    from backend.services.alert_engine import check_compliance_alerts, check_street_intel_alerts
     for s in company_ships:
         if s.get("is_perishable"):
             new_v = calculate_shipment_vitality(s)
             if new_v != s.get("vitality"):
                 s["vitality"] = new_v
                 shipments_db.update(s["id"], {"vitality": new_v})
+        
+        # Run Indian-specific "Killer Feature" checks
+        check_compliance_alerts(s)
+        check_street_intel_alerts(s)
                 
     return company_ships
 
@@ -505,3 +697,22 @@ def delete_shipment(shipment_id: str):
         return {"message": "Shipment deleted successfully"}
         
     raise HTTPException(status_code=404, detail="Shipment not found")
+
+@router.post("/{shipment_id}/extend-eway")
+def extend_eway_bill(shipment_id: str):
+    from datetime import datetime, timedelta
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    current_expiry = shipment.get("eway_bill_expiry")
+    if not current_expiry:
+        raise HTTPException(status_code=400, detail="No E-Way Bill found for this shipment")
+        
+    try:
+        dt = datetime.fromisoformat(current_expiry.replace("Z", ""))
+        new_expiry = (dt + timedelta(hours=24)).isoformat() + "Z"
+        shipments_db.update(shipment_id, {"eway_bill_expiry": new_expiry})
+        return {"message": "Extended by 24 hours", "new_expiry": new_expiry}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
