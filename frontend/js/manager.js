@@ -1366,12 +1366,14 @@ async function loadDriversAndVehicles() {
                     const plate = v ? v.number_plate : 'Unknown';
                     
                     verifTbody.innerHTML += `<tr>
-                        <td>${d.name}</td>
-                        <td>${plate}</td>
-                        <td><img src="http://localhost:8000/images/${d.verification_image}" style="max-height:60px; border-radius:4px;"></td>
-                        <td>
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--success)" onclick="manualVerify('${d.id}', 'verified')">Approve</button>
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--danger)" onclick="manualVerify('${d.id}', 'unverified')">Reject</button>
+                        <td style="padding:15px 20px;"><b>${d.name}</b></td>
+                        <td style="padding:15px 20px;"><span style="font-family:monospace; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:6px;">${plate}</span></td>
+                        <td style="padding:15px 20px;"><img src="http://localhost:8000/images/${d.verification_image}" style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"></td>
+                        <td style="padding:15px 20px;">
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn-primary btn-success" style="padding:8px 16px; font-size:0.75rem;" onclick="manualVerify('${d.id}', 'verified')">Approve</button>
+                                <button class="btn-primary btn-danger" style="padding:8px 16px; font-size:0.75rem;" onclick="manualVerify('${d.id}', 'unverified')">Reject</button>
+                            </div>
                         </td>
                     </tr>`;
                 }
@@ -1453,9 +1455,11 @@ window.renderDriversTable = function() {
             <td><strong style="color:var(--accent)">${d.reward_points || 0}</strong></td>
             <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
             <td>
-                ${d.assigned_vehicle_id ? `<small>Linked</small>` : `<small style="color:var(--warning)">Unlinked</small>`}
-                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:10px;" onclick="openEditModal('drivers', '${d.id}', '${d.name}', '${d.license_type}', '${d.base_warehouse_id}')" title="Edit">✏️</button>
-                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px; color:var(--danger);" onclick="deleteItem('drivers', '${d.id}')" title="Delete">🗑️</button>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    ${d.assigned_vehicle_id ? `<span class="badge" style="background:var(--success)22; color:var(--success); margin:0;">Linked</span>` : `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
+                    <button class="btn-primary btn-accent" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="openEditModal('drivers', '${d.id}', '${d.name}', '${d.license_type}', '${d.base_warehouse_id}')" title="Edit">✏️</button>
+                    <button class="btn-primary btn-danger" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="deleteItem('drivers', '${d.id}')" title="Delete">🗑️</button>
+                </div>
             </td>
         </tr>`;
         if (dSelect) dSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
@@ -1476,7 +1480,7 @@ window.renderLinkedPairs = function() {
             <td><b>${vehicle ? vehicle.type : 'Unknown'}</b><br><small>${vehicle ? vehicle.number_plate : 'N/A'}</small></td>
             <td><small>${hub ? hub.name : 'N/A'}</small></td>
             <td>
-                <button class="btn-primary" style="padding:4px 8px; font-size:0.8rem; background:var(--danger)" onclick="unlinkVehicle('${d.id}')">Unlink</button>
+                <button class="btn-primary btn-danger" style="padding:6px 16px; font-size:0.75rem;" onclick="unlinkVehicle('${d.id}')">Unlink Assets</button>
             </td>
         </tr>`;
     });
@@ -1537,9 +1541,11 @@ window.renderVehiclesTable = function() {
             <td>${v.capacity}kg<br><small>Eff: ${v.fuel_efficiency}km/l</small></td>
             <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
             <td>
-                ${v.assigned_driver_id ? `<small>Linked</small>` : `<small style="color:var(--warning)">Unlinked</small>`}
-                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:10px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}', '${v.base_warehouse_id}', '${v.fuel_efficiency}')" title="Edit">✏️</button>
-                <button style="background:none; border:none; cursor:pointer; font-size:1.1rem; margin-left:5px; color:var(--danger);" onclick="deleteItem('vehicles', '${v.id}')" title="Delete">🗑️</button>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    ${v.assigned_driver_id ? `<span class="badge" style="background:var(--success)22; color:var(--success); margin:0;">Linked</span>` : `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
+                    <button class="btn-primary btn-accent" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}', '${v.base_warehouse_id}', '${v.fuel_efficiency}')" title="Edit">✏️</button>
+                    <button class="btn-primary btn-danger" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="deleteItem('vehicles', '${v.id}')" title="Delete">🗑️</button>
+                </div>
             </td>
         </tr>`;
         if (vSelect) vSelect.innerHTML += `<option value="${v.id}">${v.type} - ${v.number_plate} (${v.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
@@ -1861,10 +1867,10 @@ async function loadWeatherFleetData() {
             simsTable.style.display = 'table';
             emptyMsg.style.display = 'none';
             simsBody.innerHTML = activeSims.map(c => `
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:5px 0;">${c.type.toUpperCase()}</td>
-                    <td>${c.shapeType}</td>
-                    <td><button style="background:var(--danger); border:none; color:white; padding:2px 8px; border-radius:4px; cursor:pointer; font-size:0.7rem;" onclick="stopSimulation('${c.id}')">STOP</button></td>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px 0; font-weight:600; color:var(--text);">${c.type.toUpperCase()}</td>
+                    <td style="color:var(--text-muted);">${c.shapeType}</td>
+                    <td style="text-align:right;"><button class="btn-primary btn-danger" style="padding:6px 12px; font-size:0.65rem;" onclick="stopSimulation('${c.id}')">STOP</button></td>
                 </tr>
             `).join('');
         } else {
@@ -1934,12 +1940,12 @@ async function loadMessages() {
         const msgs = await apiCall(`/tracking/messages/${localStorage.getItem('manager_id')}?company_id=${localStorage.getItem('manager_id')}`);
         const container = document.getElementById('messages-container');
         container.innerHTML = msgs.length === 0 ? '<p>No messages yet.</p>' : msgs.reverse().map(m => `
-            <div style="margin-bottom:10px; padding:10px; background:${m.sender_type==='manager'?'rgba(49, 130, 206, 0.2)':'rgba(72, 187, 120, 0.2)'}; border-radius:8px; border-left:4px solid ${m.sender_type==='manager'?'var(--primary)':'var(--success)'}">
-                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:5px;">
-                    <b>${m.sender_type==='manager'?'You':'Driver'}</b>
+            <div style="margin-bottom:20px; padding:16px; background:${m.sender_type==='manager'?'rgba(99, 102, 241, 0.1)':'rgba(34, 197, 94, 0.1)'}; border-radius:12px; border:1px solid ${m.sender_type==='manager'?'rgba(99, 102, 241, 0.2)':'rgba(34, 197, 94, 0.2)'}; border-left:4px solid ${m.sender_type==='manager'?'var(--primary)':'var(--success)'}">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:8px; color:var(--text-muted);">
+                    <b style="color:${m.sender_type==='manager'?'var(--primary)':'var(--success)'}; text-transform:uppercase; letter-spacing:0.05em;">${m.sender_type==='manager'?'Control Center':'Driver Unit'}</b>
                     <span>${new Date(m.created_at).toLocaleString()}</span>
                 </div>
-                <p style="margin:0; font-size:0.9rem;">${m.content}</p>
+                <p style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text);">${m.content}</p>
             </div>
         `).join('');
     } catch(e) {}
@@ -2600,5 +2606,36 @@ async function loadStrategyPlan() {
 
     } catch(e) {
         console.error("Strategy load failed:", e);
+    }
+}
+
+// Handle Info Icon Clicks for mobile/desktop preference
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('info-icon')) {
+        const tip = e.target.getAttribute('data-tip');
+        if (tip) alert(tip);
+    }
+});
+
+function showInfoTip(el) {
+    const tip = el.getAttribute('data-tip');
+    if (!tip) return;
+    
+    // Create a custom notification if alert-container is available
+    const container = document.getElementById('alert-container');
+    if (container) {
+        const div = document.createElement('div');
+        div.className = 'glass-card';
+        div.style.cssText = 'position:fixed; bottom:20px; right:20px; padding:15px 25px; background:var(--primary); color:white; border-radius:12px; z-index:10001; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease;';
+        div.innerHTML = `<b>💡 Info:</b> ${tip}`;
+        container.appendChild(div);
+        setTimeout(() => {
+            div.style.opacity = '0';
+            div.style.transform = 'translateY(20px)';
+            div.style.transition = 'all 0.3s ease';
+            setTimeout(() => div.remove(), 300);
+        }, 4000);
+    } else {
+        alert(tip);
     }
 }

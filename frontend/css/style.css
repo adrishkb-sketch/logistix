@@ -28,7 +28,7 @@ body.light-mode {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Manrope', sans-serif;
+    font-family: 'Outfit', sans-serif;
 }
 
 body {
@@ -89,9 +89,10 @@ body.light-mode .background-animation {
 }
 
 h1, h2, h3, h4 {
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
     line-height: 1.2;
-    margin-bottom: 1.2rem;
+    margin-bottom: 12px;
+    font-weight: 800;
 }
 
 /* Sidebar */
@@ -197,6 +198,19 @@ body.light-mode .glass-card {
 }
 
 /* Forms & Inputs */
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.2em;
+    padding-right: 3rem !important;
+}
+
+body.light-mode select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='black'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
 input, select, textarea {
     width: 100%;
     padding: 14px 18px; /* Increased padding */
@@ -249,6 +263,20 @@ input:focus, select:focus {
 @media (max-width: 900px) {
     .span-2 {
         grid-column: span 1;
+    }
+}
+
+.side-by-side {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 24px;
+    align-items: start;
+    margin-bottom: 24px;
+}
+
+@media (max-width: 1200px) {
+    .side-by-side {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -360,6 +388,17 @@ body.light-mode tr:hover td {
     box-shadow: 0 8px 25px rgba(239, 68, 68, 0.35);
 }
 
+.btn-success {
+    background: var(--success);
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25);
+}
+
+.btn-success:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(34, 197, 94, 0.35);
+}
+
 .btn-outline {
     background: transparent;
     border: 1px solid var(--border);
@@ -427,4 +466,62 @@ body.light-mode .btn-outline:hover {
 .nav-link.has-notif {
     font-weight: 800;
     color: var(--text);
+}
+/* Info Icons and Tooltips */
+.info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary);
+    border-radius: 50%;
+    font-size: 11px;
+    cursor: help;
+    margin-left: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.info-icon:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.info-icon::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: rgba(20, 25, 35, 0.95);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    width: 240px;
+    white-space: normal;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 100000;
+    pointer-events: none;
+    font-weight: 400;
+    letter-spacing: normal;
+}
+
+.info-icon:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
