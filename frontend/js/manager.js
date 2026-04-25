@@ -1503,13 +1503,15 @@ window.renderVehiclesTable = function() {
     const searchTerm = (document.getElementById('vehicle-search')?.value || '').toLowerCase();
     const typeFilter = document.getElementById('vehicle-filter-type')?.value || '';
     const hubFilter = document.getElementById('vehicle-filter-hub')?.value || '';
+    const statusFilter = document.getElementById('vehicle-filter-status')?.value || '';
     const sortMode = document.getElementById('vehicle-sort')?.value || 'type';
 
     let filtered = globalVehicles.filter(v => {
-        const matchesSearch = v.number_plate.toLowerCase().includes(searchTerm) || v.system_id.toLowerCase().includes(searchTerm);
+        const matchesSearch = v.number_plate.toLowerCase().includes(searchTerm) || (v.system_id || '').toLowerCase().includes(searchTerm);
         const matchesType = !typeFilter || v.type === typeFilter;
         const matchesHub = !hubFilter || v.base_warehouse_id === hubFilter;
-        return matchesSearch && matchesType && matchesHub;
+        const matchesStatus = !statusFilter || v.status === statusFilter;
+        return matchesSearch && matchesType && matchesHub && matchesStatus;
     });
 
     // Sorting
@@ -1522,8 +1524,14 @@ window.renderVehiclesTable = function() {
     filtered.forEach(v => {
         const baseWh = globalWarehouses.find(w => w.id === v.base_warehouse_id);
         let healthColor = v.vehicle_health_score > 80 ? 'var(--success)' : (v.vehicle_health_score > 60 ? 'var(--warning)' : 'var(--danger)');
+        
+        let statusTag = '';
+        if (v.status === 'maintenance') statusTag = `<span class="status-pill" style="background:var(--danger)22; color:var(--danger); font-size:0.6rem;">MAINTENANCE</span>`;
+        else if (v.status === 'in_transit') statusTag = `<span class="status-pill" style="background:var(--primary)22; color:var(--primary); font-size:0.6rem;">IN-TRANSIT</span>`;
+        else statusTag = `<span class="status-pill" style="background:var(--success)22; color:var(--success); font-size:0.6rem;">AVAILABLE</span>`;
+
         vtbody.innerHTML += `<tr>
-            <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || 'ID: ' + v.id.substring(0,8)}</small></td>
+            <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || 'ID: ' + v.id.substring(0,8)}</small><br>${statusTag}</td>
             <td>${v.number_plate || '<span style="color:var(--text-muted)">Not Set</span>'}</td>
             <td><span style="color:${healthColor}; font-weight:bold;">${v.vehicle_health_score || 100}%</span></td>
             <td>${v.capacity}kg<br><small>Eff: ${v.fuel_efficiency}km/l</small></td>

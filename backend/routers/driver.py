@@ -404,3 +404,42 @@ def update_health_metrics(driver_id: str, metrics: Dict[str, Any]):
     }
     drivers_db.update(driver_id, driver)
     return {"message": "Health metrics updated successfully"}
+
+@router.post("/{driver_id}/breakdown")
+def report_breakdown(driver_id: str, location: Dict[str, Any]):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver or not driver.get("assigned_vehicle_id"):
+        raise HTTPException(status_code=404, detail="Driver or vehicle not found")
+    
+    vehicle_id = driver["assigned_vehicle_id"]
+    from backend.database import JSONDatabase
+    vehicles_db = JSONDatabase("vehicles")
+    vehicles_db.update(vehicle_id, {"status": "maintenance"})
+    
+    alerts_db = JSONDatabase("alerts")
+    alerts_db.insert({
+        "id": str(uuid.uuid4()),
+        "company_id": driver["company_id"],
+        "type": "breakdown",
+        "description": f"🚨 CRITICAL: Driver {driver['name']} reported a MAJOR BREAKDOWN with vehicle {vehicle_id}.",
+        "severity": "critical",
+        "suggestion": "Automatic rescue vehicle assignment initiated.",
+        "driver_id": driver_id,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+    
+    from backend.services.assignment import assign_rescue_vehicle
+    res = assign_rescue_vehicle(driver_id, vehicle_id, location)
+    return {"message": "Breakdown reported and rescue initiated", "rescue": res}
+
+@router.post("/{driver_id}/maintenance-complete")
+def maintenance_complete(driver_id: str):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver or not driver.get("assigned_vehicle_id"):
+        raise HTTPException(status_code=404, detail="Driver or vehicle not found")
+        
+    vehicle_id = driver["assigned_vehicle_id"]
+    from backend.database import JSONDatabase
+    vehicles_db = JSONDatabase("vehicles")
+    vehicles_db.update(vehicle_id, {"status": "available"})
+    return {"message": "Vehicle is now available for duty"}

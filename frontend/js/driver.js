@@ -89,8 +89,53 @@ async function loadDashStats() {
         const me = drivers.find(d => d.id === localStorage.getItem('driver_id'));
         if (me && me.assigned_vehicle_id) {
             document.getElementById('vehicle-mini-details').innerText = `Active Vehicle: ${me.assigned_vehicle_id}`;
+            
+            // Handle Breakdown/Maintenance UI
+            const v = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('company_id')}`).then(list => list.find(veh => veh.id === me.assigned_vehicle_id));
+            const statusBadge = document.getElementById('vehicle-status-badge');
+            const actionsDiv = document.getElementById('vehicle-actions');
+            const rescueInfo = document.getElementById('breakdown-rescue-info');
+            
+            if (v.status === 'maintenance') {
+                statusBadge.innerText = 'UNDER MAINTENANCE';
+                statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+                statusBadge.style.color = 'var(--danger)';
+                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success); font-size:0.85rem;" onclick="completeMaintenance()">🔧 Mark Repaired</button>`;
+                rescueInfo.style.display = 'block';
+                document.getElementById('rescue-details').innerText = "Vehicle is locked in maintenance mode. Click 'Mark Repaired' to resume duties.";
+            } else {
+                statusBadge.innerText = v.status.toUpperCase().replace('_', '-');
+                statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+                statusBadge.style.color = 'var(--success)';
+                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger); font-size:0.85rem;" onclick="reportBreakdown()">🚨 Report Breakdown</button>`;
+                rescueInfo.style.display = 'none';
+            }
         }
     } catch(e) {}
+}
+
+async function reportBreakdown() {
+    if (!confirm("🚨 MAJOR BREAKDOWN: Are you sure? This will trigger an automatic rescue vehicle to intercept your shipments.")) return;
+    try {
+        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000}));
+        const res = await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: pos.coords.latitude, lng: pos.coords.longitude });
+        showNotification("Breakdown reported! Rescue protocol initiated.", "error");
+        loadDashStats();
+    } catch (e) {
+        await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: 0, lng: 0 });
+        showNotification("Breakdown reported without GPS. Rescue assigned.", "error");
+        loadDashStats();
+    }
+}
+
+async function completeMaintenance() {
+    try {
+        await apiCall(`/driver/${dId}/maintenance-complete`, 'POST');
+        showNotification("Vehicle cleared for duty!", "success");
+        loadDashStats();
+    } catch (e) {
+        showNotification("Failed to update status.", "error");
+    }
 }
 
 function renderDriverChart(history) {
@@ -839,6 +884,10 @@ function openIncidentModal() {
 async function submitIncident(type, fromStationary = false) {
     if (fromStationary) document.getElementById('stationary-modal').style.display = 'none';
     else document.getElementById('incident-modal').style.display = 'none';
+    
+    if (type === 'breakdown') {
+        return reportBreakdown();
+    }
     
     // Get current location if available
     let lat = null;

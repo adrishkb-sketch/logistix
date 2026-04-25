@@ -138,10 +138,26 @@
                     </div>
                 </div>
 
-                <div class="glass-card" style="padding:1rem; text-align:center; background:linear-gradient(135deg, rgba(0,242,254,0.1), rgba(0,0,0,0));">
+                <div class="glass-card" id="vehicle-status-card" style="padding:1.5rem; margin-bottom:1.5rem; border-left:4px solid var(--primary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h4 style="margin:0; font-size:1rem;">Vehicle Status</h4>
+                            <div id="vehicle-status-badge" class="status-pill" style="background:var(--success)22; color:var(--success); margin-top:5px; display:inline-block; font-size:0.75rem;">OPERATIONAL</div>
+                        </div>
+                        <div id="vehicle-actions">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                    <div id="breakdown-rescue-info" style="display:none; margin-top:15px; padding:15px; background:rgba(239, 68, 68, 0.08); border-radius:12px; border:1px solid rgba(239, 68, 68, 0.2);">
+                        <div style="font-weight:bold; color:var(--danger); margin-bottom:5px; font-size:0.9rem;">🚨 Rescue Protocol Active</div>
+                        <p style="font-size:0.85rem; color:var(--muted); margin:0;" id="rescue-details">Initiating emergency shipment transfer...</p>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="padding:1.5rem; text-align:center; background:linear-gradient(135deg, rgba(79, 140, 255, 0.05), transparent);">
                     <h4 style="margin:0;">Active vehicle details</h4>
                     <div id="vehicle-mini-details" style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Loading...</div>
-                    <button class="btn-primary" style="margin-top:10px; width:auto; padding:5px 15px; background:var(--success);" onclick="switchDriverTab('active')">View Live Route →</button>
+                    <button class="btn-primary" style="margin-top:10px; width:auto; padding:8px 20px; font-size:0.85rem;" onclick="switchDriverTab('active')">View Live Route →</button>
                 </div>
             </div>
 

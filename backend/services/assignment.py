@@ -106,3 +106,49 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "status": "assigned",
         "stage": "Assigned to Driver"
     }
+
+def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, Any]):
+    from backend.database import JSONDatabase
+    from datetime import datetime
+    shipments_db = JSONDatabase("shipments")
+    vehicles_db = JSONDatabase("vehicles")
+    drivers_db = JSONDatabase("drivers")
+    
+    all_shipments = shipments_db.get_all()
+    broken_shipments = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]]
+    
+    if not broken_shipments: return None
+    
+    driver = drivers_db.get_by_id(driver_id)
+    company_id = driver.get("company_id")
+    total_weight = sum(s.get("weight", 0) for s in broken_shipments)
+    
+    potential_rescuers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id and d.get("id") != driver_id]
+    rescue_pair = None
+    for d in potential_rescuers:
+        if d.get("assigned_vehicle_id") and d.get("verification_status") == "verified":
+            v = vehicles_db.get_by_id(d["assigned_vehicle_id"])
+            if v and v.get("status") == "available" and v.get("capacity", 0) >= total_weight:
+                rescue_pair = (d, v)
+                break
+                
+    if rescue_pair:
+        new_d, new_v = rescue_pair
+        for s in broken_shipments:
+            shipments_db.update(s["id"], {
+                "assigned_driver_id": new_d["id"],
+                "assigned_vehicle_id": new_v["id"],
+                "status": "assigned"
+            })
+            history = s.get("history", [])
+            history.append({
+                "status": "assigned",
+                "message": f"🚑 RESCUE: Shipments transferred to {new_d['name']} due to vehicle breakdown.",
+                "reason": "Automatic rescue initiated.",
+                "location": location,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            shipments_db.update(s["id"], {"history": history})
+        vehicles_db.update(new_v["id"], {"status": "assigned"})
+        return {"driver_name": new_d["name"], "vehicle_id": new_v["id"]}
+    return None

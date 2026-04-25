@@ -418,6 +418,12 @@
                         <select id="vehicle-filter-hub" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
                             <option value="">All Hubs</option>
                         </select>
+                        <select id="vehicle-filter-status" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
+                            <option value="">All Statuses</option>
+                            <option value="available">Available</option>
+                            <option value="in_transit">In-Transit</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
                         <select id="vehicle-sort" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
                             <option value="type">Sort by Type</option>
                             <option value="health">Sort by Health</option>
