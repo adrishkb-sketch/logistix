@@ -5,7 +5,10 @@ if (!localStorage.getItem('driver_id')) {
 }
 
 const dId = localStorage.getItem('driver_id');
-document.getElementById('driver-name').innerText = `Hello, ${localStorage.getItem('driver_name')}`;
+if (dId) {
+    const nameEl = document.getElementById('driver-name');
+    if (nameEl) nameEl.innerText = `Hello, ${localStorage.getItem('driver_name') || 'Driver'}`;
+}
 
 let map;
 let marker;
@@ -14,6 +17,8 @@ let watchId;
 let routeCoords = [];
 let simIndex = 0;
 let hasSetInitialView = false;
+let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count_driver') || '-1');
+let currentActiveTab = 'dash';
 
 // Stationary Tracking Variables
 let lastMovedTimestamp = Date.now();
@@ -28,14 +33,47 @@ let lastMotionAlert = 0;
 // Real-time Refresh Loop
 setInterval(() => {
     const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
-    // If mission tab or dashboard is active
     if (activeSection && (activeSection.id === 'active-tab' || activeSection.id === 'dash-tab')) {
         if (activeSection.id === 'active-tab') loadActiveMission();
         else loadDashStats();
     }
-}, 30000); // Refresh every 30s
+}, 30000);
+
+// Background Notification Poller (Snappier for Chat)
+setInterval(async () => {
+    try {
+        const dId = localStorage.getItem('driver_id');
+        if (!dId) return;
+        
+        const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`);
+        
+        if (msgs.length > lastMsgCount) {
+            if (currentActiveTab !== 'chat') {
+                const badge = document.getElementById('chat-badge');
+                if (badge) {
+                    badge.style.display = 'inline-block';
+                    badge.style.background = 'var(--danger)';
+                    badge.style.border = '1.5px solid var(--bg)';
+                }
+                const btn = document.getElementById('btn-tab-chat');
+                if (btn) {
+                    btn.style.fontWeight = '900';
+                    btn.style.color = 'var(--text)';
+                }
+            } else {
+                // Already in chat, just update the seen count
+                lastMsgCount = msgs.length;
+                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount);
+                // Also update the chat list if we are looking at it
+                const container = document.getElementById('driver-messages');
+                if (container) renderDriverMessages(msgs);
+            }
+        }
+    } catch(e) {}
+}, 5000);
 
 function switchDriverTab(tab) {
+    currentActiveTab = tab;
     const tabs = ['dash', 'active', 'chat', 'completed', 'profile'];
     tabs.forEach(t => {
         const el = document.getElementById(`${t}-tab`);
@@ -51,7 +89,20 @@ function switchDriverTab(tab) {
     if (tab === 'profile') loadProfileData();
     if (tab === 'chat') {
         loadAlertsAndMessages();
-        document.getElementById('chat-badge').style.display = 'none';
+        const badge = document.getElementById('chat-badge');
+        if (badge) badge.style.display = 'none';
+        const btn = document.getElementById('btn-tab-chat');
+        if (btn) {
+            btn.style.fontWeight = '700'; // Standard bold
+            btn.style.color = 'var(--muted)';
+        }
+        
+        // Mark as seen
+        apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`)
+            .then(msgs => {
+                lastMsgCount = msgs.length;
+                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount);
+            });
     }
     if (tab === 'active' && map) setTimeout(() => map.invalidateSize(), 200);
 }
@@ -428,7 +479,14 @@ async function loadMissions(autoStartNext = false) {
         
     } catch(e) {
         console.error("Error in loadMissions:", e);
-        document.getElementById('mission-container').innerHTML = `<div class="glass-card"><p style="color:red">Error loading route: ${e.message}</p></div>`;
+        alert("Startup Error: " + e.message);
+        // Ensure main content is shown even on error
+        const mainContent = document.getElementById('main-content');
+        if (mainContent) mainContent.style.display = 'block';
+        const missionContainer = document.getElementById('mission-container');
+        if (missionContainer) {
+            missionContainer.innerHTML = `<div class="glass-card"><p style="color:red">Error loading route: ${e.message}</p></div>`;
+        }
     }
 }
 
@@ -686,45 +744,166 @@ async function loadAlertsAndMessages() {
         
         // Fetch Messages
         const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`);
-        const container = document.getElementById('driver-messages');
-        const currentMsgs = container.children.length;
         
-        container.innerHTML = msgs.length === 0 ? '<p style="font-size:0.8rem; color:var(--text-muted)">No messages from manager.</p>' : msgs.map(m => `
-            <div style="margin-bottom:12px; padding:12px; background:${m.sender_type==='driver'?'rgba(79, 140, 255, 0.08)':'rgba(16, 185, 129, 0.1)'}; border-radius:12px; border-left:4px solid ${m.sender_type==='driver'?'var(--primary)':'var(--success)'}; align-self: ${m.sender_type==='driver'?'flex-end':'flex-start'}; max-width: 85%;">
-                <div style="font-size:0.7rem; color:var(--muted); margin-bottom:4px; font-weight:700;">${m.sender_type==='manager'?'MANAGER 🛡️':'YOU'} • ${new Date(m.created_at).toLocaleTimeString()}</div>
-                <div style="font-size:0.9rem; line-height:1.4;">${m.content}</div>
-            </div>
-        `).join('');
-        
-        if (msgs.length > currentMsgs && document.getElementById('chat-tab').style.display === 'none') {
-            document.getElementById('chat-badge').style.display = 'inline-block';
+        if (msgs.length > lastMsgCount) {
+            if (currentActiveTab !== 'chat') {
+                const badge = document.getElementById('chat-badge');
+                if (badge) {
+                    badge.style.display = 'inline-block';
+                    badge.style.background = 'var(--danger)';
+                    badge.style.border = '1.5px solid var(--bg)';
+                }
+                const btn = document.getElementById('btn-tab-chat');
+                if (btn) {
+                    btn.style.fontWeight = '900';
+                    btn.style.color = 'var(--text)';
+                }
+            } else {
+                lastMsgCount = msgs.length;
+                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount);
+            }
         }
-        
-        container.scrollTop = container.scrollHeight;
-        
+
+        renderDriverMessages(msgs);
     } catch(e) {}
 }
 
-async function sendMessageToManager() {
-    const content = document.getElementById('manager-msg-content').value;
-    if (!content) return;
+function renderDriverMessages(msgs) {
+    const container = document.getElementById('driver-messages');
+    if (!container) return;
     
+    // Use the same beautiful bubble layout as the manager dashboard
+    container.innerHTML = msgs.length === 0
+        ? '<p style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:20px;">No conversation history. Message your manager for updates.</p>'
+        : msgs.map(m => {
+            const isMe = m.sender_type === 'driver';
+            let mediaHtml = '';
+            if (m.media_type === 'image' && m.media_url) {
+                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:6px;display:block;cursor:pointer;" onclick="window.open('${m.media_url}')" alt="photo">`;
+            } else if (m.media_type === 'audio' && m.media_url) {
+                mediaHtml = `<div class="audio-placeholder" data-src="${m.media_url}" data-accent="${isMe ? 'rgba(255,255,255,0.25)' : 'rgba(79,140,255,0.4)'}"></div>`;
+            }
+            return `
+                <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; margin-bottom:14px; width:100%;">
+                    <div style="max-width:80%; padding:12px 16px; border-radius:16px;
+                                background:${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.08)'};
+                                color:${isMe ? '#fff' : 'var(--text)'};
+                                border-bottom-${isMe ? 'right' : 'left'}-radius:2px;
+                                border: 1px solid ${isMe ? 'transparent' : 'var(--border)'};
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <div style="font-size:0.65rem; margin-bottom:4px; opacity:0.7; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">
+                            ${isMe ? 'You' : 'Operations 🛡️'}
+                        </div>
+                        ${m.content && m.content !== '[Media]' ? `<div style="font-size:0.95rem; line-height:1.4;">${m.content}</div>` : ''}
+                        ${mediaHtml}
+                        <div style="font-size:0.6rem; margin-top:6px; text-align:right; opacity:0.6;">
+                            ${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    
+    container.scrollTop = container.scrollHeight;
+    container.querySelectorAll('.audio-placeholder').forEach(ph => {
+        ph.replaceWith(buildAudioPlayer(ph.dataset.src, ph.dataset.accent));
+    });
+}
+
+let driverChatMediaData = null;
+let driverMediaRecorder = null;
+let driverRecording = false;
+
+async function sendMessageToManager() {
+    const content = (document.getElementById('manager-msg-content').value || '').trim();
+    if (!content && !driverChatMediaData) return;
+
     const dId = localStorage.getItem('driver_id');
     const shipments = await apiCall(`/driver/${dId}/shipments`);
     const activeShipment = shipments.find(s => s.status === 'in_transit' || s.status === 'assigned');
-    
+
     try {
+        const companyId = localStorage.getItem('company_id');
         await apiCall('/tracking/messages', 'POST', {
             shipment_id: activeShipment ? activeShipment.id : null,
+            company_id: companyId,
             sender_id: dId,
-            receiver_id: 'manager', // In a multi-company app this would be specific
-            content: content,
-            sender_type: 'driver'
+            receiver_id: companyId,
+            content: content || (driverChatMediaData ? '[Media]' : ''),
+            sender_type: 'driver',
+            media_url: driverChatMediaData ? driverChatMediaData.url : null,
+            media_type: driverChatMediaData ? driverChatMediaData.type : null
         });
         document.getElementById('manager-msg-content').value = '';
+        driverChatMediaData = null;
+        const preview = document.getElementById('driver-media-preview');
+        if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
         loadAlertsAndMessages();
     } catch(e) {
         alert("Failed to send message.");
+    }
+}
+
+function driverChatPickPhoto() {
+    document.getElementById('driver-photo-input').click();
+}
+
+function driverChatHandlePhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        driverChatMediaData = { type: 'image', url: e.target.result };
+        const preview = document.getElementById('driver-media-preview');
+        preview.style.display = 'flex';
+        preview.innerHTML = `<img src="${e.target.result}" style="height:52px;border-radius:8px;border:1px solid var(--border);"><span style="font-size:0.8rem;color:var(--muted);flex:1;">Photo ready</span><button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;">✕</button>`;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+function driverClearMedia() {
+    driverChatMediaData = null;
+    const preview = document.getElementById('driver-media-preview');
+    if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
+}
+
+async function driverChatToggleRecording() {
+    const btn = document.getElementById('driver-voice-btn');
+    if (!driverRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const chunks = [];
+            driverMediaRecorder = new MediaRecorder(stream);
+            driverMediaRecorder.ondataavailable = e => chunks.push(e.data);
+            driverMediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    driverChatMediaData = { type: 'audio', url: ev.target.result };
+                    const preview = document.getElementById('driver-media-preview');
+                    preview.style.display = 'flex';
+                    preview.innerHTML = `<button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>`;
+                    const player = buildAudioPlayer(ev.target.result, 'rgba(79,140,255,0.4)');
+                    preview.insertBefore(player, preview.firstChild);
+                };
+                reader.readAsDataURL(blob);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            driverMediaRecorder.start();
+            driverRecording = true;
+            btn.innerText = '⏹️';
+            btn.style.background = 'rgba(229,62,62,0.2)';
+            btn.style.color = 'var(--danger)';
+        } catch(e) {
+            alert('Microphone access denied. Please allow mic permission.');
+        }
+    } else {
+        driverMediaRecorder.stop();
+        driverRecording = false;
+        btn.innerText = '🎙️';
+        btn.style.background = 'rgba(255,255,255,0.08)';
+        btn.style.color = 'var(--text)';
     }
 }
 
@@ -1047,7 +1226,7 @@ async function analyzeLoading() {
         return;
     }
 
-    const btn = event.target;
+    const btn = event?.target || document.activeElement;
     const originalText = btn.innerText;
     btn.innerText = "🌀 AI Calculating Space...";
     btn.disabled = true;
@@ -1056,7 +1235,7 @@ async function analyzeLoading() {
     formData.append('file', fileInput.files[0]);
 
     try {
-        const res = await fetch(`${API_BASE_URL}/driver/${localStorage.getItem('driver_id')}/optimize-loading`, {
+        const res = await fetch(`${API_BASE}/driver/${localStorage.getItem('driver_id')}/optimize-loading`, {
             method: 'POST',
             body: formData
         });
@@ -1177,3 +1356,5 @@ async function applyOfficialBorders(mapInstance) {
         console.warn("Sovereignty overlay failed to load");
     }
 }
+
+loadMissions();

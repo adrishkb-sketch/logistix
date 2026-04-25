@@ -88,8 +88,8 @@
                     <p style="color:var(--text-muted); margin-bottom:30px;">Your manager has not assigned a vehicle to you yet. Please contact dispatch.</p>
                     <button class="btn-primary" style="background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()">🔄 Check Assignment</button>
                 </div>
+                </div>
              </div>
-        </div>
 
         <!-- Gated Main Content (Visible if verified) -->
         <div id="main-content" style="display:none;">
@@ -182,18 +182,25 @@
 
             <div id="chat-tab" style="display:none;">
                 <div class="glass-card section-card" style="padding:1.5rem; border-left:4px solid var(--accent);">
-                    <h3 style="margin-bottom:12px;">Message Manager 💬</h3>
-                    <p class="subtitle" style="margin-bottom:20px; font-size:0.85rem;">Direct line to fleet operations for help or updates.</p>
-                    
-                    <div id="driver-messages" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
-                        <!-- Messages from manager -->
+                    <h3 style="margin-bottom:4px;">Message Manager 💬</h3>
+                    <p class="subtitle" style="margin-bottom:16px; font-size:0.85rem;">Direct line to fleet operations for help or updates.</p>
+
+                    <div id="driver-messages" style="min-height:280px; max-height:420px; overflow-y: auto; margin-bottom: 16px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border); display:flex; flex-direction:column;">
+                        <!-- Messages injected here -->
                     </div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="text" id="manager-msg-content" placeholder="Type a message..." style="flex:1; padding:12px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit;">
-                        <button class="btn-primary" style="width:auto; padding:0 24px;" onclick="sendMessageToManager()">Send</button>
+
+                    <!-- Media preview -->
+                    <div id="driver-media-preview" style="display:none; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:10px; align-items:center; gap:10px;"></div>
+
+                    <!-- Input row -->
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button onclick="driverChatPickPhoto()" title="Send Photo" style="background:rgba(255,255,255,0.08);border:1px solid var(--card-border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;">📷</button>
+                        <button id="driver-voice-btn" onclick="driverChatToggleRecording()" title="Voice Note" style="background:rgba(255,255,255,0.08);border:1px solid var(--card-border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;">🎙️</button>
+                        <input id="driver-photo-input" type="file" accept="image/*" style="display:none;" onchange="driverChatHandlePhoto(this)">
+                        <input type="text" id="manager-msg-content" placeholder="Type a message..." style="flex:1; padding:10px 14px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit; font-size:0.95rem;" onkeydown="if(event.key==='Enter')sendMessageToManager()">
+                        <button class="btn-primary" style="width:auto; padding:10px 22px;" onclick="sendMessageToManager()">Send</button>
                     </div>
                 </div>
-            </div>
             </div>
 
             <div id="completed-tab" style="display:none;">
@@ -283,8 +290,6 @@
                     <button class="btn-primary" style="margin-top:30px; background:var(--secondary);" onclick="startRest()">Start 12h Rest Period</button>
                 </div>
             </div>
-        </div> <!-- end main-content -->
-    </div> <!-- end driver-layout -->
     
     <!-- Persistent Report Issue Button -->
     <button id="report-issue-btn" onclick="openIncidentModal()" style="display:none; position:fixed; bottom:20px; right:20px; background:var(--danger); color:white; border:none; padding:14px 24px; border-radius:30px; font-weight:bold; font-size:1rem; cursor:pointer; box-shadow:0 10px 25px rgba(229,62,62,0.4); z-index:1000; transition:all 0.2s ease;">
@@ -418,7 +423,8 @@
                 <button type="button" class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="closeHealthModal()">Cancel</button>
             </div>
         </form>
-    </div>
+        </div> <!-- end main-content -->
+    </div> <!-- end driver-layout -->
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

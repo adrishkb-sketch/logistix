@@ -14,12 +14,48 @@ let weatherMap;
 let weatherMarkers = [];
 
 // Real-time Refresh Loop
-setInterval(() => {
+let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count') || '-1');
+let currentActiveSection = 'analytics';
+let selectedDriverChatId = null;
+let globalDrivers = []; // For searching
+
+setInterval(async () => {
     const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
     if (activeSection && activeSection.id === 'shipments') {
         loadShipments();
     }
-}, 30000); // Refresh every 30s
+    
+    // Background message check for notifications
+    try {
+        const mId = localStorage.getItem('manager_id');
+        const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`);
+        
+        // Show notification if total count has increased since last SEEN
+        if (msgs.length > lastMsgCount) {
+            if (currentActiveSection !== 'messages') {
+                const badge = document.getElementById('msg-badge');
+                if (badge) {
+                    badge.style.display = 'inline-block';
+                    badge.style.background = 'var(--danger)';
+                    badge.style.width = '8px';
+                    badge.style.height = '8px';
+                    badge.style.borderRadius = '50%';
+                    badge.style.border = '2px solid var(--bg)';
+                }
+                const link = document.getElementById('nav-link-messages');
+                if (link) {
+                    link.style.fontWeight = '900';
+                    link.style.color = 'var(--text)';
+                }
+            } else {
+                // If already in messages section, update the chat but also update the "seen" count
+                lastMsgCount = msgs.length;
+                localStorage.setItem('last_seen_msg_count', lastMsgCount);
+                loadMessages(); // Refresh chat list/window
+            }
+        }
+    } catch(e) {}
+}, 5000); // Check every 5s for snappier feel
 
 function initMap() {
     // Default to a central location (e.g., India center)
@@ -382,6 +418,7 @@ async function drawRouteWithTraffic(start, end) {
 }
 
 function showSection(id) {
+    currentActiveSection = id;
     const sections = ['analytics', 'warehouses', 'shipments', 'drivers', 'weather', 'leaderboard', 'messages', 'verifications', 'safety', 'ledger', 'oracle', 'strategy-plan', 'network-resilience', 'system'];
     sections.forEach(s => {
         const el = document.getElementById(s);
@@ -396,6 +433,24 @@ function showSection(id) {
         }
     });
 
+    // Clear notifications if messages section
+    if (id === 'messages') {
+        const badge = document.getElementById('msg-badge');
+        if (badge) badge.style.display = 'none';
+        const link = document.getElementById('nav-link-messages');
+        if (link) {
+            link.style.fontWeight = '600';
+            link.style.color = 'var(--muted)';
+        }
+        
+        // Mark as seen
+        apiCall(`/tracking/messages/${localStorage.getItem('manager_id')}?company_id=${localStorage.getItem('manager_id')}`)
+            .then(msgs => {
+                lastMsgCount = msgs.length;
+                localStorage.setItem('last_seen_msg_count', lastMsgCount);
+            });
+    }
+
     // Specific loads
     if (id === 'analytics') loadInsights();
     if (id === 'warehouses') {
@@ -407,7 +462,7 @@ function showSection(id) {
     if (id === 'drivers') loadDriversAndVehicles();
     if (id === 'weather') initWeatherMap();
     if (id === 'leaderboard') loadLeaderboard();
-    if (id === 'messages') loadAllConversations();
+    if (id === 'messages') loadMessages();
     if (id === 'verifications') loadVerifications();
     if (id === 'safety') loadSafetyCenter();
     if (id === 'ledger') loadLedger();
@@ -848,7 +903,6 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
 
 // Shipments Table Rendering
 let globalShipments = [];
-let globalDrivers = [];
 let globalVehicles = [];
 let globalWarehouses = [];
 
@@ -1332,6 +1386,264 @@ document.getElementById('link-form').addEventListener('submit', async (e) => {
     } catch(e) {}
 });
 
+let currentMsgShipmentId = null;
+let currentMsgDriverId = null;
+
+let miniChatDriverId = null;
+let miniChatShipmentId = null;
+let miniChatMsgs = [];
+let miniChatMediaData = null; // { type: 'image'|'audio', url: base64 }
+let miniChatMediaRecorder = null;
+let miniChatRecording = false;
+
+async function openMessageModal(shipmentId, driverId) {
+    miniChatShipmentId = shipmentId === 'null' ? null : shipmentId;
+    miniChatDriverId = driverId;
+
+    // Ensure globalDrivers is populated
+    if (!globalDrivers.length) {
+        const mId = localStorage.getItem('manager_id');
+        globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
+    }
+    const driver = globalDrivers.find(d => d.id === driverId) || { name: 'Driver' };
+
+    // Build or show mini chat popup
+    let popup = document.getElementById('mini-chat-popup');
+    if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'mini-chat-popup';
+        popup.innerHTML = `
+            <div id="mini-chat-header" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(79,140,255,0.15);border-bottom:1px solid var(--border);cursor:move;border-radius:18px 18px 0 0;">
+                <img id="mini-chat-avatar" src="" style="width:34px;height:34px;border-radius:50%;border:2px solid var(--primary);object-fit:cover;">
+                <div style="flex:1;">
+                    <div id="mini-chat-name" style="font-weight:700;font-size:0.95rem;color:var(--primary);"></div>
+                    <div style="font-size:0.7rem;color:var(--muted);">Direct Line</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="showSection('messages');closeMiniChat()" title="Open in full Messages" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;">⤢</button>
+                    <button onclick="closeMiniChat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;">✕</button>
+                </div>
+            </div>
+            <div id="mini-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
+            <div id="mini-chat-media-preview" style="display:none;padding:8px 16px;background:rgba(0,0,0,0.2);border-top:1px solid var(--border);align-items:center;gap:10px;"></div>
+            <div style="padding:12px 16px;border-top:1px solid var(--border);">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button onclick="miniChatPickPhoto()" title="Send Photo" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:1rem;">📷</button>
+                    <button id="mini-chat-voice-btn" onclick="miniChatToggleRecording()" title="Voice Note" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:1rem;">🎙️</button>
+                    <input id="mini-chat-photo-input" type="file" accept="image/*" style="display:none;" onchange="miniChatHandlePhoto(this)">
+                    <input id="mini-chat-input" type="text" placeholder="Message..." style="flex:1;background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;color:white;font-family:inherit;font-size:0.9rem;" onkeydown="if(event.key==='Enter')miniChatSend()">
+                    <button onclick="miniChatSend()" style="background:var(--primary);border:none;color:white;border-radius:10px;padding:8px 16px;cursor:pointer;font-weight:700;">Send</button>
+                </div>
+            </div>
+        `;
+        popup.style.cssText = `
+            position: fixed; bottom: 20px; right: 24px; width: 360px; height: 520px;
+            background: rgba(15,23,42,0.96); backdrop-filter: blur(24px);
+            border: 1px solid var(--border); border-radius: 18px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            z-index: 99999; animation: slideUp 0.3s ease;
+        `;
+        document.body.appendChild(popup);
+
+        // Draggable
+        makeDraggable(popup, document.getElementById('mini-chat-header'));
+    }
+
+    popup.style.display = 'flex';
+    document.getElementById('mini-chat-name').innerText = driver.name;
+    document.getElementById('mini-chat-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
+    miniChatMediaData = null;
+    document.getElementById('mini-chat-media-preview').style.display = 'none';
+    document.getElementById('mini-chat-media-preview').innerHTML = '';
+
+    await miniChatLoadHistory();
+}
+
+function closeMiniChat() {
+    const popup = document.getElementById('mini-chat-popup');
+    if (popup) popup.style.display = 'none';
+    if (miniChatMediaRecorder && miniChatRecording) {
+        miniChatMediaRecorder.stop();
+    }
+}
+
+async function miniChatLoadHistory() {
+    const mId = localStorage.getItem('manager_id');
+    const allMsgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`);
+    miniChatMsgs = allMsgs.filter(m => m.sender_id === miniChatDriverId || m.receiver_id === miniChatDriverId)
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    miniChatRender();
+}
+
+function miniChatRender() {
+    const container = document.getElementById('mini-chat-messages');
+    if (!container) return;
+    container.innerHTML = miniChatMsgs.length === 0
+        ? '<div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:30px;">No messages yet. Say hello! 👋</div>'
+        : miniChatMsgs.map(m => {
+            const isMe = m.sender_type === 'manager';
+            let mediaHtml = '';
+            if (m.media_type === 'image' && m.media_url) {
+                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:8px;margin-top:6px;display:block;" alt="photo">`;
+            } else if (m.media_type === 'audio' && m.media_url) {
+                mediaHtml = `<div class="audio-placeholder" data-src="${m.media_url}" data-accent="${isMe ? 'rgba(255,255,255,0.25)' : 'rgba(79,140,255,0.4)'}"></div>`;
+            }
+            return `
+                <div style="display:flex;justify-content:${isMe ? 'flex-end' : 'flex-start'};">
+                    <div style="max-width:80%;padding:10px 14px;border-radius:14px;
+                                background:${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.07)'};
+                                color:${isMe ? '#fff' : 'var(--text)'};
+                                border-bottom-${isMe ? 'right' : 'left'}-radius:2px;
+                                border:1px solid ${isMe ? 'transparent' : 'var(--border)'};
+                                box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                        ${m.content ? `<div style="font-size:0.9rem;line-height:1.4;">${m.content}</div>` : ''}
+                        ${mediaHtml}
+                        <div style="font-size:0.6rem;margin-top:4px;text-align:right;opacity:0.65;">
+                            ${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    container.scrollTop = container.scrollHeight;
+    // Inject custom audio players
+    container.querySelectorAll('.audio-placeholder').forEach(ph => {
+        ph.replaceWith(buildAudioPlayer(ph.dataset.src, ph.dataset.accent));
+    });
+}
+
+async function miniChatSend() {
+    const input = document.getElementById('mini-chat-input');
+    const content = (input.value || '').trim();
+    if (!content && !miniChatMediaData) return;
+
+    const mId = localStorage.getItem('manager_id');
+    const payload = {
+        company_id: mId,
+        shipment_id: miniChatShipmentId,
+        sender_id: mId,
+        receiver_id: miniChatDriverId,
+        content: content || (miniChatMediaData ? '[Media]' : ''),
+        sender_type: 'manager',
+        media_url: miniChatMediaData ? miniChatMediaData.url : null,
+        media_type: miniChatMediaData ? miniChatMediaData.type : null
+    };
+
+    try {
+        await apiCall('/tracking/messages', 'POST', payload);
+        input.value = '';
+        miniChatMediaData = null;
+        document.getElementById('mini-chat-media-preview').style.display = 'none';
+        document.getElementById('mini-chat-media-preview').innerHTML = '';
+        await miniChatLoadHistory();
+        // Also refresh main messages if open
+        if (currentActiveSection === 'messages') loadMessages();
+    } catch(e) {
+        showNotification('Failed to send message', 'error');
+    }
+}
+
+function miniChatPickPhoto() {
+    document.getElementById('mini-chat-photo-input').click();
+}
+
+function miniChatHandlePhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        miniChatMediaData = { type: 'image', url: e.target.result };
+        const preview = document.getElementById('mini-chat-media-preview');
+        preview.style.display = 'flex';
+        preview.innerHTML = `<img src="${e.target.result}" style="height:60px;border-radius:8px;border:1px solid var(--border);"><span style="font-size:0.75rem;color:var(--muted);flex:1;">Photo ready to send</span><button onclick="miniChatClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;">✕</button>`;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+function miniChatClearMedia() {
+    miniChatMediaData = null;
+    const preview = document.getElementById('mini-chat-media-preview');
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+}
+
+async function miniChatToggleRecording() {
+    const btn = document.getElementById('mini-chat-voice-btn');
+    if (!miniChatRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const chunks = [];
+            miniChatMediaRecorder = new MediaRecorder(stream);
+            miniChatMediaRecorder.ondataavailable = e => chunks.push(e.data);
+            miniChatMediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    miniChatMediaData = { type: 'audio', url: ev.target.result };
+                    const preview = document.getElementById('mini-chat-media-preview');
+                    preview.style.display = 'flex';
+                    preview.innerHTML = `<button onclick="miniChatClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>`;
+                    const player = buildAudioPlayer(ev.target.result, 'rgba(79,140,255,0.4)');
+                    preview.insertBefore(player, preview.firstChild);
+                };
+                reader.readAsDataURL(blob);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            miniChatMediaRecorder.start();
+            miniChatRecording = true;
+            btn.innerText = '⏹️';
+            btn.style.background = 'rgba(229,62,62,0.2)';
+            btn.style.color = 'var(--danger)';
+            btn.title = 'Stop Recording';
+        } catch(e) {
+            alert('Microphone access denied. Please allow microphone permission.');
+        }
+    } else {
+        miniChatMediaRecorder.stop();
+        miniChatRecording = false;
+        btn.innerText = '🎙️';
+        btn.style.background = 'rgba(255,255,255,0.08)';
+        btn.style.color = 'var(--text)';
+        btn.title = 'Voice Note';
+    }
+}
+
+function makeDraggable(el, handle) {
+    let ox=0,oy=0,cx=0,cy=0;
+    handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        cx=e.clientX; cy=e.clientY;
+        document.onmouseup = () => { document.onmouseup=null; document.onmousemove=null; };
+        document.onmousemove = (ev) => {
+            ox=cx-ev.clientX; oy=cy-ev.clientY; cx=ev.clientX; cy=ev.clientY;
+            el.style.top=(el.offsetTop-oy)+'px'; el.style.left=(el.offsetLeft-ox)+'px';
+            el.style.bottom='auto'; el.style.right='auto';
+        };
+    });
+}
+
+async function submitMessage() {
+    // Legacy compatibility wrapper
+    const content = document.getElementById('msg-content')?.value;
+    if (!content) return;
+    try {
+        await apiCall('/tracking/messages', 'POST', {
+            shipment_id: miniChatShipmentId,
+            company_id: localStorage.getItem('manager_id'),
+            sender_id: localStorage.getItem('manager_id'),
+            receiver_id: miniChatDriverId,
+            content: content,
+            sender_type: 'manager'
+        });
+        document.getElementById('message-modal').style.display = 'none';
+        showNotification("Message sent to driver successfully", "success");
+    } catch (e) {
+        alert("Failed to send message to driver.");
+    }
+}
+
 async function loadDriversAndVehicles() {
     try {
         const [drivers, vehicles, warehouses, shipments] = await Promise.all([
@@ -1579,25 +1891,31 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
     document.getElementById('edit-type').innerText = type.charAt(0).toUpperCase() + type.slice(1);
     
     let html = '';
+    const fieldStyle = `style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit; font-size:0.95rem;"`;
+
     if (type === 'shipments') {
-        html = `<input type="text" id="edit-val1" value="${val1}" placeholder="Description" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">
-                <input type="text" id="edit-val2" value="${val2}" placeholder="Status" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">`;
+        html = `<div style="display:flex;flex-direction:column;gap:10px;">
+                    <input type="text" id="edit-val1" value="${val1}" placeholder="Description" ${fieldStyle}>
+                    <input type="text" id="edit-val2" value="${val2}" placeholder="Status" ${fieldStyle}>
+                </div>`;
     } else if (type === 'drivers' || type === 'vehicles') {
         const placeholder1 = type === 'drivers' ? 'Name' : 'Number Plate';
-        const placeholder2 = type === 'drivers' ? 'License Type' : 'Capacity';
+        const placeholder2 = type === 'drivers' ? 'License Type' : 'Capacity (kg)';
         const inputType2 = type === 'drivers' ? 'text' : 'number';
-        
-        html = `<input type="text" id="edit-val1" value="${val1}" placeholder="${placeholder1}" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">
-                <input type="${inputType2}" id="edit-val2" value="${val2}" placeholder="${placeholder2}" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">`;
-        
+
+        let fieldsInner = `<input type="text" id="edit-val1" value="${val1}" placeholder="${placeholder1}" ${fieldStyle}>
+                           <input type="${inputType2}" id="edit-val2" value="${val2}" placeholder="${placeholder2}" ${fieldStyle}>`;
+
         if (type === 'vehicles') {
-            html += `<input type="number" id="edit-val4" value="${val4 || ''}" placeholder="Fuel Efficiency (km/l)" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; margin-bottom:10px;">`;
+            fieldsInner += `<input type="number" id="edit-val4" value="${val4 || ''}" placeholder="Fuel Efficiency (km/l)" ${fieldStyle}>`;
         }
 
-        html += `<select id="edit-val3" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">
-                    <option value="">Select Base Hub</option>
-                    ${globalWarehouses.map(w => `<option value="${w.id}" ${w.id === val3 ? 'selected' : ''}>${w.name}</option>`).join('')}
-                </select>`;
+        fieldsInner += `<select id="edit-val3" ${fieldStyle}>
+                            <option value="">Select Base Hub</option>
+                            ${globalWarehouses.map(w => `<option value="${w.id}" ${w.id === val3 ? 'selected' : ''}>${w.name}</option>`).join('')}
+                        </select>`;
+
+        html = `<div style="display:flex;flex-direction:column;gap:10px;">${fieldsInner}</div>`;
     }
     document.getElementById('edit-fields').innerHTML = html;
     document.getElementById('edit-modal').style.display = 'block';
@@ -1937,19 +2255,222 @@ async function loadWeatherFleetData() {
 
 async function loadMessages() {
     try {
-        const msgs = await apiCall(`/tracking/messages/${localStorage.getItem('manager_id')}?company_id=${localStorage.getItem('manager_id')}`);
-        const container = document.getElementById('messages-container');
-        container.innerHTML = msgs.length === 0 ? '<p>No messages yet.</p>' : msgs.reverse().map(m => `
-            <div style="margin-bottom:20px; padding:16px; background:${m.sender_type==='manager'?'rgba(99, 102, 241, 0.1)':'rgba(34, 197, 94, 0.1)'}; border-radius:12px; border:1px solid ${m.sender_type==='manager'?'rgba(99, 102, 241, 0.2)':'rgba(34, 197, 94, 0.2)'}; border-left:4px solid ${m.sender_type==='manager'?'var(--primary)':'var(--success)'}">
-                <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:8px; color:var(--text-muted);">
-                    <b style="color:${m.sender_type==='manager'?'var(--primary)':'var(--success)'}; text-transform:uppercase; letter-spacing:0.05em;">${m.sender_type==='manager'?'Control Center':'Driver Unit'}</b>
-                    <span>${new Date(m.created_at).toLocaleString()}</span>
+        const mId = localStorage.getItem('manager_id');
+        const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`);
+        globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
+        
+        const searchQuery = document.getElementById('driver-chat-search').value.toLowerCase();
+        const filteredDrivers = globalDrivers.filter(d => d.name.toLowerCase().includes(searchQuery));
+        
+        const driverListContainer = document.getElementById('chat-driver-list');
+        
+        // Group messages by driver
+        const conversations = {};
+        
+        globalDrivers.forEach(d => {
+            conversations[d.id] = {
+                driver: d,
+                messages: msgs.filter(m => m.sender_id === d.id || m.receiver_id === d.id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at)),
+                lastMessage: null
+            };
+            if (conversations[d.id].messages.length > 0) {
+                conversations[d.id].lastMessage = conversations[d.id].messages[conversations[d.id].messages.length - 1];
+            }
+        });
+
+        // Render Sidebar (filtered)
+        driverListContainer.innerHTML = filteredDrivers.map(d => {
+            const conv = conversations[d.id];
+            const isSelected = selectedDriverChatId === d.id;
+            const lastText = conv.lastMessage ? conv.lastMessage.content : "No messages yet";
+            const lastTime = conv.lastMessage ? new Date(conv.lastMessage.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
+            
+            return `
+                <div class="chat-driver-item ${isSelected ? 'active' : ''}" 
+                     onclick="selectDriverChat('${d.id}')"
+                     style="padding:16px 24px; cursor:pointer; border-bottom:1px solid var(--border); transition:0.2s; background:${isSelected ? 'rgba(79, 140, 255, 0.1)' : 'transparent'};">
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                <b style="font-size:0.9rem; color:${isSelected ? 'var(--primary)' : 'var(--text)'}">${d.name}</b>
+                                <span style="font-size:0.65rem; color:var(--muted);">${lastTime}</span>
+                            </div>
+                            <p style="margin:0; font-size:0.75rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lastText}</p>
+                        </div>
+                    </div>
                 </div>
-                <p style="margin:0; font-size:0.95rem; line-height:1.5; color:var(--text);">${m.content}</p>
-            </div>
-        `).join('');
-    } catch(e) {}
+            `;
+        }).join('');
+
+        if (selectedDriverChatId) {
+            renderChatWindow(conversations[selectedDriverChatId]);
+        }
+    } catch(e) {
+        console.error("Error loading messages:", e);
+    }
 }
+
+function filterDriverChatList() {
+    loadMessages(); // Just re-run with current search query
+}
+
+function selectDriverChat(driverId) {
+    selectedDriverChatId = driverId;
+    
+    // UI Updates
+    document.getElementById('chat-placeholder').style.display = 'none';
+    document.getElementById('chat-header').style.display = 'flex'; // Changed to flex for avatar
+    document.getElementById('chat-messages-container').style.display = 'block';
+    document.getElementById('chat-input-area').style.display = 'block';
+    
+    const driver = globalDrivers.find(d => d.id === driverId);
+    if (driver) {
+        document.getElementById('chat-driver-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
+    }
+    
+    loadMessages();
+}
+
+function renderChatWindow(conv) {
+    const container = document.getElementById('chat-messages-container');
+    const headerName = document.getElementById('chat-driver-name');
+    headerName.innerText = conv.driver.name;
+
+    if (conv.messages.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--muted);">No conversation history with this driver. Start the chat below.</div>';
+    } else {
+        container.innerHTML = conv.messages.map(m => {
+            const isMe = m.sender_type === 'manager';
+            let mediaHtml = '';
+            if (m.media_type === 'image' && m.media_url) {
+                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:8px;display:block;cursor:pointer;" onclick="window.open('${m.media_url}')" alt="photo">`;
+            } else if (m.media_type === 'audio' && m.media_url) {
+                mediaHtml = `<div class="audio-placeholder" data-src="${m.media_url}" data-accent="${isMe ? 'rgba(255,255,255,0.25)' : 'rgba(79,140,255,0.4)'}"></div>`;
+            }
+            return `
+                <div style="display:flex; justify-content:${isMe ? 'flex-end' : 'flex-start'}; margin-bottom:16px;">
+                    <div style="max-width:72%; padding:12px 16px; border-radius:16px;
+                                background:${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.05)'};
+                                color:${isMe ? '#fff' : 'var(--text)'};
+                                border-bottom-${isMe ? 'right' : 'left'}-radius:2px;
+                                border: 1px solid ${isMe ? 'transparent' : 'var(--border)'};
+                                box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                        ${m.content && m.content !== '[Media]' ? `<div style="font-size:0.95rem; line-height:1.4;">${m.content}</div>` : ''}
+                        ${mediaHtml}
+                        <div style="font-size:0.65rem; margin-top:4px; text-align:right; opacity:0.7;">
+                            ${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    container.scrollTop = container.scrollHeight;
+    container.querySelectorAll('.audio-placeholder').forEach(ph => {
+        ph.replaceWith(buildAudioPlayer(ph.dataset.src, ph.dataset.accent));
+    });
+}
+
+let mainChatMediaData = null;
+let mainChatMediaRecorder = null;
+let mainChatRecording = false;
+
+async function sendMessageToSelectedDriver() {
+    const input = document.getElementById('manager-chat-input');
+    const content = (input.value || '').trim();
+    if (!content && !mainChatMediaData) return;
+    if (!selectedDriverChatId) return;
+
+    try {
+        const mId = localStorage.getItem('manager_id');
+        await apiCall('/tracking/messages', 'POST', {
+            company_id: mId,
+            sender_id: mId,
+            receiver_id: selectedDriverChatId,
+            content: content || (mainChatMediaData ? '[Media]' : ''),
+            sender_type: 'manager',
+            media_url: mainChatMediaData ? mainChatMediaData.url : null,
+            media_type: mainChatMediaData ? mainChatMediaData.type : null
+        });
+        input.value = '';
+        mainChatMediaData = null;
+        const preview = document.getElementById('main-chat-media-preview');
+        if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
+
+        const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`);
+        lastMsgCount = msgs.length;
+        localStorage.setItem('last_seen_msg_count', lastMsgCount);
+
+        loadMessages();
+    } catch(e) {
+        showNotification('Failed to send message.', 'error');
+    }
+}
+
+function mainChatPickPhoto() {
+    document.getElementById('main-chat-photo-input').click();
+}
+
+function mainChatHandlePhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        mainChatMediaData = { type: 'image', url: e.target.result };
+        const preview = document.getElementById('main-chat-media-preview');
+        preview.style.display = 'flex';
+        preview.innerHTML = `<img src="${e.target.result}" style="height:56px;border-radius:8px;border:1px solid var(--border);"><span style="font-size:0.8rem;color:var(--muted);flex:1;">Photo attached</span><button onclick="mainChatClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;">✕</button>`;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+function mainChatClearMedia() {
+    mainChatMediaData = null;
+    const preview = document.getElementById('main-chat-media-preview');
+    if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
+}
+
+async function mainChatToggleRecording() {
+    const btn = document.getElementById('main-chat-voice-btn');
+    if (!mainChatRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const chunks = [];
+            mainChatMediaRecorder = new MediaRecorder(stream);
+            mainChatMediaRecorder.ondataavailable = e => chunks.push(e.data);
+            mainChatMediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    mainChatMediaData = { type: 'audio', url: ev.target.result };
+                    const preview = document.getElementById('main-chat-media-preview');
+                    preview.style.display = 'flex';
+                    preview.innerHTML = `<button onclick="mainChatClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>`;
+                    const player = buildAudioPlayer(ev.target.result, 'rgba(79,140,255,0.4)');
+                    preview.insertBefore(player, preview.firstChild);
+                };
+                reader.readAsDataURL(blob);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            mainChatMediaRecorder.start();
+            mainChatRecording = true;
+            btn.innerText = '⏹️';
+            btn.style.background = 'rgba(229,62,62,0.2)';
+            btn.style.color = 'var(--danger)';
+        } catch(e) {
+            alert('Microphone access denied.');
+        }
+    } else {
+        mainChatMediaRecorder.stop();
+        mainChatRecording = false;
+        btn.innerText = '🎙️';
+        btn.style.background = 'rgba(255,255,255,0.08)';
+        btn.style.color = 'var(--text)';
+    }
+}
+
 
 async function loadLeaderboard() {
     const category = document.getElementById('leader-type').value;
@@ -2048,6 +2569,30 @@ async function viewFullProfile(type, id) {
             const meter = document.getElementById('prof-meter-bar');
             meter.style.width = `${p.fatigue_score || 0}%`;
             meter.style.background = (p.fatigue_score || 0) > 80 ? 'var(--danger)' : 'var(--primary)';
+
+            // Driving Status Logic
+            const statusEl = document.getElementById('prof-driving-status');
+            const hasActiveShipment = shipments.some(s => s.status === 'in_transit');
+            const isResting = p.fatigue_score > 80;
+            const hasVehicle = p.vehicle_id !== null;
+
+            if (hasActiveShipment) {
+                statusEl.innerText = "🚚 ON THE ROAD";
+                statusEl.style.background = "rgba(16, 185, 129, 0.15)";
+                statusEl.style.color = "var(--success)";
+            } else if (isResting) {
+                statusEl.innerText = "🧘 RESTING (ZEN MODE)";
+                statusEl.style.background = "rgba(79, 140, 255, 0.15)";
+                statusEl.style.color = "var(--primary)";
+            } else if (hasVehicle) {
+                statusEl.innerText = "🅿️ READY / ASSIGNED";
+                statusEl.style.background = "rgba(245, 158, 11, 0.15)";
+                statusEl.style.color = "var(--warning)";
+            } else {
+                statusEl.innerText = "🏠 UNAVAILABLE / OFF-DUTY";
+                statusEl.style.background = "rgba(255, 255, 255, 0.05)";
+                statusEl.style.color = "var(--text-muted)";
+            }
         } else {
             document.getElementById('prof-stat-1').innerText = `${(p.efficiency_score || 100).toFixed(1)}%`;
             document.getElementById('prof-stat-2').innerText = `${p.vehicle_health_score || 100}%`;
@@ -2620,22 +3165,53 @@ document.addEventListener('click', (e) => {
 function showInfoTip(el) {
     const tip = el.getAttribute('data-tip');
     if (!tip) return;
+    // Remove existing tips to avoid stacking
+    const existing = document.querySelectorAll('.oracle-tip-toast');
+    existing.forEach(t => t.remove());
+
+    const div = document.createElement('div');
+    div.className = 'oracle-tip-toast';
+    div.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(20px);
+        color: white;
+        padding: 30px;
+        border-radius: 24px;
+        z-index: 100000;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border: 1px solid var(--primary);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    `;
     
-    // Create a custom notification if alert-container is available
-    const container = document.getElementById('alert-container');
-    if (container) {
-        const div = document.createElement('div');
-        div.className = 'glass-card';
-        div.style.cssText = 'position:fixed; bottom:20px; right:20px; padding:15px 25px; background:var(--primary); color:white; border-radius:12px; z-index:10001; box-shadow:0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease;';
-        div.innerHTML = `<b>💡 Info:</b> ${tip}`;
-        container.appendChild(div);
-        setTimeout(() => {
-            div.style.opacity = '0';
-            div.style.transform = 'translateY(20px)';
-            div.style.transition = 'all 0.3s ease';
-            setTimeout(() => div.remove(), 300);
-        }, 4000);
-    } else {
-        alert(tip);
-    }
+    div.innerHTML = `
+        <div style="font-size: 2.5rem; margin-bottom: 15px;">💡</div>
+        <h3 style="margin: 0 0 10px 0; color: var(--primary);">Intelligence Insight</h3>
+        <p style="margin: 0; font-size: 1rem; line-height: 1.6; opacity: 0.9;">${tip}</p>
+        <button class="btn-primary" style="margin-top: 25px; width: auto; padding: 10px 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);" onclick="this.parentElement.remove()">Got it</button>
+    `;
+    
+    document.body.appendChild(div);
+    
+    // Trigger animation
+    setTimeout(() => {
+        div.style.opacity = '1';
+        div.style.transform = 'translate(-50%, -50%) scale(1)';
+    }, 10);
+
+    // Auto-close on outside click
+    const closer = (e) => {
+        if (!div.contains(e.target) && e.target !== el) {
+            div.remove();
+            document.removeEventListener('click', closer);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closer), 100);
 }

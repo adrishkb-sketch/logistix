@@ -190,6 +190,8 @@ class Message(BaseModel):
     content: str
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     sender_type: str # manager, driver
+    media_url: Optional[str] = None
+    media_type: Optional[str] = None # 'image' or 'audio'
 
 class JourneyReview(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

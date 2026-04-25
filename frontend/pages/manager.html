@@ -40,6 +40,9 @@
         
         /* Sidebar Logo */
         .sidebar-header { margin-bottom: 40px; padding: 0 12px; }
+        .nav-links-wrapper { margin-bottom: 32px; }
+        .chat-driver-item:hover { background: rgba(79, 140, 255, 0.05) !important; }
+        .chat-driver-item.active { background: rgba(79, 140, 255, 0.1) !important; border-left: 4px solid var(--primary); }
         .section-card h3 {
     margin: 0;
     font-size: 1.4rem;
@@ -79,7 +82,7 @@
                 <a href="#" class="nav-link" onclick="showSection('drivers')">Drivers & Vehicles 🚛</a>
                 <a href="#" class="nav-link" onclick="showSection('weather')">Weather Fleet Map 🗺️</a>
                 <a href="#" class="nav-link" onclick="showSection('leaderboard')">Leaderboards 🏆</a>
-                <a href="#" class="nav-link" onclick="showSection('messages')">Messages <span id="msg-badge" class="badge"></span></a>
+                <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')">Messages <span id="msg-badge" class="badge"></span></a>
                 <a href="#" class="nav-link" onclick="showSection('verifications')">Verifications 🛡️ <span id="verif-badge" class="badge"></span></a>
                 <a href="#" class="nav-link" onclick="showSection('safety')">Safety Center 🛡️ <span id="safety-badge" class="badge"></span></a>
                 <a href="#" class="nav-link" onclick="showSection('ledger')">Smart Contracts ⛓️</a>
@@ -496,8 +499,9 @@
             <!-- Verifications Section -->
             <section id="verifications" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
-                    <h3>Manual ML Verifications</h3>
-                    <p class="subtitle" style="margin-bottom:40px;">Review number plates that the AI could not confidently read.</p>
+                    <h2 style="margin:0; font-size:1.6rem; color:var(--accent);">Manual ML Verifications</h2>
+                    <div style="width:50px; height:4px; background:var(--accent); margin:16px 0; border-radius:2px;"></div>
+                    <p class="subtitle" style="margin-bottom:40px; font-size:0.95rem;">Review number plates that the AI could not confidently read.</p>
                     <div class="table-container">
                         <table>
                             <thead><tr><th>Driver</th><th>Vehicle Plate</th><th>Image</th><th>Action</th></tr></thead>
@@ -506,9 +510,10 @@
                     </div>
                 </div>
 
-                <div class="glass-card section-card" style="margin-top:20px;">
-                    <h3>Verified Vehicles</h3>
-                    <p class="subtitle">List of all vehicles successfully verified by AI or Manual review.</p>
+                <div class="glass-card section-card" style="margin-top:32px;">
+                    <h2 style="margin:0; font-size:1.6rem; color:var(--success);">Verified Vehicles</h2>
+                    <div style="width:50px; height:4px; background:var(--success); margin:16px 0; border-radius:2px;"></div>
+                    <p class="subtitle" style="margin-bottom:32px; font-size:0.95rem;">List of all vehicles successfully verified by AI or Manual review.</p>
                     <div class="table-container">
                         <table>
                             <thead>
@@ -604,11 +609,55 @@
 
             <!-- Messages Section -->
             <section id="messages" class="section-content" style="display:none;">
-                <div class="glass-card section-card">
-                    <h3>Driver Communications</h3>
-                    <p class="subtitle" style="margin-bottom:32px;">Real-time chat with active drivers.</p>
-                    <div id="messages-container" style="max-height: 500px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                        <!-- Messages injected here -->
+                <div class="glass-card section-card" style="padding:0; overflow:hidden; display:flex; height:600px;">
+                    <!-- Driver Sidebar -->
+                    <div style="width:300px; border-right:1px solid var(--border); display:flex; flex-direction:column; background:rgba(0,0,0,0.1);">
+                        <div style="padding:24px; border-bottom:1px solid var(--border);">
+                            <h2 style="margin:0; font-size:1.4rem; color:var(--primary); letter-spacing:-0.02em;">Driver Communications</h2>
+                            <div style="width:40px; height:3px; background:var(--primary); margin:12px 0; border-radius:2px;"></div>
+                            <p style="margin:0; font-size:0.85rem; color:var(--muted); line-height:1.4;">Real-time chat with active drivers.</p>
+                        </div>
+                        <div style="padding:12px 24px; border-bottom:1px solid var(--border);">
+                            <div style="position:relative;">
+                                <input type="text" id="driver-chat-search" placeholder="🔍 Search driver by name..." oninput="filterDriverChatList()" style="padding:10px 10px 10px 35px; font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); width:100%; color:white;">
+                                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:0.5; pointer-events:none;"></span>
+                            </div>
+                        </div>
+                        <div id="chat-driver-list" style="flex:1; overflow-y:auto;">
+                            <!-- Drivers list injected here -->
+                            <div style="padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">Loading drivers...</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Window -->
+                    <div id="chat-window" style="flex:1; display:flex; flex-direction:column; background:rgba(255,255,255,0.02);">
+                        <div id="chat-header" style="padding:15px 32px; border-bottom:1px solid var(--border); display:none; align-items:center; gap:15px;">
+                            <img id="chat-driver-avatar" src="" style="width:40px; height:40px; border-radius:50%; border:2px solid var(--primary); object-fit:cover;">
+                            <div style="flex:1;">
+                                <h4 id="chat-driver-name" style="margin:0; font-size:1.1rem; cursor:pointer; color:var(--primary);" onclick="viewFullProfile('driver', selectedDriverChatId)">Driver Name</h4>
+                                <p id="chat-driver-status" style="margin:2px 0 0 0; font-size:0.75rem; color:var(--success);">● Active</p>
+                            </div>
+                        </div>
+                        
+                        <div id="chat-messages-container" style="flex:1; overflow-y:auto; padding:32px; display:none;">
+                            <!-- Individual chat messages -->
+                        </div>
+
+                        <div id="chat-placeholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted);">
+                            <div style="font-size:3rem; margin-bottom:1rem;">💬</div>
+                            <p>Select a driver from the left to view messages</p>
+                        </div>
+
+                        <div id="chat-input-area" style="padding:16px 32px; border-top:1px solid var(--border); display:none;">
+                            <div id="main-chat-media-preview" style="display:none; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:10px; align-items:center; gap:10px;"></div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <button onclick="mainChatPickPhoto()" title="Send Photo" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;white-space:nowrap;">📷</button>
+                                <button id="main-chat-voice-btn" onclick="mainChatToggleRecording()" title="Voice Note" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;white-space:nowrap;">🎙️</button>
+                                <input id="main-chat-photo-input" type="file" accept="image/*" style="display:none;" onchange="mainChatHandlePhoto(this)">
+                                <input type="text" id="manager-chat-input" placeholder="Type your message..." style="flex:1; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); padding:10px 14px; color:white; font-family:inherit; font-size:0.95rem;" onkeydown="if(event.key==='Enter')sendMessageToSelectedDriver()">
+                                <button class="btn-primary" style="width:auto; padding:10px 24px;" onclick="sendMessageToSelectedDriver()">Send 🚀</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -976,10 +1025,11 @@
             <!-- Safety Center Section -->
             <section id="safety" class="section-content" style="display:none;">
                 <div class="glass-card section-card" style="border-left: 4px solid var(--danger);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                         <div>
-                            <h2 style="color:var(--danger); margin:0;">Safety Center 🛡️</h2>
-                            <p class="subtitle" style="margin-bottom:40px;">AI-monitored safety incidents, fatigue alerts, and Zen Mode activations.</p>
+                            <h2 style="color:var(--danger); margin:0; font-size:2rem;">Safety Center 🛡️</h2>
+                            <div style="width:60px; height:5px; background:var(--danger); margin:18px 0; border-radius:2px;"></div>
+                            <p class="subtitle" style="margin-bottom:0; font-size:1rem; opacity:0.8;">AI-monitored safety incidents, fatigue alerts, and Zen Mode activations.</p>
                         </div>
                         <div style="text-align:right;">
                             <span style="font-size:0.8rem; color:var(--text-muted);">Fleet Safety Index:</span>
@@ -1073,13 +1123,16 @@
     </div>
 
     <!-- Edit Modal -->
-    <div id="edit-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-        <h3>Edit <span id="edit-type"></span></h3>
-        <form id="edit-form" class="form-grid" style="margin-top:15px;">
-            <div id="edit-fields" style="grid-column: span 2;"></div>
-            <div class="input-group" style="grid-column: span 2;">
-                <button type="submit" class="btn-primary">Save Changes</button>
-                <button type="button" class="btn-primary" style="background:var(--danger); margin-top:10px;" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
+    <div id="edit-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:440px; max-width:94vw; max-height:90vh; overflow-y:auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6); padding:28px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0;">Edit <span id="edit-type"></span></h3>
+            <button onclick="document.getElementById('edit-modal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.3rem;line-height:1;">&#x2715;</button>
+        </div>
+        <form id="edit-form" style="display:flex; flex-direction:column; gap:12px;">
+            <div id="edit-fields"></div>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
+                <button type="button" class="btn-primary" style="flex:1; background:var(--danger);" onclick="document.getElementById('edit-modal').style.display='none'">Cancel</button>
             </div>
         </form>
     </div>
@@ -1206,11 +1259,12 @@
     </div>
 
     <!-- Message Modal -->
-    <div id="message-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+    <!-- Old message-modal kept for compatibility (hidden by default) -->
+    <div id="message-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:10001; width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
         <h3>Message Driver</h3>
         <p style="font-size:0.85rem; margin-bottom:10px;">To: <span id="msg-driver-name"></span></p>
         <div class="input-group">
-            <textarea id="msg-content" placeholder="Type your message here..." style="width:100%; height:100px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; padding:10px;"></textarea>
+            <textarea id="msg-content" placeholder="Type your message here..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; padding:10px;"></textarea>
         </div>
         <div class="input-group">
             <button class="btn-primary" onclick="submitMessage()">Send Message</button>
@@ -1226,6 +1280,7 @@
                 <div>
                     <h2 id="prof-name" style="margin:0;"></h2>
                     <p id="prof-sub" style="color:var(--text-muted); margin:0;"></p>
+                    <div id="prof-driving-status" style="margin-top:8px; font-size:0.8rem; display:inline-block; padding:4px 10px; border-radius:12px; font-weight:700;"></div>
                 </div>
             </div>
             <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('profile-modal').style.display='none'">✖</button>
