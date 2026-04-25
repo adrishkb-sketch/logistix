@@ -1,227 +1,566 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logistix | Intelligent Dispatch Platform</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/landing.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Logistix</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg: #0b1220;
+    --text: #ffffff;
+    --muted: #9aa4b2;
+    --primary: #4f8cff;
+    --card: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.08);
+}
+
+body.light-mode {
+    --bg: #f6f8fc;
+    --text: #0f172a;
+    --muted: #475569;
+    --primary: #2563eb;
+    --card: #ffffff;
+    --border: rgba(0,0,0,0.08);
+}
+
+body {
+    margin: 0;
+    font-family: 'Manrope', sans-serif;
+    color: var(--text);
+    transition: 0.3s ease;
+
+    /* DARK MODE GRADIENT */
+    background: linear-gradient(
+        to right,
+        #0b1220 0%,
+        #0f172a 40%,
+        #111827 100%
+    );
+}
+
+/* LIGHT MODE GRADIENT (🔥 THIS IS THE MAGIC) */
+body.light-mode {
+    background: linear-gradient(
+        to right,
+        #f8fafc 0%,
+        #eef2ff 45%,
+        #e0e7ff 100%
+    );
+}
+
+/* ===== BACKGROUND GLOW (KEEP SUBTLE) ===== */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(79,140,255,0.12), transparent),
+        radial-gradient(circle at 80% 60%, rgba(99,102,241,0.08), transparent);
+    z-index: -1;
+}
+
+/* ===== HERO WITH YOUR IMAGES ===== */
+.hero {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* DARK MODE IMAGE */
+    background: url('dark_mode_bg.png') no-repeat center/cover;
+    position: relative;
+}
+
+/* LIGHT MODE IMAGE */
+body.light-mode .hero {
+    background: url('light_mode_bg.png') no-repeat center/cover;
+}
+
+/* SOFT OVERLAY (NOT GLOOMY) */
+.hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(10,15,30,0.35); /* lighter than before */
+}
+
+body.light-mode .hero::after {
+    background: rgba(255,255,255,0.55);
+}
+
+.hero-content {
+    text-align: center;
+    max-width: 720px;
+    position: relative;
+    z-index: 2;
+}
+
+/* ===== HERO TEXT ===== */
+.hero h1 {
+    font-size: 3.8rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+
+    background: linear-gradient(90deg, #ffffff, #4f8cff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    text-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+body.light-mode .hero h1 {
+    background: linear-gradient(90deg, #0f172a, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+}
+
+.hero p {
+    font-size: 1.15rem;
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+/* ===== BUTTONS (FIXED VISIBILITY) ===== */
+.btn {
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    margin: 10px;
+    transition: 0.25s ease;
+}
+
+/* PRIMARY */
+.btn-primary {
+    background: linear-gradient(135deg, #4f8cff, #6366f1);
+    color: #fff;
+    border: none;
+    box-shadow: 0 10px 25px rgba(79,140,255,0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px rgba(79,140,255,0.45);
+}
+
+/* OUTLINE */
+.btn-outline {
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: rgba(255,255,255,0.02);
+}
+
+.btn-outline:hover {
+    background: var(--card);
+}
+
+/* ===== SECTIONS ===== */
+section {
+    padding: 100px 6%;
+}
+
+/* ===== STATS ===== */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    text-align: center;
+}
+
+.stat h2 {
+    font-size: 2.6rem;
+    color: var(--primary);
+}
+
+/* ===== FEATURES ===== */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+    gap: 30px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 30px;
+    transition: 0.3s;
+    backdrop-filter: blur(10px);
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    border-color: var(--primary);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.card h3 {
+    margin: 10px 0;
+}
+
+.card p {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+/* ===== PLATFORM ===== */
+.platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+    gap: 25px;
+}
+
+/* ===== MODAL ===== */
+/* ===== MODAL (PREMIUM GLASS) ===== */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(8px);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0 }
+    to { opacity: 1 }
+}
+
+.modal-box {
+    position: relative;
+
+    background: var(--card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+
+    padding: 32px;
+    border-radius: 18px;
+    width: 90%;
+    max-width: 420px;
+
+    box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Title */
+.modal-box h2 {
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+/* Inputs */
+.modal-box input {
+    width: 100%;
+    padding: 12px 14px;
+    margin: 10px 0;
+
+    border-radius: 10px;
+    border: 1px solid var(--border);
+
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+
+    font-size: 0.95rem;
+    transition: 0.2s;
+}
+
+.modal-box input:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+/* Light mode inputs */
+body.light-mode .modal-box input {
+    background: rgba(255,255,255,0.8);
+}
+
+/* Button spacing */
+.modal-box button {
+    width: 100%;
+    margin-top: 14px;
+}
+
+/* Close button */
+.modal-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: 0.2s;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+}
+
+/* ===== INPUTS ===== */
+input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+/* ===== SCROLL ANIMATION ===== */
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: 0.6s ease;
+}
+
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ===== THEME BUTTON ===== */
+#theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    cursor: pointer;
+    z-index: 9999; /* 🔥 THIS FIXES EVERYTHING */
+}
+.modal-close {
+    cursor: pointer;
+    font-size: 1.2rem;
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    opacity: 0.7;
+    transition: 0.2s;
+}
+.modal-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+</style>
 </head>
+
 <body>
-    <div class="background-animation"></div>
 
-    <div class="landing-page">
-        <!-- Hero Section -->
-        <header class="hero">
-            <div class="hero-content">
-                <div class="doodle" style="top: 10%; left: 10%;">📦</div>
-                <div class="doodle" style="top: 20%; right: 15%;">✨</div>
-                <div class="doodle" style="bottom: 15%; left: 5%;">🚚</div>
-                
-                <h1>Logistics, <br>Simplified with AI.</h1>
-                <p>The world's first intelligent dispatch platform designed for the complex needs of modern supply chains. From Cold Chain vitality tracking to AR-powered loading, we've got you covered.</p>
-                
-                <div class="cta-group">
-                    <a href="#get-started" class="btn-premium btn-primary-glow">Get Started Now</a>
-                    <a href="#features" class="btn-premium btn-outline" style="border: 1px solid var(--card-border); color: #fff; padding: 16px 40px; border-radius: 50px; text-decoration:none;">Explore Features</a>
-                </div>
-            </div>
-        </header>
+<button id="theme-toggle">🌙 Dark</button>
 
-        <!-- Stats Section -->
-        <section class="stats-section">
-            <div class="stat-card">
-                <span class="stat-number" data-target="1500">0</span>
-                <span class="stat-label">Total Companies</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-number" data-target="12400">0</span>
-                <span class="stat-label">Active Drivers</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-number" data-target="98">0</span>
-                <span class="stat-label">% On-Time Rate</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-number" data-target="50000">0</span>
-                <span class="stat-label">Trips Completed</span>
-            </div>
-        </section>
+<!-- HERO -->
+<div class="hero">
+<div class="hero-content reveal">
+<h1>🚚 Logistics, finally working.</h1>
+<p>
+Predict delays. Optimize routes. Eliminate chaos.
+Logistix brings intelligence to every movement in your supply chain.
+</p>
 
-        <!-- Features Section -->
-        <section id="features" class="features-section">
-            <h2 class="section-title">Why Logistix?</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">❄️</div>
-                    <h3>Cold Chain 2.0</h3>
-                    <p>Real-time vitality monitoring for perishable goods. Our AI predicts decay based on temperature, traffic, and vehicle health.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
-                    <h3>AI Dispatch</h3>
-                    <p>Automated driver-vehicle assignment using multi-factor optimization including fatigue, history, and proximity.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🏗️</div>
-                    <h3>AR Cargo Plan</h3>
-                    <p>Augmented Reality blueprints for drivers to optimize truck space and ensure safe weight distribution.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🛡️</div>
-                    <h3>Secure Tracking</h3>
-                    <p>OTP-verified authenticated tracking for end customers. No more public data leaks, only secure logistics.</p>
-                </div>
-            </div>
-        </section>
+<a href="#platform" class="btn btn-primary">Get Started →</a>
+<a href="#features" class="btn btn-outline">Explore Features</a>
+</div>
+</div>
 
-        <!-- Get Started / Login Selection -->
-        <section id="get-started" class="auth-selection">
-            <h2 class="section-title">Enter the Dashboard</h2>
-            <p style="color:var(--text-muted); margin-bottom: 30px;">Choose your portal to begin</p>
-            
-            <div class="role-grid">
-                <div class="role-card" onclick="openLoginModal('manager')">
-                    <div style="font-size:3rem;">🏢</div>
-                    <h4>Manager Portal</h4>
-                    <p>Control fleet, warehouses, and track real-time operations.</p>
-                </div>
-                
-                <div class="role-card" onclick="openLoginModal('driver')">
-                    <div style="font-size:3rem;">🚛</div>
-                    <h4>Driver App</h4>
-                    <p>View missions, scan cargo, and earn performance points.</p>
-                </div>
-                
-                <a href="pages/track.html" class="role-card" style="text-decoration:none; color:inherit;">
-                    <div style="font-size:3rem;">📦</div>
-                    <h4>Receiver Portal</h4>
-                    <p>Track your orders securely with phone-based OTP login.</p>
-                </a>
-                
-                <div class="role-card" style="border-style: dashed; background: transparent;" onclick="openLoginModal('signup')">
-                    <div style="font-size:3rem;">🚀</div>
-                    <h4>Join as Company</h4>
-                    <p>Register your logistics business and start scaling today.</p>
-                </div>
-            </div>
-        </section>
+<!-- STATS -->
+<section class="stats reveal">
+<div class="stat"><h2>1500+</h2><p>Companies</p></div>
+<div class="stat"><h2>12400+</h2><p>Drivers</p></div>
+<div class="stat"><h2>98%</h2><p>On-Time</p></div>
+<div class="stat"><h2>50K+</h2><p>Trips</p></div>
+</section>
 
-        <footer style="padding: 60px 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; border-top: 1px solid var(--card-border);">
-            <p>&copy; 2026 Logistix AI Solutions. All rights reserved.</p>
-        </footer>
-    </div>
+<!-- FEATURES -->
+<section id="features" class="reveal">
+<h2 style="text-align:center;">Why Logistix?</h2>
 
-    <div id="auth-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:1000; align-items:center; justify-content:center;">
-        <div class="glass-card login-card" style="width:100%; max-width:450px; position:relative; padding:40px;">
-            <button onclick="closeModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
-            <div id="modal-content"></div>
-        </div>
-    </div>
+<div class="features-grid">
 
-    <!-- Templates -->
-    <template id="manager-login-template">
-        <form id="manager-login-form">
-            <h2 style="margin-bottom:20px;">Manager Login</h2>
-            <div class="input-group">
-                <label>Email</label>
-                <input type="email" id="manager-email" required placeholder="manager@company.com">
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="manager-password" required placeholder="••••••••">
-            </div>
-            <button type="submit" class="btn-primary">Login to Dashboard</button>
-        </form>
-    </template>
+<div class="card">
+❄️
+<h3>Cold Chain Intelligence</h3>
+<p>Prevent spoilage with AI predicting decay using real-time environmental data.</p>
+</div>
 
-    <template id="driver-login-template">
-        <form id="driver-login-form">
-            <h2 style="margin-bottom:20px;">Driver Login</h2>
-            <div class="input-group">
-                <label>Login ID</label>
-                <input type="text" id="driver-id" required placeholder="DRV-101">
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="driver-password" required placeholder="••••••••">
-            </div>
-            <button type="submit" class="btn-primary">Driver Login</button>
-        </form>
-    </template>
+<div class="card">
+🤖
+<h3>Smart Dispatch</h3>
+<p>Auto-assign drivers using fatigue, performance, and proximity intelligence.</p>
+</div>
 
-    <template id="signup-template">
-        <form id="signup-form">
-            <h2 style="margin-bottom:20px;">Company Registration</h2>
-            <div id="step-1">
-                <div class="input-group">
-                    <label>Company Name</label>
-                    <input type="text" id="signup-name" required placeholder="FastLogistics Inc.">
-                </div>
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="signup-email" required placeholder="admin@fastlogistics.com">
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="signup-password" required placeholder="••••••••">
-                </div>
-                <button type="button" class="btn-primary" onclick="requestOTP()">Request OTP</button>
-            </div>
-            <div id="step-2" style="display:none;">
-                <p class="info-text">OTP sent to console.</p>
-                <div class="input-group">
-                    <label>6-digit OTP</label>
-                    <input type="text" id="signup-otp" required placeholder="123456">
-                </div>
-                <button type="submit" class="btn-primary">Verify & Register</button>
-            </div>
-        </form>
-    </template>
+<div class="card">
+📦
+<h3>Load Optimization</h3>
+<p>Reduce trips and maximize space with intelligent cargo planning.</p>
+</div>
 
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script>
-        function openLoginModal(type) {
-            const modal = document.getElementById('auth-modal');
-            const content = document.getElementById('modal-content');
-            let templateId = (type === 'manager') ? 'manager-login-template' : (type === 'driver' ? 'driver-login-template' : 'signup-template');
-            content.innerHTML = '';
-            content.appendChild(document.getElementById(templateId).content.cloneNode(true));
-            modal.style.display = 'flex';
+<div class="card">
+🔐
+<h3>Secure Delivery</h3>
+<p>OTP-based verification ensures safe, fraud-proof deliveries.</p>
+</div>
+
+</div>
+</section>
+
+<!-- PLATFORM -->
+<section id="platform" class="reveal">
+<h2 style="text-align:center;">Enter Platform</h2>
+
+<div class="platform-grid">
+
+<div class="card" onclick="openModal('manager')">
+🏢 <h3>Manager</h3>
+<p>Control operations and fleet in real time.</p>
+</div>
+
+<div class="card" onclick="openModal('driver')">
+🚛 <h3>Driver</h3>
+<p>Access tasks and track deliveries.</p>
+</div>
+
+<a href="pages/track.html" style="text-decoration:none;color:inherit;">
+<div class="card">
+📦 <h3>Track Order</h3>
+<p>Track shipments securely using OTP login.</p>
+</div>
+</a>
+
+<div class="card" onclick="openModal('signup')">
+🚀 <h3>Join</h3>
+<p>Register your logistics company.</p>
+</div>
+
+</div>
+</section>
+
+<!-- MODAL -->
+<div id="modal" class="modal">
+<div class="modal-box" id="modal-content"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    /* ===== MODAL ===== */
+    function openModal(type){
+        const modal = document.getElementById('modal');
+        const content = document.getElementById('modal-content');
+
+        let html = `<div class="modal-close" id="modal-close-btn">✖</div>`;
+
+        if(type === 'manager'){
+            html += `
+            <h2>🏢 Manager Login</h2>
+            <input placeholder="Email">
+            <input type="password" placeholder="Password">
+            <button class="btn btn-primary">Login</button>
+            `;
         }
-        function closeModal() { document.getElementById('auth-modal').style.display = 'none'; }
-
-        // Stats Counter Animation
-        function animateCounters() {
-            const counters = document.querySelectorAll('.stat-number');
-            counters.forEach(counter => {
-                const target = +counter.getAttribute('data-target');
-                let count = 0;
-                const inc = target / 200;
-                const updateCount = () => {
-                    if (count < target) {
-                        count += inc;
-                        counter.innerText = Math.ceil(count).toLocaleString() + (target === 98 ? '%' : '+');
-                        setTimeout(updateCount, 1);
-                    } else {
-                        counter.innerText = target.toLocaleString() + (target === 98 ? '%' : '+');
-                    }
-                };
-                updateCount();
-            });
+        else if(type === 'driver'){
+            html += `
+            <h2>🚛 Driver Login</h2>
+            <input placeholder="Driver ID">
+            <input type="password" placeholder="Password">
+            <button class="btn btn-primary">Login</button>
+            `;
+        }
+        else {
+            html += `
+            <h2>🚀 Register Company</h2>
+            <input placeholder="Company Name">
+            <input placeholder="Email">
+            <input type="password" placeholder="Password">
+            <button class="btn btn-primary">Register</button>
+            `;
         }
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    animateCounters();
-                    observer.unobserve(entry.target);
-                }
+        content.innerHTML = html;
+        modal.style.display = 'flex';
+
+        /* 🔥 attach close button AFTER render */
+        const closeBtn = document.getElementById('modal-close-btn');
+        if(closeBtn){
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevents conflict with overlay click
+                closeModal();
             });
-        }, { threshold: 0.5 });
-        observer.observe(document.querySelector('.stats-section'));
-    </script>
+        }
+    }
+
+    function closeModal(){
+        document.getElementById('modal').style.display = 'none';
+    }
+
+    window.openModal = openModal;
+
+    /* ===== CLICK OUTSIDE TO CLOSE (FIXED) ===== */
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('modal');
+        if(e.target === modal){
+            closeModal();
+        }
+    });
+
+    /* ===== SCROLL REVEAL ===== */
+    const reveals = document.querySelectorAll('.reveal');
+
+    function revealOnScroll(){
+        reveals.forEach(el => {
+            const top = el.getBoundingClientRect().top;
+            if(top < window.innerHeight - 100){
+                el.classList.add('active');
+            }
+        });
+    }
+
+    window.addEventListener('scroll', revealOnScroll);
+    revealOnScroll();
+
+    /* ===== THEME ===== */
+    const btn = document.getElementById('theme-toggle');
+
+    if(localStorage.getItem('theme') === 'light'){
+        document.body.classList.add('light-mode');
+        btn.innerText = '☀️ Light';
+    } else {
+        btn.innerText = '🌙 Dark';
+    }
+
+    btn.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+
+        if(document.body.classList.contains('light-mode')){
+            localStorage.setItem('theme','light');
+            btn.innerText = '☀️ Light';
+        } else {
+            localStorage.setItem('theme','dark');
+            btn.innerText = '🌙 Dark';
+        }
+    });
+
+});
+</script>
 </body>
 </html>
