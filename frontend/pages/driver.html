@@ -4,48 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Driver App | Logistix</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .driver-layout { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .top-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .mission-card { background: rgba(0, 242, 254, 0.1); border-left: 4px solid var(--primary); margin-bottom: 20px; }
-        #route-map { height: 300px; width: 100%; border-radius: 12px; margin-top: 15px; border: 1px solid var(--card-border); z-index: 1;}
+        .driver-layout { max-width: 700px; margin: 0 auto; padding: 24px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .mission-card { background: rgba(79, 140, 255, 0.05); border-left: 4px solid var(--primary); margin-bottom: 24px; }
+        #route-map { height: 350px; width: 100%; border-radius: 20px; margin-top: 15px; border: 1px solid var(--border); z-index: 1; }
+        
         .instruction-banner {
-            background: linear-gradient(90deg, #f6ad55, #ed8936);
+            background: linear-gradient(135deg, #f59e0b, #d97706);
             color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: bold;
+            padding: 18px;
+            border-radius: 14px;
+            margin-bottom: 24px;
+            font-weight: 800;
             display: none;
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
             animation: pulse 2s infinite;
         }
-        .timeline { border-left: 3px solid var(--primary); padding-left: 20px; margin-left: 15px; margin-top: 20px;}
-        .timeline-node { position: relative; margin-bottom: 20px; }
-        .timeline-dot { position: absolute; left: -29px; top: 0; width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--bg-dark); }
+
+        .timeline { border-left: 2px solid var(--border); padding-left: 24px; margin-left: 12px; margin-top: 24px; }
+        .timeline-node { position: relative; margin-bottom: 24px; }
+        .timeline-dot { position: absolute; left: -33px; top: 0; width: 18px; height: 18px; border-radius: 50%; border: 4px solid var(--bg); background: var(--primary); }
         
-        /* Zen Mode Styles */
         .zen-overlay {
-            position: fixed; top:0; left:0; width:100%; height:100%; 
-            background: rgba(10, 25, 41, 0.95); backdrop-filter: blur(20px);
+            position: fixed; inset: 0;
+            background: rgba(11, 18, 32, 0.98); backdrop-filter: blur(30px);
             z-index: 20000; display: none; flex-direction: column; 
             align-items: center; justify-content: center; text-align: center;
             color: #fff; padding: 40px;
         }
-        .zen-breathing {
-            width: 150px; height: 150px; border-radius: 50%;
-            background: radial-gradient(circle, var(--primary), transparent);
-            animation: breathe 8s infinite ease-in-out;
-            margin-bottom: 30px; opacity: 0.6;
+
+        .tabs { background: var(--card); border: 1px solid var(--border); padding: 6px; border-radius: 16px; margin-bottom: 24px; }
+        .tab-btn { flex: 1; padding: 10px; border-radius: 12px; border: none; background: transparent; color: var(--muted); font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 4px 12px rgba(79, 140, 255, 0.25); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
         }
-        @keyframes breathe {
-            0%, 100% { transform: scale(0.8); opacity: 0.3; }
-            50% { transform: scale(1.5); opacity: 0.8; }
-        }
-        .pulse-warning { animation: pulse 1s infinite; }
     </style>
 </head>
 <body>
@@ -53,10 +54,10 @@
 
     <div class="driver-layout">
         <div class="top-bar">
-            <h2 id="driver-name">Driver App</h2>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <button id="sensor-btn" class="btn-primary" style="width:auto; padding: 5px 15px; background:var(--warning); color:#000; font-size:0.8rem;" onclick="requestSensorPermission()">🛡️ Safety Sync</button>
-                <button class="btn-primary" style="width:auto; padding: 5px 15px;" onclick="logout()">Exit</button>
+            <h2 id="driver-name" style="font-weight:800;">Driver App</h2>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <div id="theme-toggle" class="theme-switch" style="width:36px; height:36px; font-size:1rem;">🌙</div>
+                <button class="btn-primary" style="padding:8px 16px; background:var(--danger);" onclick="logout()">Exit</button>
             </div>
         </div>
 
@@ -92,11 +93,11 @@
 
         <!-- Gated Main Content (Visible if verified) -->
         <div id="main-content" style="display:none;">
-            <div class="tabs" style="display:flex; gap:10px; margin-bottom: 20px;">
-                <button class="btn-primary" id="btn-tab-dash" style="flex:1;" onclick="switchDriverTab('dash')">Dashboard</button>
-                <button class="btn-primary" id="btn-tab-active" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('active')">My Route</button>
-                <button class="btn-primary" id="btn-tab-completed" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('completed')">History</button>
-                <button class="btn-primary" id="btn-tab-profile" style="flex:1; background:rgba(255,255,255,0.1); color:var(--text-muted);" onclick="switchDriverTab('profile')">Profile</button>
+            <div class="tabs">
+                <button class="tab-btn active" id="btn-tab-dash" onclick="switchDriverTab('dash')">Tasks</button>
+                <button class="tab-btn" id="btn-tab-active" onclick="switchDriverTab('active')">Live Route</button>
+                <button class="tab-btn" id="btn-tab-completed" onclick="switchDriverTab('completed')">History</button>
+                <button class="tab-btn" id="btn-tab-profile" onclick="switchDriverTab('profile')">Account</button>
             </div>
 
             <div id="dash-tab" style="display:block;">
@@ -402,5 +403,24 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="../js/api.js"></script>
     <script src="../js/driver.js"></script>
+    <!-- Theme Script -->
+    <script>
+    const btn = document.getElementById('theme-toggle');
+    function setTheme(mode) {
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+            btn.innerText = '☀️';
+        } else {
+            document.body.classList.remove('light-mode');
+            btn.innerText = '🌙';
+        }
+        localStorage.setItem('theme', mode);
+    }
+    btn.onclick = () => {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
+    setTheme(localStorage.getItem('theme') || 'dark');
+    </script>
 </body>
 </html>

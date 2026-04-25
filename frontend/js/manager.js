@@ -477,6 +477,13 @@ function renderManagerCharts(stats) {
     if (volumeChart) volumeChart.destroy();
     if (fleetChart) fleetChart.destroy();
 
+    // Global Font Settings
+    const chartFont = {
+        family: "'Manrope', sans-serif",
+        size: 13,
+        weight: '600'
+    };
+
     volumeChart = new Chart(volCtx, {
         type: 'line',
         data: {
@@ -484,30 +491,61 @@ function renderManagerCharts(stats) {
             datasets: [{
                 label: 'Shipment Volume',
                 data: stats.volume_data,
-                borderColor: '#00f2fe',
-                backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                borderColor: '#4f8cff',
+                backgroundColor: 'rgba(79, 140, 255, 0.1)',
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#4f8cff'
             }]
         },
         options: {
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } }
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: false }
+            },
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                    ticks: { color: '#94a3b8', font: chartFont, padding: 10 }
+                }, 
+                x: { 
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8', font: chartFont, padding: 10 }
+                } 
+            }
         }
     });
+
     fleetChart = new Chart(fleetCtx, {
         type: 'doughnut',
         data: {
             labels: ['In-Transit', 'Available', 'Maintenance'],
             datasets: [{
                 data: [stats.fleet_dist.in_transit, stats.fleet_dist.available, stats.fleet_dist.maintenance],
-                backgroundColor: ['#3182ce', '#48bb78', '#f56565'],
-                borderWidth: 0
+                backgroundColor: ['#4f8cff', '#10b981', '#ef4444'],
+                borderWidth: 0,
+                hoverOffset: 15
             }]
         },
         options: {
-            cutout: '70%',
-            plugins: { legend: { position: 'bottom', labels: { color: '#a0aec0', boxWidth: 12 } } }
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: { 
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        color: '#94a3b8', 
+                        font: chartFont,
+                        padding: 25,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    } 
+                } 
+            }
         }
     });
 }
@@ -535,19 +573,19 @@ function renderCascadePredictor(data) {
     recText.innerText = data.recommendation;
     
     container.innerHTML = data.risks.map(r => `
-        <div class="glass-card" style="padding:15px; border-left: 4px solid ${r.severity==='high'?'var(--danger)':'var(--warning)'}; background:rgba(255,255,255,0.02);">
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span style="font-size:0.7rem; color:var(--text-muted); font-weight:bold;">SOURCE: ${r.source_shipment_id.slice(0,8)}</span>
-                <span class="badge" style="background:${r.severity==='high'?'var(--danger)':'var(--warning)'}; font-size:0.6rem;">${r.severity.toUpperCase()} RISK</span>
+        <div class="glass-card" style="padding:24px; border-left: 4px solid ${r.severity==='high'?'var(--danger)':'var(--warning)'}; background:rgba(255,255,255,0.02); margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                <span style="font-size:0.75rem; color:var(--muted); font-weight:bold; letter-spacing:0.05em;">SOURCE: ${r.source_shipment_id.slice(0,8)}</span>
+                <span class="status-pill" style="background:${r.severity==='high'?'var(--danger)':'var(--warning)'}22; color:${r.severity==='high'?'var(--danger)':'var(--warning)'}; font-size:0.7rem;">${r.severity.toUpperCase()} RISK</span>
             </div>
-            <h4 style="margin:5px 0;">${r.description}</h4>
-            <p style="font-size:0.8rem; color:var(--danger); margin-bottom:10px;">Current Deviation: +${r.current_delay}</p>
+            <h3 style="margin:8px 0; font-size:1.1rem;">${r.description}</h3>
+            <p style="font-size:0.9rem; color:var(--danger); font-weight:600; margin-bottom:16px;">Current Deviation: +${r.current_delay}</p>
             
-            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top:10px;">
-                <small style="color:var(--text-muted); display:block; margin-bottom:5px;">PREDICTED HUB IMPACTS:</small>
+            <div style="border-top: 1px solid var(--border); padding-top:16px;">
+                <small style="color:var(--muted); display:block; margin-bottom:8px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Predicted Hub Impacts:</small>
                 ${r.impact_hubs.map(h => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:0.8rem;">
-                        <span>📍 ${h.location}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:0.85rem;">
+                        <span style="font-weight:600;">📍 ${h.location}</span>
                         <span style="color:${h.risk_level==='critical'?'var(--danger)':'var(--warning)'}">+${h.est_delay_mins}m</span>
                     </div>
                 `).join('')}

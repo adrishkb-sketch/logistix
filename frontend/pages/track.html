@@ -4,583 +4,135 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Track My Orders | Logistix</title>
-    <meta name="description" content="Track your Logistix shipments in real time with secure phone-based login.">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="../css/style.css">
     <style>
+        .track-layout { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+        .hero-section { text-align: center; margin-bottom: 48px; }
+        .hero-section h1 { font-size: 2.8rem; font-weight: 800; margin-bottom: 12px; }
+        .hero-section p { color: var(--muted); font-size: 1.1rem; }
+        
+        .auth-card { max-width: 440px; margin: 0 auto; padding: 40px; }
+        .pin-row { display: flex; gap: 12px; justify-content: center; margin: 24px 0; }
+        .pin-box { width: 50px; height: 60px; text-align: center; font-size: 1.5rem; font-weight: 800; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text); }
+        
+        .order-list { margin-top: 32px; }
+        .order-card { margin-bottom: 24px; cursor: pointer; }
+        .status-pill { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        
+        #track-map { height: 350px; width: 100%; border-radius: 20px; margin-top: 24px; border: 1px solid var(--border); z-index: 1; }
+        
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin: 24px 0; }
+        .info-item { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); padding: 16px; border-radius: 16px; text-align: center; }
+        .info-item small { display: block; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .info-item strong { font-size: 1rem; }
 
-/* ===== THEME VARIABLES (ADDED SAFELY) ===== */
-:root {
-    --bg: #0b1220;
-    --text: #ffffff;
-    --muted: #9aa4b2;
-    --primary: #4f8cff;
-    --card: rgba(255,255,255,0.05);
-    --border: rgba(255,255,255,0.08);
-}
+        .timeline { border-left: 2px solid var(--border); padding-left: 24px; margin-left: 12px; margin-top: 24px; }
+        .timeline-step { position: relative; margin-bottom: 24px; }
+        .timeline-dot { position: absolute; left: -33px; top: 0; width: 18px; height: 18px; border-radius: 50%; border: 4px solid var(--bg); background: var(--primary); }
+        
+        .otp-display { background: rgba(79, 140, 255, 0.1); border: 2px dashed var(--primary); padding: 24px; border-radius: 16px; text-align: center; margin-top: 24px; }
+        .otp-code { font-size: 3rem; font-weight: 800; letter-spacing: 8px; color: var(--primary); margin: 12px 0; }
 
-body.light-mode {
-    --bg: #f6f8fc;
-    --text: #0f172a;
-    --muted: #475569;
-    --primary: #2563eb;
-    --card: #ffffff;
-    --border: rgba(0,0,0,0.08);
-}
-
-/* ===== BACKGROUND (MATCH INDEX) ===== */
-body {
-    background: linear-gradient(to right,#0b1220,#0f172a,#111827);
-    color: var(--text);
-    transition: 0.3s ease;
-}
-
-body.light-mode {
-    background: linear-gradient(to right,#f8fafc,#eef2ff,#e0e7ff);
-}
-
-/* ===== FIX TEXT COLORS ===== */
-.home-link:hover {
-    color: var(--text);
-}
-
-.pin-box {
-    background: var(--card);
-    color: var(--text);
-}
-
-.order-card {
-    background: var(--card);
-}
-
-.info-cell {
-    background: var(--card);
-}
-
-/* ===== BUTTON FIX ===== */
-.search-row button {
-    background: linear-gradient(135deg, #4f8cff, #6366f1);
-    color: white;
-    border: none;
-}
-
-/* ===== THEME BUTTON STYLE ===== */
-#theme-toggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    padding: 8px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    color: var(--text);
-    cursor: pointer;
-}
-/* ===== PREMIUM INPUT FIELD ===== */
-input {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 10px;
-
-    background: linear-gradient(
-        145deg,
-        rgba(255,255,255,0.06),
-        rgba(255,255,255,0.02)
-    );
-
-    border: 1px solid var(--border);
-    color: var(--text);
-
-    font-size: 0.95rem;
-    transition: all 0.25s ease;
-}
-
-/* Placeholder */
-input::placeholder {
-    color: var(--muted);
-    opacity: 0.7;
-}
-
-/* Focus state */
-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: rgba(255,255,255,0.08);
-    box-shadow: 0 0 0 3px rgba(79,140,255,0.15);
-}
-
-/* ===== LIGHT MODE FIX ===== */
-body.light-mode input {
-    background: linear-gradient(
-        145deg,
-        rgba(255,255,255,0.9),
-        rgba(255,255,255,0.7)
-    );
-
-    color: #0f172a;
-}
-
-/* Light mode focus */
-body.light-mode input:focus {
-    background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
-}
-</style>
-
-    <style>
-        body { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; padding:20px 16px; }
-        .track-wrap { max-width:680px; width:100%; margin-top:40px; }
-        .home-link { position:fixed; top:20px; left:20px; color:var(--text-muted); text-decoration:none; font-size:0.9rem; transition:color .3s; z-index:100; }
-        .home-link:hover { color:white; }
-
-        /* Auth card */
-        .auth-card { animation:fadeIn .5s ease-out; }
-        .otp-step { display:none; }
-        .otp-step.active { display:block; }
-
-        .pin-row { display:flex; gap:10px; justify-content:center; margin:16px 0; }
-        .pin-box { width:46px; height:56px; font-size:1.6rem; font-weight:700; text-align:center;
-            background:rgba(255,255,255,0.05); border:2px solid var(--card-border);
-            border-radius:10px; color:white; transition:border-color .2s; }
-        .pin-box:focus { border-color:var(--primary); outline:none; }
-
-        /* Orders list */
-        .orders-panel { display:none; animation:fadeIn .4s ease-out; }
-        .order-card { cursor:pointer; padding:16px; border-radius:12px;
-            background:rgba(255,255,255,0.04); border:1px solid var(--card-border);
-            margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;
-            transition:border-color .2s, background .2s; }
-        .order-card:hover { border-color:var(--primary); background:rgba(49,130,206,0.08); }
-        .status-badge { font-size:0.75rem; padding:3px 10px; border-radius:20px; font-weight:600; text-transform:capitalize; }
-        .status-pending   { background:rgba(246,173,85,0.15); color:var(--warning); }
-        .status-assigned  { background:rgba(49,130,206,0.15); color:var(--primary); }
-        .status-in_transit{ background:rgba(0,242,254,0.15); color:#00f2fe; }
-        .status-delivered { background:rgba(16,185,129,0.15); color:var(--success); }
-
-        /* Detail panel */
-        .detail-panel { display:none; animation:fadeIn .4s ease-out; }
-        .back-btn { background:none; border:none; color:var(--primary); cursor:pointer; font-size:0.9rem; margin-bottom:16px; padding:0; }
-        .back-btn:hover { text-decoration:underline; }
-
-        .info-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
-        .info-cell { background:rgba(0,0,0,0.2); border-radius:10px; padding:14px; text-align:center; }
-        .info-cell small { font-size:0.72rem; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; }
-        .info-cell strong { font-size:1rem; }
-
-        .otp-box { background:rgba(49,130,206,0.15); border:2px dashed #3182ce; border-radius:10px; padding:18px; text-align:center; margin-top:16px; }
-        .otp-code { font-size:3rem; font-weight:700; letter-spacing:6px; color:#63b3ed; margin:8px 0; }
-
-        #track-map { width:100%; height:240px; border-radius:10px; margin-top:16px; border:1px solid rgba(255,255,255,0.1); z-index:1; }
-
-        .timeline { position:relative; padding-left:22px; margin-top:16px; }
-        .timeline::before { content:''; position:absolute; left:6px; top:0; bottom:0; width:2px; background:rgba(255,255,255,0.15); }
-        .timeline-event { position:relative; margin-bottom:14px; }
-        .timeline-event::before { content:''; position:absolute; left:-22px; top:5px; width:10px; height:10px; border-radius:50%; background:var(--primary); }
-        .timeline-event.delivered::before { background:var(--success); }
-        .timeline-time { font-size:0.72rem; color:var(--text-muted); }
-        .timeline-msg  { font-size:0.88rem; }
-
-        /* Search bar */
-        .search-row { display:flex; gap:10px; margin-bottom:20px; }
-        .search-row input { flex:1; }
-        .search-row button { width:auto; padding:0 22px; }
-
-        .signout-btn { float:right; background:none; border:1px solid var(--card-border); color:var(--text-muted); border-radius:8px; padding:4px 14px; font-size:0.8rem; cursor:pointer; transition:color .2s,border-color .2s; }
-        .signout-btn:hover { color:white; border-color:var(--danger); }
-
-        .eta-alert { margin-top:12px; padding:10px; border-radius:8px; font-size:0.85rem; text-align:center; display:none; }
+        .back-btn { background: transparent; border: none; color: var(--primary); font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
+        .back-btn:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <button id="theme-toggle">🌙 Dark</button>
     <div class="background-animation"></div>
-    <a href="../index.html" class="home-link">← Home</a>
+    <div id="theme-toggle" class="theme-switch" style="position:fixed; top:24px; right:24px;">🌙</div>
+    
+    <div class="track-layout">
+        <a href="../index.html" style="text-decoration:none; color:var(--muted); font-weight:600; font-size:0.9rem;">← Back to Home</a>
+        
+        <!-- Auth View -->
+        <div id="auth-panel" class="auth-card glass-card" style="margin-top:60px;">
+            <h1 style="text-align:center; margin-bottom:8px;">Track Orders 📦</h1>
+            <p style="text-align:center; color:var(--muted); margin-bottom:32px;">Secure tracking via phone verification.</p>
 
-    <div class="track-wrap">
-
-        <!-- ── Phase 1: Phone Auth ── -->
-        <div id="auth-panel" class="glass-card auth-card" style="padding:2rem; position:relative;">
-            <div class="doodle" style="top:-20px; right:-20px; font-size:3rem; opacity:0.6; transform:rotate(15deg);">🎨</div>
-            <h1 style="text-align:center; margin-bottom:4px;">Track My Orders 📦</h1>
-            <p class="subtitle" style="text-align:center; margin-bottom:2rem;">Enter your registered phone number to view all your shipments.</p>
-
-            <!-- Step 1: Phone -->
-            <div id="step-phone" class="otp-step active">
-                <div class="input-group">
-                    <label for="cust-phone">Phone Number</label>
-                    <input type="tel" id="cust-phone" placeholder="+91 98765 43210" style="letter-spacing:1px;">
-                </div>
-                <button class="btn-primary" onclick="requestCustomerOTP()" id="send-otp-btn">Send OTP</button>
-                <p id="phone-error" style="color:var(--danger); font-size:0.85rem; margin-top:10px; display:none;"></p>
+            <div id="step-phone">
+                <label style="font-size:0.85rem; color:var(--muted); display:block; margin-bottom:8px;">Phone Number</label>
+                <input type="tel" id="cust-phone" placeholder="+91 98765 43210" style="margin-bottom:20px;">
+                <button class="btn-primary" style="width:100%;" onclick="requestCustomerOTP()">Send OTP</button>
+                <p id="phone-error" style="color:var(--danger); font-size:0.85rem; margin-top:12px; display:none; text-align:center;"></p>
             </div>
 
-            <!-- Step 2: OTP -->
-            <div id="step-otp" class="otp-step">
-                <p style="text-align:center; color:var(--text-muted); margin-bottom:8px;">
-                    OTP sent to <span id="otp-phone-label" style="color:white; font-weight:600;"></span>
-                </p>
+            <div id="step-otp" style="display:none;">
+                <p style="text-align:center; color:var(--muted); margin-bottom:12px;">OTP sent to <span id="otp-phone-label" style="color:var(--text); font-weight:700;"></span></p>
                 <div class="pin-row" id="pin-row">
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
-                    <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
-                    <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                 </div>
-                <button class="btn-primary" onclick="verifyCustomerOTP()" id="verify-otp-btn">Verify & View Orders</button>
-                <p style="text-align:center; margin-top:12px; font-size:0.82rem; color:var(--text-muted);">
-                    Wrong number? <span style="color:var(--primary); cursor:pointer;" onclick="resetToPhone()">Change</span>
-                </p>
-                <p id="otp-error" style="color:var(--danger); font-size:0.85rem; margin-top:10px; display:none;"></p>
+                <button class="btn-primary" style="width:100%;" onclick="verifyCustomerOTP()">Track My Orders</button>
+                <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;">Change Phone Number</a></p>
             </div>
         </div>
 
-        <!-- ── Phase 2: Orders List ── -->
-        <div id="orders-panel" class="orders-panel">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-                <div>
-                    <h2 style="margin:0;">Your Orders</h2>
-                    <p class="subtitle" style="margin:4px 0 0 0;">Logged in as <span id="session-phone" style="color:var(--primary); font-weight:600;"></span></p>
-                </div>
-                <button class="signout-btn" onclick="signOut()">Sign Out</button>
+        <!-- Orders List View -->
+        <div id="list-panel" style="display:none; margin-top:40px;">
+            <div class="hero-section">
+                <h1>My Shipments</h1>
+                <p>Live tracking and delivery status for all your orders.</p>
             </div>
-
-            <!-- Search by Order ID -->
-            <div class="search-row">
-                <input type="text" id="order-search" placeholder="Search by Order ID..." oninput="filterOrders()">
-                <button class="btn-primary search-row button" onclick="filterOrders()">Search</button>
-            </div>
-
-            <div id="orders-list"></div>
-            <p id="no-orders-msg" style="color:var(--text-muted); text-align:center; display:none;">No orders match your search.</p>
+            <div id="orders-list" class="order-list"></div>
+            <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.05); color:var(--text); width:100%;" onclick="logoutCustomer()">Sign Out</button>
         </div>
 
-        <!-- ── Phase 3: Single Order Detail ── -->
-        <div id="detail-panel" class="detail-panel">
-            <button class="back-btn" onclick="showOrders()">← Back to My Orders</button>
-
-            <div class="glass-card" style="padding:1.5rem;">
-                <h3 id="det-desc" style="margin-bottom:4px;">Order Details</h3>
-                <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:16px;">Order ID: <span id="det-id" style="font-family:monospace; color:white;"></span></p>
-
-                <div class="info-grid">
-                    <div class="info-cell">
-                        <small>Status</small>
-                        <strong id="det-status">—</strong>
+        <!-- Detail View -->
+        <div id="detail-panel" style="display:none; margin-top:40px;">
+            <button class="back-btn" onclick="showPanel('list')">← Back to List</button>
+            <div class="glass-card">
+                <div class="status-header">
+                    <div>
+                        <h2 id="det-id" style="margin-bottom:4px;">Order #---</h2>
+                        <p id="det-desc" style="color:var(--muted); margin:0;"></p>
                     </div>
-                    <div class="info-cell">
-                        <small>Stage</small>
-                        <strong id="det-stage">—</strong>
-                    </div>
-                    <div class="info-cell">
-                        <small>Vehicle</small>
-                        <strong id="det-vehicle">—</strong>
-                    </div>
-                    <div class="info-cell">
-                        <small>ETA</small>
-                        <strong id="det-eta" style="color:var(--warning);">—</strong>
-                    </div>
+                    <span id="det-status" class="status-pill status-active">In Transit</span>
                 </div>
-
-                <div id="det-eta-alert" class="eta-alert"></div>
 
                 <div id="track-map"></div>
 
-                <div id="det-otp-box" class="otp-box">
-                    <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">Secure Delivery OTP</p>
-                    <div class="otp-code" id="det-otp">----</div>
-                    <p style="margin:0; font-size:0.82rem;">Show this to the driver upon arrival.</p>
+                <div class="info-grid">
+                    <div class="info-item"><small>Expected Delivery</small><strong id="det-eta">---</strong></div>
+                    <div class="info-item"><small>Current Location</small><strong id="det-loc">---</strong></div>
+                    <div class="info-item"><small>Vehicle</small><strong id="det-vehicle">---</strong></div>
                 </div>
 
-                <h4 style="margin-top:24px; margin-bottom:6px;">Shipment History</h4>
+                <div id="det-otp-box" class="otp-display" style="display:none;">
+                    <small style="text-transform:uppercase; letter-spacing:1px; font-weight:800;">Delivery Verification OTP</small>
+                    <div id="det-otp" class="otp-code">0000</div>
+                    <p style="font-size:0.85rem; color:var(--muted); margin:0;">Share this with the driver only upon successful delivery.</p>
+                </div>
+
+                <h4 style="margin-top:32px; margin-bottom:16px;">Journey Timeline</h4>
                 <div id="det-timeline" class="timeline"></div>
             </div>
         </div>
-
-    </div><!-- /track-wrap -->
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../js/api.js"></script>
+    <script src="../js/track.js"></script>
     <script>
-    // ── State ──────────────────────────────────────────────────
-    let sessionPhone = null;
-    let allOrders    = [];
-    let leafletMap   = null;
-    let routeLayer   = null;
-    let curMarker    = null;
-
-    // ── Restore session on load ────────────────────────────────
-    window.addEventListener('DOMContentLoaded', () => {
-        const saved = sessionStorage.getItem('cust_phone');
-        const savedOrders = sessionStorage.getItem('cust_orders');
-        if (saved && savedOrders) {
-            sessionPhone = saved;
-            allOrders = JSON.parse(savedOrders);
-            showOrders();
-        }
-
-        // PIN box auto-advance
-        document.querySelectorAll('.pin-box').forEach((box, i, boxes) => {
-            box.addEventListener('input', () => {
-                box.value = box.value.replace(/\D/g, '').slice(-1);
-                if (box.value && i < boxes.length - 1) boxes[i+1].focus();
-            });
-            box.addEventListener('keydown', e => {
-                if (e.key === 'Backspace' && !box.value && i > 0) boxes[i-1].focus();
-            });
-        });
-    });
-
-    // ── Step 1: Request OTP ────────────────────────────────────
-    window.requestCustomerOTP = async function() {
-        const phone = document.getElementById('cust-phone').value.trim();
-        const err   = document.getElementById('phone-error');
-        const btn   = document.getElementById('send-otp-btn');
-        err.style.display = 'none';
-        if (!phone) { err.innerText = 'Please enter your phone number.'; err.style.display = 'block'; return; }
-
-        btn.disabled = true; btn.innerText = 'Sending...';
-        try {
-            await apiCall('/customer/request-otp', 'POST', { phone });
-            document.getElementById('otp-phone-label').innerText = phone;
-            document.getElementById('step-phone').classList.remove('active');
-            document.getElementById('step-otp').classList.add('active');
-            document.querySelectorAll('.pin-box')[0].focus();
-        } catch(e) {
-            err.innerText = e.message || 'No orders found for this number.';
-            err.style.display = 'block';
-        } finally {
-            btn.disabled = false; btn.innerText = 'Send OTP';
-        }
-    };
-
-    // ── Step 2: Verify OTP ─────────────────────────────────────
-    window.verifyCustomerOTP = async function() {
-        const phone = document.getElementById('cust-phone').value.trim();
-        const otp   = [...document.querySelectorAll('.pin-box')].map(b => b.value).join('');
-        const err   = document.getElementById('otp-error');
-        const btn   = document.getElementById('verify-otp-btn');
-        err.style.display = 'none';
-        if (otp.length < 6) { err.innerText = 'Please enter the 6-digit OTP.'; err.style.display = 'block'; return; }
-
-        btn.disabled = true; btn.innerText = 'Verifying...';
-        try {
-            const res = await apiCall('/customer/verify-otp', 'POST', { phone, otp });
-            sessionPhone = res.phone;
-            allOrders    = res.orders;
-            sessionStorage.setItem('cust_phone',  sessionPhone);
-            sessionStorage.setItem('cust_orders', JSON.stringify(allOrders));
-            showOrders();
-        } catch(e) {
-            err.innerText = e.message || 'Invalid OTP. Please try again.';
-            err.style.display = 'block';
-        } finally {
-            btn.disabled = false; btn.innerText = 'Verify & View Orders';
-        }
-    };
-
-    function resetToPhone() {
-        document.getElementById('step-otp').classList.remove('active');
-        document.getElementById('step-phone').classList.add('active');
-        document.querySelectorAll('.pin-box').forEach(b => b.value = '');
-    }
-
-    window.signOut = function() {
-        sessionStorage.removeItem('cust_phone');
-        sessionStorage.removeItem('cust_orders');
-        sessionPhone = null; allOrders = [];
-        document.getElementById('orders-panel').style.display = 'none';
-        document.getElementById('auth-panel').style.display   = 'block';
-        document.getElementById('step-otp').classList.remove('active');
-        document.getElementById('step-phone').classList.add('active');
-        document.querySelectorAll('.pin-box').forEach(b => b.value = '');
-        document.getElementById('cust-phone').value = '';
-    };
-
-    // ── Orders List ────────────────────────────────────────────
-    function showOrders() {
-        document.getElementById('auth-panel').style.display   = 'none';
-        document.getElementById('detail-panel').style.display = 'none';
-        document.getElementById('orders-panel').style.display = 'block';
-        document.getElementById('session-phone').innerText     = sessionPhone;
-        renderOrdersList(allOrders);
-    }
-
-    function renderOrdersList(orders) {
-        const list = document.getElementById('orders-list');
-        const noMsg = document.getElementById('no-orders-msg');
-        if (!orders.length) {
-            list.innerHTML = ''; noMsg.style.display = 'block'; return;
-        }
-        noMsg.style.display = 'none';
-        list.innerHTML = orders.map(o => {
-            const statusClass = 'status-' + (o.status || 'pending');
-            const date = o.expected_delivery ? new Date(o.expected_delivery).toLocaleDateString([], {day:'numeric',month:'short',year:'numeric'}) : '—';
-            return `
-            <div class="order-card" onclick="openOrder('${o.id}')">
-                <div>
-                    <div style="font-weight:600; margin-bottom:4px;">${o.description || 'Order'}</div>
-                    <div style="font-size:0.78rem; color:var(--text-muted); font-family:monospace;">${o.id}</div>
-                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">ETA: ${date}</div>
-                </div>
-                <span class="status-badge ${statusClass}">${(o.status || 'pending').replace('_',' ')}</span>
-            </div>`;
-        }).join('');
-    }
-
-    window.filterOrders = function() {
-        const q = document.getElementById('order-search').value.trim().toLowerCase();
-        if (!q) { renderOrdersList(allOrders); return; }
-        const filtered = allOrders.filter(o =>
-            o.id.toLowerCase().includes(q) ||
-            (o.description || '').toLowerCase().includes(q)
-        );
-        renderOrdersList(filtered);
-    };
-
-    // ── Order Detail ───────────────────────────────────────────
-    window.openOrder = async function(orderId) {
-        document.getElementById('orders-panel').style.display = 'none';
-        document.getElementById('detail-panel').style.display = 'block';
-
-        // Fetch full detail
-        try {
-            const data = await apiCall(`/tracking/${orderId}`);
-            const s = data.shipment;
-
-            document.getElementById('det-desc').innerText = s.description || 'Order';
-            document.getElementById('det-id').innerText   = s.id;
-            document.getElementById('det-stage').innerText = s.stage || '—';
-
-            const statusEl = document.getElementById('det-status');
-            statusEl.innerText = (s.status || 'pending').replace('_', ' ');
-            statusEl.style.color = s.status === 'delivered' ? 'var(--success)'
-                                 : s.status === 'in_transit' ? '#00f2fe' : 'white';
-
-            // Vehicle
-            const vEl = document.getElementById('det-vehicle');
-            if (s.assigned_vehicle_id) {
-                try {
-                    const vList = await apiCall('/manager/vehicles');
-                    const v = vList.find(x => x.id === s.assigned_vehicle_id);
-                    vEl.innerText = v ? `${v.type} [${v.number_plate}]` : 'Assigned';
-                } catch { vEl.innerText = 'Assigned'; }
-            } else { vEl.innerText = 'Pending'; }
-
-            // ETA
-            const etaEl = document.getElementById('det-eta');
-            let targetDate = null;
-            if (s.status === 'delivered') {
-                etaEl.innerText = '✅ Delivered'; etaEl.style.color = 'var(--success)';
-                document.getElementById('det-otp-box').style.display = 'none';
+        const btn = document.getElementById('theme-toggle');
+        function setTheme(mode) {
+            if (mode === 'light') {
+                document.body.classList.add('light-mode');
+                btn.innerText = '☀️';
             } else {
-                document.getElementById('det-otp-box').style.display = 'block';
-                document.getElementById('det-otp').innerText = s.delivery_otp || '—';
-                targetDate = data.dynamic_eta ? new Date(data.dynamic_eta.estimated_arrival)
-                           : s.expected_delivery ? new Date(s.expected_delivery) : null;
-                etaEl.innerText = targetDate
-                    ? targetDate.toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
-                    : 'Calculating...';
+                document.body.classList.remove('light-mode');
+                btn.innerText = '🌙';
             }
-
-            // ETA alert
-            const alertEl = document.getElementById('det-eta-alert');
-            alertEl.style.display = 'none';
-            if (s.expected_delivery && targetDate && s.status !== 'delivered') {
-                const diffMins = (targetDate - new Date(s.expected_delivery)) / 60000;
-                if (diffMins > 15) {
-                    const reason = (data.dynamic_eta?.weather_impact?.severity || 'None') !== 'None'
-                        ? data.dynamic_eta.weather_impact.severity.toLowerCase() + ' weather' : 'unexpected delays';
-                    alertEl.style.cssText = 'display:block;background:rgba(239,68,68,0.15);border:1px solid var(--danger);color:var(--danger);';
-                    alertEl.innerText = `⚠️ Delayed ~${Math.round(diffMins)} min due to ${reason}.`;
-                } else if (diffMins < -15) {
-                    alertEl.style.cssText = 'display:block;background:rgba(16,185,129,0.15);border:1px solid var(--success);color:var(--success);';
-                    alertEl.innerText = `🚀 Arriving ~${Math.abs(Math.round(diffMins))} min early!`;
-                }
-            }
-
-            // Timeline
-            const tl = document.getElementById('det-timeline');
-            if (s.logs && s.logs.length) {
-                const sorted = [...s.logs].sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp));
-                tl.innerHTML = sorted.map(log => `
-                    <div class="timeline-event ${log.status === 'delivered' ? 'delivered' : ''}">
-                        <div class="timeline-time">${new Date(log.timestamp).toLocaleString()}</div>
-                        <div class="timeline-msg">${log.message}</div>
-                        ${log.reason ? `<div style="font-size:0.8rem;color:var(--danger)">Reason: ${log.reason}</div>` : ''}
-                    </div>`).join('');
-            } else {
-                tl.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">No history yet.</p>';
-            }
-
-            // Map
-            setTimeout(() => initDetailMap(s.pickup, s.drop, s.current_location), 150);
-
-        } catch(e) {
-            document.getElementById('det-desc').innerText = 'Failed to load order details.';
+            localStorage.setItem('theme', mode);
         }
-    };
-
-    window.showOrders = showOrders;
-
-    // ── Map ─────────────────────────────────────────────────────
-    async function initDetailMap(pickup, drop, current) {
-        if (!pickup) return;
-        const mapEl = document.getElementById('track-map');
-        if (!leafletMap) {
-            leafletMap = L.map('track-map', {zoomControl:false}).setView([pickup.lat, pickup.lng], 10);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution:'© OpenStreetMap' }).addTo(leafletMap);
-        } else {
-            if (routeLayer) leafletMap.removeLayer(routeLayer);
-            if (curMarker) leafletMap.removeLayer(curMarker);
-        }
-        try {
-            const res  = await fetch(`https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}?geometries=geojson`);
-            const rData = await res.json();
-            if (rData.routes?.length) {
-                const coords = rData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                routeLayer = L.polyline(coords, {color:'#3182ce', weight:4, opacity:.7}).addTo(leafletMap);
-                leafletMap.fitBounds(routeLayer.getBounds(), {padding:[20,20]});
-            }
-        } catch {}
-        const loc = current || pickup;
-        curMarker = L.circleMarker([loc.lat, loc.lng], {radius:8, fillColor:'#00f2fe', color:'#fff', weight:2, opacity:1, fillOpacity:1}).addTo(leafletMap);
-    }
+        btn.onclick = () => {
+            const isLight = document.body.classList.contains('light-mode');
+            setTheme(isLight ? 'dark' : 'light');
+        };
+        setTheme(localStorage.getItem('theme') || 'dark');
     </script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-
-    const toggleBtn = document.getElementById('theme-toggle');
-
-    // Safety check
-    if (!toggleBtn) return;
-
-    // Load saved theme
-    const savedTheme = localStorage.getItem('theme');
-
-    if (savedTheme === 'light') {
-        document.body.classList.add('light-mode');
-        toggleBtn.innerText = '☀️ Light';
-    } else {
-        toggleBtn.innerText = '🌙 Dark';
-    }
-
-    // Toggle theme
-    toggleBtn.addEventListener('click', function () {
-        document.body.classList.toggle('light-mode');
-
-        if (document.body.classList.contains('light-mode')) {
-            localStorage.setItem('theme', 'light');
-            toggleBtn.innerText = '☀️ Light';
-        } else {
-            localStorage.setItem('theme', 'dark');
-            toggleBtn.innerText = '🌙 Dark';
-        }
-    });
-
-});
-</script>
 </body>
 </html>
