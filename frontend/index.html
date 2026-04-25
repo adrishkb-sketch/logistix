@@ -362,6 +362,15 @@ input {
     opacity: 1;
     transform: scale(1.1);
 }
+    /* Fix theme toggle text visibility */
+#theme-toggle {
+    color: var(--text);
+}
+
+/* Extra safety for dark mode */
+body:not(.light-mode) #theme-toggle {
+    color: #ffffff;
+}
 </style>
 </head>
 
@@ -460,6 +469,10 @@ Logistix brings intelligence to every movement in your supply chain.
 <div class="modal-box" id="modal-content"></div>
 </div>
 
+<!-- SCRIPTS -->
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -472,27 +485,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if(type === 'manager'){
             html += `
-            <h2>🏢 Manager Login</h2>
-            <input placeholder="Email">
-            <input type="password" placeholder="Password">
-            <button class="btn btn-primary">Login</button>
+            <form id="manager-login-form">
+                <h2>🏢 Manager Login</h2>
+                <input id="manager-email" type="email" placeholder="Email" required>
+                <input id="manager-password" type="password" placeholder="Password" required>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
             `;
         }
         else if(type === 'driver'){
             html += `
-            <h2>🚛 Driver Login</h2>
-            <input placeholder="Driver ID">
-            <input type="password" placeholder="Password">
-            <button class="btn btn-primary">Login</button>
+            <form id="driver-login-form">
+                <h2>🚛 Driver Login</h2>
+                <input id="driver-id" type="text" placeholder="Driver ID" required>
+                <input id="driver-password" type="password" placeholder="Password" required>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
             `;
         }
         else {
             html += `
-            <h2>🚀 Register Company</h2>
-            <input placeholder="Company Name">
-            <input placeholder="Email">
-            <input type="password" placeholder="Password">
-            <button class="btn btn-primary">Register</button>
+            <form id="signup-form">
+                <h2>🚀 Register Company</h2>
+                <div id="step-1">
+                    <input id="signup-name" type="text" placeholder="Company Name" required>
+                    <input id="signup-email" type="email" placeholder="Email" required>
+                    <input id="signup-password" type="password" placeholder="Password" required>
+                    <button type="button" class="btn btn-primary" onclick="requestOTP()">Request OTP</button>
+                </div>
+                <div id="step-2" style="display:none;">
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">OTP sent to your console.</p>
+                    <input id="signup-otp" type="text" placeholder="6-digit OTP" required>
+                    <button type="submit" class="btn btn-primary">Verify & Register</button>
+                </div>
+            </form>
             `;
         }
 
