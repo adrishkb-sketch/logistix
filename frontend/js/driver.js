@@ -36,19 +36,23 @@ setInterval(() => {
 }, 30000); // Refresh every 30s
 
 function switchDriverTab(tab) {
-    const tabs = ['dash', 'active', 'completed', 'profile'];
+    const tabs = ['dash', 'active', 'chat', 'completed', 'profile'];
     tabs.forEach(t => {
         const el = document.getElementById(`${t}-tab`);
         const btn = document.getElementById(`btn-tab-${t}`);
         if (el) el.style.display = t === tab ? 'block' : 'none';
         if (btn) {
             btn.style.background = t === tab ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
-            btn.style.color = t === tab ? '#000' : 'var(--text-muted)';
+            btn.style.color = t === tab ? '#fff' : 'var(--muted)';
         }
     });
 
     if (tab === 'dash') loadDashStats();
     if (tab === 'profile') loadProfileData();
+    if (tab === 'chat') {
+        loadAlertsAndMessages();
+        document.getElementById('chat-badge').style.display = 'none';
+    }
     if (tab === 'active' && map) setTimeout(() => map.invalidateSize(), 200);
 }
 
@@ -683,12 +687,19 @@ async function loadAlertsAndMessages() {
         // Fetch Messages
         const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`);
         const container = document.getElementById('driver-messages');
+        const currentMsgs = container.children.length;
+        
         container.innerHTML = msgs.length === 0 ? '<p style="font-size:0.8rem; color:var(--text-muted)">No messages from manager.</p>' : msgs.map(m => `
-            <div style="margin-bottom:8px; padding:8px; background:${m.sender_type==='driver'?'rgba(49, 130, 206, 0.1)':'rgba(72, 187, 120, 0.1)'}; border-radius:6px; border-left:3px solid ${m.sender_type==='driver'?'var(--primary)':'var(--success)'}">
-                <div style="font-size:0.7rem; color:var(--text-muted);">${m.sender_type==='manager'?'Manager':'You'} - ${new Date(m.created_at).toLocaleTimeString()}</div>
-                <div style="font-size:0.85rem;">${m.content}</div>
+            <div style="margin-bottom:12px; padding:12px; background:${m.sender_type==='driver'?'rgba(79, 140, 255, 0.08)':'rgba(16, 185, 129, 0.1)'}; border-radius:12px; border-left:4px solid ${m.sender_type==='driver'?'var(--primary)':'var(--success)'}; align-self: ${m.sender_type==='driver'?'flex-end':'flex-start'}; max-width: 85%;">
+                <div style="font-size:0.7rem; color:var(--muted); margin-bottom:4px; font-weight:700;">${m.sender_type==='manager'?'MANAGER 🛡️':'YOU'} • ${new Date(m.created_at).toLocaleTimeString()}</div>
+                <div style="font-size:0.9rem; line-height:1.4;">${m.content}</div>
             </div>
         `).join('');
+        
+        if (msgs.length > currentMsgs && document.getElementById('chat-tab').style.display === 'none') {
+            document.getElementById('chat-badge').style.display = 'inline-block';
+        }
+        
         container.scrollTop = container.scrollHeight;
         
     } catch(e) {}
