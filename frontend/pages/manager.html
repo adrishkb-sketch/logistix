@@ -229,9 +229,9 @@
                                 <label>Weight (kg)</label>
                                 <input type="number" id="weight" required>
                             </div>
-                            <div class="input-group">
+                            <div class="input-group span-2">
                                 <label>Description</label>
-                                <input type="text" id="description" required>
+                                <input type="text" id="description" placeholder="Brief description of the cargo..." required>
                             </div>
                             <div class="input-group">
                                 <label>Receiver Name</label>
@@ -241,9 +241,9 @@
                                 <label>Receiver Phone</label>
                                 <input type="text" id="receiver-phone" placeholder="+91 9876543210" required>
                             </div>
-                            <div class="input-group" style="display:flex; align-items:center; gap:10px; padding-top:25px;">
-                                <input type="checkbox" id="is-perishable" style="width:20px; height:20px; cursor:pointer;">
-                                <label for="is-perishable" style="cursor:pointer;">🍎 Cold Chain (Perishable / Medicine)</label>
+                            <div class="input-group span-2" style="display:flex; flex-direction:row; align-items:center; gap:12px; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border);">
+                                <input type="checkbox" id="is-perishable" style="width:20px; height:20px; cursor:pointer; margin:0;">
+                                <label for="is-perishable" style="cursor:pointer; margin:0; text-transform:none; letter-spacing:normal; font-size:1rem; color:var(--text);">🍎 Cold Chain Protocol (Perishable / Medicine)</label>
                             </div>
                         </div>
                         <button type="submit" class="btn-primary">Create Shipment</button>
