@@ -6,6 +6,14 @@
       "destination": "/api/index.py"
     },
     {
+      "source": "/(css/.*|js/.*|pages/.*|.*\\.png|.*\\.jpg|.*\\.ico|.*\\.svg)",
+      "destination": "/frontend/$1"
+    },
+    {
+      "source": "/",
+      "destination": "/frontend/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/frontend/$1"
     }
