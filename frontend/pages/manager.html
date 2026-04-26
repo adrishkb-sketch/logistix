@@ -224,7 +224,7 @@
                     </div>
 
                     <!-- Charts Row -->
-                    <div data-layout-id="analytics-charts" style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; margin-bottom:32px; align-items: start;">
+                    <div data-layout-id="analytics-charts" class="responsive-grid-2" style="margin-bottom:32px; align-items: start;">
                         <div class="glass-card">
                             <h3 style="margin-top:0;" data-i18n="volume_trends_title">Volume Trends (Last 7 Days)</h3>
                             <div style="height: 300px; width: 100%; position: relative;">
@@ -241,12 +241,12 @@
 
                     <!-- Cascading Impact Predictor -->
                     <div class="glass-card section-card" data-layout-id="analytics-cascade" style="margin-bottom:2rem; border-top:4px solid var(--warning);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <div class="responsive-flex-column" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:16px;">
                             <div>
                                 <h3 style="margin:0;" data-i18n="cascade_title">Cascading Impact Predictor (Automated Simulation)</h3>
                                 <p class="subtitle" data-i18n="cascade_subtitle">Predicting downstream bottlenecks based on active transit deviations</p>
                             </div>
-                            <div style="text-align:right;">
+                            <div style="text-align:right; min-width:140px;">
                                 <small style="color:var(--text-muted)" data-i18n="projected_impact">Projected Network Impact</small>
                                 <div id="cascade-total-hours" style="font-size:1.5rem; font-weight:bold; color:var(--warning);">0.0 hrs</div>
                             </div>

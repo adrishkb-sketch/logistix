@@ -655,7 +655,17 @@ body.light-mode .btn-outline:hover {
 
 @media (max-width: 1024px) {
     .responsive-grid-2, .responsive-grid-3 {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important; /* Force single column on mobile */
+    }
+    
+    .responsive-flex-column {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
     }
 .menu-toggle {
     display: none;
