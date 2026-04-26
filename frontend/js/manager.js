@@ -2497,7 +2497,7 @@ function selectDriverChat(driverId) {
     
     // UI Updates
     document.getElementById('chat-placeholder').style.display = 'none';
-    document.getElementById('chat-header').style.display = 'flex'; // Changed to flex for avatar
+    document.getElementById('chat-header').style.display = 'flex';
     document.getElementById('chat-messages-container').style.display = 'block';
     document.getElementById('chat-input-area').style.display = 'block';
     
@@ -2505,8 +2505,23 @@ function selectDriverChat(driverId) {
     if (driver) {
         document.getElementById('chat-driver-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
     }
+
+    // Mobile: slide to chat panel
+    const shell = document.querySelector('.chat-shell');
+    if (shell) shell.classList.add('chat-open');
     
     loadMessages();
+}
+
+function closeMobileChat() {
+    // Mobile back button — slide back to driver list
+    const shell = document.querySelector('.chat-shell');
+    if (shell) shell.classList.remove('chat-open');
+    selectedDriverChatId = null;
+    document.getElementById('chat-placeholder').style.display = 'flex';
+    document.getElementById('chat-header').style.display = 'none';
+    document.getElementById('chat-messages-container').style.display = 'none';
+    document.getElementById('chat-input-area').style.display = 'none';
 }
 
 function renderChatWindow(conv) {
@@ -3987,3 +4002,80 @@ async function approveFundRequest(alertId) {
         initFintechOracle();
     } catch (e) { alert("Failed to approve fund request: " + e.message); }
 }
+
+/* ── Smooth Draggable Floating Panels ─────────────────────────────────────
+   Handles both mouse (desktop) and touch (mobile) events.
+   Panels are dragged by their .drag-handle child.
+   On mobile (≤768px) dragging is disabled — panels go static.
+   ─────────────────────────────────────────────────────────────────────── */
+function initDraggablePanels() {
+    document.querySelectorAll('.draggable-panel').forEach(panel => {
+        const handle = panel.querySelector('.drag-handle');
+        if (!handle) return;
+
+        let startX, startY, startLeft, startTop, rafId;
+        let isDragging = false;
+
+        const getLeft = () => parseFloat(panel.style.left) || panel.getBoundingClientRect().left;
+        const getTop  = () => parseFloat(panel.style.top)  || panel.getBoundingClientRect().top;
+
+        function onStart(clientX, clientY) {
+            if (window.innerWidth <= 768) return; // Disable on mobile — panels are static
+            isDragging = true;
+            startX = clientX;
+            startY = clientY;
+            startLeft = getLeft();
+            startTop  = getTop();
+            panel.classList.add('is-dragging');
+            panel.style.position = 'absolute';
+        }
+
+        function onMove(clientX, clientY) {
+            if (!isDragging) return;
+            cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+                const parent = panel.offsetParent;
+                const maxLeft = parent ? parent.clientWidth  - panel.offsetWidth  : window.innerWidth  - panel.offsetWidth;
+                const maxTop  = parent ? parent.clientHeight - panel.offsetHeight : window.innerHeight - panel.offsetHeight;
+
+                const newLeft = Math.max(0, Math.min(maxLeft, startLeft + dx));
+                const newTop  = Math.max(0, Math.min(maxTop,  startTop  + dy));
+
+                panel.style.left = newLeft + 'px';
+                panel.style.top  = newTop  + 'px';
+                panel.style.right = 'auto';
+                panel.style.bottom = 'auto';
+            });
+        }
+
+        function onEnd() {
+            isDragging = false;
+            cancelAnimationFrame(rafId);
+            panel.classList.remove('is-dragging');
+        }
+
+        // Mouse events
+        handle.addEventListener('mousedown', e => {
+            e.preventDefault();
+            onStart(e.clientX, e.clientY);
+        });
+        window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onEnd);
+
+        // Touch events (mobile — only if not in static mode, but guard anyway)
+        handle.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            onStart(t.clientX, t.clientY);
+        }, { passive: true });
+        handle.addEventListener('touchmove', e => {
+            const t = e.touches[0];
+            onMove(t.clientX, t.clientY);
+        }, { passive: true });
+        handle.addEventListener('touchend', onEnd);
+    });
+}
+
+// Run after the DOM and weather section are ready
+document.addEventListener('DOMContentLoaded', initDraggablePanels);

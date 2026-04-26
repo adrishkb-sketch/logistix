@@ -166,8 +166,10 @@ body.light-mode .nav-link:hover {
 .main-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden; /* Prevents any child from causing page-wide horizontal scroll */
     padding: 32px;
     scroll-behavior: smooth;
+    min-width: 0; /* Allows flex item to shrink below content size */
 }
 
 .top-bar {
@@ -294,9 +296,16 @@ input:focus, select:focus {
 .table-container {
     width: 100%;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth iOS scrolling */
     border-radius: 16px;
     background: var(--card);
     border: 1px solid var(--border);
+}
+
+/* Ensure tables inside containers have a min-width so they scroll
+   inside the container rather than pushing the whole page */
+.table-container table {
+    min-width: 500px;
 }
 
 table {
@@ -638,12 +647,427 @@ body.light-mode .btn-outline:hover {
     transition: transform 0.2s ease;
 }
 
+/* ── Map Picker Modal ──────────────────────────────── */
+.map-picker-modal-container {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px;
+    max-width: 95vw;
+    height: 600px;
+    max-height: 90vh;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.map-picker-map-container {
+    flex: 1;
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+    min-height: 0; /* Allows flex child to shrink */
+}
+
+@media (max-width: 768px) {
+    .map-picker-modal-container {
+        top: 0;
+        left: 0;
+        transform: none;
+        width: 100vw;
+        max-width: 100vw;
+        height: 100dvh; /* Dynamic viewport height for mobile browsers */
+        max-height: 100dvh;
+        border-radius: 0;
+        padding: 16px;
+        z-index: 20000;
+    }
+    
+    .map-picker-map-container {
+        border-radius: 8px;
+    }
+}
+
+/* ── Shipments Board Toolbar ───────────────────────── */
+.shipments-board-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.shipments-board-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.shipments-search-input {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+    color: var(--text);
+    font-size: 0.85rem;
+    width: 180px;
+}
+
+.shipments-board-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .shipments-board-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .shipments-board-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .shipments-search-input {
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 1rem;
+    }
+
+    .shipments-board-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .shipments-board-buttons button,
+    .shipments-board-buttons .ai-optimize-btn {
+        width: 100% !important;
+        justify-content: center;
+        font-size: 0.8rem !important;
+    }
+
+    #sim-mode-toggle-container {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+}
+
+/* ── Messages / Chat Section ──────────────────────────── */
+.chat-shell {
+    padding: 0 !important;
+    overflow: hidden;
+    display: flex;
+    height: 640px;
+}
+
+.chat-sidebar {
+    width: 300px;
+    min-width: 300px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.chat-sidebar-header {
+    padding: 20px 20px 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.chat-sidebar-actions {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-search-input {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    width: 100%;
+    color: var(--text);
+    font-family: inherit;
+}
+
+.chat-broadcast-btn {
+    width: 100%;
+    padding: 9px;
+    font-size: 0.8rem;
+    background: var(--accent) !important;
+}
+
+.chat-window-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255,255,255,0.02);
+    min-width: 0;
+}
+
+.chat-header-bar {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    gap: 12px;
+}
+
+.chat-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* Back button — hidden on desktop */
+.chat-back-btn {
+    display: none;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.chat-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chat-text-input {
+    flex: 1;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    min-width: 0;
+}
+
+.chat-send-btn {
+    width: auto !important;
+    padding: 10px 18px !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.chat-icon-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Mobile Chat Layout ── */
+@media (max-width: 768px) {
+    .chat-shell {
+        height: calc(100dvh - 140px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Sidebar takes full width on mobile */
+    .chat-sidebar {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        min-width: 100%;
+        z-index: 2;
+        transform: translateX(0);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* When chat is open, slide sidebar off to the left */
+    .chat-shell.chat-open .chat-sidebar {
+        transform: translateX(-100%);
+        pointer-events: none;
+    }
+
+    /* Chat window takes full width */
+    .chat-window-panel {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        z-index: 1;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* When chat is open, slide chat in from the right */
+    .chat-shell.chat-open .chat-window-panel {
+        transform: translateX(0);
+        z-index: 3;
+    }
+
+    /* Show back button on mobile */
+    .chat-back-btn {
+        display: flex;
+        align-items: center;
+    }
+
+    .chat-input-row {
+        gap: 6px;
+    }
+
+    .chat-send-btn {
+        padding: 10px 12px !important;
+        font-size: 0.85rem !important;
+    }
+
+    .chat-icon-btn {
+        padding: 10px 10px;
+        font-size: 1rem;
+    }
+}
+
+/* ── Weather / Digital Twin Section ──────────────────────────────────── */
+.weather-main-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 600px;
+    height: calc(100vh - 160px);
+}
+
+.weather-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.weather-toolbar-left {
+    flex: 1;
+    min-width: 0; /* Allow flex child to shrink below content size */
+}
+
+.sim-sandbox-box {
+    margin-top: 12px;
+    padding: 16px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+}
+
+.sim-sandbox-controls {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.sim-sandbox-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.weather-map-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    gap: 0;
+    min-height: 350px;
+}
+
+@media (max-width: 768px) {
+    .weather-main-card {
+        height: auto;
+        min-height: unset;
+    }
+
+    .weather-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sim-sandbox-controls {
+        flex-direction: column;
+    }
+
+    .sim-sandbox-buttons {
+        flex-wrap: nowrap; /* Keep draw + delete + layer in one row */
+        align-items: center;
+        overflow-x: auto;
+    }
+
+    .weather-map-wrapper {
+        flex-direction: column;
+        height: 400px;
+        min-height: 400px;
+    }
+
+    #weather-map {
+        height: 400px !important;
+        min-height: 400px;
+    }
+
+    /* On mobile, float panels become static blocks below the map */
+    #active-sims-container.draggable-panel,
+    #simulation-panel.draggable-panel {
+        position: static !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-top: 16px;
+        transform: none !important;
+    }
+}
+
+/* ── Draggable Floating Panels ─────────────────────────── */
+.draggable-panel {
+    touch-action: none; /* Allow JS touch handling */
+}
+
+.draggable-panel.is-dragging {
+    transition: none !important;
+    cursor: grabbing !important;
+    opacity: 0.92;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6) !important;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
 /* ── RESPONSIVE DESIGN ───────────────────────────────── */
 
 /* Global Responsive Grid Utilities */
 .responsive-grid-2 {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 1fr;
     gap: 24px;
 }
 
@@ -667,6 +1091,8 @@ body.light-mode .btn-outline:hover {
     .stats-grid {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
     }
+}
+
 .menu-toggle {
     display: none;
     background: var(--card);

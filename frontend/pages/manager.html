@@ -34,7 +34,47 @@
         
         /* Specific Table Overrides */
         .leaderboard-table tr:first-child { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--warning); }
-        
+
+        /* Leaderboard responsive layout */
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .leaderboard-selects {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        /* The table wrapper scrolls horizontally on its own — page stays still */
+        .leaderboard-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+        }
+        .leaderboard-table {
+            min-width: 480px; /* Forces scroll inside the wrapper instead of the page */
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .leaderboard-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .leaderboard-selects {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+            .leaderboard-selects select {
+                width: 100%;
+                font-size: 0.85rem !important;
+                padding: 8px 10px !important;
+            }
+        }
         /* Dashboard Spacing */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
         
@@ -120,6 +160,17 @@
         
         #sim-mode-toggle-container.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
         #sim-mode-toggle-container.active span { color: #3b82f6 !important; }
+        @media (max-width: 600px) {
+            .glass-card.section-card {
+                padding: 16px !important;
+            }
+            .section-card h2 {
+                font-size: 1.4rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -370,23 +421,23 @@
                     </div>
 
                     <div class="glass-card section-card" data-layout-id="shipments-board">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                        <div class="shipments-board-header">
                             <h3 style="margin:0;" data-i18n="shipments_board_title">Shipments Board</h3>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" style="padding:5px 10px; border-radius:4px; border:1px solid var(--card-border); background:rgba(0,0,0,0.3); color:white; font-size:0.8rem;" data-i18n-placeholder="search_shipment_placeholder">
-                                
-                                <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:5px 15px; white-space: nowrap;" data-i18n="btn_auto_bulk_assign">⚡ Auto Bulk Assign</button>
-                                <button class="ai-optimize-btn" onclick="optimizeFleet()" style="white-space: nowrap;">
-                                    <span style="font-size:0.95rem;">🚛</span> 
-                                    <span data-i18n="btn_optimize_fleet">Optimize Fleet</span>
-                                </button>
-
-                                <div id="sim-mode-toggle-container" class="glass-card" style="padding:6px 12px; background:rgba(0,0,0,0.4); border:1px solid var(--border); display:flex; align-items:center; gap:10px; border-radius:12px; transition: all 0.3s ease;">
-                                    <span style="font-size:0.7rem; color:var(--text-muted); font-weight:800; letter-spacing: 0.5px;" data-i18n="label_sim_mode">SIMULATION MODE</span>
-                                    <label class="switch">
-                                        <input type="checkbox" id="global-sim-toggle" onchange="toggleGlobalSimulationMode(this.checked)">
-                                        <span class="slider"></span>
-                                    </label>
+                            <div class="shipments-board-actions">
+                                <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" class="shipments-search-input" data-i18n-placeholder="search_shipment_placeholder">
+                                <div class="shipments-board-buttons">
+                                    <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem;" data-i18n="btn_auto_bulk_assign">⚡ Auto Bulk Assign</button>
+                                    <button class="ai-optimize-btn" onclick="optimizeFleet()" style="white-space: nowrap;">
+                                        <span style="font-size:0.95rem;">🚛</span> 
+                                        <span data-i18n="btn_optimize_fleet">Optimize Fleet</span>
+                                    </button>
+                                    <div id="sim-mode-toggle-container" class="glass-card" style="padding:6px 12px; background:rgba(0,0,0,0.4); border:1px solid var(--border); display:flex; align-items:center; gap:10px; border-radius:12px; transition: all 0.3s ease;">
+                                        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:800; letter-spacing: 0.5px;" data-i18n="label_sim_mode">SIMULATION MODE</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="global-sim-toggle" onchange="toggleGlobalSimulationMode(this.checked)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -600,15 +651,15 @@
 
             <!-- Weather Fleet Map Section -->
             <section id="weather" class="section-content" data-layout-id="section-weather" style="display:none;">
-                <div class="glass-card section-card" data-layout-id="weather-main" style="height: calc(100vh - 150px); display:flex; flex-direction:column;">
+                <div class="glass-card section-card weather-main-card" data-layout-id="weather-main">
 
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                        <div style="flex:1; min-width:450px;">
-                            <h3 style="margin:0;" data-i18n="title_digital_twin">Digital Twin: Live Fleet Intel</h3>
-                            <div style="margin-top:15px; padding:20px; background:rgba(255,255,255,0.03); border-radius:16px; border:1px solid var(--card-border); backdrop-filter:blur(10px);">
-                                <h4 style="margin:0 0 15px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em;" data-i18n="sim_sandbox">🧪 Simulation Sandbox</h4>
-                                <div style="display:flex; gap:15px; align-items:flex-end; flex-wrap:wrap;">
-                                    <div class="input-group" style="flex:1; min-width:200px; margin:0;">
+                    <div class="weather-toolbar">
+                        <div class="weather-toolbar-left">
+                            <h3 style="margin:0 0 12px 0;" data-i18n="title_digital_twin">Digital Twin: Live Fleet Intel</h3>
+                            <div class="sim-sandbox-box">
+                                <h4 style="margin:0 0 12px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em;" data-i18n="sim_sandbox">🧪 Simulation Sandbox</h4>
+                                <div class="sim-sandbox-controls">
+                                    <div class="input-group" style="margin:0; flex:1;">
                                         <label style="font-size:0.7rem;" data-i18n="label_select_disaster">Select Disaster</label>
                                         <select id="disaster-type" class="glass-card" style="width:100%; padding:10px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);">
                                             <option value="cyclone" data-i18n="dis_cyclone">🌀 Cyclone / Hurricane</option>
@@ -620,35 +671,33 @@
                                             <option value="blockage" data-i18n="dis_block">🚧 Road Blockage</option>
                                         </select>
                                     </div>
-
-                                    <div style="display:flex; gap:10px;">
-                                        <button class="btn-primary btn-accent" style="padding:12px 20px; font-size:0.85rem; white-space:nowrap;" onclick="toggleDrawMode()" data-i18n="btn_draw_on_map">✏️ Draw on Map</button>
-                                        <button class="btn-primary btn-danger" style="padding:12px 15px; font-size:0.85rem;" onclick="clearDisasters()">🗑️</button>
+                                    <div class="sim-sandbox-buttons">
+                                        <button class="btn-primary btn-accent" style="padding:10px 16px; font-size:0.85rem; white-space:nowrap;" onclick="toggleDrawMode()" data-i18n="btn_draw_on_map">✏️ Draw on Map</button>
+                                        <button class="btn-primary btn-danger" style="padding:10px 14px; font-size:0.85rem;" onclick="clearDisasters()">🗑️</button>
+                                        <div class="input-group" style="margin:0; min-width:140px;">
+                                            <label style="font-size:0.7rem;" data-i18n="label_map_layer">Map Layer</label>
+                                            <select id="map-layer" class="glass-card" style="width:100%; padding:8px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);" onchange="changeMapLayer()">
+                                                <option value="standard" data-i18n="layer_standard">Standard</option>
+                                                <option value="terrain" data-i18n="layer_terrain">Terrain</option>
+                                                <option value="satellite" data-i18n="layer_satellite">Satellite</option>
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div class="input-group" style="flex:1; min-width:160px; margin:0;">
-                                        <label style="font-size:0.7rem;" data-i18n="label_map_layer">Map Layer</label>
-                                        <select id="map-layer" class="glass-card" style="width:100%; padding:10px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);" onchange="changeMapLayer()">
-                                            <option value="standard" data-i18n="layer_standard">Standard View</option>
-                                            <option value="terrain" data-i18n="layer_terrain">Terrain / Topo</option>
-                                            <option value="satellite" data-i18n="layer_satellite">Satellite Intel</option>
-                                        </select>
-                                    </div>
-
                                 </div>
                             </div>
                         </div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); text-align:right;">
+                        <div style="font-size:0.85rem; color:var(--text-muted); white-space:nowrap;">
                             <span style="color:#3182ce;">●</span> Rain Cell 
-                            <span style="color:#e53e3e; margin-left:10px;">●</span> Critical Anomaly
+                            <span style="color:#e53e3e; margin-left:8px;">●</span> Critical Anomaly
                         </div>
                     </div>
 
-                    <div style="position:relative; flex:1; display:flex; gap:20px;">
-                        <div id="weather-map" style="flex:1; height: 100%; border-radius: 12px; border: 1px solid var(--card-border); overflow:hidden; z-index:1;"></div>
-                        
-                        <!-- Floating Active Simulation Control (Moved outside map to avoid interaction conflicts) -->
-                        <div id="active-sims-container" class="glass-card" style="position:absolute; top:20px; left:20px; z-index:1000; padding:20px; border:1px solid var(--warning); width:320px; background:rgba(20,25,35,0.9); backdrop-filter:blur(10px); box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-                            <h4 style="margin:0 0 15px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em; cursor:move;" data-i18n="active_sim_control">📡 Active Simulation Control</h4>
+                    <div class="weather-map-wrapper">
+                        <div id="weather-map" style="flex:1; min-height:350px; border-radius:12px; border:1px solid var(--border); overflow:hidden; z-index:1;"></div>
+
+                        <!-- Floating Active Simulation Control -->
+                        <div id="active-sims-container" class="glass-card draggable-panel" style="position:absolute; top:20px; left:20px; z-index:1000; padding:16px; border:1px solid var(--warning); width:300px; max-width:calc(100% - 32px); background:rgba(20,25,35,0.92); backdrop-filter:blur(12px); box-shadow:0 10px 30px rgba(0,0,0,0.5); border-radius:14px;">
+                            <h4 class="drag-handle" style="margin:0 0 12px 0; color:var(--warning); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.1em; cursor:grab; user-select:none; display:flex; align-items:center; gap:8px;" data-i18n="active_sim_control">📡 Active Simulation Control <span style="opacity:0.4; font-size:0.7rem;">⠿</span></h4>
                             <div id="sims-empty-msg" style="color:var(--text-muted); font-size:0.8rem; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px dashed var(--border);" data-i18n="no_active_sandboxes">No active sandboxes detected. Draw on the map to start testing.</div>
                             <table id="sims-table" style="width:100%; font-size:0.8rem; display:none;">
                                 <thead>
@@ -662,23 +711,21 @@
                             </table>
                         </div>
 
-                        <!-- Floating Automated Simulation Results -->
-                        <div id="simulation-panel" style="display:none; position:absolute; top:20px; right:20px; width:320px; background:rgba(20,25,35,0.9); backdrop-filter:blur(10px); border:1px solid var(--card-border); border-radius:8px; padding:15px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h3 style="margin:0; color:var(--warning); font-size:1.1rem; cursor:move;" data-i18n="ai_results">Automated Simulation Results</h3>
-                                <button style="background:none; border:none; color:white; cursor:pointer;" onclick="document.getElementById('simulation-panel').style.display='none'">✖</button>
+                        <!-- Floating Simulation Results -->
+                        <div id="simulation-panel" class="draggable-panel" style="display:none; position:absolute; top:20px; right:20px; width:300px; max-width:calc(100% - 32px); background:rgba(20,25,35,0.92); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:14px; padding:16px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+                            <div class="drag-handle" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; cursor:grab; user-select:none;">
+                                <h3 style="margin:0; color:var(--warning); font-size:1rem;" data-i18n="ai_results">Automated Results</h3>
+                                <button style="background:none; border:none; color:var(--text); cursor:pointer; font-size:1.2rem; line-height:1;" onclick="document.getElementById('simulation-panel').style.display='none'">✖</button>
                             </div>
-                            <p style="margin:0 0 10px 0; font-size:0.9rem; color:var(--text-muted);">
-                                <strong data-i18n="affected_shipments">Affected Shipments:</strong> <span id="sim-affected-count" style="color:white; font-weight:bold;">0</span>
+                            <p style="margin:0 0 10px 0; font-size:0.85rem; color:var(--text-muted);">
+                                <strong data-i18n="affected_shipments">Affected Shipments:</strong> <span id="sim-affected-count" style="color:var(--text); font-weight:bold;">0</span>
                             </p>
-                            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px;">
-                                <h4 style="margin:0 0 5px 0; font-size:0.85rem; color:var(--success);" data-i18n="ai_recommendation">💡 Automated Recommendation</h4>
-                                <p id="sim-ai-recommendation" style="margin:0; font-size:0.85rem; color:var(--text-muted);"></p>
+                            <div style="background:rgba(255,255,255,0.04); padding:10px; border-radius:8px; margin-bottom:10px;">
+                                <h4 style="margin:0 0 5px 0; font-size:0.8rem; color:var(--success);" data-i18n="ai_recommendation">💡 Recommendation</h4>
+                                <p id="sim-ai-recommendation" style="margin:0; font-size:0.8rem; color:var(--text-muted);"></p>
                             </div>
-                            <div id="sim-affected-list" style="max-height:200px; overflow-y:auto; margin-bottom:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                                <!-- Detailed shipment rows injected here -->
-                            </div>
-                            <button class="btn-primary" style="width:100%; font-size:0.85rem; padding:8px;" onclick="applySimulationFixes()" data-i18n="execute_actions">Execute All Automated Actions</button>
+                            <div id="sim-affected-list" style="max-height:180px; overflow-y:auto; margin-bottom:10px; border-top:1px solid var(--border); padding-top:10px;"></div>
+                            <button class="btn-primary" style="width:100%; font-size:0.85rem; padding:8px;" onclick="applySimulationFixes()" data-i18n="execute_actions">Execute All Actions</button>
                         </div>
                     </div>
                 </div>
@@ -686,65 +733,85 @@
 
             <!-- Messages Section -->
             <section id="messages" class="section-content" style="display:none;">
-                <div class="glass-card section-card" style="padding:0; overflow:hidden; display:flex; height:600px;">
-                    <!-- Driver Sidebar -->
-                    <div style="width:300px; border-right:1px solid var(--border); display:flex; flex-direction:column; background:rgba(0,0,0,0.1);">
-                        <div style="padding:24px; border-bottom:1px solid var(--border);">
-                            <h2 style="margin:0; font-size:1.4rem; color:var(--primary); letter-spacing:-0.02em;" data-i18n="driver_comm_title">Driver Communications</h2>
-                            <div style="width:40px; height:3px; background:var(--primary); margin:12px 0; border-radius:2px;"></div>
-                            <p style="margin:0; font-size:0.85rem; color:var(--muted); line-height:1.4;" data-i18n="driver_comm_desc">Real-time chat with active drivers.</p>
-                        </div>
-                        <div style="padding:12px 24px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
-                            <div style="position:relative;">
-                                <input type="text" id="driver-chat-search" placeholder="🔍 Search driver by name..." data-i18n-placeholder="search_driver_name" oninput="filterDriverChatList()" style="padding:10px 10px 10px 35px; font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); width:100%; color:white;">
-                                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:0.5; pointer-events:none;"></span>
+                <div class="chat-shell glass-card section-card">
+
+                    <!-- ── Driver List Panel ─────────────────────────────── -->
+                    <div class="chat-sidebar" id="chat-sidebar">
+                        <!-- Header -->
+                        <div class="chat-sidebar-header">
+                            <div>
+                                <h2 style="margin:0; font-size:1.3rem; color:var(--primary); letter-spacing:-0.02em;" data-i18n="driver_comm_title">Driver Communications</h2>
+                                <div style="width:36px; height:3px; background:var(--primary); margin:10px 0 6px 0; border-radius:2px;"></div>
+                                <p style="margin:0; font-size:0.8rem; color:var(--muted); line-height:1.4;" data-i18n="driver_comm_desc">Real-time chat with active drivers.</p>
                             </div>
-                            <button class="btn-primary" style="width:100%; padding:8px; font-size:0.8rem; background:var(--accent);" onclick="openBroadcastModal()" data-i18n="btn_broadcast">📢 Message Everyone (Broadcast)</button>
                         </div>
+
+                        <!-- Search + Broadcast -->
+                        <div class="chat-sidebar-actions">
+                            <input type="text" id="driver-chat-search"
+                                placeholder="🔍 Search driver by name..."
+                                data-i18n-placeholder="search_driver_name"
+                                oninput="filterDriverChatList()"
+                                class="chat-search-input">
+                            <button class="btn-primary chat-broadcast-btn" onclick="openBroadcastModal()" data-i18n="btn_broadcast">
+                                📢 Message Everyone (Broadcast)
+                            </button>
+                        </div>
+
+                        <!-- Driver List -->
                         <div id="chat-driver-list" style="flex:1; overflow-y:auto;">
-                            <!-- Drivers list injected here -->
                             <div style="padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">Loading drivers...</div>
                         </div>
                     </div>
 
-                    <!-- Chat Window -->
-                    <div id="chat-window" style="flex:1; display:flex; flex-direction:column; background:rgba(255,255,255,0.02);">
-                        <div id="chat-header" style="padding:15px 32px; border-bottom:1px solid var(--border); display:none; align-items:center; gap:15px;">
-                            <img id="chat-driver-avatar" src="" style="width:40px; height:40px; border-radius:50%; border:2px solid var(--primary); object-fit:cover;">
-                            <div style="flex:1;">
-                                <h4 id="chat-driver-name" style="margin:0; font-size:1.1rem; cursor:pointer; color:var(--primary);" onclick="viewFullProfile('driver', selectedDriverChatId)">Driver Name</h4>
+                    <!-- ── Chat Window ────────────────────────────────────── -->
+                    <div class="chat-window-panel" id="chat-window">
+
+                        <!-- Chat Header (shown when driver selected) -->
+                        <div id="chat-header" class="chat-header-bar" style="display:none;">
+                            <!-- Mobile back button -->
+                            <button class="chat-back-btn" onclick="closeMobileChat()" title="Back">←</button>
+                            <img id="chat-driver-avatar" src="" class="chat-avatar">
+                            <div style="flex:1; min-width:0;">
+                                <h4 id="chat-driver-name" style="margin:0; font-size:1rem; cursor:pointer; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" onclick="viewFullProfile('driver', selectedDriverChatId)">Driver Name</h4>
                                 <p id="chat-driver-status" style="margin:2px 0 0 0; font-size:0.75rem; color:var(--success);">● Active</p>
                             </div>
                         </div>
-                        
-                        <div id="chat-messages-container" style="flex:1; overflow-y:auto; padding:32px; display:none;">
-                            <!-- Individual chat messages -->
+
+                        <!-- Messages -->
+                        <div id="chat-messages-container" style="flex:1; overflow-y:auto; padding:20px; display:none;"></div>
+
+                        <!-- Placeholder -->
+                        <div id="chat-placeholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:12px;">
+                            <div style="font-size:3.5rem;">💬</div>
+                            <p style="font-size:0.95rem; text-align:center;" data-i18n="select_driver_msg">Select a driver from the left to view messages</p>
                         </div>
 
-                        <div id="chat-placeholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted);">
-                            <div style="font-size:3rem; margin-bottom:1rem;">💬</div>
-                            <p data-i18n="select_driver_msg">Select a driver from the left to view messages</p>
-                        </div>
-
-                        <div id="chat-input-area" style="padding:16px 32px; border-top:1px solid var(--border); display:none;">
+                        <!-- Input Area -->
+                        <div id="chat-input-area" class="chat-input-area" style="display:none;">
                             <div id="main-chat-media-preview" style="display:none; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:10px; align-items:center; gap:10px;"></div>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <button onclick="mainChatPickPhoto()" title="Send Photo" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;white-space:nowrap;">📷</button>
-                                <button id="main-chat-voice-btn" onclick="mainChatToggleRecording()" title="Voice Note" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;white-space:nowrap;">🎙️</button>
+                            <div class="chat-input-row">
+                                <button onclick="mainChatPickPhoto()" title="Send Photo" class="chat-icon-btn">📷</button>
+                                <button id="main-chat-voice-btn" onclick="mainChatToggleRecording()" title="Voice Note" class="chat-icon-btn">🎙️</button>
                                 <input id="main-chat-photo-input" type="file" accept="image/*" style="display:none;" onchange="mainChatHandlePhoto(this)">
-                                <input type="text" id="manager-chat-input" placeholder="Type your message..." data-i18n-placeholder="placeholder_message" style="flex:1; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); padding:10px 14px; color:white; font-family:inherit; font-size:0.95rem;" onkeydown="if(event.key==='Enter')sendMessageToSelectedDriver()">
-                                <button class="btn-primary" style="width:auto; padding:10px 24px;" onclick="sendMessageToSelectedDriver()" data-i18n="btn_send">Send 🚀</button>
+                                <input type="text" id="manager-chat-input"
+                                    placeholder="Type your message..."
+                                    data-i18n-placeholder="placeholder_message"
+                                    class="chat-text-input"
+                                    onkeydown="if(event.key==='Enter')sendMessageToSelectedDriver()">
+                                <button class="btn-primary chat-send-btn" onclick="sendMessageToSelectedDriver()" data-i18n="btn_send">Send 🚀</button>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </section>
             <!-- Leaderboard Section -->
             <section id="leaderboard" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                    <div class="leaderboard-header">
                         <h3 style="margin:0;">Performance Leaderboard 🏆</h3>
-                        <div style="display:flex; gap:10px;">
+                        <div class="leaderboard-selects">
                             <select id="leader-type" class="glass-card" style="padding:10px 15px; border-radius:10px; border:1px solid var(--border); color:var(--text); background:rgba(128,128,128,0.15); font-size:0.95rem; cursor:pointer; outline:none;" onchange="loadLeaderboard()">
                                 <option value="driver">Drivers</option>
                                 <option value="vehicle">Vehicles</option>
@@ -757,18 +824,21 @@
                             </select>
                         </div>
                     </div>
-                    <table class="leaderboard-table">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th style="padding:10px;" data-i18n="th_name_plate">Name / Plate</th>
-                                <th style="padding:10px;" data-i18n="score">Score</th>
-                                <th style="padding:10px;" data-i18n="hub_status">Status</th>
-                                <th style="padding:10px;" data-i18n="th_action">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboard-body"></tbody>
-                    </table>
+                    <!-- Table scrolls horizontally inside this wrapper; page does NOT scroll sideways -->
+                    <div class="leaderboard-table-wrapper">
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th style="padding:10px;" data-i18n="th_name_plate">Name / Plate</th>
+                                    <th style="padding:10px;" data-i18n="score">Score</th>
+                                    <th style="padding:10px;" data-i18n="hub_status">Status</th>
+                                    <th style="padding:10px;" data-i18n="th_action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-body"></tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
             <!-- Smart Contract Ledger Section -->
@@ -834,15 +904,15 @@
             <!-- Strategy Oracle Section -->
             <section id="oracle" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <div class="responsive-flex-column" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap: 15px;">
                         <div>
                             <h2 style="margin:0; color:var(--primary);" data-i18n="oracle_title">Automated Strategy 🧠</h2>
-                            <p class="subtitle" data-i18n="oracle_subtitle">Simulate future growth scenarios and business strategies in a Digital Twin environment.</p>
+                            <p class="subtitle" style="margin-bottom:0;" data-i18n="oracle_subtitle">Simulate future growth scenarios and business strategies in a Digital Twin environment.</p>
                         </div>
                         <button class="btn-primary" style="width:auto; padding:12px 25px;" onclick="runOracleSimulation()"><span data-i18n="run_forecast">Run Automated Forecast</span></button>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                    <div class="responsive-grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
                         <!-- Parameters -->
                         <div class="glass-card" style="padding:20px; background:rgba(255,255,255,0.03);">
                             <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;" data-i18n="sim_params">Simulation Parameters</h3>
@@ -929,7 +999,7 @@
                             
                             <div id="oracle-data" style="display:none; width:100%; text-align:left;">
                                 <h3 style="margin-top:0; color:var(--success);" data-i18n="forecast_summary">Forecast Summary</h3>
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:15px; margin-bottom:20px;">
                                     <div class="glass-card result-card" style="padding:10px; position:relative; cursor:help;" id="profit-card">
                                         <small style="color:var(--text-muted)" data-i18n="proj_profit">Projected Profit</small>
                                         <h2 id="res-profit" style="margin:5px 0; color:var(--success);"></h2>
@@ -1011,19 +1081,19 @@
             <section id="fuel-oracle" class="section-content" data-layout-id="section-fuel" style="display:none;">
                 <div class="glass-card section-card" data-layout-container="fuel-content" style="border-top: 4px solid #f59e0b;">
 
-                    <div data-layout-id="fuel-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                    <div class="responsive-flex-column" data-layout-id="fuel-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap: 15px;">
                         <div>
                             <h2 style="margin:0; color:#f59e0b;" data-i18n="fuel_oracle_title">Bharat-Fuel & Toll Oracle 🛢️</h2>
-                            <p class="subtitle" data-i18n="fuel_desc">Automated-Optimized Cost Analysis: Toll + Fuel Variance across 28 States</p>
+                            <p class="subtitle" style="margin-bottom:0;" data-i18n="fuel_desc">Automated-Optimized Cost Analysis: Toll + Fuel Variance across 28 States</p>
                         </div>
-                        <div class="glass-card" style="padding:12px 24px; text-align:center; background:rgba(245, 158, 11, 0.1);">
+                        <div class="glass-card" style="padding:12px 24px; text-align:center; background:rgba(245, 158, 11, 0.1); width: auto;">
                             <small style="color:var(--text-muted)" data-i18n="proj_fuel_savings">Projected Fuel Savings</small>
                             <h2 id="fuel-savings-total" style="margin:0; color:#f59e0b;">₹12,450.00</h2>
                         </div>
                     </div>
 
 
-                    <div data-layout-id="fuel-optimizer-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:32px;">
+                    <div class="responsive-grid-2" data-layout-id="fuel-optimizer-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:32px;">
                         <!-- Price Heatmap -->
                         <div class="glass-card" data-layout-id="fuel-price-list-card" style="padding:24px; background:rgba(0,0,0,0.2);">
                             <h3 style="margin:0 0 20px 0; font-size:1.1rem;" data-i18n="fuel_variance">Inter-State Fuel Price Variance</h3>
@@ -1069,19 +1139,18 @@
             <!-- Payments Section -->
             <section id="paisa-fast" class="section-content" data-layout-id="section-paisa-fast" style="display:none;">
                 <div class="glass-card section-card" data-layout-container="paisa-content" style="border-top: 4px solid var(--success); padding: 40px;">
-                    <div data-layout-id="paisa-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-
+                    <div class="responsive-flex-column" data-layout-id="paisa-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px; gap: 20px;">
                         <div>
                             <h2 style="margin:0; color:var(--success);" data-i18n="payments_portal">💰 Payments Portal</h2>
-                            <p class="subtitle" data-i18n="payments_desc">Real-time settlements, COD reconciliation, and fleet liquidity Oracle.</p>
+                            <p class="subtitle" style="margin-bottom:0;" data-i18n="payments_desc">Real-time settlements, COD reconciliation, and fleet liquidity Oracle.</p>
                         </div>
-                        <div class="glass-card" style="padding:12px 24px; text-align:center; background:rgba(16, 185, 129, 0.1);">
+                        <div class="glass-card" style="padding:12px 24px; text-align:center; background:rgba(16, 185, 129, 0.1); width: auto;">
                             <small style="color:var(--text-muted)" data-i18n="settled_rev">Settled Revenue (Today)</small>
                             <h2 id="fintech-daily-revenue" style="margin:0; color:var(--success);">₹ 0.00</h2>
                         </div>
                     </div>
 
-                    <div data-layout-id="paisa-stats-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:32px; margin-bottom:48px;">
+                    <div class="responsive-grid-3" data-layout-id="paisa-stats-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:32px; margin-bottom:48px;">
                         <div class="glass-card" data-layout-id="stat-escrow" style="padding:20px; border-bottom: 3px solid var(--primary);">
                             <small style="color:var(--text-muted)" data-i18n="pending_escrow">Pending Digital Escrow</small>
                             <h3 id="fintech-cod" style="margin:10px 0 0 0;">₹ 0.00</h3>
@@ -1097,7 +1166,7 @@
                     </div>
 
 
-                    <div data-layout-id="paisa-charts-row" style="display:grid; grid-template-columns: 2fr 1fr; gap:40px; margin-bottom:48px;">
+                    <div class="responsive-grid-2" data-layout-id="paisa-charts-row" style="display:grid; grid-template-columns: 2fr 1fr; gap:40px; margin-bottom:48px;">
                         <!-- Revenue Trends -->
                         <div class="glass-card" data-layout-id="paisa-chart-velocity" style="padding:24px;">
                             <h3 style="margin:0 0 20px 0;" data-i18n="rev_velocity">Revenue Velocity Analytics</h3>
@@ -1117,7 +1186,7 @@
                     </div>
 
 
-                    <div data-layout-id="paisa-tables-row" style="margin-top:48px; display:grid; grid-template-columns: 1fr 1fr; gap:40px;">
+                    <div class="responsive-grid-2" data-layout-id="paisa-tables-row" style="margin-top:48px; display:grid; grid-template-columns: 1fr 1fr; gap:40px;">
                         <div data-layout-id="paisa-driver-payouts">
                             <h3 style="margin-bottom:24px;">Pending Driver Payouts 💸</h3>
                             <div class="table-container">
@@ -1157,16 +1226,16 @@
 
 
                     <div data-layout-id="paisa-b2b-escrow" style="margin-top:48px;">
-                        <h3 style="margin-bottom:24px;">B2B Smart Contracts (Escrow)</h3>
+                        <h3 style="margin-bottom:24px;" data-i18n="b2b_smart_contracts">B2B Smart Contracts (Escrow)</h3>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
                                         <th data-i18n="contract_id">Contract ID</th>
-                                        <th>Counterparty</th>
-                                        <th>Value</th>
+                                        <th data-i18n="th_counterparty">Counterparty</th>
+                                        <th data-i18n="th_value">Value</th>
                                         <th data-i18n="hub_status">Status</th>
-                                        <th>Settlement ETA</th>
+                                        <th data-i18n="th_settlement_eta">Settlement ETA</th>
                                     </tr>
                                 </thead>
                                 <tbody id="fintech-escrow-table">
@@ -1196,25 +1265,25 @@
             <section id="network-resilience" class="section-content" data-layout-id="section-resilience" style="display:none;">
                 <div class="glass-card section-card" data-layout-container="resilience-content" style="border-top: 4px solid var(--warning);">
 
-                    <div data-layout-id="resilience-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="responsive-flex-column" data-layout-id="resilience-header" style="display:flex; justify-content:space-between; align-items:center; gap: 15px;">
                         <div>
-                            <h2 style="margin:0; color:var(--warning);">Network Resilience Intelligence 🦋</h2>
-                            <p class="subtitle" data-i18n="resilience_desc">Automated-driven simulation of cascading supply chain disruptions</p>
+                            <h2 style="margin:0; color:var(--warning);" data-i18n="resilience_title">Network Resilience Intelligence 🦋</h2>
+                            <p class="subtitle" style="margin-bottom:0;" data-i18n="resilience_desc">Automated-driven simulation of cascading supply chain disruptions</p>
                         </div>
-                        <div class="glass-card" style="padding:10px 20px; text-align:center; background:rgba(237, 137, 54, 0.1);">
-                            <small style="color:var(--text-muted)">Total Downstream Delay Risk</small>
+                        <div class="glass-card" style="padding:10px 20px; text-align:center; background:rgba(237, 137, 54, 0.1); width: auto;">
+                            <small style="color:var(--text-muted)" data-i18n="total_delay_risk">Total Downstream Delay Risk</small>
                             <h2 id="nr-total-risk" style="margin:0; color:var(--warning);">0.0 hrs</h2>
                         </div>
                     </div>
 
 
-                    <div data-layout-id="resilience-analysis-row" style="margin-top:2rem; display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+                    <div class="responsive-grid-2" data-layout-id="resilience-analysis-row" style="margin-top:2rem; display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
                         <!-- Risk Heatmap (Mock representation) -->
                         <div class="glass-card" data-layout-id="resilience-matrix" style="padding:24px; background:rgba(0,0,0,0.2);">
-                            <h3 style="margin:0 0 24px 0;">Downstream Impact Matrix</h3>
+                            <h3 style="margin:0 0 24px 0;" data-i18n="impact_matrix">Downstream Impact Matrix</h3>
                             <div id="nr-matrix" style="min-height:300px; display:flex; flex-direction:column; gap:10px;">
                                 <!-- Detailed Rows -->
-                                <p style="color:var(--text-muted); text-align:center; padding-top:100px;">Analyzing network nodes...</p>
+                                <p style="color:var(--text-muted); text-align:center; padding-top:100px;" data-i18n="analyzing_nodes">Analyzing network nodes...</p>
                             </div>
                         </div>
 
@@ -1232,16 +1301,16 @@
 
 
                     <div data-layout-id="resilience-disruptions" style="margin-top:3rem;">
-                        <h3 style="margin:0 0 24px 0;">Active Disruption Chains</h3>
+                        <h3 style="margin:0 0 24px 0;" data-i18n="active_disruptions">Active Disruption Chains</h3>
                         <div class="glass-card" style="overflow-x:auto;">
                             <table>
                                 <thead style="background:rgba(255,255,255,0.05);">
                                     <tr>
-                                        <th style="padding:12px; text-align:left;">Source Shipment</th>
-                                        <th style="padding:12px; text-align:left;">Current Delay</th>
-                                        <th style="padding:12px; text-align:left;">Impacted Hubs</th>
-                                        <th style="padding:12px; text-align:left;">Severity</th>
-                                        <th style="padding:12px; text-align:center;">Actions</th>
+                                        <th style="padding:12px; text-align:left;" data-i18n="th_source_shipment">Source Shipment</th>
+                                        <th style="padding:12px; text-align:left;" data-i18n="th_current_delay">Current Delay</th>
+                                        <th style="padding:12px; text-align:left;" data-i18n="th_impacted_hubs">Impacted Hubs</th>
+                                        <th style="padding:12px; text-align:left;" data-i18n="th_severity">Severity</th>
+                                        <th style="padding:12px; text-align:center;" data-i18n="th_actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="nr-table-body">
@@ -1651,15 +1720,15 @@
     </div>
 
     <!-- Map Picker Modal -->
-    <div id="map-picker-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:800px; max-width:95%; height:600px; max-height:90vh; padding:24px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid var(--primary);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="map-picker-title" style="margin:0; font-size:1.4rem;">Select Location on Map</h3>
-            <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="closeMapPicker()">✖</button>
+    <div id="map-picker-modal" class="glass-card map-picker-modal-container" style="display:none; position:fixed; z-index:10000; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid var(--primary);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 id="map-picker-title" style="margin:0; font-size:1.2rem;">Select Location on Map</h3>
+            <button style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;" onclick="closeMapPicker()">✖</button>
         </div>
-        <div id="picking-map" style="height: calc(100% - 110px); width:100%; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,0.2);"></div>
-        <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
-            <div id="current-pick-display" style="font-size:1rem; color:var(--primary); font-weight:600; background:rgba(79, 140, 255, 0.1); padding:8px 16px; border-radius:8px;">Click on map to pick a location...</div>
-            <button class="btn-primary" style="width:auto; padding:12px 32px;" onclick="confirmMapPick()">Confirm Selection</button>
+        <div id="picking-map" class="map-picker-map-container"></div>
+        <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div id="current-pick-display" style="font-size:0.9rem; color:var(--primary); font-weight:600; background:rgba(79, 140, 255, 0.1); padding:8px 14px; border-radius:8px; flex:1;">Click on map to pick a location...</div>
+            <button class="btn-primary" style="width:auto; padding:10px 24px; white-space:nowrap;" onclick="confirmMapPick()">Confirm Selection</button>
         </div>
     </div>
 
