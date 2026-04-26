@@ -640,7 +640,23 @@ body.light-mode .btn-outline:hover {
 
 /* ── RESPONSIVE DESIGN ───────────────────────────────── */
 
-/* Mobile Menu Toggle Button (Hidden by default) */
+/* Global Responsive Grid Utilities */
+.responsive-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.responsive-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+}
+
+@media (max-width: 1024px) {
+    .responsive-grid-2, .responsive-grid-3 {
+        grid-template-columns: 1fr;
+    }
 .menu-toggle {
     display: none;
     background: var(--card);
