@@ -164,9 +164,9 @@ function buildAudioPlayer(src, accentColor = 'rgba(255,255,255,0.18)') {
 
 /* ── GLOBAL UI / RESPONSIVE LOGIC ───────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inject Mobile Header if on a dashboard page and it's missing
+    // 1. Inject Mobile Header if on a dashboard page and it's missing (Mobile Only)
     const layout = document.querySelector('.dashboard-layout');
-    if (layout && !document.querySelector('.mobile-header')) {
+    if (layout && !document.querySelector('.mobile-header') && window.innerWidth <= 1024) {
         const header = document.createElement('div');
         header.className = 'mobile-header';
         header.innerHTML = `

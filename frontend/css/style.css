@@ -1111,6 +1111,10 @@ body.light-mode .btn-outline:hover {
     transform: scale(1.05);
 }
 
+.mobile-header {
+    display: none;
+}
+
 @media (max-width: 1024px) {
     :root {
         --sidebar-w: 240px;
