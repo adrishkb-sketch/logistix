@@ -84,6 +84,9 @@ class Driver(BaseModel):
     traffic_violations: int = 0
     reward_points: float = 0.0
     phone_number: Optional[str] = None
+    wallet_balance: float = 0.0
+    total_earnings: float = 0.0
+    monthly_earnings: float = 0.0
     
     # Zen Mode Fields
     is_zen_mode: bool = False
@@ -95,14 +98,15 @@ class Vehicle(BaseModel):
     company_id: str
     type: str # bike, van, truck
     number_plate: str # e.g. MH-12-AB-1234
-    speed: float # avg km/h
-    capacity: float # kg
-    fuel_efficiency: float # km/l
+    speed: float = 60.0 # avg km/h
+    capacity: float = 1000.0 # kg
+    fuel_efficiency: float = 15.0 # km/l
+    status: str = "available" # available, assigned, in_transit, maintenance
+    base_warehouse_id: Optional[str] = None
+    last_known_location: Optional[Location] = None
     vehicle_health_score: float = 100.0
     last_service_date: Optional[str] = None
-    status: str = "available" # available, assigned, maintenance
     assigned_driver_id: Optional[str] = None
-    base_warehouse_id: Optional[str] = None
     join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     total_distance_km: float = 0.0
     efficiency_score: float = 100.0
@@ -157,6 +161,8 @@ class Shipment(BaseModel):
     qr_code_data: Optional[str] = None
     receiver_name: Optional[str] = None
     receiver_phone: Optional[str] = None
+    finance: Optional[dict] = None
+    payment_status: str = "unpaid" # unpaid, paid, payout_requested, payout_settled
     
     # Compliance Guardian Fields
     eway_bill_no: Optional[str] = None

@@ -8,6 +8,32 @@ weather_db = JSONDatabase("weather_cells")
 alerts_db = JSONDatabase("alerts")
 shipments_db = JSONDatabase("shipments")
 
+@router.post("/mode/start")
+def start_simulation_mode():
+    from backend.services.simulation_engine import simulation_engine
+    simulation_engine.start()
+    return {"message": "Simulation Mode Activated. State snapshot created."}
+
+@router.post("/mode/stop")
+def stop_simulation_mode():
+    from backend.services.simulation_engine import simulation_engine
+    simulation_engine.stop()
+    return {"message": "Simulation Mode Deactivated. Previous state restored."}
+
+@router.post("/mode/toggle-halt/{driver_id}")
+def toggle_simulation_halt(driver_id: str):
+    from backend.services.simulation_engine import simulation_engine
+    is_halted = simulation_engine.toggle_driver_halt(driver_id)
+    return {"is_halted": is_halted, "message": "Vehicle halted" if is_halted else "Movement resumed"}
+
+@router.get("/mode/status")
+def get_simulation_status():
+    from backend.services.simulation_engine import simulation_engine
+    return {
+        "active": simulation_engine.active,
+        "halted_drivers": list(simulation_engine.halted_drivers)
+    }
+
 @router.post("/disaster")
 def simulate_disaster(data: dict):
     # type: "cyclone", "blockade", "flood"
@@ -40,7 +66,7 @@ def simulate_disaster(data: dict):
         dist = haversine(curr_loc["lat"], curr_loc["lng"], new_cell["lat"], new_cell["lng"])
         if dist <= new_cell["radius"]:
             # Log event (SIMULATION ONLY - NO ALERT)
-            log_event = ShipmentEvent(status="simulated_delay", message=f"SIMULATION: Affected by {new_cell['type']}.", reason=f"Disaster Simulation Sandbox")
+            log_event = ShipmentEvent(status="simulated_delay", message=f"🌪️ SIMULATION: Impacted by {new_cell['type'].upper()}. Recalculating safety routes.", reason=f"Disaster Simulation Sandbox")
             s["logs"] = s.get("logs", []) + [log_event.model_dump()]
             shipments_db.update(s["id"], s)
             affected_count += 1
@@ -104,9 +130,24 @@ def custom_disaster(data: dict):
             ai_action = "Reroute"
             if new_cell['type'] in ['cyclone', 'flood']:
                 ai_action = "Emergency Halt & Seek High Ground"
+            elif new_cell['type'] == 'heatwave':
+                ai_action = "Mandatory Stop (Vulnerable Vehicles) / Reroute"
+            elif new_cell['type'] == 'earthquake':
+                ai_action = "Emergency Halt & Open Area Check"
+            elif new_cell['type'] == 'riot':
+                ai_action = "Immediate Diversion (Avoid Zone)"
+            elif new_cell['type'] == 'hail':
+                ai_action = "Shelter Search / Underpass Parking"
             elif new_cell['type'] == 'blockade':
                 ai_action = "Recalculate Route (OSRM Bypass)"
                 
+            icon = "🌪️"
+            if new_cell['type'] == 'heatwave': icon = "🌡️"
+            elif new_cell['type'] == 'earthquake': icon = "🫨"
+            elif new_cell['type'] == 'riot': icon = "🔥"
+            elif new_cell['type'] == 'hail': icon = "🌨️"
+            elif new_cell['type'] == 'flood': icon = "🌊"
+
             affected_list.append({
                 "id": s["id"],
                 "description": s["description"],
@@ -118,7 +159,7 @@ def custom_disaster(data: dict):
             })
             
             # We still log it in the shipment history as a 'simulated' event, but NO ALERT in alerts_db
-            log_event = ShipmentEvent(status="simulated_delay", message=f"SIMULATION: Affected by {new_cell['type']}.", reason=f"Disaster Simulation Sandbox")
+            log_event = ShipmentEvent(status="simulated_delay", message=f"{icon} SIMULATION: Impacted by {new_cell['type'].upper()}. Analyzing bypass routes.", reason=f"Disaster Simulation Sandbox")
             s["logs"] = s.get("logs", []) + [log_event.model_dump()]
             shipments_db.update(s["id"], s)
 
@@ -128,6 +169,14 @@ def custom_disaster(data: dict):
         recommendation = f"AI suggests halting {affected_count} vehicles immediately. "
         if new_cell['type'] in ['cyclone', 'flood']:
             recommendation += "Reroute 2-wheelers immediately; standard delivery trucks should seek elevated parking."
+        elif new_cell['type'] == 'heatwave':
+            recommendation += "Enforce mandatory stops for all bike/scooty drivers. Monitor engine temperatures for trucks."
+        elif new_cell['type'] == 'earthquake':
+            recommendation += "Instruct all drivers to halt in open areas away from flyovers and skyscrapers."
+        elif new_cell['type'] == 'riot':
+            recommendation += "Establish a 5km exclusion zone. Reroute all cargo via secure arterial roads."
+        elif new_cell['type'] == 'hail':
+            recommendation += "Move high-value cargo to covered parking. Potential windscreen damage risk."
         elif new_cell['type'] in ['landslide', 'blockade']:
             recommendation += "Calculate alternative paths bypassing the affected segment. Minor delays expected."
 

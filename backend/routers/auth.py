@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Header
 from pydantic import BaseModel
+from typing import Optional, List
 import random
 from backend.models import CompanyCreate, CompanyLogin, DriverLogin
 from backend.database import JSONDatabase
@@ -13,6 +14,7 @@ shipments_db = JSONDatabase("shipments")
 # Temporary in-memory OTP store for simulation
 otp_store = {}
 customer_otp_store = {}  # phone -> otp
+customer_sessions = {}  # token -> phone
 
 class OTPRequest(BaseModel):
     email: str
@@ -101,10 +103,12 @@ def customer_verify_otp(data: CustomerOTPVerify):
     stored = customer_otp_store.get(phone)
     if not stored or stored != data.otp.strip():
         raise HTTPException(status_code=401, detail="Invalid or expired OTP")
+    
     del customer_otp_store[phone]
     all_shipments = shipments_db.get_all()
     orders = [s for s in all_shipments if s.get("receiver_phone") == phone]
     orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)
+    
     slim = []
     for s in orders:
         slim.append({
@@ -116,11 +120,19 @@ def customer_verify_otp(data: CustomerOTPVerify):
             "created_at": s.get("created_at"),
             "receiver_name": s.get("receiver_name"),
         })
-    return {"phone": phone, "orders": slim}
+
+    token = str(uuid.uuid4())
+    customer_sessions[token] = phone
+    
+    return {"phone": phone, "orders": slim, "session_token": token}
 
 @router.get("/customer/shipments")
-def get_customer_shipments(phone: str):
-    """Lookup all shipments by receiver phone (used for order-id search)."""
+def get_customer_shipments(x_logistix_context: Optional[str] = Header(None)):
+    """Lookup all shipments by session token (secured via header)."""
+    phone = customer_sessions.get(x_logistix_context)
+    if not phone:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+        
     all_shipments = shipments_db.get_all()
     orders = [s for s in all_shipments if s.get("receiver_phone") == phone]
     orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)

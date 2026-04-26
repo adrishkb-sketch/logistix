@@ -28,6 +28,33 @@ def calculate_route_type(pickup: Location, drop: Location) -> str:
         return "warehouse_hop"
     return "direct"
 
+def simulate_traffic(lat: float, lng: float) -> dict:
+    """
+    Simulates real-time traffic levels based on coordinates.
+    """
+    import random
+    # Deterministic seed for demo stability
+    seed = int((abs(lat) + abs(lng)) * 1000) % 100
+    if seed < 20: return {"level": "Heavy", "color": "#ef4444", "delay_mult": 2.2, "reason": "Major Congestion"}
+    if seed < 50: return {"level": "Moderate", "color": "#f59e0b", "delay_mult": 1.4, "reason": "Slow Moving"}
+    return {"level": "Light", "color": "#10b981", "delay_mult": 1.0, "reason": "Free Flow"}
+
+def optimize_multi_stop_route(start_lat: float, start_lng: float, stops: list) -> list:
+    """
+    Greedy TSP optimization for multi-stop routing.
+    """
+    optimized = []
+    current_lat, current_lng = start_lat, start_lng
+    remaining = list(stops)
+    
+    while remaining:
+        next_stop = min(remaining, key=lambda s: haversine(current_lat, current_lng, s["lat"], s["lng"]))
+        optimized.append(next_stop)
+        current_lat, current_lng = next_stop["lat"], next_stop["lng"]
+        remaining.remove(next_stop)
+        
+    return optimized
+
 def predict_weather_impact(lat: float, lng: float) -> dict:
     """
     Mock ML Model to predict weather at a given coordinate.
@@ -41,7 +68,7 @@ def predict_weather_impact(lat: float, lng: float) -> dict:
     if seed < 60: return {"condition": "Cloudy", "multiplier": 1.1, "icon": "☁️"}
     return {"condition": "Clear", "multiplier": 1.0, "icon": "☀️"}
 
-def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigue: int, health: int) -> dict:
+def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigue: int, health: int, lat: float = 0, lng: float = 0) -> dict:
     """
     AI Model to calculate adjusted ETA.
     """
@@ -61,10 +88,14 @@ def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigu
     # Fatigue Impact (Driver slows down)
     f_mult = 1.0 + (fatigue / 200.0) # Max +50% delay
     
+    # Traffic Impact
+    traffic = simulate_traffic(lat, lng) if 'lat' in locals() else {"delay_mult": 1.0, "level": "Unknown"}
+    t_mult = traffic["delay_mult"]
+
     # Health Impact (Vehicle issues)
     h_mult = 1.0 + ((100 - health) / 200.0) # Max +50% delay
     
-    adjusted_time = base_time_mins * w_mult * f_mult * h_mult
+    adjusted_time = base_time_mins * w_mult * f_mult * h_mult * t_mult
     delay = adjusted_time - base_time_mins
     
     return {
@@ -102,7 +133,7 @@ def check_shipment_performance(shipment: dict, driver: dict = None, vehicle: dic
     fatigue = driver.get("fatigue_score", 0) if driver else 0
     health = vehicle.get("vehicle_health_score", 100) if vehicle else 100
     
-    eta_info = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
+    eta_info = calculate_dynamic_eta(dist, v_type, weather, fatigue, health, curr_loc["lat"], curr_loc["lng"])
     
     predicted_arrival = now + timedelta(minutes=eta_info["adjusted_mins"])
     diff = (predicted_arrival - expected).total_seconds() / 60.0
@@ -114,8 +145,11 @@ def check_shipment_performance(shipment: dict, driver: dict = None, vehicle: dic
     return {
         "status": status,
         "diff_mins": round(diff),
+        "eta_mins": eta_info["adjusted_mins"],
+        "weather": eta_info["weather"],
+        "traffic": simulate_traffic(curr_loc["lat"], curr_loc["lng"]),
+        "factors": eta_info["factors"],
         "predicted_arrival": predicted_arrival.isoformat(),
-        "weather": weather["condition"],
         "dist_remaining_km": round(dist, 1)
     }
 

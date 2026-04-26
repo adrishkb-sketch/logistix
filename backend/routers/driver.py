@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header
+from backend.services.auth_utils import verify_context
 from backend.database import JSONDatabase
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from backend.services.ocr_service import process_number_plate_image
 import os
 import uuid
@@ -12,7 +13,8 @@ shipments_db = JSONDatabase("shipments")
 drivers_db = JSONDatabase("drivers")
 
 @router.get("/{driver_id}/shipments")
-def get_driver_shipments(driver_id: str):
+def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
     from backend.services.cold_chain import calculate_shipment_vitality
     all_shipments = shipments_db.get_all()
     assigned = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id]
@@ -39,7 +41,8 @@ def get_rest_stops(lat: float, lng: float):
     return stops
 
 @router.post("/{driver_id}/zen")
-def toggle_zen(driver_id: str, data: dict):
+def toggle_zen(driver_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
     driver = drivers_db.get_by_id(driver_id)
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
@@ -70,7 +73,8 @@ def toggle_zen(driver_id: str, data: dict):
     return {"message": "Zen Mode updated", "is_zen_mode": is_active}
 
 @router.post("/{driver_id}/location")
-def update_driver_location(driver_id: str, location: Dict[str, Any]):
+def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
     # In a real app we might update driver's current location.
     # Here we update the shipment's current location if they are carrying one.
     from backend.services.alert_engine import check_weather_alerts
@@ -79,23 +83,58 @@ def update_driver_location(driver_id: str, location: Dict[str, Any]):
     all_shipments = shipments_db.get_all()
     for s in all_shipments:
         if s.get("assigned_driver_id") == driver_id and s.get("status") in ["in_transit", "assigned"]:
-            # Recalculate Performance
+            # GPS Speed Guard: Reject jumps faster than 120km/h
+            prev_loc = s.get("current_location")
+            last_update = s.get("last_location_time")
+            now = datetime.utcnow()
+            
+            if prev_loc and last_update:
+                from backend.services.route_engine import haversine
+                dist_jump = haversine(prev_loc["lat"], prev_loc["lng"], location["lat"], location["lng"])
+                try:
+                    last_time = datetime.fromisoformat(last_update.replace('Z', ''))
+                    seconds = (now - last_time).total_seconds()
+                    if seconds > 10: # Only check if at least 10s passed to avoid noise
+                        kmh = (dist_jump / seconds) * 3600
+                        from backend.services.simulation_engine import simulation_engine
+                        if kmh > 120 and not simulation_engine.active:
+                            from backend.models import Alert
+                            alert = Alert(
+                                company_id=s["company_id"],
+                                type="fatigue",
+                                description=f"SECURITY: Impossible GPS jump ({round(kmh)}km/h) for Driver {driver_id}. Potential spoofing.",
+                                severity="high",
+                                suggestion="Verify driver coordinates. Signal may be spoofed or hardware malfunctioning.",
+                                driver_id=driver_id,
+                                shipment_id=s["id"]
+                            )
+                            JSONDatabase("alerts").insert(alert.model_dump())
+                            continue # Reject this specific update segment
+                except: pass
+            
+            s["last_location_time"] = now.isoformat() + "Z"
+
             driver = drivers_db.get_by_id(driver_id)
             vehicles_db = JSONDatabase("vehicles")
             vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"]) if driver.get("assigned_vehicle_id") else None
             
             perf = check_shipment_performance(s, driver, vehicle)
             
+            # Heatwave Safety Check
+            from backend.services.alert_engine import check_heatwave_safety
+            if vehicle:
+                check_heatwave_safety(s, vehicle)
+            
             # Check for status change to log it
             prev_perf = s.get("performance_stats") or {}
             if perf["status"] != prev_perf.get("status"):
                 from backend.models import ShipmentEvent
-                status_emoji = "🔴" if perf["status"] == "delayed" else ("🟢" if perf["status"] == "early" else "🔵")
-                log_msg = f"{status_emoji} Performance changed to {perf['status'].upper()}. Predicted Delay: {perf['diff_mins']}m."
+                status_emoji = "📉" if perf["status"] == "delayed" else ("⚡" if perf["status"] == "early" else "✅")
+                log_msg = f"{status_emoji} Performance update: {perf['status'].upper()}. Predicted variance: {perf['diff_mins']}m."
                 log = ShipmentEvent(
                     status=perf["status"],
                     message=log_msg,
-                    reason=f"AI recalculated ETA based on GPS at {location['lat']}, {location['lng']}. Weather: {perf['weather']}",
+                    reason=f"AI recalculated ETA. Traffic: {perf['traffic']['level']}. Weather: {perf['weather']}",
                     location=location
                 )
                 s["logs"] = s.get("logs", []) + [log.model_dump()]
@@ -112,8 +151,8 @@ def update_driver_location(driver_id: str, location: Dict[str, Any]):
                         from backend.models import ShipmentEvent
                         checkpoint_log = ShipmentEvent(
                             status="in_transit",
-                            message=f"📍 Reached Hub: {w['name']}",
-                            reason="Automatic GPS Checkpoint",
+                            message=f"🏭 Arrived at Warehouse: {w['name']}. Undergoing processing.",
+                            reason="Automatic Warehouse Proximity Checkpoint",
                             location=location
                         )
                         s["logs"] = s.get("logs", []) + [checkpoint_log.model_dump()]
@@ -143,6 +182,20 @@ def update_driver_location(driver_id: str, location: Dict[str, Any]):
 
             
             if not in_warehouse and s.get("at_warehouse_id"):
+                wh_id = s.get("at_warehouse_id")
+                from backend.database import JSONDatabase
+                wh_name = "Warehouse"
+                w_obj = JSONDatabase("warehouses").get_by_id(wh_id)
+                if w_obj: wh_name = w_obj["name"]
+                
+                from backend.models import ShipmentEvent
+                exit_log = ShipmentEvent(
+                    status="in_transit",
+                    message=f"🚀 Released from Warehouse: {wh_name}. On route to next destination.",
+                    reason="Warehouse processing complete. Transit resumed.",
+                    location=location
+                )
+                s["logs"] = s.get("logs", []) + [exit_log.model_dump()]
                 s["at_warehouse_id"] = None # left warehouse
 
             shipments_db.update(s["id"], {
@@ -216,7 +269,7 @@ async def scan_cargo(driver_id: str, shipment_id: str, file: UploadFile = File(.
     
     if is_damaged:
         from backend.models import ShipmentEvent
-        log_event = ShipmentEvent(status="disputed", message="AI Cargo Scanner detected damage at pickup. Handover halted.", reason="Packaging tear detected by CV.")
+        log_event = ShipmentEvent(status="disputed", message="🚫 AI Cargo Scanner detected damage at pickup. Handover halted.", reason="Packaging tear detected by CV.")
         shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
         shipment["status"] = "disputed"
         shipment["stage"] = "Damage Dispute"
@@ -297,10 +350,11 @@ def report_incident(driver_id: str, data: dict):
         
         # Append log to shipment with location info
         loc_obj = {"lat": lat, "lng": lng} if lat and lng else None
+        emoji = "🛠️" if incident_type == "breakdown" else ("👮" if incident_type == "challan" else "📝")
         log = ShipmentEvent(
             status="delayed" if incident_type in ["breakdown", "challan"] else active["status"], 
-            message=f"ISSUE: {incident_type.upper()} at {lat or 'unknown'}, {lng or 'unknown'}.", 
-            reason=desc,
+            message=f"{emoji} Incident Reported: {incident_type.upper()}.", 
+            reason=desc if desc else f"Driver reported {incident_type} at {lat}, {lng}.",
             location=loc_obj
         )
         logs = active.get("logs", [])
@@ -444,3 +498,77 @@ def maintenance_complete(driver_id: str):
     vehicles_db = JSONDatabase("vehicles")
     vehicles_db.update(vehicle_id, {"status": "available"})
     return {"message": "Vehicle is now available for duty"}
+
+@router.get("/wallet/{driver_id}")
+def get_driver_wallet(driver_id: str):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver: raise HTTPException(status_code=404, detail="Driver not found")
+    
+    # Mock transactions based on history
+    from datetime import datetime, timedelta
+    txs = [
+        {"desc": "Last Trip Earnings", "amount": driver.get("wallet_balance", 0), "timestamp": datetime.now().isoformat(), "type": "Trip"},
+    ]
+    
+    return {
+        "balance": driver.get("wallet_balance", 0),
+        "today_earning": driver.get("monthly_earnings", 0) / 30, # Approximation
+        "total_earnings": driver.get("total_earnings", 0),
+        "monthly_earnings": driver.get("monthly_earnings", 0),
+        "transactions": txs
+    }
+
+@router.post("/{driver_id}/complete-delivery/{shipment_id}")
+def complete_delivery(driver_id: str, shipment_id: str, otp: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    if shipment.get("delivery_otp") != otp:
+        raise HTTPException(status_code=400, detail="Invalid Delivery OTP")
+        
+    if shipment.get("payment_status") != "paid":
+        raise HTTPException(status_code=400, detail="Payment Pending: Manager must confirm payment before delivery release.")
+        
+    # Update Shipment
+    shipments_db.update(shipment_id, {
+        "status": "delivered",
+        "stage": "Delivered",
+        "actual_delivery": datetime.utcnow().isoformat() + "Z"
+    })
+    
+    # Update Driver Wallet
+    driver = drivers_db.get_by_id(driver_id)
+    payout = shipment.get("finance", {}).get("driver_payout", 0)
+    food = shipment.get("finance", {}).get("food_allowance", 0)
+    total_credit = payout + food
+    
+    new_balance = driver.get("wallet_balance", 0) + total_credit
+    new_total = driver.get("total_earnings", 0) + total_credit
+    
+    drivers_db.update(driver_id, {
+        "wallet_balance": new_balance,
+        "total_earnings": new_total,
+        "monthly_earnings": driver.get("monthly_earnings", 0) + total_credit
+    })
+    
+    return {"message": f"Delivery Complete! ₹{total_credit} credited to your wallet.", "new_balance": new_balance}
+
+@router.post("/{driver_id}/request-funds")
+def request_funds(driver_id: str, data: dict):
+    # amount, type (fuel, food)
+    driver = drivers_db.get_by_id(driver_id)
+    amount = data.get("amount", 0)
+    f_type = data.get("type", "fuel")
+    
+    from backend.models import Alert
+    alerts_db = JSONDatabase("alerts")
+    new_alert = Alert(
+        company_id=driver["company_id"],
+        type="finance",
+        description=f"FUND REQUEST: Driver {driver['name']} requested ₹{amount} for {f_type.upper()}.",
+        severity="medium",
+        suggestion="Review and approve via Paisa-Fast portal.",
+        driver_id=driver_id
+    )
+    alerts_db.insert(new_alert.model_dump())
+    return {"message": "Request sent to manager."}

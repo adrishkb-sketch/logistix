@@ -105,6 +105,17 @@
                     <div class="info-item"><small>Vehicle</small><strong id="det-vehicle">---</strong></div>
                 </div>
 
+                <div id="payment-box" class="glass-card" style="display:none; margin-top:20px; padding:20px; border-left:4px solid var(--primary); background:rgba(79, 140, 255, 0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <small style="color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:bold;">Amount Due</small>
+                            <h2 id="det-amount" style="margin:5px 0 0 0; color:var(--primary);">₹ 0.00</h2>
+                            <p style="font-size:0.8rem; color:var(--text-muted); margin:5px 0 0 0;">Pay this amount to clear the shipment for final delivery.</p>
+                        </div>
+                        <button class="btn-primary" id="btn-pay-now" style="width:auto; padding:12px 24px;" onclick="simulatePayment()">Pay Now</button>
+                    </div>
+                </div>
+
                 <div id="det-otp-box" class="otp-display" style="display:none;">
                     <small style="text-transform:uppercase; letter-spacing:1px; font-weight:800;">Delivery Verification OTP</small>
                     <div id="det-otp" class="otp-code">0000</div>

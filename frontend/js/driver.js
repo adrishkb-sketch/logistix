@@ -19,6 +19,45 @@ let simIndex = 0;
 let hasSetInitialView = false;
 let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count_driver') || '-1');
 let currentActiveTab = 'dash';
+let isSimulationMode = false;
+let isHalted = false;
+
+async function checkSimulationStatus() {
+    try {
+        const status = await apiCall('/simulation/mode/status');
+        isSimulationMode = status.active;
+        const ctrl = document.getElementById('simulation-ctrl');
+        if (ctrl) ctrl.style.display = isSimulationMode ? 'block' : 'none';
+        
+        if (isSimulationMode) {
+            // Check if this driver is halted
+            isHalted = status.halted_drivers.includes(dId);
+            const haltBtn = document.getElementById('sim-halt-btn');
+            if (haltBtn) {
+                haltBtn.innerText = isHalted ? "Resume Movement 🚛" : "Emergency Halt 🛑";
+                haltBtn.style.background = isHalted ? "var(--success)" : "var(--danger)";
+            }
+        }
+    } catch (e) {}
+}
+
+async function toggleSimHalt() {
+    try {
+        const res = await apiCall(`/simulation/mode/toggle-halt/${dId}`, 'POST');
+        isHalted = res.halted;
+        const haltBtn = document.getElementById('sim-halt-btn');
+        if (haltBtn) {
+            haltBtn.innerText = isHalted ? "Resume Movement 🚛" : "Emergency Halt 🛑";
+            haltBtn.style.background = isHalted ? "var(--success)" : "var(--danger)";
+        }
+        showNotification(isHalted ? "Vehicle Halted. All shipment timers paused." : "Movement Resumed.", isHalted ? "error" : "success");
+    } catch (e) {
+        alert("Failed to toggle halt status.");
+    }
+}
+
+// Initial status check
+setTimeout(checkSimulationStatus, 1000);
 
 // Stationary Tracking Variables
 let lastMovedTimestamp = Date.now();
@@ -37,6 +76,7 @@ setInterval(() => {
         if (activeSection.id === 'active-tab') loadActiveMission();
         else loadDashStats();
     }
+    checkSimulationStatus();
 }, 30000);
 
 // Background Notification Poller (Snappier for Chat)
@@ -74,7 +114,7 @@ setInterval(async () => {
 
 function switchDriverTab(tab) {
     currentActiveTab = tab;
-    const tabs = ['dash', 'active', 'chat', 'completed', 'profile'];
+    const tabs = ['dash', 'active', 'chat', 'completed', 'wallet', 'profile'];
     tabs.forEach(t => {
         const el = document.getElementById(`${t}-tab`);
         const btn = document.getElementById(`btn-tab-${t}`);
@@ -84,6 +124,7 @@ function switchDriverTab(tab) {
             btn.style.color = t === tab ? '#fff' : 'var(--muted)';
         }
     });
+    if (tab === 'wallet') loadWallet();
 
     if (tab === 'dash') loadDashStats();
     if (tab === 'profile') loadProfileData();
@@ -1359,3 +1400,73 @@ async function applyOfficialBorders(mapInstance) {
 }
 
 loadMissions();
+
+async function loadWallet() {
+    try {
+        const driverId = localStorage.getItem('driver_id');
+        const stats = await apiCall(`/driver/wallet/${driverId}`);
+        
+        document.getElementById('w-balance').innerText = `₹ ${stats.balance.toLocaleString()}`;
+        document.getElementById('w-today').innerText = `₹ ${stats.today_earning.toLocaleString()}`;
+        document.getElementById('w-bonus').innerText = `₹ ${stats.total_bonuses.toLocaleString()}`;
+        
+        const tList = document.getElementById('wallet-transactions');
+        tList.innerHTML = '';
+        stats.transactions.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'glass-card';
+            div.style.padding = '12px';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.background = 'rgba(255,255,255,0.03)';
+            
+            div.innerHTML = `
+                <div>
+                    <div style="font-weight:bold; font-size:0.9rem;">${t.desc}</div>
+                    <small style="color:var(--text-muted)">${new Date(t.timestamp).toLocaleString()}</small>
+                </div>
+                <div style="text-align:right;">
+                    <div style="color:${t.amount > 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:bold;">${t.amount > 0 ? '+' : ''}₹${t.amount}</div>
+                    <small style="color:var(--text-muted)">${t.type}</small>
+                </div>
+            `;
+            tList.appendChild(div);
+        });
+    } catch (e) {
+        console.error("Wallet Error:", e);
+    }
+}
+
+async function withdrawMoney() {
+    alert("Withdrawal request initiated. Money will be credited to your linked UPI/Bank account within 30 minutes.");
+}
+
+async function requestFunds() {
+    const amt = document.getElementById('fund-req-amount').value;
+    const type = document.getElementById('fund-req-type').value;
+    if (!amt || amt <= 0) return alert("Enter valid amount");
+    
+    try {
+        await apiCall(`/driver/${localStorage.getItem('driver_id')}/request-funds`, 'POST', {
+            amount: parseFloat(amt), type: type
+        });
+        alert(`Request for ₹${amt} sent to Manager!`);
+        document.getElementById('fund-req-amount').value = '';
+    } catch (e) {
+        alert("Failed to send request.");
+    }
+}
+
+async function completeDelivery(shipmentId) {
+    const otp = prompt("Enter the 4-digit Delivery OTP provided by the customer:");
+    if (!otp) return;
+    try {
+        const res = await apiCall(`/driver/${localStorage.getItem('driver_id')}/complete-delivery/${shipmentId}?otp=${otp}`, 'POST');
+        alert(res.message);
+        loadMissions();
+        loadWallet();
+    } catch(e) {
+        alert("Error: " + e.message + ". If payment is pending, the customer must pay first.");
+    }
+}

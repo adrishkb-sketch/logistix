@@ -1,12 +1,86 @@
 from backend.database import JSONDatabase
 import random
-from backend.models import Alert
+from backend.models import Alert, ShipmentEvent, Message
+from datetime import datetime
 
 alerts_db = JSONDatabase("alerts")
 shipments_db = JSONDatabase("shipments")
 
-alerts_db = JSONDatabase("alerts")
-shipments_db = JSONDatabase("shipments")
+VULNERABLE_VEHICLE_TYPES = ["bike", "scooty", "bicycle"]
+
+def check_heatwave_safety(shipment: dict, vehicle: dict):
+    """
+    If a heatwave cell is active and the vehicle is a bike/scooty, stop the driver
+    and log the event in the shipment logs with a manager alert.
+    """
+    from backend.services.route_engine import haversine
+    
+    v_type = vehicle.get("type", "").lower()
+    if not any(t in v_type for t in VULNERABLE_VEHICLE_TYPES):
+        return  # Only applies to vulnerable vehicles
+
+    weather_db = JSONDatabase("weather_cells")
+    cells = weather_db.get_all()
+    
+    current_loc = shipment.get("current_location", {})
+    if not current_loc:
+        return
+    lat, lng = current_loc.get("lat", 0), current_loc.get("lng", 0)
+    
+    for cell in cells:
+        condition = (cell.get("condition") or cell.get("type") or "").lower()
+        if "heatwave" not in condition and "heat" not in condition:
+            continue
+        
+        dist = haversine(lat, lng, cell.get("lat", 0), cell.get("lng", 0))
+        if dist <= cell.get("radius", 50):
+            # Check if alert already exists
+            existing = [
+                a for a in alerts_db.get_all()
+                if a.get("shipment_id") == shipment["id"]
+                and a.get("type") == "heatwave_safety"
+                and a.get("status") == "active"
+            ]
+            if existing:
+                return
+            
+            temp = cell.get("temp", 42)
+            s = shipment
+            loc = current_loc
+            
+            alert = Alert(
+                company_id=s.get("company_id"),
+                type="weather",
+                description=f"CRITICAL HEATWAVE: {temp}°C detected in {loc.get('address', 'current zone')}.",
+                severity="high",
+                suggestion="MANDATORY SAFETY STOP: Halt operations immediately. Move to shade. Resume only after 6:00 PM.",
+                shipment_id=s["id"],
+                driver_id=s.get("assigned_driver_id")
+            )
+            alerts_db.insert(alert.model_dump())
+            
+            # Log to shipment history
+            log = ShipmentEvent(
+                status="safety_stop",
+                message=f"🛡️ SAFETY PROTOCOL: Extreme temperature ({temp}°C) detected in transit zone. Mandatory stop enforced for vulnerable vehicle type ({v_type}). Operations will resume when conditions are safe (expected after 6:00 PM).",
+                reason="Heatwave Protection",
+                location=loc
+            )
+            history = s.get("logs", [])
+            history.append(log.model_dump())
+            shipments_db.update(s["id"], {"logs": history, "stage": "Safety Halt: Heatwave"})
+
+            # Send automated message to driver
+            messages_db = JSONDatabase("messages")
+            msg = Message(
+                company_id=s.get("company_id"),
+                shipment_id=s["id"],
+                sender_id=s.get("company_id"),
+                receiver_id=s.get("assigned_driver_id"),
+                content="⚠️ [SYSTEM ALERT]: Extreme heat detected ({}°C). Mandatory safety stop for your vehicle type. Please find shade and stop operations immediately for your safety. Resume after temperature drops (suggested 6 PM).".format(temp),
+                sender_type="manager"
+            )
+            messages_db.insert(msg.model_dump())
 
 def check_weather_alerts(shipment: dict, lat: float, lng: float):
     """

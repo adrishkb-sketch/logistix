@@ -18,12 +18,60 @@ let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count') || '-1')
 let currentActiveSection = 'analytics';
 let selectedDriverChatId = null;
 let globalDrivers = []; // For searching
+let isSimulationMode = false;
+
+async function checkSimulationStatus() {
+    try {
+        const status = await apiCall('/simulation/mode/status');
+        isSimulationMode = status.active;
+        const toggle = document.getElementById('global-sim-toggle');
+        const container = document.getElementById('sim-mode-toggle-container');
+        if (toggle) toggle.checked = isSimulationMode;
+        if (container) {
+            if (isSimulationMode) container.classList.add('active');
+            else container.classList.remove('active');
+        }
+    } catch (e) {}
+}
+
+async function toggleGlobalSimulationMode(active) {
+    const container = document.getElementById('sim-mode-toggle-container');
+    try {
+        const endpoint = active ? '/simulation/mode/start' : '/simulation/mode/stop';
+        const res = await apiCall(endpoint, 'POST');
+        isSimulationMode = active;
+        
+        if (active) {
+            container.classList.add('active');
+            alert("🚀 Simulation Mode ACTIVE. The platform is now in a Sandbox state. State snapshot created.");
+        } else {
+            container.classList.remove('active');
+            alert("🛑 Simulation Mode DEACTIVATED. System has been reverted to the previous normal state.");
+        }
+        
+        // Full refresh
+        loadShipments();
+        loadInsights();
+        loadMapData();
+        if (typeof renderDriverPointsSummary === 'function') renderDriverPointsSummary();
+        if (typeof loadDriversAndVehicles === 'function') loadDriversAndVehicles();
+        
+    } catch (e) {
+        console.error("Simulation toggle failed:", e);
+        document.getElementById('global-sim-toggle').checked = !active;
+        alert("Failed to toggle Simulation Mode. Ensure the backend is running.");
+    }
+}
+
+// Call check status on init
+setTimeout(checkSimulationStatus, 1000);
 
 setInterval(async () => {
     const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
     if (activeSection && activeSection.id === 'shipments') {
         loadShipments();
     }
+    checkSimulationStatus();
     
     // Background message check for notifications
     try {
@@ -56,6 +104,38 @@ setInterval(async () => {
         }
     } catch(e) {}
 }, 5000); // Check every 5s for snappier feel
+
+// Poll for pending driver fund requests → update Paisa-Fast badge
+setInterval(async () => {
+    try {
+        const companyId = localStorage.getItem('manager_id');
+        if (!companyId) return;
+        const fundRequests = await apiCall(`/manager/finance/fund-requests?company_id=${companyId}`);
+        const badge = document.getElementById('paisa-badge');
+        const link = document.getElementById('nav-link-paisa-fast');
+        if (fundRequests.length > 0 && currentActiveSection !== 'paisa-fast') {
+            if (badge) {
+                badge.style.display = 'inline-block';
+                badge.style.background = 'var(--danger)';
+                badge.style.width = '8px';
+                badge.style.height = '8px';
+                badge.style.borderRadius = '50%';
+                badge.style.border = '2px solid var(--bg)';
+                badge.style.marginLeft = '4px';
+            }
+            if (link) {
+                link.style.fontWeight = '900';
+                link.style.color = 'var(--text)';
+            }
+        } else {
+            if (badge) badge.style.display = 'none';
+            if (link) {
+                link.style.fontWeight = '';
+                link.style.color = '';
+            }
+        }
+    } catch(e) {}
+}, 8000); // Check every 8s
 
 function initMap() {
     // Default to a central location (e.g., India center)
@@ -419,11 +499,19 @@ async function drawRouteWithTraffic(start, end) {
 
 function showSection(id) {
     currentActiveSection = id;
-    const sections = ['analytics', 'warehouses', 'shipments', 'drivers', 'weather', 'leaderboard', 'messages', 'verifications', 'safety', 'ledger', 'oracle', 'strategy-plan', 'network-resilience', 'system'];
+    const sections = ['analytics', 'warehouses', 'shipments', 'drivers', 'weather', 'leaderboard', 'messages', 'verifications', 'safety', 'ledger', 'oracle', 'fuel-oracle', 'paisa-fast', 'strategy-plan', 'network-resilience', 'system'];
     sections.forEach(s => {
         const el = document.getElementById(s);
         if (el) el.style.display = s === id ? 'block' : 'none';
     });
+
+    if (id === 'fuel-oracle') {
+        loadFuelPrices();
+        initFuelTrendChart();
+    }
+    if (id === 'paisa-fast') {
+        initFintechOracle();
+    }
 
     // Update nav links
     document.querySelectorAll('.nav-link').forEach(link => {
@@ -486,10 +574,11 @@ function logout() {
 async function loadInsights() {
     try {
         const container = document.getElementById('alerts-container');
-        const [alerts, stats, cascade] = await Promise.all([
+        const [alerts, stats, cascade, pl] = await Promise.all([
             apiCall(`/tracking/alerts/active?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/dashboard/stats?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/manager/analytics/cascade?company_id=${localStorage.getItem('manager_id')}`)
+            apiCall(`/manager/analytics/cascade?company_id=${localStorage.getItem('manager_id')}`),
+            apiCall(`/manager/finance/p-and-l?company_id=${localStorage.getItem('manager_id')}`).catch(() => ({ net_profit: 0 }))
         ]);
         
         // Update Stats Grid
@@ -499,6 +588,9 @@ async function loadInsights() {
         document.getElementById('stat-drivers').innerText = stats.total_drivers;
         document.getElementById('stat-warehouses').innerText = stats.total_warehouses;
         document.getElementById('stat-vehicles').innerText = stats.total_vehicles;
+        if (document.getElementById('stat-profits')) {
+            document.getElementById('stat-profits').innerText = `₹ ${(pl.net_profit || 0).toLocaleString()}`;
+        }
 
         // Render Charts & Cascade
         renderManagerCharts(stats);
@@ -1287,9 +1379,19 @@ async function openTrackModal(shipmentId) {
                     const data = await res.json();
                     if(data.routes && data.routes[0]) {
                         const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                        let color = '#3182ce'; // Blue
-                        if (seg.status === 'delivered') color = '#a0aec0'; // Grey out completed portions
-                        const pline = L.polyline(coords, {color: color, weight: 4, opacity: 0.8}).addTo(trackMap);
+                        let color = '#3182ce'; // Default Blue
+                        
+                        // Smart Traffic Coloring
+                        if (s.performance_stats && s.performance_stats.traffic) {
+                            color = s.performance_stats.traffic.color;
+                        }
+
+                        if (seg.status === 'delivered') color = '#a0aec0'; 
+                        const pline = L.polyline(coords, {color: color, weight: 6, opacity: 0.85}).addTo(trackMap);
+                        
+                        if (s.performance_stats && s.performance_stats.traffic && s.performance_stats.traffic.level === 'Heavy') {
+                            pline.setStyle({dashArray: '10, 10'}); // Visual warning for heavy traffic
+                        }
                         trackMarkers.push(pline);
                     }
                 } catch(e) {}
@@ -1850,24 +1952,40 @@ window.renderVehiclesTable = function() {
 
     filtered.forEach(v => {
         const baseWh = globalWarehouses.find(w => w.id === v.base_warehouse_id);
+        const activeShipment = globalShipments.find(s => s.assigned_vehicle_id === v.id && (s.status === 'assigned' || s.status === 'in_transit'));
+        
         let healthColor = v.vehicle_health_score > 80 ? 'var(--success)' : (v.vehicle_health_score > 60 ? 'var(--warning)' : 'var(--danger)');
         
         let statusTag = '';
         if (v.status === 'maintenance') statusTag = `<span class="status-pill" style="background:var(--danger)22; color:var(--danger); font-size:0.6rem;">MAINTENANCE</span>`;
-        else if (v.status === 'in_transit') statusTag = `<span class="status-pill" style="background:var(--primary)22; color:var(--primary); font-size:0.6rem;">IN-TRANSIT</span>`;
+        else if (v.status === 'in_transit' || activeShipment) statusTag = `<span class="status-pill" style="background:var(--primary)22; color:var(--primary); font-size:0.6rem;">ON-TRIP</span>`;
         else statusTag = `<span class="status-pill" style="background:var(--success)22; color:var(--success); font-size:0.6rem;">AVAILABLE</span>`;
 
+        let destInfo = '<span style="color:var(--text-muted)">Stationary</span>';
+        if (activeShipment) {
+            destInfo = `<div style="font-size:0.8rem; color:var(--primary);"><b>Dest:</b> ${activeShipment.drop_address || activeShipment.drop.address || 'Target Hub'}</div>`;
+            
+            // Check if it's a back-haul (returning to base)
+            if (baseWh && activeShipment.drop) {
+                // Approximate check if heading towards base (we don't have JS haversine yet, so we'll check address or IDs)
+                if (activeShipment.drop_warehouse_id === v.base_warehouse_id) {
+                    destInfo += `<span class="badge" style="background:var(--success); color:white; font-size:0.6rem; padding:2px 6px; margin-top:4px; display:inline-block;">🏠 BACK-HAUL</span>`;
+                }
+            }
+        }
+
         vtbody.innerHTML += `<tr>
-            <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || 'ID: ' + v.id.substring(0,8)}</small><br>${statusTag}</td>
+            <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || 'ID: ' + v.id.substring(0,8)}</small></td>
             <td>${v.number_plate || '<span style="color:var(--text-muted)">Not Set</span>'}</td>
             <td><span style="color:${healthColor}; font-weight:bold;">${v.vehicle_health_score || 100}%</span></td>
             <td>${v.capacity}kg<br><small>Eff: ${v.fuel_efficiency}km/l</small></td>
             <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
+            <td>${destInfo}</td>
+            <td>${statusTag}</td>
             <td>
-                <div style="display:flex; align-items:center; gap:12px;">
+                <div style="display:flex; align-items:center; gap:8px;">
                     ${v.assigned_driver_id ? `<span class="badge" style="background:var(--success)22; color:var(--success); margin:0;">Linked</span>` : `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
-                    <button class="btn-primary btn-accent" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}', '${v.base_warehouse_id}', '${v.fuel_efficiency}')" title="Edit">✏️</button>
-                    <button class="btn-primary btn-danger" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="deleteItem('vehicles', '${v.id}')" title="Delete">🗑️</button>
+                    <button class="btn-primary btn-accent" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}', '${v.base_warehouse_id}', '${v.fuel_efficiency}')" title="Edit">✏️</button>
                 </div>
             </td>
         </tr>`;
@@ -2065,6 +2183,48 @@ function initWeatherMap() {
 
     loadWeatherFleetData();
     setInterval(loadWeatherFleetData, 10000); // Update every 10s
+
+    // Make simulation panels draggable
+    makeDraggable(document.getElementById('active-sims-container'));
+    makeDraggable(document.getElementById('simulation-panel'));
+}
+
+function makeDraggable(el) {
+    if (!el) return;
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    const header = el.querySelector('h3, h4'); 
+    if (header) {
+        header.onmousedown = dragMouseDown;
+    } else {
+        el.onmousedown = dragMouseDown;
+    }
+
+    function dragMouseDown(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
+
+    function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        el.style.top = (el.offsetTop - pos2) + "px";
+        el.style.left = (el.offsetLeft - pos1) + "px";
+        el.style.right = 'auto'; 
+        el.style.bottom = 'auto';
+    }
+
+    function closeDragElement() {
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
 }
 
 function changeMapLayer() {
@@ -2082,7 +2242,7 @@ function toggleDrawMode() {
         currentDrawHandler.disable();
     }
     
-    if (type === 'cyclone' || type === 'flood') {
+    if (type === 'cyclone' || type === 'flood' || type === 'heatwave' || type === 'earthquake' || type === 'riot' || type === 'hail') {
         currentDrawHandler = new L.Draw.Circle(weatherMap, drawControl.options.draw.circle);
     } else {
         currentDrawHandler = new L.Draw.Polyline(weatherMap, drawControl.options.draw.polyline);
@@ -2675,18 +2835,53 @@ async function openLogsModal(shipmentId) {
         
         if (shipment.logs && shipment.logs.length > 0) {
             const sortedLogs = [...shipment.logs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
-            timeline.innerHTML = sortedLogs.map(log => `
-                <div class="timeline-event ${log.status === 'delivered' ? 'delivered' : ''}">
-                    <div class="timeline-time">${new Date(log.timestamp).toLocaleString()}</div>
-                    <div class="timeline-msg">${log.message}</div>
-                    ${log.reason ? `<div class="timeline-reason">Reason: ${log.reason}</div>` : ''}
-                    ${log.photo_url ? `
-                        <div style="margin-top:10px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
-                            <img src="${log.photo_url}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open('${log.photo_url}')">
+            
+            const statusMeta = {
+                'pending':        { icon: '📥', color: '#94a3b8', label: 'Order Received' },
+                'assigned':       { icon: '🚛', color: '#3b82f6', label: 'Fleet Assigned' },
+                'in_transit':     { icon: '🛤️', color: '#6366f1', label: 'In Transit' },
+                'at_warehouse':   { icon: '🏭', color: '#8b5cf6', label: 'Arrived at Hub' },
+                'released':       { icon: '📤', color: '#0ea5e9', label: 'Dispatched from Hub' },
+                'delivered':      { icon: '✨', color: '#10b981', label: 'Delivered' },
+                'safety_stop':    { icon: '🛡️', color: '#f59e0b', label: 'Safety Halt' },
+                'delayed':        { icon: '⏳', color: '#f59e0b', label: 'Delayed' },
+                'breakdown':      { icon: '🆘', color: '#ef4444', label: 'Vehicle Breakdown' },
+                'disputed':       { icon: '🚫', color: '#dc2626', label: 'Disputed' },
+                'split':          { icon: '🔗', color: '#a855f7', label: 'Route Optimized' }
+            };
+
+            timeline.innerHTML = sortedLogs.map((log, idx) => {
+                const meta = statusMeta[log.status] || { icon: '📍', color: '#94a3b8', label: 'System Update' };
+                const d = new Date(log.timestamp);
+                const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const isLast = idx === sortedLogs.length - 1;
+
+                return `
+                <div style="display:flex; gap:16px; padding-bottom:${isLast ? '10px' : '24px'}; position:relative;">
+                    <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:36px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:${meta.color}15; border:1px solid ${meta.color}33; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">
+                            ${meta.icon}
                         </div>
-                    ` : ''}
-                </div>
-            `).join('');
+                        ${!isLast ? `<div style="width:2px; flex:1; background:rgba(255,255,255,0.05); margin-top:6px;"></div>` : ''}
+                    </div>
+                    <div style="flex:1; padding-top:2px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:${meta.color};">${meta.label}</span>
+                            <span style="font-size:0.65rem; color:var(--text-muted);">${dateStr}, ${timeStr}</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.03);">
+                            <p style="margin:0; font-size:0.85rem; color:var(--text); opacity:0.9;">${log.message}</p>
+                            ${log.reason ? `<div style="margin-top:5px; font-size:0.75rem; color:var(--text-muted); font-style:italic; border-top:1px solid rgba(255,255,255,0.03); padding-top:5px;">Note: ${log.reason}</div>` : ''}
+                            ${log.photo_url ? `
+                                <div style="margin-top:10px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
+                                    <img src="${log.photo_url}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open('${log.photo_url}')">
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
         } else {
             timeline.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem;">No history available.</p>';
         }
@@ -2839,9 +3034,12 @@ async function systemReset(type) {
     if (!confirm(`CRITICAL WARNING: Are you sure you want to delete all ${type} data? This action is permanent and cannot be reversed.`)) {
         return;
     }
+
+    const password = prompt("Enter MANAGER PASSWORD to authorize this destructive action:");
+    if (!password) return;
     
     try {
-        const res = await apiCall(`/manager/system/reset-${type}?company_id=${localStorage.getItem('manager_id')}`, 'POST');
+        const res = await apiCall(`/manager/system/reset-${type}`, 'POST', { manager_password: password });
         alert(res.message);
         // Reload the UI
         loadShipments();
@@ -2952,6 +3150,7 @@ async function runOracleSimulation() {
     const green = parseInt(document.getElementById('param-green').value);
     const auto = parseInt(document.getElementById('param-auto').value);
     const incentive = parseInt(document.getElementById('param-incentive').value);
+    const budget = parseInt(document.getElementById('param-budget').value) * 100000;
     
     // UI Loading state
     document.getElementById('oracle-placeholder').style.display = 'none';
@@ -2972,11 +3171,12 @@ async function runOracleSimulation() {
             fleet_expansion: fleet,
             green_policy: green,
             automation_level: auto,
-            driver_incentive: incentive
+            driver_incentive: incentive,
+            budget: budget
         });
         
         lastOracleRes = res;
-        lastOracleRes.params = { months, wh, whLoc, fleet, green, auto, incentive };
+        lastOracleRes.params = { months, wh, whLoc, fleet, green, auto, incentive, budget };
         
         // Remove loading
         const loader = document.getElementById('oracle-loading');
@@ -3078,6 +3278,14 @@ async function loadStrategyPlan() {
 
         // Fetch current live stats to compare
         const currentStats = await apiCall('/manager/system/baseline-stats?company_id=' + localStorage.getItem('manager_id'));
+
+        // Fetch Forecast
+        try {
+            const forecast = await apiCall('/manager/strategy/forecast?company_id=' + localStorage.getItem('manager_id'));
+            document.getElementById('sf-predicted').innerText = `₹ ${forecast.predicted_revenue.toLocaleString()}`;
+            document.getElementById('sf-confidence').innerText = `${forecast.confidence_score * 100}% Confidence`;
+            document.getElementById('sf-risk').innerText = `Risks: ${forecast.risk_factors.join(', ')}`;
+        } catch(e) {}
 
         document.getElementById('target-list').innerHTML = `
             ${params.fleet > 0 ? `<p style="margin-bottom:12px; font-size:1rem;">• Fleet Expansion: <b style="color:var(--primary)">+${params.fleet}%</b></p>` : ''}
@@ -3531,4 +3739,215 @@ async function sendBroadcast() {
         btn.disabled = false;
         btn.innerText = originalText;
     }
+}
+
+async function loadFuelPrices() {
+    try {
+        const prices = await apiCall('/fuel/prices');
+        const list = document.getElementById('fuel-price-list');
+        list.innerHTML = '';
+        
+        Object.keys(prices).forEach(state => {
+            const data = prices[state];
+            const div = document.createElement('div');
+            div.className = 'glass-card';
+            div.style.padding = '15px';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.background = 'rgba(255,255,255,0.03)';
+            
+            // Color based on price
+            const isHigh = data.diesel > 90;
+            const priceColor = isHigh ? 'var(--danger)' : 'var(--success)';
+            
+            div.innerHTML = `
+                <div>
+                    <h4 style="margin:0;">${state}</h4>
+                    <small style="color:var(--text-muted)">Petrol: ₹${data.petrol}</small>
+                </div>
+                <div style="text-align:right;">
+                    <div style="color:${priceColor}; font-weight:bold;">₹${data.diesel}</div>
+                    <small style="color:var(--text-muted)">Diesel</small>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    } catch (e) {
+        console.error("Failed to load fuel prices", e);
+    }
+}
+
+async function runFuelOptimization() {
+    const statesInput = document.getElementById('route-states-input').value;
+    if (!statesInput) return alert("Please enter states in your route.");
+    
+    const states = statesInput.split(',').map(s => s.trim());
+    
+    try {
+        const result = await apiCall('/fuel/optimize', 'POST', { states });
+        const resDiv = document.getElementById('fuel-optimization-result');
+        resDiv.style.display = 'block';
+        
+        document.getElementById('opt-best-state').innerText = `Optimal Stop: ${result.best_state}`;
+        document.getElementById('opt-suggestion').innerText = result.suggestion;
+        document.getElementById('opt-savings').innerText = result.potential_savings_per_liter;
+        
+        // Also update total savings mock
+        document.getElementById('fuel-savings-total').innerText = `₹${(result.potential_savings_per_liter * 500).toLocaleString()}`;
+    } catch (e) {
+        alert("Optimization failed.");
+    }
+}
+
+let fuelTrendChart = null;
+function initFuelTrendChart() {
+    const ctx = document.getElementById('fuelTrendChart').getContext('2d');
+    if (fuelTrendChart) fuelTrendChart.destroy();
+    
+    const days = Array.from({length: 30}, (_, i) => `Day ${i+1}`);
+    const data = Array.from({length: 30}, () => 85 + Math.random() * 10);
+    
+    fuelTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [{
+                label: 'Avg Diesel Price (India)',
+                data: data,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9aa4b2' } },
+                x: { grid: { display: false }, ticks: { display: false } }
+            }
+        }
+    });
+}
+
+// PAISA-FAST FINTECH ORACLE
+let fintechChart = null;
+async function initFintechOracle() {
+    try {
+        const stats = await apiCall('/manager/fintech-stats?company_id=' + localStorage.getItem('manager_id'));
+        const pl = await apiCall('/manager/finance/p-and-l?company_id=' + localStorage.getItem('manager_id'));
+        
+        document.getElementById('fintech-daily-revenue').innerText = `₹ ${stats.daily_revenue.toLocaleString()}`;
+        document.getElementById('fintech-cod').innerText = `₹ ${(stats.digital_escrow || 0).toLocaleString()}`;
+        document.getElementById('fintech-unpaid').innerText = `₹ ${stats.unpaid_invoices.toLocaleString()}`;
+        document.getElementById('fintech-profit').innerText = `₹ ${pl.net_profit.toLocaleString()}`;
+
+        // Render Settlements
+        const sList = document.getElementById('fintech-settlement-list');
+        sList.innerHTML = '';
+        stats.recent_settlements.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'glass-card';
+            div.style.padding = '12px'; div.style.display = 'flex'; div.style.justifyContent = 'space-between';
+            div.style.background = 'rgba(255,255,255,0.03)';
+            div.innerHTML = `
+                <div><div style="font-weight:bold; font-size:0.9rem;">${s.desc}</div><small style="color:var(--text-muted)">${new Date(s.timestamp).toLocaleTimeString()}</small></div>
+                <div style="text-align:right;"><div style="color:var(--success); font-weight:bold;">+₹${s.amount}</div><small style="color:var(--text-muted)">${s.type}</small></div>
+            `;
+            sList.appendChild(div);
+        });
+
+        // Payout Table
+        const pTable = document.getElementById('fintech-payout-table');
+        pTable.innerHTML = '';
+        const allDrivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
+        allDrivers.filter(d => (d.wallet_balance || 0) > 0).forEach(d => {
+            pTable.innerHTML += `<tr>
+                <td><b>${d.name}</b><br><small style="color:var(--text-muted)">${d.system_id}</small></td>
+                <td style="color:var(--success); font-weight:bold;">₹${(d.wallet_balance || 0).toLocaleString()}</td>
+                <td><button class="btn-primary" style="padding:5px 10px; font-size:0.7rem; background:var(--success);" onclick="settlePayout('${d.id}')">Approve & Pay</button></td>
+            </tr>`;
+        });
+
+        // Payment Audit (Unpaid shipments)
+        const paTable = document.getElementById('fintech-payment-audit-table');
+        paTable.innerHTML = '';
+        const allShips = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`);
+        allShips.filter(s => s.payment_status === 'unpaid').forEach(s => {
+            paTable.innerHTML += `<tr>
+                <td><b>${s.description}</b><br><small style="color:var(--text-muted)">${s.id.substring(0,8)}</small></td>
+                <td>₹${(s.finance?.suggested_price || 0).toLocaleString()}</td>
+                <td><span class="badge" style="background:var(--warning)22; color:var(--warning);">UNPAID</span></td>
+                <td><button class="btn-primary" style="padding:5px 10px; font-size:0.7rem; background:var(--accent);" onclick="confirmCustomerPayment('${s.id}')">Mark Paid</button></td>
+            </tr>`;
+        });
+
+        // Escrow Table
+        const eTable = document.getElementById('fintech-escrow-table');
+        eTable.innerHTML = '';
+        stats.escrow_contracts.forEach(c => {
+            eTable.innerHTML += `<tr><td style="font-family:monospace; font-size:0.75rem;">${c.id}</td><td>${c.counterparty}</td><td>₹${c.value.toLocaleString()}</td><td><span class="badge" style="background:var(--primary)22; color:var(--primary);">${c.status}</span></td><td>${c.eta}</td></tr>`;
+        });
+
+        // Revenue Chart
+        const ctx = document.getElementById('fintechRevenueChart').getContext('2d');
+        if (fintechChart) fintechChart.destroy();
+        fintechChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: stats.chart_data.labels,
+                datasets: [{ label: 'Revenue Velocity', data: stats.chart_data.values, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.4 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9aa4b2' } }, x: { grid: { display: false }, ticks: { color: '#9aa4b2' } } } }
+        });
+
+        // Fund Requests Table
+        const frTable = document.getElementById('fintech-fund-requests-table');
+        if (frTable) {
+            const fundRequests = await apiCall(`/manager/finance/fund-requests?company_id=${localStorage.getItem('manager_id')}`);
+            frTable.innerHTML = '';
+            if (fundRequests.length === 0) {
+                frTable.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No pending requests</td></tr>';
+            } else {
+                fundRequests.forEach(r => {
+                    frTable.innerHTML += `<tr>
+                        <td><b>${r.driver_name}</b></td>
+                        <td style="color:var(--warning); font-weight:bold;">₹${r.amount.toLocaleString()}</td>
+                        <td><span class="badge" style="background:rgba(255,165,0,0.15); color:var(--warning);">${r.fund_type}</span></td>
+                        <td><button class="btn-primary" style="padding:5px 10px; font-size:0.7rem; background:var(--success);" onclick="approveFundRequest('${r.alert_id}')">Approve Transfer</button></td>
+                    </tr>`;
+                });
+            }
+        }
+
+    } catch (e) { console.error("Fintech Oracle Error:", e); }
+}
+
+async function settlePayout(driverId) {
+    if (!confirm("Are you sure you want to approve this payout? Ensure the transfer is done via your external banking system.")) return;
+    try {
+        await apiCall(`/manager/finance/approve-payout/${driverId}`, 'POST');
+        alert("Payout settled successfully. Driver wallet has been debited.");
+        initFintechOracle();
+    } catch (e) { alert("Failed to settle payout."); }
+}
+
+async function confirmCustomerPayment(shipmentId) {
+    try {
+        await apiCall(`/manager/finance/confirm-payment/${shipmentId}`, 'POST');
+        alert("Payment confirmed. Shipping lifecycle now cleared for delivery.");
+        initFintechOracle();
+    } catch (e) { alert("Failed to confirm payment."); }
+}
+
+async function approveFundRequest(alertId) {
+    if (!confirm("Approve this fund request? The amount will be instantly credited to the driver's wallet.")) return;
+    try {
+        const res = await apiCall(`/manager/finance/approve-fund-request/${alertId}`, 'POST');
+        alert(res.message);
+        initFintechOracle();
+    } catch (e) { alert("Failed to approve fund request: " + e.message); }
 }

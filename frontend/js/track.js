@@ -16,9 +16,20 @@ async function requestCustomerOTP() {
 
 async function verifyCustomerOTP() {
     const phone = document.getElementById('cust-phone').value.trim();
-    // Verify logic...
-    showPanel('list');
-    loadCustomerOrders(phone);
+    const otp = Array.from(document.querySelectorAll('.pin-box')).map(i => i.value).join('');
+    
+    if (otp.length < 4) return alert("Please enter the full OTP.");
+    
+    try {
+        const data = await apiCall('/auth/customer/verify-otp', 'POST', { phone, otp });
+        localStorage.setItem('tracking_token', data.session_token);
+        localStorage.setItem('tracking_phone', phone);
+        
+        showPanel('list');
+        renderOrderList(data.orders);
+    } catch (e) {
+        alert("Invalid OTP or session expired.");
+    }
 }
 
 function showPanel(panelId) {
@@ -27,14 +38,32 @@ function showPanel(panelId) {
     document.getElementById('detail-panel').style.display = panelId === 'detail' ? 'block' : 'none';
 }
 
-async function loadCustomerOrders(phone) {
+function renderOrderList(orders) {
+    const list = document.getElementById('orders-list');
+    if (!orders || orders.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:var(--muted);">No orders found for this number.</p>';
+        return;
+    }
+    
+    list.innerHTML = orders.map(s => `
+        <div class="glass-card order-card" onclick="viewOrder('${s.id}')">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h3 style="margin:0;">${s.description}</h3>
+                    <small style="color:var(--muted);">Order #${s.id.substring(0,8)}</small>
+                </div>
+                <span class="status-pill status-${s.status}">${s.status.toUpperCase()}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadCustomerOrders() {
     const list = document.getElementById('orders-list');
     list.innerHTML = '<p style="text-align:center;">Loading orders...</p>';
     
     try {
-        const allShipments = await apiCall('/shipments?company_id=all'); // Admin view or filter by phone
-        // In this demo, we filter by receiver_phone
-        const myOrders = allShipments.filter(s => s.receiver_phone === phone);
+        const myOrders = await apiCall('/auth/customer/shipments');
         
         if (myOrders.length === 0) {
             list.innerHTML = '<p style="text-align:center; color:var(--muted);">No orders found for this number.</p>';
@@ -74,9 +103,24 @@ async function viewOrder(id) {
         document.getElementById('det-loc').innerText = s.current_location ? `${s.current_location.lat.toFixed(2)}, ${s.current_location.lng.toFixed(2)}` : 'Pending';
         document.getElementById('det-vehicle').innerText = s.assigned_vehicle_id ? 'Vehicle Linked' : 'Awaiting Fleet';
         
-        // OTP for non-delivered
+        // Payment Box
+        const payBox = document.getElementById('payment-box');
+        const payBtn = document.getElementById('btn-pay-now');
+        if (s.status !== 'delivered' && s.payment_status === 'unpaid') {
+            payBox.style.display = 'block';
+            document.getElementById('det-amount').innerText = `₹ ${(s.finance?.suggested_price || 0).toLocaleString()}`;
+        } else if (s.payment_status === 'paid') {
+            payBox.style.display = 'block';
+            document.getElementById('det-amount').innerText = `PAID`;
+            document.getElementById('det-amount').style.color = 'var(--success)';
+            payBtn.style.display = 'none';
+        } else {
+            payBox.style.display = 'none';
+        }
+
+        // OTP for non-delivered AND PAID
         const otpBox = document.getElementById('det-otp-box');
-        if (s.status !== 'delivered') {
+        if (s.status !== 'delivered' && s.payment_status === 'paid') {
             otpBox.style.display = 'block';
             document.getElementById('det-otp').innerText = s.delivery_otp;
         } else {
@@ -91,15 +135,53 @@ async function viewOrder(id) {
             ratingBox.style.display = 'none';
         }
         
-        // Timeline
+        // Timeline — richly designed
         const timeline = document.getElementById('det-timeline');
-        timeline.innerHTML = (s.logs || []).reverse().map(log => `
-            <div class="timeline-step">
-                <div class="timeline-dot"></div>
-                <div style="font-weight:700; font-size:0.95rem;">${log.message}</div>
-                <div style="font-size:0.8rem; color:var(--muted);">${new Date(log.timestamp).toLocaleString()}</div>
-            </div>
-        `).join('');
+        const logs = (s.logs || []).slice().reverse();
+        
+        const statusMeta = {
+            'pending':        { icon: '📥', color: '#94a3b8', label: 'Order Received' },
+            'assigned':       { icon: '🚛', color: '#3b82f6', label: 'Fleet Assigned' },
+            'in_transit':     { icon: '🛤️', color: '#6366f1', label: 'In Transit' },
+            'at_warehouse':   { icon: '🏭', color: '#8b5cf6', label: 'Arrived at Hub' },
+            'released':       { icon: '📤', color: '#0ea5e9', label: 'Dispatched from Hub' },
+            'delivered':      { icon: '✨', color: '#10b981', label: 'Delivered' },
+            'safety_stop':    { icon: '🛡️', color: '#f59e0b', label: 'Safety Halt' },
+            'delayed':        { icon: '⏳', color: '#f59e0b', label: 'Delayed' },
+            'breakdown':      { icon: '🆘', color: '#ef4444', label: 'Vehicle Breakdown' },
+            'disputed':       { icon: '🚫', color: '#dc2626', label: 'Disputed' },
+            'split':          { icon: '🔗', color: '#a855f7', label: 'Route Optimized' }
+        };
+
+        timeline.innerHTML = logs.map((log, idx) => {
+            const meta = statusMeta[log.status] || { icon: '📍', color: '#94a3b8', label: 'System Update' };
+            const d = new Date(log.timestamp);
+            const dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const isLast = idx === logs.length - 1;
+
+            return `
+            <div style="display:flex; gap:20px; padding-bottom:${isLast ? '10px' : '30px'}; position:relative;">
+                <!-- Left: icon + connector line -->
+                <div style="display:flex; flex-direction:column; align-items:center; flex-shrink:0; width:42px;">
+                    <div style="width:42px; height:42px; border-radius:12px; background:${meta.color}15; border:1px solid ${meta.color}44; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        ${meta.icon}
+                    </div>
+                    ${!isLast ? `<div style="width:2px; flex:1; background:linear-gradient(${meta.color}44, transparent); margin-top:8px;"></div>` : ''}
+                </div>
+                <!-- Right: content -->
+                <div style="flex:1; padding-top:2px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:${meta.color};">${meta.label}</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-family:monospace; background:rgba(255,255,255,0.03); padding:2px 6px; border-radius:4px;">${dateStr}, ${timeStr}</span>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.02); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); position:relative;">
+                        <p style="margin:0; font-size:0.9rem; color:var(--text); line-height:1.6; opacity:0.9;">${log.message}</p>
+                        ${log.reason ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); font-size:0.75rem; color:var(--text-muted); font-style:italic;">Note: ${log.reason}</div>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
 
         showPanel('detail');
         initMap(s);
@@ -166,3 +248,12 @@ document.addEventListener('input', (e) => {
         }
     }
 });
+
+async function simulatePayment() {
+    alert("Simulating redirect to Payment Gateway (UPI/Card)...");
+    setTimeout(async () => {
+        alert("Payment Successful! Informing Logistix Manager for confirmation.");
+        document.getElementById('btn-pay-now').innerText = "Awaiting Manager Confirmation...";
+        document.getElementById('btn-pay-now').disabled = true;
+    }, 2000);
+}

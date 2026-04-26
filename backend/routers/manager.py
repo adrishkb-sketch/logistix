@@ -11,8 +11,11 @@ import math
 import pandas as pd
 import io
 import re
+from fastapi import Header
+from backend.services.auth_utils import verify_context
 
 router = APIRouter()
+companies_db = JSONDatabase("companies")
 drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")
 warehouses_db = JSONDatabase("warehouses")
@@ -117,7 +120,8 @@ async def bulk_confirm_vehicles(vehicles: List[Vehicle]):
     return {"message": f"Successfully created {len(vehicles)} vehicles."}
 
 @router.get("/ledger")
-def get_ledger(company_id: str):
+def get_ledger(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
     txs = ledger_db.get_all()
     # Match by company_id if present, OR if the transaction has a driver in this company
     driver_ids = {d["id"] for d in drivers_db.get_all() if d.get("company_id") == company_id}
@@ -200,7 +204,8 @@ def create_driver(driver: Driver):
     return drivers_db.insert(driver_data)
 
 @router.get("/drivers")
-def get_drivers(company_id: str):
+def get_drivers(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
     drivers = drivers_db.get_all()
     return [d for d in drivers if d.get("company_id") == company_id]
 
@@ -216,7 +221,8 @@ def create_vehicle(vehicle: Vehicle):
     return vehicles_db.insert(vehicle.model_dump())
 
 @router.get("/vehicles")
-def get_vehicles(company_id: str):
+def get_vehicles(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
     vehicles = vehicles_db.get_all()
     return [v for v in vehicles if v.get("company_id") == company_id]
 
@@ -232,7 +238,8 @@ def create_warehouse(warehouse: Warehouse):
     return warehouses_db.insert(warehouse.model_dump())
 
 @router.get("/warehouses")
-def get_warehouses(company_id: str):
+def get_warehouses(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
     warehouses = warehouses_db.get_all()
     return [w for w in warehouses if w.get("company_id") == company_id]
 
@@ -300,7 +307,8 @@ def suggest_warehouse_location(data: dict):
     }
 
 @router.get("/dashboard/stats")
-def get_manager_stats(company_id: str):
+def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
     s_db = JSONDatabase("shipments")
     v_db = JSONDatabase("vehicles")
     d_db = JSONDatabase("drivers")
@@ -595,30 +603,59 @@ def get_vehicle_profile(vehicle_id: str):
         "recent_shipments": shipments[:10]
     }
 
-# System Reset Features
+# System Reset Features (ADMIN ONLY)
 @router.post("/system/reset-shipments")
-def reset_shipments():
+def reset_shipments(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    if not x_logistix_context: raise HTTPException(status_code=401, detail="Context missing")
+    company = companies_db.get_by_id(x_logistix_context)
+    if not company: raise HTTPException(status_code=404, detail="Company not found")
+    
+    provided_pw = str(data.get("manager_password", "")).strip()
+    if provided_pw != str(company.get("password", "")).strip():
+        raise HTTPException(status_code=401, detail="Invalid manager password")
+
     s_db = JSONDatabase("shipments")
-    s_db.clear_all()
-    return {"message": "All shipment data has been cleared."}
+    # Only clear shipments for THIS company
+    all_s = s_db.get_all()
+    to_delete = [s["id"] for s in all_s if s.get("company_id") == x_logistix_context]
+    for sid in to_delete:
+        s_db.delete(sid)
+    return {"message": f"All {len(to_delete)} shipment records for {company['name']} have been cleared."}
 
 @router.post("/system/reset-drivers")
-def reset_drivers():
-    drivers_db.clear_all()
-    # Also clear vehicle assignments
-    v_all = vehicles_db.get_all()
-    for v in v_all:
-        vehicles_db.update(v["id"], {"assigned_driver_id": None})
-    return {"message": "All driver data has been cleared and vehicles unlinked."}
+def reset_drivers(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    if not x_logistix_context: raise HTTPException(status_code=401, detail="Context missing")
+    company = companies_db.get_by_id(x_logistix_context)
+    if not company: raise HTTPException(status_code=404, detail="Company not found")
+    
+    provided_pw = str(data.get("manager_password", "")).strip()
+    if provided_pw != str(company.get("password", "")).strip():
+        raise HTTPException(status_code=401, detail="Invalid manager password")
+
+    # Only clear drivers for THIS company
+    all_d = drivers_db.get_all()
+    to_delete = [d["id"] for d in all_d if d.get("company_id") == x_logistix_context]
+    for did in to_delete:
+        drivers_db.delete(did)
+    return {"message": f"All {len(to_delete)} driver records for {company['name']} have been cleared."}
 
 @router.post("/system/reset-vehicles")
-def reset_vehicles():
-    vehicles_db.clear_all()
-    # Also clear driver assignments
-    d_all = drivers_db.get_all()
-    for d in d_all:
-        drivers_db.update(d["id"], {"assigned_vehicle_id": None})
-    return {"message": "All vehicle data has been cleared and drivers unlinked."}
+def reset_vehicles(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    if not x_logistix_context: raise HTTPException(status_code=401, detail="Context missing")
+    company = companies_db.get_by_id(x_logistix_context)
+    if not company: raise HTTPException(status_code=404, detail="Company not found")
+    
+    provided_pw = str(data.get("manager_password", "")).strip()
+    if provided_pw != str(company.get("password", "")).strip():
+        raise HTTPException(status_code=401, detail="Invalid manager password")
+
+    # Only clear vehicles for THIS company
+    v_db = JSONDatabase("vehicles")
+    all_v = v_db.get_all()
+    to_delete = [v["id"] for v in all_v if v.get("company_id") == x_logistix_context]
+    for vid in to_delete:
+        v_db.delete(vid)
+    return {"message": f"All {len(to_delete)} vehicle records for {company['name']} have been cleared."}
 
 # Account Deletion with OTP
 @router.post("/system/delete-account-request")
@@ -665,8 +702,11 @@ def confirm_account_deletion(company_id: str, otp: str):
     
     raise HTTPException(status_code=404, detail="Account not found")
 @router.post("/rescue-shipment")
-def rescue_shipment(shipment_id: str, driver_id: str, vehicle_id: str):
-    from backend.models import ShipmentEvent
+def rescue_shipment(shipment_id: str, driver_id: str, vehicle_id: str, x_logistix_context: Optional[str] = Header(None)):
+    # Verify manager context for rescue operations
+    shipment = shipments_db.get_by_id(shipment_id)
+    if shipment:
+        verify_context(shipment.get("company_id"), x_logistix_context)
     shipments_db = JSONDatabase("shipments")
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
@@ -699,3 +739,209 @@ def rescue_shipment(shipment_id: str, driver_id: str, vehicle_id: str):
         drivers_db.update(old_driver_id, {"assigned_vehicle_id": None})
         
     return {"message": "Rescue mission initiated. Shipment is back on track."}
+
+@router.get("/fintech-stats")
+def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
+    from datetime import datetime, timedelta
+    
+    # Get actual ledger transactions
+    all_txs = ledger_db.get_all()
+    comp_txs = [t for t in all_txs if t.get("company_id") == company_id]
+    
+    # Calculate Daily Revenue (last 24 hours)
+    now = datetime.utcnow()
+    last_24h = now - timedelta(days=1)
+    daily_revenue = sum(
+        t["amount"] for t in comp_txs 
+        if t["type"] == "REVENUE" and datetime.fromisoformat(t["timestamp"]) >= last_24h
+    )
+    
+    # Get unpaid invoices / Digital Escrow in transit from Shipments
+    all_ships = shipments_db.get_all()
+    comp_ships = [s for s in all_ships if s.get("company_id") == company_id]
+    
+    unpaid_ships = [s for s in comp_ships if s.get("payment_status") == "unpaid"]
+    unpaid_total = sum(s.get("finance", {}).get("suggested_price", 0) for s in unpaid_ships)
+    
+    unpaid_invoices = unpaid_total
+    
+    bonus_pool = daily_revenue * 0.05 # 5% of daily revenue goes to driver bonus pool
+    
+    # Recent settlements (top 5)
+    recent = sorted(comp_txs, key=lambda x: x["timestamp"], reverse=True)[:5]
+    settlements_list = []
+    for t in recent:
+        settlements_list.append({
+            "desc": t["desc"],
+            "amount": t["amount"],
+            "timestamp": t["timestamp"],
+            "type": t["type"]
+        })
+        
+    # Chart Data: Revenue per day for last 7 days
+    labels = []
+    values = []
+    for i in range(6, -1, -1):
+        day_date = now - timedelta(days=i)
+        day_start = day_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        
+        day_rev = sum(
+            t["amount"] for t in comp_txs 
+            if t["type"] == "REVENUE" and day_start <= datetime.fromisoformat(t["timestamp"]) < day_end
+        )
+        labels.append(day_date.strftime("%d %b"))
+        values.append(round(day_rev, 2))
+        
+    return {
+        "daily_revenue": round(daily_revenue, 2),
+        "digital_escrow": round(unpaid_total, 2),
+        "unpaid_invoices": round(unpaid_invoices, 2),
+        "bonus_pool": round(bonus_pool, 2),
+        "recent_settlements": settlements_list,
+        "escrow_contracts": [
+            {"id": "CON-AUTO", "counterparty": "Logistix Reserve", "value": round(unpaid_total * 1.2, 2), "status": "Guaranteed", "eta": "Auto"},
+        ],
+        "chart_data": {
+            "labels": labels,
+            "values": values
+        }
+    }
+
+@router.post("/finance/confirm-payment/{shipment_id}")
+def confirm_customer_payment(shipment_id: str, x_logistix_context: Optional[str] = Header(None)):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    verify_context(shipment.get("company_id"), x_logistix_context)
+    
+    shipments_db.update(shipment_id, {"payment_status": "paid"})
+    
+    # Log to ledger
+    ledger_db.insert({
+        "type": "REVENUE",
+        "desc": f"Payment Recieved for Shipment {shipment_id[:8]}",
+        "amount": shipment.get("finance", {}).get("suggested_price", 0),
+        "timestamp": datetime.utcnow().isoformat(),
+        "company_id": shipment.get("company_id")
+    })
+    return {"message": "Payment confirmed. Driver is now cleared for OTP delivery."}
+
+@router.post("/finance/approve-payout/{driver_id}")
+def approve_driver_payout(driver_id: str, x_logistix_context: Optional[str] = Header(None)):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver: raise HTTPException(status_code=404, detail="Driver not found")
+    
+    verify_context(driver.get("company_id"), x_logistix_context)
+    
+    balance = driver.get("wallet_balance", 0)
+    if balance <= 0: raise HTTPException(status_code=400, detail="Zero balance")
+    
+    # Reset driver balance
+    drivers_db.update(driver_id, {"wallet_balance": 0})
+    
+    # Log to ledger
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Payout Settled: {driver['name']}",
+        "amount": balance,
+        "timestamp": datetime.utcnow().isoformat(),
+        "company_id": driver.get("company_id")
+    })
+    return {"message": f"Successfully settled ₹{balance} for {driver['name']}"}
+
+@router.get("/finance/p-and-l")
+def get_p_and_l(company_id: str):
+    all_txs = ledger_db.get_all()
+    comp_txs = [t for t in all_txs if t.get("company_id") == company_id]
+    
+    revenue = sum(t["amount"] for t in comp_txs if t["type"] == "REVENUE")
+    expenses = sum(t["amount"] for t in comp_txs if t["type"] == "EXPENSE")
+    
+    return {
+        "total_revenue": round(revenue, 2),
+        "total_expenses": round(expenses, 2),
+        "net_profit": round(revenue - expenses, 2),
+        "margin_percentage": round((revenue - expenses) / revenue * 100, 1) if revenue > 0 else 0
+    }
+
+@router.get("/strategy/forecast")
+def get_strategy_forecast(company_id: str):
+    from backend.services.strategy_engine import predict_monthly_revenue
+    # Calculate current month revenue from ledger
+    all_txs = ledger_db.get_all()
+    this_month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    current_rev = sum(t["amount"] for t in all_txs if t.get("company_id") == company_id and t["type"] == "REVENUE" and datetime.fromisoformat(t["timestamp"]) >= this_month_start)
+    
+    forecast = predict_monthly_revenue(current_rev)
+    return forecast
+
+@router.get("/finance/fund-requests")
+def get_fund_requests(company_id: str):
+    """Return all unresolved driver fund request alerts for a company."""
+    alerts_db = JSONDatabase("alerts")
+    all_alerts = alerts_db.get_all()
+    fund_alerts = [
+        a for a in all_alerts
+        if a.get("company_id") == company_id
+        and a.get("type") == "finance"
+        and a.get("status") != "resolved"
+        and "FUND REQUEST" in a.get("description", "")
+    ]
+    results = []
+    for a in fund_alerts:
+        # Parse amount and type from description: "FUND REQUEST: Driver X requested ₹500 for FUEL."
+        import re
+        desc = a.get("description", "")
+        amount_match = re.search(r"₹([\d.]+)", desc)
+        type_match = re.search(r"for ([A-Z]+)", desc)
+        driver_name_match = re.search(r"Driver (.+?) requested", desc)
+        results.append({
+            "alert_id": a.get("id"),
+            "driver_id": a.get("driver_id"),
+            "driver_name": driver_name_match.group(1) if driver_name_match else "Unknown",
+            "amount": float(amount_match.group(1)) if amount_match else 0,
+            "fund_type": type_match.group(1) if type_match else "MISC",
+            "timestamp": a.get("timestamp"),
+        })
+    return results
+
+@router.post("/finance/approve-fund-request/{alert_id}")
+def approve_fund_request(alert_id: str):
+    """Approve a driver fund request: credit wallet and resolve alert."""
+    alerts_db = JSONDatabase("alerts")
+    alert = alerts_db.get_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Fund request not found")
+    
+    import re
+    desc = alert.get("description", "")
+    amount_match = re.search(r"₹([\d.]+)", desc)
+    amount = float(amount_match.group(1)) if amount_match else 0
+    
+    driver_id = alert.get("driver_id")
+    if not driver_id:
+        raise HTTPException(status_code=400, detail="No driver linked to this request")
+    
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    # Credit driver's wallet
+    new_balance = driver.get("wallet_balance", 0) + amount
+    drivers_db.update(driver_id, {"wallet_balance": new_balance})
+    
+    # Log as expense in ledger
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Fund Transfer Approved: {driver['name']} ({desc.split('for')[-1].strip()})",
+        "amount": amount,
+        "timestamp": datetime.utcnow().isoformat(),
+        "company_id": alert.get("company_id")
+    })
+    
+    # Mark alert as resolved
+    alerts_db.update(alert_id, {"status": "resolved"})
+    
+    return {"message": f"₹{amount} transferred to {driver['name']}'s wallet successfully."}

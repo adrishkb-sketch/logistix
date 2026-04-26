@@ -1,10 +1,14 @@
 const API_BASE = "http://localhost:8000/api";
 
 async function apiCall(endpoint, method = "GET", body = null) {
+    // Dynamically retrieve security context (Company ID or Driver ID)
+    const context = localStorage.getItem('company_id') || localStorage.getItem('driver_id') || localStorage.getItem('tracking_token');
+    
     const options = {
         method,
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-Logistix-Context": context || ""
         }
     };
     if (body) {

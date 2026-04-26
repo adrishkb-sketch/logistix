@@ -82,11 +82,16 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     if dist < 30 and v_type_short in ["bike", "scooty"]: score_modifier += 10
                     if dist > 50 and v_type_short == "truck": score_modifier += 10
                     
-                    # Boost score if shipment is fragile and driver is safe
-                    labels = shipment.get("labels", [])
-                    if "fragile" in labels or "priority" in labels:
-                        score_modifier += d.get("safety_rating", 5) * 2
-                        score_modifier += (d.get("on_time_rate", 100) / 10.0)
+                    # REVERSE LOGISTICS BOOST:
+                    # If vehicle is away from its base warehouse, and shipment destination is NEAR its base warehouse
+                    if vehicle.get("base_warehouse_id"):
+                        base_wh = next((w for w in warehouses if w["id"] == vehicle["base_warehouse_id"]), None)
+                        if base_wh:
+                            # Check if the shipment drop is near vehicle's home base
+                            dist_drop_to_base = haversine(shipment["drop"]["lat"], shipment["drop"]["lng"], base_wh["lat"], base_wh["lng"])
+                            if dist_drop_to_base < 50: # Shipment drop is within 50km of vehicle home base
+                                score_modifier += 40 # Significant boost for back-haul
+                                vehicle["is_backhaul"] = True
                     
                     available_pairs.append({"driver": d, "vehicle": vehicle, "score_modifier": score_modifier})
                 
@@ -152,3 +157,49 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
         vehicles_db.update(new_v["id"], {"status": "assigned"})
         return {"driver_name": new_d["name"], "vehicle_id": new_v["id"]}
     return None
+
+def reoptimize_driver_route(driver_id: str):
+    from backend.database import JSONDatabase
+    from backend.services.route_engine import optimize_multi_stop_route, haversine
+    from datetime import datetime, timedelta
+
+    shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+
+    # Get all non-delivered tasks for this driver
+    active_tasks = [s for s in shipments_db.get_all() if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]]
+    if len(active_tasks) < 1: return
+
+    driver = drivers_db.get_by_id(driver_id)
+    vehicle = vehicles_db.get_by_id(driver.get("assigned_vehicle_id")) if driver else None
+    
+    # Start from current vehicle location or first task pickup
+    start_lat = vehicle.get("last_known_location", {}).get("lat") if vehicle else active_tasks[0]["pickup"]["lat"]
+    start_lng = vehicle.get("last_known_location", {}).get("lng") if vehicle else active_tasks[0]["pickup"]["lng"]
+
+    # Simple Optimization: Group by Shipment
+    # 1. Sort shipments by the distance from current location to their PICKUP
+    active_tasks.sort(key=lambda s: haversine(start_lat, start_lng, s["pickup"]["lat"], s["pickup"]["lng"]))
+    
+    # 2. Update deadlines sequentially
+    curr_lat, curr_lng = start_lat, start_lng
+    current_time = datetime.utcnow()
+    
+    for s in active_tasks:
+        from backend.services.time_utils import snap_eta_to_business_hours
+        # Travel to Pickup
+        dist_to_p = haversine(curr_lat, curr_lng, s["pickup"]["lat"], s["pickup"]["lng"])
+        time_to_p = (dist_to_p / 30.0) * 60.0 # Slow in city
+        current_time += timedelta(minutes=time_to_p + 10) # 10m buffer
+        shipments_db.update(s["id"], {"pickup_deadline": snap_eta_to_business_hours(current_time).isoformat() + "Z"})
+        
+        # Travel to Drop
+        dist_to_d = haversine(s["pickup"]["lat"], s["pickup"]["lng"], s["drop"]["lat"], s["drop"]["lng"])
+        time_to_d = (dist_to_d / 40.0) * 60.0 
+        current_time += timedelta(minutes=time_to_d + 15) # 15m buffer
+        shipments_db.update(s["id"], {"expected_delivery": snap_eta_to_business_hours(current_time).isoformat() + "Z"})
+        
+        curr_lat, curr_lng = s["drop"]["lat"], s["drop"]["lng"]
+
+    return active_tasks

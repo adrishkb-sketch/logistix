@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 
-from backend.routers import auth, manager, driver, shipment, tracking, simulation
+from backend.routers import auth, manager, driver, shipment, tracking, simulation, fuel_oracle
 
 app = FastAPI(title="Logistix API", version="1.0.0")
 
@@ -27,6 +27,7 @@ app.include_router(driver.router, prefix="/api/driver", tags=["Driver"])
 app.include_router(shipment.router, prefix="/api/shipments", tags=["Shipments"])
 app.include_router(tracking.router, prefix="/api/tracking", tags=["Tracking"])
 app.include_router(simulation.router, prefix="/api/simulation", tags=["Simulation"])
+app.include_router(fuel_oracle.router, prefix="/api/fuel", tags=["Fuel Oracle"])
 
 @app.get("/")
 def read_root():

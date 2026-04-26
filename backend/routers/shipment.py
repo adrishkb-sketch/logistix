@@ -13,6 +13,14 @@ import io
 import requests
 import re
 
+from backend.services.time_utils import snap_eta_to_business_hours
+
+import random
+import pandas as pd
+import io
+import requests
+import re
+
 router = APIRouter()
 shipments_db = JSONDatabase("shipments")
 warehouses_db = JSONDatabase("warehouses")
@@ -211,21 +219,28 @@ def create_shipment(shipment_data: ShipmentCreate):
                 detail=f"Perishable Violation: It is impossible to deliver this within the 1-hour window. Best estimated time with current fleet: {round(min_total_mins)} minutes (including traffic/weather)."
             )
 
-    # Calculate ETA based on avg speed 40km/h
+    # Calculate ETA based on avg speed 40km/h, clamped to 8am-10pm IST
     eta_hours = dist / 40.0
     now = datetime.utcnow()
-    expected_delivery = (now + timedelta(hours=eta_hours)).isoformat() + "Z"
-    pickup_deadline = (now + timedelta(hours=1)).isoformat() + "Z" # Deadline to pick up is 1 hour from now
+    raw_eta = now + timedelta(hours=eta_hours)
+    snapped_eta = snap_eta_to_business_hours(raw_eta)
+    expected_delivery = snapped_eta.isoformat() + "Z"
+    pickup_deadline = (now + timedelta(hours=1)).isoformat() + "Z"  # Deadline to pick up is 1 hour from now
     
     # Generate random 4-digit OTP for delivery security
     otp = str(random.randint(1000, 9999))
     
+    pickup_addr = shipment_data.pickup.address or f"{shipment_data.pickup.lat}, {shipment_data.pickup.lng}"
+    drop_addr = shipment_data.drop.address or f"{shipment_data.drop.lat}, {shipment_data.drop.lng}"
     initial_log = ShipmentEvent(
         status="pending",
-        message="Shipment created and awaiting assignment.",
+        message=f"📦 Shipment created — {pickup_addr} → {drop_addr}. Awaiting fleet assignment.",
         location=shipment_data.pickup
     )
     
+    from backend.services.finance_engine import estimate_delivery_cost
+    finance = estimate_delivery_cost(shipment_data.model_dump())
+
     new_shipment = Shipment(
         **shipment_data.model_dump(),
         route_type="direct",
@@ -234,7 +249,9 @@ def create_shipment(shipment_data: ShipmentCreate):
         delivery_otp=otp,
         logs=[initial_log],
         vitality=100.0,
-        qr_code_data=str(uuid.uuid4())
+        qr_code_data=str(uuid.uuid4()),
+        finance=finance,
+        payment_status="unpaid"
     )
     
     shipments_db.insert(new_shipment.model_dump())
@@ -248,7 +265,8 @@ def get_shipments(company_id: str):
     company_ships = [s for s in all_ships if s.get("company_id") == company_id]
     
     # Recalculate vitality and check compliance/street intel
-    from backend.services.alert_engine import check_compliance_alerts, check_street_intel_alerts
+    from backend.services.alert_engine import check_compliance_alerts, check_street_intel_alerts, check_heatwave_safety
+    vehicles_db = JSONDatabase("vehicles")
     for s in company_ships:
         if s.get("is_perishable"):
             new_v = calculate_shipment_vitality(s)
@@ -259,6 +277,13 @@ def get_shipments(company_id: str):
         # Run Indian-specific "Killer Feature" checks
         check_compliance_alerts(s)
         check_street_intel_alerts(s)
+        
+        # Heatwave safety: stop bike/scooty drivers in heat zones
+        v_id = s.get("assigned_vehicle_id")
+        if v_id and s.get("status") == "in_transit":
+            vehicle = vehicles_db.get_by_id(v_id)
+            if vehicle:
+                check_heatwave_safety(s, vehicle)
                 
     return company_ships
 
@@ -456,7 +481,7 @@ def dispatch_rescue(shipment_id: str):
         s["stage"] = "Rescue Dispatched"
         
         from backend.models import ShipmentEvent
-        log = ShipmentEvent(status="assigned", message="Rescue vehicle dispatched and assigned automatically.", reason="Previous vehicle breakdown.")
+        log = ShipmentEvent(status="assigned", message="🚑 Rescue vehicle dispatched and assigned automatically.", reason="Previous vehicle breakdown. AI rerouted nearest available recovery unit.")
         s["logs"] = s.get("logs", []) + [log.model_dump()]
         
         shipments_db.update(shipment_id, s)
@@ -489,10 +514,22 @@ def auto_assign(shipment_id: str):
     assigned_data = auto_assign_shipment(shipment)
     if assigned_data:
         from backend.models import ShipmentEvent
-        log_event = ShipmentEvent(status="assigned", message="AI successfully auto-assigned driver and vehicle.")
+        d = drivers_db.get_by_id(assigned_data["assigned_driver_id"])
+        v = JSONDatabase("vehicles").get_by_id(assigned_data["assigned_vehicle_id"])
+        driver_name = d["name"] if d else "Unknown"
+        plate = v["number_plate"] if v else "Unknown"
+        
+        log_event = ShipmentEvent(
+            status="assigned", 
+            message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}."
+        )
         assigned_data["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
         
         updated = shipments_db.update(shipment_id, assigned_data)
+        try:
+            from backend.services.assignment import reoptimize_driver_route
+            reoptimize_driver_route(assigned_data["assigned_driver_id"])
+        except: pass
         return {"message": "Auto-assigned successfully", "shipment": updated}
     
     raise HTTPException(status_code=400, detail="No suitable driver/vehicle available")
@@ -503,8 +540,17 @@ def manual_assign(shipment_id: str, driver_id: str, vehicle_id: str):
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
+    from backend.database import JSONDatabase
+    d = JSONDatabase("drivers").get_by_id(driver_id)
+    v = JSONDatabase("vehicles").get_by_id(vehicle_id)
+    driver_name = d["name"] if d else "Unknown"
+    plate = v["number_plate"] if v else "Unknown"
+    
     from backend.models import ShipmentEvent
-    log_event = ShipmentEvent(status="assigned", message=f"Manually assigned to driver {driver_id}")
+    log_event = ShipmentEvent(
+        status="assigned", 
+        message=f"👤 Manually assigned to driver {driver_name}. Vehicle: {plate}."
+    )
     logs = shipment.get("logs", []) + [log_event.model_dump()]
     
     updated = shipments_db.update(shipment_id, {
@@ -514,12 +560,16 @@ def manual_assign(shipment_id: str, driver_id: str, vehicle_id: str):
         "stage": "Assigned to Driver",
         "logs": logs
     })
+    try:
+        from backend.services.assignment import reoptimize_driver_route
+        reoptimize_driver_route(driver_id)
+    except: pass
     return {"message": "Assigned manually", "shipment": updated}
 
 @router.post("/bulk-assign")
 def bulk_assign():
-    all_shipments = shipments_db.get_all()
-    pending = [s for s in all_shipments if s.get("status") == "pending"]
+    # Only consider shipments that aren't yet picked up or delivered
+    pending = [s for s in shipments_db.get_all() if s.get("status") == "pending"]
     assigned_count = 0
     failed_count = 0
     
@@ -527,7 +577,15 @@ def bulk_assign():
         assigned_data = auto_assign_shipment(s)
         if assigned_data:
             from backend.models import ShipmentEvent
-            log_event = ShipmentEvent(status="assigned", message="AI successfully bulk-assigned driver and vehicle.")
+            d = drivers_db.get_by_id(assigned_data["assigned_driver_id"])
+            v = JSONDatabase("vehicles").get_by_id(assigned_data["assigned_vehicle_id"])
+            driver_name = d["name"] if d else "Unknown"
+            plate = v["number_plate"] if v else "Unknown"
+            
+            log_event = ShipmentEvent(
+                status="assigned", 
+                message=f"🤖 AI successfully bulk-assigned driver {driver_name} and vehicle {plate}."
+            )
             assigned_data["logs"] = s.get("logs", []) + [log_event.model_dump()]
             shipments_db.update(s["id"], assigned_data)
             assigned_count += 1
@@ -566,7 +624,7 @@ def consolidate_shipments():
                 assigned_data = auto_assign_shipment(s1)
                 if assigned_data:
                     # s1 assigned successfully
-                    log1 = ShipmentEvent(status="assigned", message=f"AI Consolidated with Shipment {s2['id'][:8]}.")
+                    log1 = ShipmentEvent(status="assigned", message=f"📦 AI Consolidated with Shipment {s2['id'][:8]}. Efficiency optimized.")
                     assigned_data["logs"] = s1.get("logs", []) + [log1.model_dump()]
                     shipments_db.update(s1["id"], assigned_data)
                     
@@ -577,7 +635,7 @@ def consolidate_shipments():
                         "status": "assigned",
                         "stage": "Assigned to Driver (Consolidated)"
                     }
-                    log2 = ShipmentEvent(status="assigned", message=f"AI Consolidated with Shipment {s1['id'][:8]}.")
+                    log2 = ShipmentEvent(status="assigned", message=f"📦 AI Consolidated with Shipment {s1['id'][:8]}. Efficiency optimized.")
                     s2_update["logs"] = s2.get("logs", []) + [log2.model_dump()]
                     
                     shipments_db.update(s2["id"], s2_update)
@@ -595,8 +653,8 @@ class ManualSplitRequest(BaseModel):
 @router.post("/{shipment_id}/split/manual")
 def manual_split(shipment_id: str, req: ManualSplitRequest):
     shipment = shipments_db.get_by_id(shipment_id)
-    if not shipment or shipment.get("is_leg"):
-        raise HTTPException(status_code=400, detail="Invalid shipment for splitting")
+    if not shipment or shipment.get("is_leg") or shipment.get("status") in ["delivered", "in_transit"]:
+        raise HTTPException(status_code=400, detail="Invalid shipment for splitting. Cannot split shipments already in transit or delivered.")
         
     warehouses = warehouses_db.get_all()
     selected_whs = [w for w_id in req.warehouse_ids for w in warehouses if w["id"] == w_id]
@@ -650,7 +708,7 @@ def _generate_legs(parent_shipment, leg_data):
     parent_shipment["route_type"] = "multi-leg"
     parent_shipment["status"] = "split"
     
-    log_event = ShipmentEvent(status="split", message=f"Route split into {len(leg_data)} legs.")
+    log_event = ShipmentEvent(status="split", message=f"🔗 Multi-leg journey planned via {len(leg_data)} warehouse hubs.")
     parent_shipment["logs"] = parent_shipment.get("logs", []) + [log_event.model_dump()]
     
     shipments_db.update(parent_shipment["id"], parent_shipment)
@@ -661,7 +719,8 @@ def _generate_legs(parent_shipment, leg_data):
     for i, leg in enumerate(leg_data):
         dist = haversine(leg["pickup"]["lat"], leg["pickup"]["lng"], leg["drop"]["lat"], leg["drop"]["lng"])
         eta_hours = dist / 40.0
-        expected_time = current_time + timedelta(hours=eta_hours)
+        raw_eta = current_time + timedelta(hours=eta_hours)
+        expected_time = snap_eta_to_business_hours(raw_eta)
         
         leg_log = ShipmentEvent(
             status="pending",

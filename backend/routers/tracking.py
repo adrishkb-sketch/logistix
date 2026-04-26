@@ -42,10 +42,13 @@ def track_shipment(shipment_id: str):
     dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
     
     from datetime import datetime, timedelta
+    from backend.services.time_utils import snap_eta_to_business_hours
     if shipment.get("expected_delivery"):
         try:
             original_eta = datetime.fromisoformat(shipment["expected_delivery"])
-            dynamic_eta["estimated_arrival"] = (original_eta + timedelta(minutes=dynamic_eta["delay_mins"])).isoformat()
+            adjusted_eta = original_eta + timedelta(minutes=dynamic_eta["delay_mins"])
+            snapped_eta = snap_eta_to_business_hours(adjusted_eta)
+            dynamic_eta["estimated_arrival"] = snapped_eta.isoformat()
         except Exception:
             pass
     

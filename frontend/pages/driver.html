@@ -98,7 +98,53 @@
                 <button class="tab-btn" id="btn-tab-active" onclick="switchDriverTab('active')">Live Route</button>
                 <button class="tab-btn" id="btn-tab-chat" onclick="switchDriverTab('chat')">Chat <span id="chat-badge" style="display:none; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
                 <button class="tab-btn" id="btn-tab-completed" onclick="switchDriverTab('completed')">History</button>
+                <button class="tab-btn" id="btn-tab-wallet" onclick="switchDriverTab('wallet')">Wallet 💰</button>
                 <button class="tab-btn" id="btn-tab-profile" onclick="switchDriverTab('profile')">Account</button>
+            </div>
+
+            <div id="wallet-tab" style="display:none;">
+                <div class="glass-card" style="padding:24px; background:linear-gradient(135deg, var(--success)22, transparent); border-left:4px solid var(--success); margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <small style="color:var(--text-muted)">Withdrawable Balance</small>
+                            <h1 id="w-balance" style="margin:0; color:var(--success);">₹ 0.00</h1>
+                        </div>
+                        <button class="btn-primary" style="width:auto; padding:10px 20px; background:var(--success);" onclick="withdrawMoney()">Withdraw 💸</button>
+                    </div>
+                </div>
+
+                <div class="stats-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Monthly Earning</div>
+                        <div style="font-size:1.2rem; font-weight:bold;" id="w-today">₹ 0.00</div>
+                    </div>
+                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Total Earnings</div>
+                        <div style="font-size:1.2rem; font-weight:bold;" id="w-bonus">₹ 0.00</div>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03);">
+                    <h4 style="margin:0 0 15px 0;">Request Funds ⛽🍔</h4>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="fund-req-amount" placeholder="Amount (₹)" class="glass-card" style="width:100%; padding:10px; border:1px solid rgba(255,255,255,0.1); color:white; background:transparent;">
+                        <select id="fund-req-type" class="glass-card" style="padding:10px; border:1px solid rgba(255,255,255,0.1); color:white; background:#1a202c;">
+                            <option value="fuel">Fuel</option>
+                            <option value="food">Food</option>
+                            <option value="toll">Toll</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                        <button class="btn-primary" style="padding:10px 20px; white-space:nowrap;" onclick="requestFunds()">Send</button>
+                    </div>
+                </div>
+
+                <div class="glass-card" style="padding:20px;">
+                    <h4 style="margin:0 0 15px 0;">Transaction History</h4>
+                    <div id="wallet-transactions" style="display:flex; flex-direction:column; gap:12px;">
+                        <!-- Injected via JS -->
+                        <p style="text-align:center; color:var(--text-muted); font-size:0.8rem;">Fetching ledger...</p>
+                    </div>
+                </div>
             </div>
 
             <div id="dash-tab" style="display:block;">
@@ -165,6 +211,13 @@
             <div id="active-tab" style="display:none;">
                 <div id="instruction-banner" class="instruction-banner">
                     <!-- Injected via JS -->
+                </div>
+
+                <div id="simulation-ctrl" class="glass-card" style="display:none; padding:12px; border:1px solid var(--primary); background:rgba(59, 130, 246, 0.1); margin-bottom:15px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.8rem; color:var(--primary); font-weight:800;">🛰️ SIMULATION SANDBOX</span>
+                        <button id="sim-halt-btn" class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--danger);" onclick="toggleSimHalt()">Emergency Halt 🛑</button>
+                    </div>
                 </div>
 
                 <div id="mission-container">
