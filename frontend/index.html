@@ -378,13 +378,23 @@ body:not(.light-mode) #theme-toggle {
 
 <body>
 
+<script src="js/translations.js"></script>
 <button id="theme-toggle">🌙 Dark</button>
+
+<!-- Language Selector -->
+<div class="glass-card" style="position:fixed; top:20px; right:120px; display:flex; gap:6px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; height:auto; z-index:9999; background:var(--card); backdrop-filter:blur(10px);">
+    <button class="lang-btn" onclick="setLanguage('en')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.75rem; font-weight:800;">EN</button>
+    <div style="width:1px; background:var(--border); margin:2px 0;"></div>
+    <button class="lang-btn" onclick="setLanguage('bn')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.75rem; font-weight:800;">বাং</button>
+    <div style="width:1px; background:var(--border); margin:2px 0;"></div>
+    <button class="lang-btn" onclick="setLanguage('hi')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.75rem; font-weight:800;">हिं</button>
+</div>
 
 <!-- HERO -->
 <div class="hero">
 <div class="hero-content reveal">
-<h1>🚚 Logistics, finally working.</h1>
-<p>
+<h1 data-i18n="hero_title">🚚 Logistics, finally working.</h1>
+<p data-i18n="hero_subtitle">
 Predict delays. Optimize routes. Eliminate chaos.
 Logistix brings intelligence to every movement in your supply chain.
 </p>

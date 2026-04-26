@@ -1653,7 +1653,7 @@ async function miniChatSend() {
         // Also refresh main messages if open
         if (currentActiveSection === 'messages') loadMessages();
     } catch(e) {
-        showNotification('Failed to send message', 'error');
+        showNotification(getTranslation('msg_failed'), 'error');
     }
 }
 
@@ -1751,7 +1751,7 @@ async function submitMessage() {
             sender_type: 'manager'
         });
         document.getElementById('message-modal').style.display = 'none';
-        showNotification("Message sent to driver successfully", "success");
+        showNotification(getTranslation('msg_sent'), "success");
     } catch (e) {
         alert("Failed to send message to driver.");
     }
@@ -2575,7 +2575,7 @@ async function sendMessageToSelectedDriver() {
 
         loadMessages();
     } catch(e) {
-        showNotification('Failed to send message.', 'error');
+        showNotification(getTranslation('msg_failed'), 'error');
     }
 }
 
@@ -2837,17 +2837,17 @@ async function openLogsModal(shipmentId) {
             const sortedLogs = [...shipment.logs].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
             
             const statusMeta = {
-                'pending':        { icon: '📥', color: '#94a3b8', label: 'Order Received' },
-                'assigned':       { icon: '🚛', color: '#3b82f6', label: 'Fleet Assigned' },
-                'in_transit':     { icon: '🛤️', color: '#6366f1', label: 'In Transit' },
-                'at_warehouse':   { icon: '🏭', color: '#8b5cf6', label: 'Arrived at Hub' },
-                'released':       { icon: '📤', color: '#0ea5e9', label: 'Dispatched from Hub' },
-                'delivered':      { icon: '✨', color: '#10b981', label: 'Delivered' },
-                'safety_stop':    { icon: '🛡️', color: '#f59e0b', label: 'Safety Halt' },
-                'delayed':        { icon: '⏳', color: '#f59e0b', label: 'Delayed' },
-                'breakdown':      { icon: '🆘', color: '#ef4444', label: 'Vehicle Breakdown' },
-                'disputed':       { icon: '🚫', color: '#dc2626', label: 'Disputed' },
-                'split':          { icon: '🔗', color: '#a855f7', label: 'Route Optimized' }
+                'pending':        { icon: '📥', color: '#94a3b8', label: getTranslation('order_received') },
+                'assigned':       { icon: '🚛', color: '#3b82f6', label: getTranslation('fleet_assigned') },
+                'in_transit':     { icon: '🛤️', color: '#6366f1', label: getTranslation('in_transit') },
+                'at_warehouse':   { icon: '🏭', color: '#8b5cf6', label: getTranslation('arrived_hub') },
+                'released':       { icon: '📤', color: '#0ea5e9', label: getTranslation('dispatched_hub') },
+                'delivered':      { icon: '✨', color: '#10b981', label: getTranslation('delivered') },
+                'safety_stop':    { icon: '🛡️', color: '#f59e0b', label: getTranslation('safety_halt') },
+                'delayed':        { icon: '⏳', color: '#f59e0b', label: getTranslation('delayed') },
+                'breakdown':      { icon: '🆘', color: '#ef4444', label: getTranslation('breakdown') },
+                'disputed':       { icon: '🚫', color: '#dc2626', label: getTranslation('disputed') },
+                'split':          { icon: '🔗', color: '#a855f7', label: getTranslation('route_optimized') }
             };
 
             timeline.innerHTML = sortedLogs.map((log, idx) => {

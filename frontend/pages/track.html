@@ -47,18 +47,27 @@
     <div class="background-animation"></div>
     <div id="theme-toggle" class="theme-switch" style="position:fixed; top:24px; right:24px;">🌙</div>
     
+    <!-- Language Selector -->
+    <div class="glass-card" style="position:fixed; top:24px; right:80px; display:flex; gap:6px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; height:auto; z-index:10002;">
+        <button class="lang-btn" onclick="setLanguage('en')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">EN</button>
+        <div style="width:1px; background:var(--border); margin:2px 0;"></div>
+        <button class="lang-btn" onclick="setLanguage('bn')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">বাং</button>
+        <div style="width:1px; background:var(--border); margin:2px 0;"></div>
+        <button class="lang-btn" onclick="setLanguage('hi')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">हिं</button>
+    </div>
+
     <div class="track-layout">
         <a href="../index.html" style="text-decoration:none; color:var(--muted); font-weight:600; font-size:0.9rem;">← Back to Home</a>
         
         <!-- Auth View -->
         <div id="auth-panel" class="auth-card glass-card" style="margin-top:60px;">
-            <h1 style="text-align:center; margin-bottom:8px;">Track Orders 📦</h1>
-            <p style="text-align:center; color:var(--muted); margin-bottom:32px;">Secure tracking via phone verification.</p>
+            <h1 style="text-align:center; margin-bottom:8px;" data-i18n="track_orders">Track Orders 📦</h1>
+            <p style="text-align:center; color:var(--muted); margin-bottom:32px;" data-i18n="secure_tracking">Secure tracking via phone verification.</p>
 
             <div id="step-phone">
-                <label style="font-size:0.85rem; color:var(--muted); display:block; margin-bottom:8px;">Phone Number</label>
+                <label style="font-size:0.85rem; color:var(--muted); display:block; margin-bottom:8px;" data-i18n="phone_number">Phone Number</label>
                 <input type="tel" id="cust-phone" placeholder="+91 98765 43210" style="margin-bottom:20px;">
-                <button class="btn-primary" style="width:100%;" onclick="requestCustomerOTP()">Send OTP</button>
+                <button class="btn-primary" style="width:100%;" onclick="requestCustomerOTP()" data-i18n="send_otp">Send OTP</button>
                 <p id="phone-error" style="color:var(--danger); font-size:0.85rem; margin-top:12px; display:none; text-align:center;"></p>
             </div>
 
@@ -70,7 +79,7 @@
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                 </div>
-                <button class="btn-primary" style="width:100%;" onclick="verifyCustomerOTP()">Track My Orders</button>
+                <button class="btn-primary" style="width:100%;" onclick="verifyCustomerOTP()" data-i18n="verify_otp">Track My Orders</button>
                 <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;">Change Phone Number</a></p>
             </div>
         </div>
@@ -78,11 +87,11 @@
         <!-- Orders List View -->
         <div id="list-panel" style="display:none; margin-top:40px;">
             <div class="hero-section">
-                <h1>My Shipments</h1>
-                <p>Live tracking and delivery status for all your orders.</p>
+                <h1 data-i18n="my_shipments">My Shipments</h1>
+                <p data-i18n="live_tracking_desc">Live tracking and delivery status for all your orders.</p>
             </div>
             <div id="orders-list" class="order-list"></div>
-            <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.05); color:var(--text); width:100%;" onclick="logoutCustomer()">Sign Out</button>
+            <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.05); color:var(--text); width:100%;" onclick="logoutCustomer()" data-i18n="sign_out">Sign Out</button>
         </div>
 
         <!-- Detail View -->
@@ -144,6 +153,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../js/translations.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/track.js"></script>
     <script>

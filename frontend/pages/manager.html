@@ -131,30 +131,40 @@
                 <h2>Logistix</h2>
             </div>
             <div class="nav-links-wrapper">
-                <a href="#" class="nav-link active" onclick="showSection('analytics')">Executive Analytics 📊</a>
-                <a href="#" class="nav-link" onclick="showSection('warehouses')">Infrastructure (Hubs) 🏗️</a>
-                <a href="#" class="nav-link" onclick="showSection('shipments')">Shipments 📦</a>
-                <a href="#" class="nav-link" onclick="showSection('drivers')">Drivers & Vehicles 🚛</a>
-                <a href="#" class="nav-link" onclick="showSection('weather')">Weather Fleet Map 🗺️</a>
-                <a href="#" class="nav-link" onclick="showSection('leaderboard')">Leaderboards 🏆</a>
-                <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')">Messages <span id="msg-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('verifications')">Verifications 🛡️ <span id="verif-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('safety')">Safety Center 🛡️ <span id="safety-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('ledger')">Smart Contracts ⛓️</a>
-                <a href="#" class="nav-link" onclick="showSection('oracle')">Strategy Oracle 🧠</a>
-                <a href="#" class="nav-link" onclick="showSection('fuel-oracle')">Bharat-Fuel Oracle 🛢️</a>
-                <a href="#" id="nav-link-paisa-fast" class="nav-link" onclick="showSection('paisa-fast')">💰 Paisa-Fast (Fintech) <span id="paisa-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('strategy-plan')">Operational Strategy 🎯</a>
-                <a href="#" class="nav-link" onclick="showSection('network-resilience')">Network Resilience 🦋</a>
-                <a href="#" class="nav-link" onclick="showSection('system')">System Settings ⚙️</a>
+                <a href="#" class="nav-link active" onclick="showSection('analytics')" data-i18n="nav_analytics">Executive Analytics 📊</a>
+                <a href="#" class="nav-link" onclick="showSection('warehouses')" data-i18n="nav_hubs">Infrastructure (Hubs) 🏗️</a>
+                <a href="#" class="nav-link" onclick="showSection('shipments')" data-i18n="nav_shipments">Shipments 📦</a>
+                <a href="#" class="nav-link" onclick="showSection('drivers')" data-i18n="nav_drivers">Drivers & Vehicles 🚛</a>
+                <a href="#" class="nav-link" onclick="showSection('weather')" data-i18n="nav_weather">Weather Fleet Map 🗺️</a>
+                <a href="#" class="nav-link" onclick="showSection('leaderboard')" data-i18n="nav_leaderboard">Leaderboards 🏆</a>
+                <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')"><span data-i18n="nav_messages">Messages</span> <span id="msg-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('verifications')" data-i18n="nav_verifications">Verifications 🛡️ <span id="verif-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('safety')" data-i18n="nav_safety">Safety Center 🛡️ <span id="safety-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('ledger')" data-i18n="nav_ledger">Smart Contracts ⛓️</a>
+                <a href="#" class="nav-link" onclick="showSection('oracle')" data-i18n="nav_oracle">Strategy Oracle 🧠</a>
+                <a href="#" class="nav-link" onclick="showSection('fuel-oracle')" data-i18n="nav_fuel">Bharat-Fuel Oracle 🛢️</a>
+                <a href="#" id="nav-link-paisa-fast" class="nav-link" onclick="showSection('paisa-fast')" data-i18n="nav_paisa">💰 Paisa-Fast (Fintech) <span id="paisa-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('strategy-plan')" data-i18n="nav_strategy">Operational Strategy 🎯</a>
+                <a href="#" class="nav-link" onclick="showSection('network-resilience')" data-i18n="nav_resilience">Network Resilience 🦋</a>
+                <a href="#" class="nav-link" onclick="showSection('system')" data-i18n="nav_settings">System Settings ⚙️</a>
             </div>
             <a href="#" class="nav-link" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); font-weight:800; border:1px solid rgba(239, 68, 68, 0.2); margin-top:0;">Logout 🚪</a>
         </aside>
 
         <main class="main-content">
-            <div class="top-bar">
-                <h1 id="welcome-msg">Dashboard</h1>
-                <div id="theme-toggle" class="theme-switch" title="Toggle Light/Dark Mode">🌙</div>
+            <div class="top-bar" style="display:flex; align-items:center; gap:20px;">
+                <h1 id="welcome-msg" style="flex:1;">Dashboard</h1>
+                
+                <!-- Language Selector -->
+                <div class="glass-card" style="display:flex; gap:8px; padding:6px 12px; border:1px solid var(--border); border-radius:12px; height:auto;">
+                    <button class="lang-btn" onclick="setLanguage('en')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:bold;">EN</button>
+                    <div style="width:1px; background:var(--border); margin:4px 0;"></div>
+                    <button class="lang-btn" onclick="setLanguage('bn')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:bold;">বাং</button>
+                    <div style="width:1px; background:var(--border); margin:4px 0;"></div>
+                    <button class="lang-btn" onclick="setLanguage('hi')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:bold;">हिं</button>
+                </div>
+
+                <div id="theme-toggle" class="theme-switch" title="Toggle Light/Dark Mode" style="margin:0;">🌙</div>
             </div>
 
 
@@ -637,12 +647,12 @@
                 <div class="glass-card section-card" style="height: calc(100vh - 150px); display:flex; flex-direction:column;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                         <div style="flex:1; min-width:450px;">
-                            <h3 style="margin:0;">Digital Twin: Live Fleet Intel</h3>
+                            <h3 style="margin:0;" data-i18n="title_digital_twin">Digital Twin: Live Fleet Intel</h3>
                             <div style="margin-top:15px; padding:20px; background:rgba(255,255,255,0.03); border-radius:16px; border:1px solid var(--card-border); backdrop-filter:blur(10px);">
-                                <h4 style="margin:0 0 15px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em;">🧪 Simulation Sandbox</h4>
+                                <h4 style="margin:0 0 15px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em;" data-i18n="sim_sandbox">🧪 Simulation Sandbox</h4>
                                 <div style="display:flex; gap:15px; align-items:flex-end; flex-wrap:wrap;">
                                     <div class="input-group" style="flex:1; min-width:200px; margin:0;">
-                                        <label style="font-size:0.7rem;">Select Disaster</label>
+                                        <label style="font-size:0.7rem;" data-i18n="select_disaster">Select Disaster</label>
                                         <select id="disaster-type" style="padding:10px;">
                                             <option value="cyclone">🌪️ Cyclone (Area)</option>
                                             <option value="flood">🌊 Flood (Area)</option>
@@ -655,11 +665,11 @@
                                         </select>
                                     </div>
                                     <div style="display:flex; gap:10px;">
-                                        <button class="btn-primary btn-accent" style="padding:12px 20px; font-size:0.85rem; white-space:nowrap;" onclick="toggleDrawMode()">✏️ Draw on Map</button>
+                                        <button class="btn-primary btn-accent" style="padding:12px 20px; font-size:0.85rem; white-space:nowrap;" onclick="toggleDrawMode()" data-i18n="draw_on_map">✏️ Draw on Map</button>
                                         <button class="btn-primary btn-danger" style="padding:12px 15px; font-size:0.85rem;" onclick="clearDisasters()">🗑️</button>
                                     </div>
                                     <div class="input-group" style="flex:1; min-width:160px; margin:0;">
-                                        <label style="font-size:0.7rem;">Map Layer</label>
+                                        <label style="font-size:0.7rem;" data-i18n="map_layer">Map Layer</label>
                                         <select id="map-layer" style="padding:10px;" onchange="changeMapLayer()">
                                             <option value="standard">Standard Map</option>
                                             <option value="terrain">Terrain Map</option>
@@ -680,8 +690,8 @@
                         
                         <!-- Floating Active Simulation Control (Moved outside map to avoid interaction conflicts) -->
                         <div id="active-sims-container" class="glass-card" style="position:absolute; top:20px; left:20px; z-index:1000; padding:20px; border:1px solid var(--warning); width:320px; background:rgba(20,25,35,0.9); backdrop-filter:blur(10px); box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-                            <h4 style="margin:0 0 15px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em; cursor:move;">📡 Active Simulation Control</h4>
-                            <div id="sims-empty-msg" style="color:var(--text-muted); font-size:0.8rem; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px dashed var(--border);">No active sandboxes detected. Draw on the map to start testing.</div>
+                            <h4 style="margin:0 0 15px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em; cursor:move;" data-i18n="active_sim_control">📡 Active Simulation Control</h4>
+                            <div id="sims-empty-msg" style="color:var(--text-muted); font-size:0.8rem; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border:1px dashed var(--border);" data-i18n="no_active_sandboxes">No active sandboxes detected. Draw on the map to start testing.</div>
                             <table id="sims-table" style="width:100%; font-size:0.8rem; display:none;">
                                 <thead>
                                     <tr style="text-align:left; color:var(--muted); border-bottom:1px solid var(--border);">
@@ -697,20 +707,20 @@
                         <!-- Floating AI Simulation Results -->
                         <div id="simulation-panel" style="display:none; position:absolute; top:20px; right:20px; width:320px; background:rgba(20,25,35,0.9); backdrop-filter:blur(10px); border:1px solid var(--card-border); border-radius:8px; padding:15px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h3 style="margin:0; color:var(--warning); font-size:1.1rem; cursor:move;">AI Simulation Results</h3>
+                                <h3 style="margin:0; color:var(--warning); font-size:1.1rem; cursor:move;" data-i18n="ai_results">AI Simulation Results</h3>
                                 <button style="background:none; border:none; color:white; cursor:pointer;" onclick="document.getElementById('simulation-panel').style.display='none'">✖</button>
                             </div>
                             <p style="margin:0 0 10px 0; font-size:0.9rem; color:var(--text-muted);">
-                                <strong>Affected Shipments:</strong> <span id="sim-affected-count" style="color:white; font-weight:bold;">0</span>
+                                <strong data-i18n="affected_shipments">Affected Shipments:</strong> <span id="sim-affected-count" style="color:white; font-weight:bold;">0</span>
                             </p>
                             <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px;">
-                                <h4 style="margin:0 0 5px 0; font-size:0.85rem; color:var(--success);">💡 AI Recommendation</h4>
+                                <h4 style="margin:0 0 5px 0; font-size:0.85rem; color:var(--success);" data-i18n="ai_recommendation">💡 AI Recommendation</h4>
                                 <p id="sim-ai-recommendation" style="margin:0; font-size:0.85rem; color:var(--text-muted);"></p>
                             </div>
                             <div id="sim-affected-list" style="max-height:200px; overflow-y:auto; margin-bottom:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
                                 <!-- Detailed shipment rows injected here -->
                             </div>
-                            <button class="btn-primary" style="width:100%; font-size:0.85rem; padding:8px;" onclick="applySimulationFixes()">Execute All AI Actions</button>
+                            <button class="btn-primary" style="width:100%; font-size:0.85rem; padding:8px;" onclick="applySimulationFixes()" data-i18n="execute_actions">Execute All AI Actions</button>
                         </div>
                     </div>
                 </div>
@@ -1818,6 +1828,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="../js/translations.js"></script>
     <script src="../js/api.js"></script>
     <script src="../js/manager.js"></script>
 <script>
