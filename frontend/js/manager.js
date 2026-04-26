@@ -1796,7 +1796,7 @@ async function loadDriversAndVehicles() {
                     verifTbody.innerHTML += `<tr>
                         <td style="padding:15px 20px;"><b>${d.name}</b></td>
                         <td style="padding:15px 20px;"><span style="font-family:monospace; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:6px;">${plate}</span></td>
-                        <td style="padding:15px 20px;"><img src="http://localhost:8000/images/${d.verification_image}" style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"></td>
+                        <td style="padding:15px 20px;"><img src="${d.verification_image.startsWith('http') ? d.verification_image : 'http://localhost:8000/images/' + d.verification_image}" style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"></td>
                         <td style="padding:15px 20px;">
                             <div style="display:flex; gap:10px;">
                                 <button class="btn-primary btn-success" style="padding:8px 16px; font-size:0.75rem;" onclick="manualVerify('${d.id}', 'verified')">Approve</button>

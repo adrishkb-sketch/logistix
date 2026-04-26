@@ -1,131 +1,114 @@
-import json
 import os
-import fcntl
 from typing import List, Dict, Any, Optional
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+# Load environment variables
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(base_dir, ".env"))
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+
+# Initialize global client
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 class JSONDatabase:
+    """
+    Supabase Implementation (retaining the JSONDatabase class name so that 
+    the rest of the codebase doesn't need to be updated).
+    This acts as a Data Access Object (DAO) mapped to Supabase JSONB tables.
+    """
     def __init__(self, table_name: str):
-        # Resolve absolute path to the logistix root directory's data folder
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.file_path = os.path.join(base_dir, "data", f"{table_name}.json")
-        self._ensure_file_exists()
+        self.table_name = table_name
 
-    def _ensure_file_exists(self):
-        if not os.path.exists(self.file_path):
-            with open(self.file_path, "w") as f:
-                json.dump([], f)
-
-    def read(self) -> List[Dict[str, Any]]:
-        with open(self.file_path, "r") as f:
-            fcntl.flock(f, fcntl.LOCK_SH)
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-            fcntl.flock(f, fcntl.LOCK_UN)
-            return data
-
-    def write(self, data: List[Dict[str, Any]]):
-        with open(self.file_path, "w") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            json.dump(data, f, indent=4)
-            fcntl.flock(f, fcntl.LOCK_UN)
+    def _ensure_client(self):
+        if not supabase:
+            raise Exception("Supabase is not configured. Please check your .env file.")
 
     def get_all(self) -> List[Dict[str, Any]]:
-        return self.read()
+        self._ensure_client()
+        try:
+            response = supabase.table(self.table_name).select("data").execute()
+            return [row["data"] for row in response.data]
+        except Exception as e:
+            print(f"Supabase GET_ALL Error on {self.table_name}: {e}")
+            return []
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
-        data = self.read()
-        for item in data:
-            if item.get("id") == item_id:
-                return item
-        return None
+        self._ensure_client()
+        try:
+            response = supabase.table(self.table_name).select("data").eq("id", item_id).execute()
+            if response.data:
+                return response.data[0]["data"]
+            return None
+        except Exception as e:
+            print(f"Supabase GET_BY_ID Error on {self.table_name}: {e}")
+            return None
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
-        with open(self.file_path, "r+") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-            data.append(item)
-            f.seek(0)
-            f.truncate()
-            json.dump(data, f, indent=4)
-            fcntl.flock(f, fcntl.LOCK_UN)
-        return item
+        self._ensure_client()
+        try:
+            record = {"id": str(item["id"]), "data": item}
+            supabase.table(self.table_name).insert(record).execute()
+            return item
+        except Exception as e:
+            print(f"Supabase INSERT Error on {self.table_name}: {e}")
+            return item
 
     def update(self, item_id: str, updated_item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        result = None
-        with open(self.file_path, "r+") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-            for i, item in enumerate(data):
-                if item.get("id") == item_id:
-                    data[i].update(updated_item)
-                    result = data[i]
-                    break
-            if result:
-                f.seek(0)
-                f.truncate()
-                json.dump(data, f, indent=4)
-            fcntl.flock(f, fcntl.LOCK_UN)
-        return result
+        self._ensure_client()
+        try:
+            # 1. Fetch current item
+            current = self.get_by_id(item_id)
+            if not current:
+                return None
+            
+            # 2. Merge updates
+            current.update(updated_item)
+            
+            # 3. Push to Supabase
+            record = {"id": str(item_id), "data": current}
+            supabase.table(self.table_name).update(record).eq("id", item_id).execute()
+            
+            return current
+        except Exception as e:
+            print(f"Supabase UPDATE Error on {self.table_name}: {e}")
+            return None
 
     def delete(self, item_id: str) -> bool:
-        deleted = False
-        with open(self.file_path, "r+") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = []
-            initial_length = len(data)
-            data = [item for item in data if item.get("id") != item_id]
-            if len(data) < initial_length:
-                deleted = True
-                f.seek(0)
-                f.truncate()
-                json.dump(data, f, indent=4)
-            fcntl.flock(f, fcntl.LOCK_UN)
-        return deleted
+        self._ensure_client()
+        try:
+            response = supabase.table(self.table_name).delete().eq("id", item_id).execute()
+            # If data was returned, a row was deleted. In newer supabase-py versions it returns count.
+            return True
+        except Exception as e:
+            print(f"Supabase DELETE Error on {self.table_name}: {e}")
+            return False
+
+    def write(self, data: List[Dict[str, Any]]):
+        """Used internally for bulk overwrites (like clearing tables)"""
+        self._ensure_client()
+        try:
+            # Clear all
+            supabase.table(self.table_name).delete().neq("id", "0").execute()
+            
+            if data:
+                records = [{"id": str(item["id"]), "data": item} for item in data]
+                supabase.table(self.table_name).insert(records).execute()
+        except Exception as e:
+            print(f"Supabase WRITE Error on {self.table_name}: {e}")
 
     def clear_all(self):
         self.write([])
 
+    # Deprecated local backup methods
     @staticmethod
     def snapshot():
-        """Creates a backup of all JSON files in the data directory."""
-        import shutil
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        data_dir = os.path.join(base_dir, "data")
-        backup_dir = os.path.join(base_dir, "data_snapshot")
-        
-        if os.path.exists(backup_dir):
-            shutil.rmtree(backup_dir)
-        
-        os.makedirs(backup_dir, exist_ok=True)
-        for f in os.listdir(data_dir):
-            if f.endswith(".json"):
-                shutil.copy2(os.path.join(data_dir, f), os.path.join(backup_dir, f))
+        pass
 
     @staticmethod
     def restore():
-        """Restores all JSON files from the backup directory."""
-        import shutil
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        data_dir = os.path.join(base_dir, "data")
-        backup_dir = os.path.join(base_dir, "data_snapshot")
-        
-        if not os.path.exists(backup_dir):
-            return False
-            
-        for f in os.listdir(backup_dir):
-            if f.endswith(".json"):
-                shutil.copy2(os.path.join(backup_dir, f), os.path.join(data_dir, f))
-        
-        shutil.rmtree(backup_dir)
         return True

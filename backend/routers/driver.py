@@ -224,14 +224,32 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
     vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"])
     expected_plate = vehicle.get("number_plate", "UNKNOWN")
     
-    # Save image
+    # Save image locally for OCR
     ext = file.filename.split('.')[-1]
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = f"data/images/{filename}"
     
     os.makedirs("data/images", exist_ok=True)
+    file_bytes = await file.read()
     with open(filepath, "wb") as buffer:
-        buffer.write(await file.read())
+        buffer.write(file_bytes)
+        
+    # Upload to Supabase Storage
+    from backend.database import supabase
+    public_url = None
+    if supabase:
+        try:
+            supabase.storage.from_("logistix-assets").upload(
+                file=file_bytes,
+                path=filename,
+                file_options={"content-type": file.content_type}
+            )
+            public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
+        except Exception as e:
+            print(f"Supabase Upload Error: {e}")
+            public_url = f"/images/{filename}" # fallback
+    else:
+        public_url = f"/images/{filename}" # fallback
         
     # Process ML
     ml_result = process_number_plate_image(filepath, expected_plate)
@@ -240,14 +258,14 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
     new_status = "verified" if ml_result["verified"] else "pending_manual"
     drivers_db.update(driver_id, {
         "verification_status": new_status,
-        "verification_image": filename,
+        "verification_image": public_url,
         "verification_message": ml_result["message"]
     })
     
     return {
         "status": new_status,
         "ml_result": ml_result,
-        "image_url": f"/images/{filename}"
+        "image_url": public_url
     }
 
 @router.post("/{driver_id}/scan-cargo/{shipment_id}")

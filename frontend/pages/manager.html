@@ -172,8 +172,8 @@
 
                 <!-- Voice Control Button & Help -->
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <button id="voice-trigger" class="glass-card" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px;" data-i18n="btn_voice_control">🎙️ Automated Control</button>
-                    <button onclick="window.logistixVoice.showInstructions()" title="Voice Help" style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:white; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;">?</button>
+                    <button id="voice-trigger" class="glass-card" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);" data-i18n="btn_voice_control">🎙️ Automated Control</button>
+                    <button onclick="window.logistixVoice.showInstructions()" title="Voice Help" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;">?</button>
                 </div>
 
                 <div id="theme-toggle" class="theme-switch" title="Toggle Light/Dark Mode" style="margin:0;">🌙</div>
@@ -739,11 +739,11 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                         <h3 style="margin:0;">Performance Leaderboard 🏆</h3>
                         <div style="display:flex; gap:10px;">
-                            <select id="leader-type" class="glass-card" style="padding:8px; border:none; color:white; background:rgba(0,0,0,0.3);" onchange="loadLeaderboard()">
+                            <select id="leader-type" class="glass-card" style="padding:10px 15px; border-radius:10px; border:1px solid var(--border); color:var(--text); background:rgba(128,128,128,0.15); font-size:0.95rem; cursor:pointer; outline:none;" onchange="loadLeaderboard()">
                                 <option value="driver">Drivers</option>
                                 <option value="vehicle">Vehicles</option>
                             </select>
-                            <select id="leader-sort" class="glass-card" style="padding:8px; border:none; color:white; background:rgba(0,0,0,0.3);" onchange="loadLeaderboard()">
+                            <select id="leader-sort" class="glass-card" style="padding:10px 15px; border-radius:10px; border:1px solid var(--border); color:var(--text); background:rgba(128,128,128,0.15); font-size:0.95rem; cursor:pointer; outline:none;" onchange="loadLeaderboard()">
                                 <option value="overall">General Ranking</option>
                                 <option value="safety_index">Safety Index</option>
                                 <option value="punctuality_rate">Punctuality</option>
