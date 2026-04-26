@@ -686,11 +686,18 @@ body.light-mode .btn-outline:hover {
         flex-direction: column;
         height: auto;
         min-height: 100vh;
+        overflow: visible; /* Unlock scroll */
+    }
+
+    body:has(.dashboard-layout) {
+        overflow: auto !important; /* Force unlock body scroll */
     }
     
     .main-content {
         width: 100%;
-        padding: 80px 16px 20px; /* Top padding for the floating menu button */
+        padding: 80px 16px 20px;
+        overflow: visible; /* Let the body handle scrolling on mobile */
+        height: auto;
     }
 
     .top-bar {

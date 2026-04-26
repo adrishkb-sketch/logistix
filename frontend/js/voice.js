@@ -181,10 +181,10 @@ class AutomatedControl {
         const langCmds = Object.keys(langCommands);
         
         let html = `
-            <div id="voice-help-modal" class="glass-card" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:500px; max-width:90vw; padding:30px; box-shadow:0 20px 50px rgba(0,0,0,0.5); border:1px solid var(--primary);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h2 style="margin:0;">${getTranslation('voice_help_title')}</h2>
-                    <button onclick="window.logistixVoice.closeInstructions()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">✕</button>
+            <div id="voice-help-modal" class="glass-card" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:500px; max-width:95vw; padding:32px; box-shadow:0 25px 60px rgba(0,0,0,0.25); border:1px solid var(--primary); background:var(--card); color:var(--text);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                    <h2 style="margin:0; font-weight:800; color:var(--text);">${getTranslation('voice_help_title')}</h2>
+                    <button onclick="window.logistixVoice.closeInstructions()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer; opacity:0.6;">✕</button>
                 </div>
                 
                 <div style="display:flex; gap:10px; margin-bottom:20px;">
@@ -211,9 +211,9 @@ class AutomatedControl {
             if (regEntry && (regEntry.role === 'all' || regEntry.role === role)) {
                 const descKey = `voice_instr_${regEntry.desc}`;
                 html += `
-                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <td style="padding:12px; font-weight:bold; color:var(--primary);">"${localizedCmd}"</td>
-                        <td style="padding:12px; font-size:0.85rem; color:var(--text-muted);">${getTranslation(descKey)}</td>
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:12px; font-weight:bold; color:var(--primary); font-family:inherit;">"${localizedCmd}"</td>
+                        <td style="padding:12px; font-size:0.85rem; color:var(--muted);">${getTranslation(descKey)}</td>
                     </tr>
                 `;
             }
