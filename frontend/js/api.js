@@ -1,4 +1,10 @@
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:8000/api"
+    : "https://" + window.location.hostname.replace("vercel.app", "up.railway.app") + "/api"; 
+
+// NOTE: If your Railway service name is different from your Vercel project name, 
+// you should manually set the production URL here:
+// const API_BASE = "https://logistix-production.up.railway.app/api";
 
 async function apiCall(endpoint, method = "GET", body = null) {
     // Dynamically retrieve security context (Company ID or Driver ID)
