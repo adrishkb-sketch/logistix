@@ -65,7 +65,7 @@
             background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
                         radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
         }
-        /* AI Optimize Button */
+        /* Automated Optimize Button */
         .ai-optimize-btn {
             background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
             color: white !important;
@@ -130,38 +130,50 @@
             <div class="sidebar-header">
                 <h2>Logistix</h2>
             </div>
-            <div class="nav-links-wrapper">
-                <a href="#" class="nav-link active" onclick="showSection('analytics')" data-i18n="nav_analytics">Executive Analytics 📊</a>
-                <a href="#" class="nav-link" onclick="showSection('warehouses')" data-i18n="nav_hubs">Infrastructure (Hubs) 🏗️</a>
-                <a href="#" class="nav-link" onclick="showSection('shipments')" data-i18n="nav_shipments">Shipments 📦</a>
-                <a href="#" class="nav-link" onclick="showSection('drivers')" data-i18n="nav_drivers">Drivers & Vehicles 🚛</a>
-                <a href="#" class="nav-link" onclick="showSection('weather')" data-i18n="nav_weather">Weather Fleet Map 🗺️</a>
-                <a href="#" class="nav-link" onclick="showSection('leaderboard')" data-i18n="nav_leaderboard">Leaderboards 🏆</a>
-                <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')"><span data-i18n="nav_messages">Messages</span> <span id="msg-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('verifications')" data-i18n="nav_verifications">Verifications 🛡️ <span id="verif-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('safety')" data-i18n="nav_safety">Safety Center 🛡️ <span id="safety-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('ledger')" data-i18n="nav_ledger">Smart Contracts ⛓️</a>
-                <a href="#" class="nav-link" onclick="showSection('oracle')" data-i18n="nav_oracle">Strategy Oracle 🧠</a>
-                <a href="#" class="nav-link" onclick="showSection('fuel-oracle')" data-i18n="nav_fuel">Bharat-Fuel Oracle 🛢️</a>
-                <a href="#" id="nav-link-paisa-fast" class="nav-link" onclick="showSection('paisa-fast')" data-i18n="nav_paisa">💰 Paisa-Fast (Fintech) <span id="paisa-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('strategy-plan')" data-i18n="nav_strategy">Operational Strategy 🎯</a>
-                <a href="#" class="nav-link" onclick="showSection('network-resilience')" data-i18n="nav_resilience">Network Resilience 🦋</a>
-                <a href="#" class="nav-link" onclick="showSection('system')" data-i18n="nav_settings">System Settings ⚙️</a>
+            <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
+                <a href="#" id="btn-nav-analytics" class="nav-link active" onclick="showSection('analytics')" data-layout-id="nav-analytics"><span data-i18n="nav_analytics">Executive Analytics 📊</span></a>
+                <a href="#" class="nav-link" onclick="showSection('warehouses')" data-layout-id="nav-hubs"><span data-i18n="nav_hubs">Infrastructure (Hubs) 🏗️</span></a>
+                <a href="#" id="btn-nav-shipments" class="nav-link" onclick="showSection('shipments')" data-layout-id="nav-shipments"><span data-i18n="nav_shipments">Shipments 📦</span></a>
+                <a href="#" class="nav-link" onclick="showSection('drivers')" data-layout-id="nav-drivers"><span data-i18n="nav_drivers">Drivers & Vehicles 🚛</span></a>
+                <a href="#" class="nav-link" onclick="showSection('weather')" data-layout-id="nav-weather"><span data-i18n="nav_weather">Weather Fleet Map 🗺️</span></a>
+                <a href="#" class="nav-link" onclick="showSection('leaderboard')" data-layout-id="nav-leaderboard"><span data-i18n="nav_leaderboard">Leaderboards 🏆</span></a>
+                <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')" data-layout-id="nav-messages"><span data-i18n="nav_messages">Messages</span> <span id="msg-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('verifications')" data-layout-id="nav-verifications"><span data-i18n="nav_verifications">Verifications 🛡️</span> <span id="verif-badge" class="badge"></span></a>
+                <a href="#" id="btn-nav-safety" class="nav-link" onclick="showSection('safety')" data-layout-id="nav-safety"><span data-i18n="nav_safety">Safety Center 🛡️</span> <span id="safety-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('ledger')" data-layout-id="nav-ledger"><span data-i18n="nav_ledger">Smart Contracts ⛓️</span></a>
+                <a href="#" class="nav-link" onclick="showSection('oracle')" data-layout-id="nav-oracle"><span data-i18n="nav_oracle">Strategy Oracle 🧠</span></a>
+                <a href="#" class="nav-link" onclick="showSection('fuel-oracle')" data-layout-id="nav-fuel"><span data-i18n="nav_fuel">Bharat-Fuel Oracle 🛢️</span></a>
+                <a href="#" id="nav-link-paisa-fast" class="nav-link" onclick="showSection('paisa-fast')" data-layout-id="nav-paisa"><span data-i18n="nav_paisa">💰 Payments</span> <span id="paisa-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('strategy-plan')" data-layout-id="nav-strategy"><span data-i18n="nav_strategy">Operational Strategy 🎯</span></a>
+                <a href="#" class="nav-link" onclick="showSection('network-resilience')" data-layout-id="nav-resilience"><span data-i18n="nav_resilience">Network Resilience 🦋</span></a>
+                <a href="#" class="nav-link" onclick="showSection('system')" data-layout-id="nav-settings"><span data-i18n="nav_settings">System Settings ⚙️</span></a>
             </div>
-            <a href="#" class="nav-link" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); font-weight:800; border:1px solid rgba(239, 68, 68, 0.2); margin-top:0;">Logout 🚪</a>
+            <a href="#" class="nav-link" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); font-weight:800; border:1px solid rgba(239, 68, 68, 0.2); margin-top:0;"><span data-i18n="sign_out">Logout 🚪</span></a>
+
         </aside>
 
-        <main class="main-content">
+        <main class="main-content" data-layout-container="main-sections">
+
             <div class="top-bar" style="display:flex; align-items:center; gap:20px;">
-                <h1 id="welcome-msg" style="flex:1;">Dashboard</h1>
+                <h1 style="flex:1;"><span data-i18n="dashboard">Dashboard</span> - <span id="manager-name">---</span></h1>
                 
-                <!-- Language Selector -->
-                <div class="glass-card" style="display:flex; gap:8px; padding:6px 12px; border:1px solid var(--border); border-radius:12px; height:auto;">
-                    <button class="lang-btn" onclick="setLanguage('en')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:bold;">EN</button>
-                    <div style="width:1px; background:var(--border); margin:4px 0;"></div>
-                    <button class="lang-btn" onclick="setLanguage('bn')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:bold;">বাং</button>
-                    <div style="width:1px; background:var(--border); margin:4px 0;"></div>
-                    <button class="lang-btn" onclick="setLanguage('hi')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:bold;">हिं</button>
+                <button id="modify-dash-btn" class="btn-primary btn-outline" style="padding:8px 16px; font-size:0.85rem;" onclick="window.logistixLayout.toggleEditMode()" data-i18n="modify_dashboard">📐 Modify Dashboard</button>
+
+                
+                <!-- Language Selector Dropdown -->
+                <div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
+                    <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
+            <option value="en">English (EN)</option>
+            <option value="hi">हिंदी (HI)</option>
+            <option value="bn">বাংলা (BN)</option>
+        </select>
+                </div>
+
+                <!-- Voice Control Button & Help -->
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <button id="voice-trigger" class="glass-card" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px;" data-i18n="btn_voice_control">🎙️ Automated Control</button>
+                    <button onclick="window.logistixVoice.showInstructions()" title="Voice Help" style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:white; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;">?</button>
                 </div>
 
                 <div id="theme-toggle" class="theme-switch" title="Toggle Light/Dark Mode" style="margin:0;">🌙</div>
@@ -169,275 +181,268 @@
 
 
             <!-- Analytics Section -->
-            <section id="analytics" class="section-content">
-                <!-- Stats Grid -->
-                <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.5rem; margin-bottom:2rem;">
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--primary);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Timely Deliveries</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-timely">0%</div>
-                        <div style="font-size:0.8rem; color:var(--success);">↑ 2.4% from last week</div>
+            <section id="analytics" class="section-content" data-layout-id="section-analytics">
+                <div data-layout-container="analytics-content">
+                    <!-- Stats Grid -->
+                    <div class="stats-grid" data-layout-container="stats-grid" data-layout-id="analytics-stats" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.5rem; margin-bottom:2rem;">
+                        <div class="glass-card" data-layout-id="stat-timely-card" style="padding:1.5rem; border-top:4px solid var(--primary);">
+                            <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;" data-i18n="timely_deliveries">Timely Deliveries</h4>
+                            <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-timely">0%</div>
+                            <div style="font-size:0.8rem; color:var(--success);" data-i18n="stat_timely_change">↑ 2.4% from last week</div>
+                        </div>
+
+                        <div class="glass-card" data-layout-id="stat-delay-card" style="padding:1.5rem; border-top:4px solid var(--warning);">
+                            <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;" data-i18n="avg_delay">Avg. Delivery Delay</h4>
+                            <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-delay">0m</div>
+                            <div style="font-size:0.8rem; color:var(--danger);" data-i18n="route_opt_rec">Route optimization recommended</div>
+                        </div>
+                        <div class="glass-card" data-layout-id="stat-active-card" style="padding:1.5rem; border-top:4px solid var(--success);">
+                            <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;" data-i18n="active_fleet">Active Fleet</h4>
+                            <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-active">0</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted);" data-i18n="in_transit_desc">Vehicles currently in-transit</div>
+                        </div>
+                        <div class="glass-card" data-layout-id="stat-drivers-card" style="padding:1.5rem; border-top:4px solid var(--accent);">
+                            <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;" data-i18n="total_drivers">Total Drivers</h4>
+                            <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-drivers">0</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted);" data-i18n="verified_personnel">Verified personnel</div>
+                        </div>
+                        <div class="glass-card" data-layout-id="stat-warehouses-card" style="padding:1.5rem; border-top:4px solid var(--primary);">
+                            <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;" data-i18n="total_warehouses">Total Warehouses</h4>
+                            <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-warehouses">0</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted);" data-i18n="distribution_hubs">Distribution hubs</div>
+                        </div>
+                        <div class="glass-card" data-layout-id="stat-vehicles-card" style="padding:1.5rem; border-top:4px solid var(--success);">
+                            <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;" data-i18n="total_vehicles">Total Vehicles</h4>
+                            <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-vehicles">0</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted);" data-i18n="active_fleet_units">Active fleet units</div>
+                        </div>
+                        <div class="glass-card" data-layout-id="stat-profits-card" style="padding:1.5rem; border-top:4px solid #10b981; background:rgba(16,185,129,0.05);">
+                            <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;" data-i18n="total_profits">Total Profits This Month</h4>
+                            <div style="font-size:2rem; font-weight:bold; margin:10px 0; color:#10b981;" id="stat-profits">₹ 0</div>
+                            <div style="font-size:0.8rem; color:var(--success);" data-i18n="net_revenue">Net Revenue</div>
+                        </div>
                     </div>
 
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--warning);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Avg. Delivery Delay</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-delay">0m</div>
-                        <div style="font-size:0.8rem; color:var(--danger);">Route optimization recommended</div>
+                    <!-- Charts Row -->
+                    <div data-layout-id="analytics-charts" style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; margin-bottom:32px; align-items: start;">
+                        <div class="glass-card">
+                            <h3 style="margin-top:0;" data-i18n="volume_trends_title">Volume Trends (Last 7 Days)</h3>
+                            <div style="height: 300px; width: 100%; position: relative;">
+                                <canvas id="volumeChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="glass-card">
+                            <h3 style="margin-top:0;" data-i18n="fleet_dist_title">Fleet Distribution</h3>
+                            <div style="height: 300px; width: 100%; position: relative;">
+                                <canvas id="fleetChart"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--success);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Active Fleet</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-active">0</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">Vehicles currently in-transit</div>
-                    </div>
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--accent);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Drivers</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-drivers">0</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">Verified personnel</div>
-                    </div>
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--primary);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Warehouses</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-warehouses">0</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">Distribution hubs</div>
-                    </div>
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid var(--success);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Vehicles</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0;" id="stat-vehicles">0</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">Active fleet units</div>
-                    </div>
-                    <div class="glass-card" style="padding:1.5rem; border-top:4px solid #10b981; background:rgba(16,185,129,0.05);">
-                        <h4 style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Profits This Month</h4>
-                        <div style="font-size:2rem; font-weight:bold; margin:10px 0; color:#10b981;" id="stat-profits">₹ 0</div>
-                        <div style="font-size:0.8rem; color:var(--success);">Net Revenue</div>
-                    </div>
-                </div>
 
-                <!-- Charts Row -->
-                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; margin-bottom:32px; align-items: start;">
-                    <div class="glass-card">
-                        <h3 style="margin-top:0;">Volume Trends (Last 7 Days)</h3>
-                        <div style="height: 300px; width: 100%; position: relative;">
-                            <canvas id="volumeChart"></canvas>
+                    <!-- Cascading Impact Predictor -->
+                    <div class="glass-card section-card" data-layout-id="analytics-cascade" style="margin-bottom:2rem; border-top:4px solid var(--warning);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                            <div>
+                                <h3 style="margin:0;" data-i18n="cascade_title">Cascading Impact Predictor (Automated Simulation)</h3>
+                                <p class="subtitle" data-i18n="cascade_subtitle">Predicting downstream bottlenecks based on active transit deviations</p>
+                            </div>
+                            <div style="text-align:right;">
+                                <small style="color:var(--text-muted)" data-i18n="projected_impact">Projected Network Impact</small>
+                                <div id="cascade-total-hours" style="font-size:1.5rem; font-weight:bold; color:var(--warning);">0.0 hrs</div>
+                            </div>
+                        </div>
+                        
+                        <div id="cascade-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:1rem;">
+                            <!-- Automated Cascade Cards -->
+                            <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted);">
+                                <span data-i18n="scanning_network">Scanning network for potential disruptions...</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="glass-card">
-                        <h3 style="margin-top:0;">Fleet Distribution</h3>
-                        <div style="height: 300px; width: 100%; position: relative;">
-                            <canvas id="fleetChart"></canvas>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Cascading Impact Predictor -->
-                <div class="glass-card section-card" style="margin-bottom:2rem; border-top:4px solid var(--warning);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                        <div>
-                            <h3 style="margin:0;">Cascading Impact Predictor (AI Simulation)</h3>
-                            <p class="subtitle">Predicting downstream bottlenecks based on active transit deviations</p>
+                    <div class="glass-card section-card" id="insights-panel" data-layout-id="analytics-insights" style="border-left: 4px solid var(--primary);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0;" data-i18n="system_alerts_title">System Alerts & Critical Insights</h3>
+                            <button class="btn-primary" style="width:auto; padding:5px 15px; background:rgba(255,255,255,0.05);" onclick="showSection('safety')"><span data-i18n="safety_center_btn">Safety Center →</span></button>
                         </div>
-                        <div style="text-align:right;">
-                            <small style="color:var(--text-muted)">Projected Network Impact</small>
-                            <div id="cascade-total-hours" style="font-size:1.5rem; font-weight:bold; color:var(--warning);">0.0 hrs</div>
-                        </div>
+                        <div id="alerts-container"><span data-i18n="loading_insights">Loading insights...</span></div>
                     </div>
-                    
-                    <div id="cascade-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:1rem;">
-                        <!-- AI Cascade Cards -->
-                        <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted);">
-                            Scanning network for potential disruptions...
-                        </div>
-                    </div>
-                    
-                    <div id="cascade-recommendation" style="margin-top:20px; padding:15px; background:rgba(237, 137, 54, 0.1); border-left:4px solid var(--warning); border-radius:8px; display:none;">
-                        <h4 style="margin:0; color:var(--warning); font-size:0.8rem; text-transform:uppercase;">AI Reroute Recommendation</h4>
-                        <p id="cascade-rec-text" style="margin:5px 0 0 0; font-size:0.9rem;"></p>
-                    </div>
-                </div>
-
-                <div class="glass-card section-card" id="insights-panel" style="border-left: 4px solid var(--primary);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0;">System Alerts & Critical Insights</h3>
-                        <button class="btn-primary" style="width:auto; padding:5px 15px; background:rgba(255,255,255,0.05);" onclick="showSection('safety')">Safety Center →</button>
-                    </div>
-                    <div id="alerts-container">Loading insights...</div>
                 </div>
             </section>
 
             <!-- Warehouses Section -->
-            <section id="warehouses" class="section-content" style="display:none;">
-                <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
-                        <div>
-                            <h2 style="margin:0; font-size:1.8rem; font-weight:800; color:var(--primary); letter-spacing:-0.02em;">Network Infrastructure</h2>
-                            <p style="margin:8px 0 0 0; color:var(--text-muted); font-size:0.95rem; line-height:1.6; max-width:600px;">Visualize and manage your regional hubs. Click anywhere on the map to deploy a new infrastructure node and expand your logistics reach.</p>
+            <section id="warehouses" class="section-content" data-layout-id="section-warehouses" style="display:none;">
+                <div data-layout-container="warehouses-content">
+                    <div class="glass-card section-card" data-layout-id="warehouses-map">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
+                            <div>
+                                <h2 style="margin:0; font-size:1.8rem; font-weight:800; color:var(--primary); letter-spacing:-0.02em;" data-i18n="infra_title">Network Infrastructure</h2>
+                                <p style="margin:8px 0 0 0; color:var(--text-muted); font-size:0.95rem; line-height:1.6; max-width:600px;" data-i18n="infra_desc">Visualize and manage your regional hubs. Click anywhere on the map to deploy a new infrastructure node and expand your logistics reach.</p>
+                            </div>
+                            <button class="btn-primary" style="width:auto; padding:12px 24px; font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:10px; border-radius:12px; background:rgba(79, 140, 255, 0.1); color:var(--primary); border:1px solid rgba(79, 140, 255, 0.2);" onclick="loadMapData()">
+                                <span style="font-size:1.1rem;">🔄</span> <span data-i18n="refresh_map">Refresh Map</span>
+                            </button>
                         </div>
-                        <button class="btn-primary" style="width:auto; padding:12px 24px; font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:10px; border-radius:12px; background:rgba(79, 140, 255, 0.1); color:var(--primary); border:1px solid rgba(79, 140, 255, 0.2);" onclick="loadMapData()">
-                            <span style="font-size:1.1rem;">🔄</span> Refresh Map
-                        </button>
+                        <div id="map"></div>
                     </div>
-                    <div id="map"></div>
-                </div>
 
-                <div class="glass-card section-card" style="margin-top:24px;">
-                    <h3 style="margin:0 0 24px 0; font-size:1.5rem; font-weight:700;">Global Infrastructure Registry</h3>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Warehouse Name</th>
-                                    <th>Manager / Contact</th>
-                                    <th>Location</th>
-                                    <th>Drones 🛰️</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="warehouses-table-body">
-                                <tr><td colspan="6" style="text-align:center;">No warehouses deployed yet.</td></tr>
-                            </tbody>
-                        </table>
+                    <div class="glass-card section-card" data-layout-id="warehouses-registry" style="margin-top:24px;">
+                        <h3 style="margin:0 0 24px 0; font-size:1.5rem; font-weight:700;" data-i18n="infra_registry">Global Infrastructure Registry</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="th_id">ID</th>
+                                        <th data-i18n="warehouse_name">Warehouse Name</th>
+                                        <th data-i18n="manager_contact">Manager / Contact</th>
+                                        <th data-i18n="th_location">Location</th>
+                                        <th data-i18n="th_drones">Drones 🛰️</th>
+                                        <th data-i18n="th_action">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="warehouses-table-body">
+                                    <tr><td colspan="6" style="text-align:center;">No warehouses deployed yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Shipments Section -->
-            <section id="shipments" class="section-content" style="display:none;">
-                <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0;">Create Shipment</h3>
-                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openBulkUploadModal()">📤 Bulk Upload (Excel/Sheets)</button>
-                    </div>
-                    <form id="create-shipment-form">
-                        <div class="form-grid">
-                            <div class="input-group">
-                                <label>Pickup Location (Lat, Lng)</label>
-                                <div style="display:flex; gap:8px;">
-                                    <input type="text" id="pickup-loc" placeholder="e.g. 28.7041, 77.1025" required>
-                                    <button type="button" class="btn-primary" style="width:auto; padding:0 12px; font-size:1.1rem; background:rgba(79, 140, 255, 0.1); border:1px solid rgba(79, 140, 255, 0.2); color:var(--primary);" onclick="openMapPicker('pickup-loc')" title="Select on Map">📍</button>
-                                </div>
-                            </div>
-                            <div class="input-group">
-                                <label>Drop Location (Lat, Lng)</label>
-                                <div style="display:flex; gap:8px;">
-                                    <input type="text" id="drop-loc" placeholder="e.g. 19.0760, 72.8777" required>
-                                    <button type="button" class="btn-primary" style="width:auto; padding:0 12px; font-size:1.1rem; background:rgba(79, 140, 255, 0.1); border:1px solid rgba(79, 140, 255, 0.2); color:var(--primary);" onclick="openMapPicker('drop-loc')" title="Select on Map">📍</button>
-                                </div>
-                            </div>
-                            <div class="input-group">
-                                <label>Weight (kg)</label>
-                                <input type="number" id="weight" required>
-                            </div>
-                            <div class="input-group span-2">
-                                <label>Description</label>
-                                <input type="text" id="description" placeholder="Brief description of the cargo..." required>
-                            </div>
-                            <div class="input-group">
-                                <label>Receiver Name</label>
-                                <input type="text" id="receiver-name" placeholder="John Doe" required>
-                            </div>
-                            <div class="input-group">
-                                <label>Receiver Phone</label>
-                                <input type="text" id="receiver-phone" placeholder="+91 9876543210" required>
-                            </div>
-                            <div class="input-group">
-                                <label>E-Way Bill Number 📄</label>
-                                <input type="text" id="eway-no" placeholder="e.g. 121012345678">
-                            </div>
-                            <div class="input-group">
-                                <label>E-Way Bill Expiry ⏰</label>
-                                <input type="datetime-local" id="eway-expiry">
-                            </div>
-                            <div class="input-group span-2" style="display:flex; flex-direction:row; align-items:center; gap:12px; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border);">
-                                <input type="checkbox" id="is-perishable" style="width:20px; height:20px; cursor:pointer; margin:0;">
-                                <label for="is-perishable" style="cursor:pointer; margin:0; text-transform:none; letter-spacing:normal; font-size:1rem; color:var(--text);">🍎 Cold Chain Protocol (Perishable / Medicine)</label>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn-primary">Create Shipment</button>
-                    </form>
-                </div>
-
-                <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                        <h3 style="margin:0;">Shipments Board</h3>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" style="padding:5px 10px; border-radius:4px; border:1px solid var(--card-border); background:rgba(0,0,0,0.3); color:white; font-size:0.8rem;">
-                            <select id="shipment-sort" onchange="applyShipmentFilters()" style="padding:5px; border-radius:4px; border:1px solid var(--card-border); background:rgba(0,0,0,0.3); color:white; font-size:0.8rem;">
-                                <option value="newest">Newest First</option>
-                                <option value="oldest">Oldest First</option>
-                                <option value="status">Status</option>
-                                <option value="eta">Expected ETA</option>
-                            </select>
-                            <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:5px 15px; white-space: nowrap;">⚡ Auto Bulk Assign</button>
-                            <button class="ai-optimize-btn" onclick="optimizeFleet()" style="white-space: nowrap;">
-                                <span style="font-size:0.95rem;">🚛</span> 
-                                <span>Optimize Fleet</span>
-                            </button>
-
-                            <div id="sim-mode-toggle-container" class="glass-card" style="padding:6px 12px; background:rgba(0,0,0,0.4); border:1px solid var(--border); display:flex; align-items:center; gap:10px; border-radius:12px; transition: all 0.3s ease;">
-                                <span style="font-size:0.7rem; color:var(--text-muted); font-weight:800; letter-spacing: 0.5px;">SIMULATION MODE</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="global-sim-toggle" onchange="toggleGlobalSimulationMode(this.checked)">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID / Desc</th>
-                                    <th>Vitality / Health</th>
-                                    <th>Status / Perf</th>
-                                    <th>Compliance 📄</th>
-                                    <th>Assigned Fleet</th>
-                                    <th>Actions & Intel</th>
-                                </tr>
-                            </thead>
-                            <tbody id="shipments-table-body">
-                                <!-- Data injected here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-                <!-- Drivers & Vehicles Section -->
-                <section id="drivers" class="section-content" style="display:none;">
-                    <div class="glass-card section-card">
+            <section id="shipments" class="section-content" data-layout-id="section-shipments" style="display:none;">
+                <div data-layout-container="shipments-content">
+                    <div class="glass-card section-card" data-layout-id="shipments-create">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                            <h3 style="margin:0;">Link Driver to Vehicle</h3>
-                            <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="autoAssignFleet()">🚀 Auto Assign All</button>
+                            <h3 style="margin:0;" data-i18n="create_shipment">Create Shipment</h3>
+                            <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openBulkUploadModal()" data-i18n="btn_bulk_upload">📤 Bulk Upload (Excel/Sheets)</button>
                         </div>
-                        <p class="subtitle">Assign a driver to a vehicle based on license compatibility.</p>
-                        <form id="link-form" class="form-grid">
-                            <div class="input-group">
-                                <label>Select Driver</label>
-                                <select id="link-driver" required>
-                                    <option value="">Loading...</option>
-                                </select>
+                        <form id="create-shipment-form">
+                            <div class="form-grid">
+                                <div class="input-group">
+                                    <label data-i18n="label_pickup_loc">Pickup Location (Lat, Lng)</label>
+                                    <div style="display:flex; gap:8px;">
+                                        <input type="text" id="pickup-loc" placeholder="e.g. 28.7041, 77.1025" required data-i18n-placeholder="placeholder_pickup">
+                                        <button type="button" class="btn-primary" style="width:auto; padding:0 12px; font-size:1.1rem; background:rgba(79, 140, 255, 0.1); border:1px solid rgba(79, 140, 255, 0.2); color:var(--primary);" onclick="openMapPicker('pickup-loc')" title="Select on Map">📍</button>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label data-i18n="label_drop_loc">Drop Location (Lat, Lng)</label>
+                                    <div style="display:flex; gap:8px;">
+                                        <input type="text" id="drop-loc" placeholder="e.g. 19.0760, 72.8777" required data-i18n-placeholder="placeholder_drop">
+                                        <button type="button" class="btn-primary" style="width:auto; padding:0 12px; font-size:1.1rem; background:rgba(79, 140, 255, 0.1); border:1px solid rgba(79, 140, 255, 0.2); color:var(--primary);" onclick="openMapPicker('drop-loc')" title="Select on Map">📍</button>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label data-i18n="label_weight">Weight (kg)</label>
+                                    <input type="number" id="weight" required>
+                                </div>
+                                <div class="input-group span-2">
+                                    <label data-i18n="label_description">Description</label>
+                                    <input type="text" id="description" placeholder="Brief description of the cargo..." required data-i18n-placeholder="label_description">
+                                </div>
+                                <div class="input-group">
+                                    <label data-i18n="label_receiver_name">Receiver Name</label>
+                                    <input type="text" id="receiver-name" placeholder="John Doe" required data-i18n-placeholder="placeholder_receiver">
+                                </div>
+                                <div class="input-group">
+                                    <label data-i18n="label_receiver_phone">Receiver Phone</label>
+                                    <input type="text" id="receiver-phone" placeholder="+91 9876543210" required data-i18n-placeholder="placeholder_phone">
+                                </div>
+                                <div class="input-group">
+                                    <label data-i18n="label_eway_no">E-Way Bill Number 📄</label>
+                                    <input type="text" id="eway-no" placeholder="e.g. 121012345678" data-i18n-placeholder="placeholder_eway">
+                                </div>
+                                <div class="input-group">
+                                    <label data-i18n="label_eway_expiry">E-Way Bill Expiry ⏰</label>
+                                    <input type="datetime-local" id="eway-expiry">
+                                </div>
+                                <div class="input-group span-2" style="display:flex; flex-direction:row; align-items:center; gap:12px; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border);">
+                                    <input type="checkbox" id="is-perishable" style="width:20px; height:20px; cursor:pointer; margin:0;">
+                                    <label for="is-perishable" style="cursor:pointer; margin:0; text-transform:none; letter-spacing:normal; font-size:1rem; color:var(--text);" data-i18n="label_cold_chain">🍎 Cold Chain Protocol (Perishable / Medicine)</label>
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label>Select Vehicle</label>
-                                <select id="link-vehicle" required>
-                                    <option value="">Loading...</option>
-                                </select>
-                            </div>
-                            <div class="input-group span-2">
-                                <button type="submit" class="btn-primary">Link Pair</button>
-                            </div>
+                            <button type="submit" class="btn-primary" data-i18n="create_shipment">Create Shipment</button>
                         </form>
                     </div>
 
-                    <div class="glass-card section-card" style="height: 100%;">
-                        <h3>Active Fleet Links</h3>
-                        <p class="subtitle">Currently active driver-vehicle pairs. Unlinking will free up both assets.</p>
+                    <div class="glass-card section-card" data-layout-id="shipments-board">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                            <h3 style="margin:0;" data-i18n="shipments_board_title">Shipments Board</h3>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" style="padding:5px 10px; border-radius:4px; border:1px solid var(--card-border); background:rgba(0,0,0,0.3); color:white; font-size:0.8rem;" data-i18n-placeholder="search_shipment_placeholder">
+                                
+                                <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:5px 15px; white-space: nowrap;" data-i18n="btn_auto_bulk_assign">⚡ Auto Bulk Assign</button>
+                                <button class="ai-optimize-btn" onclick="optimizeFleet()" style="white-space: nowrap;">
+                                    <span style="font-size:0.95rem;">🚛</span> 
+                                    <span data-i18n="btn_optimize_fleet">Optimize Fleet</span>
+                                </button>
+
+                                <div id="sim-mode-toggle-container" class="glass-card" style="padding:6px 12px; background:rgba(0,0,0,0.4); border:1px solid var(--border); display:flex; align-items:center; gap:10px; border-radius:12px; transition: all 0.3s ease;">
+                                    <span style="font-size:0.7rem; color:var(--text-muted); font-weight:800; letter-spacing: 0.5px;" data-i18n="label_sim_mode">SIMULATION MODE</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="global-sim-toggle" onchange="toggleGlobalSimulationMode(this.checked)">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Driver</th>
-                                        <th>Vehicle</th>
-                                        <th>Base Hub</th>
-                                        <th style="text-align:center;">Action</th>
+                                        <th data-i18n="th_id_desc">ID / Desc</th>
+                                        <th data-i18n="th_vitality">Vitality / Health</th>
+                                        <th data-i18n="th_status_perf">Status / Perf</th>
+                                        <th data-i18n="th_compliance">Compliance 📄</th>
+                                        <th data-i18n="th_assigned_fleet">Assigned Fleet</th>
+                                        <th data-i18n="th_actions_intel">Actions & Intel</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shipments-table-body">
+                                    <!-- Data injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Drivers & Vehicles Section -->
+            <section id="drivers" class="section-content" data-layout-id="section-drivers" style="display:none;">
+                <div data-layout-container="drivers-content">
+                    <div class="glass-card section-card" data-layout-id="drivers-link">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0;" data-i18n="link_driver_vehicle_title">Link Driver to Vehicle</h3>
+                            <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="autoAssignFleet()" data-i18n="btn_auto_assign_all">🚀 Auto Assign All</button>
+                        </div>
+                        <p class="subtitle" data-i18n="link_driver_vehicle_desc">Assign a driver to a vehicle based on license compatibility.</p>
+                        <form id="link-form" class="form-grid">
+                            <div class="input-group">
+                                <label data-i18n="label_select_driver">Select Driver</label>
+                                
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_select_vehicle">Select Vehicle</label>
+                                
+                            </div>
+                            <div class="input-group span-2">
+                                <button type="submit" class="btn-primary" data-i18n="btn_link_pair">Link Pair</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="glass-card section-card" data-layout-id="drivers-active-links" style="height: 100%;">
+                        <h3 data-i18n="active_fleet_links_title">Active Fleet Links</h3>
+                        <p class="subtitle" data-i18n="active_fleet_links_desc">Currently active driver-vehicle pairs. Unlinking will free up both assets.</p>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="platform_driver">Driver</th>
+                                        <th data-i18n="vehicle">Vehicle</th>
+                                        <th data-i18n="label_base_hub">Base Hub</th>
+                                        <th style="text-align:center;" data-i18n="th_action">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="linked-pairs-table-body">
@@ -448,203 +453,149 @@
                     </div>
 
 
-                <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0;">Add Driver</h3>
-                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openDriverBulkModal()">📤 Bulk Upload Drivers</button>
+                    <div class="glass-card section-card" data-layout-id="drivers-add">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0;" data-i18n="add_driver_title">Add Driver</h3>
+                            <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openDriverBulkModal()" data-i18n="btn_bulk_drivers">📤 Bulk Upload Drivers</button>
+                        </div>
+                        <form id="add-driver-form" class="form-grid">
+                            <div class="input-group">
+                                <label data-i18n="label_full_name">Full Name</label>
+                                <input type="text" id="d-name" placeholder="e.g. John Doe" required data-i18n-placeholder="placeholder_receiver">
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_login_id">Login ID</label>
+                                <input type="text" id="d-login" placeholder="e.g. john_d" required data-i18n-placeholder="placeholder_login_id">
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_password">Security Password</label>
+                                <input type="password" id="d-pass" placeholder="••••••••" required data-i18n-placeholder="placeholder_password">
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_license_type">License Type</label>
+                                
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_base_hub">Base Warehouse Hub</label>
+                                
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_experience">Years of Experience</label>
+                                <input type="number" id="d-exp" placeholder="e.g. 5" step="0.5" required>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_accidents">Past Accidents</label>
+                                <input type="number" id="d-accidents" placeholder="Count" min="0" required>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_violations">Traffic Violations</label>
+                                <input type="number" id="d-challans" placeholder="Challans" min="0" required>
+                            </div>
+                            <div class="input-group span-2">
+                                <label data-i18n="label_contact_number">Contact Number</label>
+                                <input type="text" id="d-phone" placeholder="+91 9876543210" required data-i18n-placeholder="placeholder_phone">
+                            </div>
+                            <div class="input-group span-2">
+                                <button type="submit" class="btn-primary" data-i18n="btn_register_driver">Register New Driver</button>
+                            </div>
+                        </form>
+                        <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
+                            <input type="text" id="driver-search" placeholder="Search by name or ID..." oninput="renderDriversTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;" data-i18n-placeholder="search_driver_placeholder">
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th data-i18n="th_name_id">Name / System ID</th><th data-i18n="th_metrics">Metrics</th><th data-i18n="th_score_safety">Driving Score / Safety</th><th data-i18n="label_violations">Challans</th><th data-i18n="reward_points">Reward Points</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_linked_vehicle">Linked Vehicle</th></tr></thead>
+                                <tbody id="drivers-table-body"></tbody>
+                            </table>
+                        </div>
                     </div>
-                    <form id="add-driver-form" class="form-grid">
-                        <div class="input-group">
-                            <label>Full Name</label>
-                            <input type="text" id="d-name" placeholder="e.g. John Doe" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Login ID</label>
-                            <input type="text" id="d-login" placeholder="e.g. john_d" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Security Password</label>
-                            <input type="password" id="d-pass" placeholder="••••••••" required>
-                        </div>
-                        <div class="input-group">
-                            <label>License Type</label>
-                            <select id="d-license" required>
-                                <option value="bike">Bike</option>
-                                <option value="scooty">Scooty</option>
-                                <option value="3 wheeled (battery)">3 Wheeled (Battery)</option>
-                                <option value="3 wheeled (non EV)">3 Wheeled (Non EV)</option>
-                                <option value="small van">Small Van</option>
-                                <option value="large van">Large Van</option>
-                                <option value="truck">Truck</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Base Warehouse Hub</label>
-                            <select id="d-base" required>
-                                <option value="">Select Base Warehouse</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>Years of Experience</label>
-                            <input type="number" id="d-exp" placeholder="e.g. 5" step="0.5" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Past Accidents</label>
-                            <input type="number" id="d-accidents" placeholder="Count" min="0" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Traffic Violations</label>
-                            <input type="number" id="d-challans" placeholder="Challans" min="0" required>
-                        </div>
-                        <div class="input-group span-2">
-                            <label>Contact Number</label>
-                            <input type="text" id="d-phone" placeholder="+91 9876543210" required>
-                        </div>
-                        <div class="input-group span-2">
-                            <button type="submit" class="btn-primary">Register New Driver</button>
-                        </div>
-                    </form>
-                    <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
-                        <input type="text" id="driver-search" placeholder="Search by name or ID..." oninput="renderDriversTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                        <select id="driver-filter-type" onchange="renderDriversTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                            <option value="">All Types</option>
-                            <option value="bike">Bike</option>
-                            <option value="van">Van</option>
-                            <option value="truck">Truck</option>
-                        </select>
-                        <select id="driver-filter-hub" onchange="renderDriversTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                            <option value="">All Hubs</option>
-                        </select>
-                        <select id="driver-sort" onchange="renderDriversTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                            <option value="name">Sort by Name</option>
-                            <option value="score">Sort by Score</option>
-                            <option value="points">Sort by Reward Points</option>
-                        </select>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Name / System ID</th><th>Metrics</th><th>Driving Score / Safety</th><th>Challans</th><th>Reward Points</th><th>Base Hub</th><th>Linked Vehicle</th></tr></thead>
-                            <tbody id="drivers-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <div class="glass-card section-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0;">Add Vehicle</h3>
-                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openVehicleBulkModal()">📤 Bulk Upload Vehicles</button>
-                    </div>
-                    <form id="add-vehicle-form" class="form-grid">
-                        <div class="input-group">
-                            <label>Vehicle Type</label>
-                            <select id="v-type" required>
-                                <option value="bike">Bike</option>
-                                <option value="scooty">Scooty</option>
-                                <option value="3 wheeled (battery)">3 Wheeled (Battery)</option>
-                                <option value="3 wheeled (non EV)">3 Wheeled (Non EV)</option>
-                                <option value="small van">Small Van</option>
-                                <option value="large van">Large Van</option>
-                                <option value="truck">Truck</option>
-                            </select>
+                    <div class="glass-card section-card" data-layout-id="drivers-vehicles-add">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0;" data-i18n="add_vehicle_title">Add Vehicle</h3>
+                            <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openVehicleBulkModal()" data-i18n="btn_bulk_vehicles">📤 Bulk Upload Vehicles</button>
                         </div>
-                        <div class="input-group">
-                            <label>Base Warehouse Hub</label>
-                            <select id="v-base" required>
-                                <option value="">Select Base Warehouse</option>
-                            </select>
+                        <form id="add-vehicle-form" class="form-grid">
+                            <div class="input-group">
+                                <label data-i18n="label_vehicle_type">Vehicle Type</label>
+                                
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_base_hub">Base Warehouse Hub</label>
+                                
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_number_plate">Number Plate</label>
+                                <input type="text" id="v-plate" placeholder="e.g. MH12AB1234" required data-i18n-placeholder="placeholder_plate">
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="capacity">Load Capacity (kg)</label>
+                                <input type="number" id="v-cap" placeholder="e.g. 500" required>
+                            </div>
+                            <div class="input-group span-2">
+                                <label data-i18n="label_fuel_efficiency">Fuel Efficiency (km/l)</label>
+                                <input type="number" id="v-eff" placeholder="e.g. 45" required>
+                            </div>
+                            <div class="input-group span-2">
+                                <button type="submit" class="btn-primary" data-i18n="btn_register_vehicle">Register New Vehicle</button>
+                            </div>
+                        </form>
+                        <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
+                            <input type="text" id="vehicle-search" placeholder="Search by plate or ID..." oninput="renderVehiclesTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;" data-i18n-placeholder="search_vehicle_placeholder">
                         </div>
-                        <div class="input-group">
-                            <label>Number Plate</label>
-                            <input type="text" id="v-plate" placeholder="e.g. MH12AB1234" required>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th data-i18n="th_type_id">Type / System ID</th><th data-i18n="label_number_plate">Plate</th><th data-i18n="th_health">Health</th><th data-i18n="capacity">Capacity</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_loc_heading">Current Location / Heading</th><th data-i18n="hub_status">Status</th><th data-i18n="th_linked_driver">Linked Driver</th></tr></thead>
+                                <tbody id="vehicles-table-body"></tbody>
+                            </table>
                         </div>
-                        <div class="input-group">
-                            <label>Load Capacity (kg)</label>
-                            <input type="number" id="v-cap" placeholder="e.g. 500" required>
-                        </div>
-                        <div class="input-group span-2">
-                            <label>Fuel Efficiency (km/l)</label>
-                            <input type="number" id="v-eff" placeholder="e.g. 45" required>
-                        </div>
-                        <div class="input-group span-2">
-                            <button type="submit" class="btn-primary">Register New Vehicle</button>
-                        </div>
-                    </form>
-                    <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
-                        <input type="text" id="vehicle-search" placeholder="Search by plate or ID..." oninput="renderVehiclesTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                        <select id="vehicle-filter-type" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                            <option value="">All Types</option>
-                            <option value="bike">Bike</option>
-                            <option value="scooty">Scooty</option>
-                            <option value="3 wheeled (battery)">3 Wheeled (Battery)</option>
-                            <option value="3 wheeled (non EV)">3 Wheeled (Non EV)</option>
-                            <option value="small van">Small Van</option>
-                            <option value="large van">Large Van</option>
-                            <option value="truck">Truck</option>
-                        </select>
-                        <select id="vehicle-filter-hub" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                            <option value="">All Hubs</option>
-                        </select>
-                        <select id="vehicle-filter-status" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                            <option value="">All Statuses</option>
-                            <option value="available">Available</option>
-                            <option value="in_transit">In-Transit</option>
-                            <option value="maintenance">Maintenance</option>
-                        </select>
-                        <select id="vehicle-sort" onchange="renderVehiclesTable()" style="padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;">
-                            <option value="type">Sort by Type</option>
-                            <option value="health">Sort by Health</option>
-                            <option value="capacity">Sort by Capacity</option>
-                        </select>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Type / System ID</th><th>Plate</th><th>Health</th><th>Capacity</th><th>Base Hub</th><th>Current Location / Heading</th><th>Status</th><th>Linked Driver</th></tr></thead>
-                            <tbody id="vehicles-table-body"></tbody>
-                        </table>
                     </div>
                 </div>
             </section>
 
             <!-- Verifications Section -->
-            <section id="verifications" class="section-content" style="display:none;">
-                <div class="glass-card section-card">
-                    <h2 style="margin:0; font-size:1.6rem; color:var(--accent);">Manual ML Verifications</h2>
-                    <div style="width:50px; height:4px; background:var(--accent); margin:16px 0; border-radius:2px;"></div>
-                    <p class="subtitle" style="margin-bottom:40px; font-size:0.95rem;">Review number plates that the AI could not confidently read.</p>
-                    <div class="table-container">
-                        <table>
-                            <thead><tr><th>Driver</th><th>Vehicle Plate</th><th>Image</th><th>Action</th></tr></thead>
-                            <tbody id="verifications-table-body"></tbody>
-                        </table>
+            <section id="verifications" class="section-content" data-layout-id="section-verifications" style="display:none;">
+                <div data-layout-container="verifications-content">
+                    <div class="glass-card section-card" data-layout-id="verifications-manual">
+                        <h2 style="margin:0; font-size:1.6rem; color:var(--accent);">Manual ML Verifications</h2>
+                        <div style="width:50px; height:4px; background:var(--accent); margin:16px 0; border-radius:2px;"></div>
+                        <p class="subtitle" style="margin-bottom:40px; font-size:0.95rem;">Review number plates that the automated system could not confidently read.</p>
+                        <div class="table-container">
+                            <table>
+                                <thead><tr><th>Driver</th><th>Vehicle Plate</th><th>Image</th><th>Action</th></tr></thead>
+                                <tbody id="verifications-table-body"></tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
 
-                <div class="glass-card section-card" style="margin-top:32px;">
-                    <h2 style="margin:0; font-size:1.6rem; color:var(--success);">Verified Vehicles</h2>
-                    <div style="width:50px; height:4px; background:var(--success); margin:16px 0; border-radius:2px;"></div>
-                    <p class="subtitle" style="margin-bottom:32px; font-size:0.95rem;">List of all vehicles successfully verified by AI or Manual review.</p>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Vehicle Type</th>
-                                    <th>Number Plate</th>
-                                    <th>System ID</th>
-                                    <th>Verified Driver</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="verified-vehicles-table-body">
-                                <!-- Verified vehicles injected here -->
-                            </tbody>
-                        </table>
+                    <div class="glass-card section-card" data-layout-id="verifications-verified" style="margin-top:32px;">
+                        <h2 style="margin:0; font-size:1.6rem; color:var(--success);">Verified Vehicles</h2>
+                        <div style="width:50px; height:4px; background:var(--success); margin:16px 0; border-radius:2px;"></div>
+                        <p class="subtitle" style="margin-bottom:32px; font-size:0.95rem;">List of all vehicles successfully verified automatically or Manual review.</p>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="vehicle_type">Vehicle Type</th>
+                                        <th>Number Plate</th>
+                                        <th>System ID</th>
+                                        <th>Verified Driver</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="verified-vehicles-table-body">
+                                    <!-- Verified vehicles injected here -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Weather Fleet Map Section -->
-            <section id="weather" class="section-content" style="display:none;">
-                <div class="glass-card section-card" style="height: calc(100vh - 150px); display:flex; flex-direction:column;">
+            <section id="weather" class="section-content" data-layout-id="section-weather" style="display:none;">
+                <div class="glass-card section-card" data-layout-id="weather-main" style="height: calc(100vh - 150px); display:flex; flex-direction:column;">
+
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                         <div style="flex:1; min-width:450px;">
                             <h3 style="margin:0;" data-i18n="title_digital_twin">Digital Twin: Live Fleet Intel</h3>
@@ -652,30 +603,31 @@
                                 <h4 style="margin:0 0 15px 0; color:var(--warning); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em;" data-i18n="sim_sandbox">🧪 Simulation Sandbox</h4>
                                 <div style="display:flex; gap:15px; align-items:flex-end; flex-wrap:wrap;">
                                     <div class="input-group" style="flex:1; min-width:200px; margin:0;">
-                                        <label style="font-size:0.7rem;" data-i18n="select_disaster">Select Disaster</label>
-                                        <select id="disaster-type" style="padding:10px;">
-                                            <option value="cyclone">🌪️ Cyclone (Area)</option>
-                                            <option value="flood">🌊 Flood (Area)</option>
-                                            <option value="heatwave">🌡️ Heatwave (Area)</option>
-                                            <option value="earthquake">🫨 Earthquake (Area)</option>
-                                            <option value="riot">🔥 Civil Disturbance (Area)</option>
-                                            <option value="hail">🌨️ Hailstorm (Area)</option>
-                                            <option value="blockade">🚧 Road Blockade (Line)</option>
-                                            <option value="landslide">⛰️ Landslide (Line)</option>
+                                        <label style="font-size:0.7rem;" data-i18n="label_select_disaster">Select Disaster</label>
+                                        <select id="disaster-type" class="glass-card" style="width:100%; padding:10px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);">
+                                            <option value="cyclone" data-i18n="dis_cyclone">🌀 Cyclone / Hurricane</option>
+                                            <option value="flood" data-i18n="dis_flood">🌊 Heavy Flooding</option>
+                                            <option value="heatwave" data-i18n="dis_heat">🔥 Extreme Heatwave</option>
+                                            <option value="earthquake" data-i18n="dis_quake">🫨 Earthquake Zone</option>
+                                            <option value="riot" data-i18n="dis_riot">🚫 Civil Unrest / Riot</option>
+                                            <option value="hail" data-i18n="dis_hail">🌨️ Severe Hailstorm</option>
+                                            <option value="blockage" data-i18n="dis_block">🚧 Road Blockage</option>
                                         </select>
                                     </div>
+
                                     <div style="display:flex; gap:10px;">
-                                        <button class="btn-primary btn-accent" style="padding:12px 20px; font-size:0.85rem; white-space:nowrap;" onclick="toggleDrawMode()" data-i18n="draw_on_map">✏️ Draw on Map</button>
+                                        <button class="btn-primary btn-accent" style="padding:12px 20px; font-size:0.85rem; white-space:nowrap;" onclick="toggleDrawMode()" data-i18n="btn_draw_on_map">✏️ Draw on Map</button>
                                         <button class="btn-primary btn-danger" style="padding:12px 15px; font-size:0.85rem;" onclick="clearDisasters()">🗑️</button>
                                     </div>
                                     <div class="input-group" style="flex:1; min-width:160px; margin:0;">
-                                        <label style="font-size:0.7rem;" data-i18n="map_layer">Map Layer</label>
-                                        <select id="map-layer" style="padding:10px;" onchange="changeMapLayer()">
-                                            <option value="standard">Standard Map</option>
-                                            <option value="terrain">Terrain Map</option>
-                                            <option value="satellite">Satellite Map</option>
+                                        <label style="font-size:0.7rem;" data-i18n="label_map_layer">Map Layer</label>
+                                        <select id="map-layer" class="glass-card" style="width:100%; padding:10px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);" onchange="changeMapLayer()">
+                                            <option value="standard" data-i18n="layer_standard">Standard View</option>
+                                            <option value="terrain" data-i18n="layer_terrain">Terrain / Topo</option>
+                                            <option value="satellite" data-i18n="layer_satellite">Satellite Intel</option>
                                         </select>
                                     </div>
+
                                 </div>
                             </div>
                         </div>
@@ -695,32 +647,32 @@
                             <table id="sims-table" style="width:100%; font-size:0.8rem; display:none;">
                                 <thead>
                                     <tr style="text-align:left; color:var(--muted); border-bottom:1px solid var(--border);">
-                                        <th style="padding-bottom:10px; font-size:0.7rem;">Disaster</th>
-                                        <th style="padding-bottom:10px; font-size:0.7rem;">Geometry</th>
-                                        <th style="padding-bottom:10px; font-size:0.7rem; text-align:right;">Control</th>
+                                        <th style="padding-bottom:10px; font-size:0.7rem;" data-i18n="th_disaster">Disaster</th>
+                                        <th style="padding-bottom:10px; font-size:0.7rem;" data-i18n="th_geometry">Geometry</th>
+                                        <th style="padding-bottom:10px; font-size:0.7rem; text-align:right;" data-i18n="th_control">Control</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sims-body"></tbody>
                             </table>
                         </div>
 
-                        <!-- Floating AI Simulation Results -->
+                        <!-- Floating Automated Simulation Results -->
                         <div id="simulation-panel" style="display:none; position:absolute; top:20px; right:20px; width:320px; background:rgba(20,25,35,0.9); backdrop-filter:blur(10px); border:1px solid var(--card-border); border-radius:8px; padding:15px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h3 style="margin:0; color:var(--warning); font-size:1.1rem; cursor:move;" data-i18n="ai_results">AI Simulation Results</h3>
+                                <h3 style="margin:0; color:var(--warning); font-size:1.1rem; cursor:move;" data-i18n="ai_results">Automated Simulation Results</h3>
                                 <button style="background:none; border:none; color:white; cursor:pointer;" onclick="document.getElementById('simulation-panel').style.display='none'">✖</button>
                             </div>
                             <p style="margin:0 0 10px 0; font-size:0.9rem; color:var(--text-muted);">
                                 <strong data-i18n="affected_shipments">Affected Shipments:</strong> <span id="sim-affected-count" style="color:white; font-weight:bold;">0</span>
                             </p>
                             <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px;">
-                                <h4 style="margin:0 0 5px 0; font-size:0.85rem; color:var(--success);" data-i18n="ai_recommendation">💡 AI Recommendation</h4>
+                                <h4 style="margin:0 0 5px 0; font-size:0.85rem; color:var(--success);" data-i18n="ai_recommendation">💡 Automated Recommendation</h4>
                                 <p id="sim-ai-recommendation" style="margin:0; font-size:0.85rem; color:var(--text-muted);"></p>
                             </div>
                             <div id="sim-affected-list" style="max-height:200px; overflow-y:auto; margin-bottom:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
                                 <!-- Detailed shipment rows injected here -->
                             </div>
-                            <button class="btn-primary" style="width:100%; font-size:0.85rem; padding:8px;" onclick="applySimulationFixes()" data-i18n="execute_actions">Execute All AI Actions</button>
+                            <button class="btn-primary" style="width:100%; font-size:0.85rem; padding:8px;" onclick="applySimulationFixes()" data-i18n="execute_actions">Execute All Automated Actions</button>
                         </div>
                     </div>
                 </div>
@@ -732,16 +684,16 @@
                     <!-- Driver Sidebar -->
                     <div style="width:300px; border-right:1px solid var(--border); display:flex; flex-direction:column; background:rgba(0,0,0,0.1);">
                         <div style="padding:24px; border-bottom:1px solid var(--border);">
-                            <h2 style="margin:0; font-size:1.4rem; color:var(--primary); letter-spacing:-0.02em;">Driver Communications</h2>
+                            <h2 style="margin:0; font-size:1.4rem; color:var(--primary); letter-spacing:-0.02em;" data-i18n="driver_comm_title">Driver Communications</h2>
                             <div style="width:40px; height:3px; background:var(--primary); margin:12px 0; border-radius:2px;"></div>
-                            <p style="margin:0; font-size:0.85rem; color:var(--muted); line-height:1.4;">Real-time chat with active drivers.</p>
+                            <p style="margin:0; font-size:0.85rem; color:var(--muted); line-height:1.4;" data-i18n="driver_comm_desc">Real-time chat with active drivers.</p>
                         </div>
                         <div style="padding:12px 24px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
                             <div style="position:relative;">
-                                <input type="text" id="driver-chat-search" placeholder="🔍 Search driver by name..." oninput="filterDriverChatList()" style="padding:10px 10px 10px 35px; font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); width:100%; color:white;">
+                                <input type="text" id="driver-chat-search" placeholder="🔍 Search driver by name..." data-i18n-placeholder="search_driver_name" oninput="filterDriverChatList()" style="padding:10px 10px 10px 35px; font-size:0.85rem; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); width:100%; color:white;">
                                 <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:0.5; pointer-events:none;"></span>
                             </div>
-                            <button class="btn-primary" style="width:100%; padding:8px; font-size:0.8rem; background:var(--accent);" onclick="openBroadcastModal()">📢 Message Everyone (Broadcast)</button>
+                            <button class="btn-primary" style="width:100%; padding:8px; font-size:0.8rem; background:var(--accent);" onclick="openBroadcastModal()" data-i18n="btn_broadcast">📢 Message Everyone (Broadcast)</button>
                         </div>
                         <div id="chat-driver-list" style="flex:1; overflow-y:auto;">
                             <!-- Drivers list injected here -->
@@ -765,7 +717,7 @@
 
                         <div id="chat-placeholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted);">
                             <div style="font-size:3rem; margin-bottom:1rem;">💬</div>
-                            <p>Select a driver from the left to view messages</p>
+                            <p data-i18n="select_driver_msg">Select a driver from the left to view messages</p>
                         </div>
 
                         <div id="chat-input-area" style="padding:16px 32px; border-top:1px solid var(--border); display:none;">
@@ -774,8 +726,8 @@
                                 <button onclick="mainChatPickPhoto()" title="Send Photo" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;white-space:nowrap;">📷</button>
                                 <button id="main-chat-voice-btn" onclick="mainChatToggleRecording()" title="Voice Note" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;white-space:nowrap;">🎙️</button>
                                 <input id="main-chat-photo-input" type="file" accept="image/*" style="display:none;" onchange="mainChatHandlePhoto(this)">
-                                <input type="text" id="manager-chat-input" placeholder="Type your message..." style="flex:1; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); padding:10px 14px; color:white; font-family:inherit; font-size:0.95rem;" onkeydown="if(event.key==='Enter')sendMessageToSelectedDriver()">
-                                <button class="btn-primary" style="width:auto; padding:10px 24px;" onclick="sendMessageToSelectedDriver()">Send 🚀</button>
+                                <input type="text" id="manager-chat-input" placeholder="Type your message..." data-i18n-placeholder="placeholder_message" style="flex:1; background:rgba(0,0,0,0.2); border-radius:10px; border:1px solid var(--border); padding:10px 14px; color:white; font-family:inherit; font-size:0.95rem;" onkeydown="if(event.key==='Enter')sendMessageToSelectedDriver()">
+                                <button class="btn-primary" style="width:auto; padding:10px 24px;" onclick="sendMessageToSelectedDriver()" data-i18n="btn_send">Send 🚀</button>
                             </div>
                         </div>
                     </div>
@@ -787,11 +739,11 @@
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                         <h3 style="margin:0;">Performance Leaderboard 🏆</h3>
                         <div style="display:flex; gap:10px;">
-                            <select id="leader-type" class="input-group" style="width:auto; margin:0;" onchange="loadLeaderboard()">
+                            <select id="leader-type" class="glass-card" style="padding:8px; border:none; color:white; background:rgba(0,0,0,0.3);" onchange="loadLeaderboard()">
                                 <option value="driver">Drivers</option>
                                 <option value="vehicle">Vehicles</option>
                             </select>
-                            <select id="leader-sort" class="input-group" style="width:auto; margin:0;" onchange="loadLeaderboard()">
+                            <select id="leader-sort" class="glass-card" style="padding:8px; border:none; color:white; background:rgba(0,0,0,0.3);" onchange="loadLeaderboard()">
                                 <option value="overall">General Ranking</option>
                                 <option value="safety_index">Safety Index</option>
                                 <option value="punctuality_rate">Punctuality</option>
@@ -803,10 +755,10 @@
                         <thead>
                             <tr>
                                 <th>Rank</th>
-                                <th>Name / Plate</th>
-                                <th>Score</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                                <th style="padding:10px;" data-i18n="th_name_plate">Name / Plate</th>
+                                <th style="padding:10px;" data-i18n="score">Score</th>
+                                <th style="padding:10px;" data-i18n="hub_status">Status</th>
+                                <th style="padding:10px;" data-i18n="th_action">Action</th>
                             </tr>
                         </thead>
                         <tbody id="leaderboard-body"></tbody>
@@ -817,24 +769,20 @@
             <section id="ledger" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h3 style="margin:0;">Driver Wallet Summary 💰</h3>
+                        <h3 style="margin:0;" data-i18n="driver_wallet_summary">Driver Wallet Summary 💰</h3>
                         <div style="display:flex; gap:10px;">
-                            <select id="ledger-driver-sort" class="btn-primary" style="width:auto; padding:5px 10px; background:rgba(0,0,0,0.3);" onchange="renderDriverPointsSummary()">
-                                <option value="points">Sort by Points (High-Low)</option>
-                                <option value="warehouse">Sort by Warehouse</option>
-                                <option value="vehicle">Sort by Vehicle Type</option>
-                            </select>
+                            
                         </div>
                     </div>
-                    <p class="subtitle">Real-time aggregate points balance for all verified drivers.</p>
+                    <p class="subtitle" data-i18n="driver_wallet_desc">Real-time aggregate points balance for all verified drivers.</p>
                     <div class="table-container" style="margin-bottom:30px;">
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="padding:10px;">Driver</th>
-                                    <th style="padding:10px;">Assigned Vehicle</th>
-                                    <th style="padding:10px;">Warehouse Hub</th>
-                                    <th style="padding:10px;">Total Points 🏆</th>
+                                    <th style="padding:10px;" data-i18n="driver">Driver</th>
+                                    <th style="padding:10px;" data-i18n="th_assigned_vehicle">Assigned Vehicle</th>
+                                    <th style="padding:10px;" data-i18n="th_warehouse_hub">Warehouse Hub</th>
+                                    <th style="padding:10px;" data-i18n="th_total_points">Total Points 🏆</th>
                                 </tr>
                             </thead>
                             <tbody id="driver-points-body">
@@ -844,29 +792,29 @@
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-top:1px solid rgba(255,255,255,0.1); padding-top:40px; margin-top:40px;">
-                        <h3 style="margin:0;">Transaction Ledger ⛓️</h3>
+                        <h3 style="margin:0;" data-i18n="tx_ledger_title">Transaction Ledger ⛓️</h3>
                     </div>
-                    <p class="subtitle" style="margin-bottom:32px;">Blockchain-verified micro-payments to driver wallets based on trip performance.</p>
+                    <p class="subtitle" style="margin-bottom:32px;" data-i18n="tx_ledger_desc">Blockchain-verified micro-payments to driver wallets based on trip performance.</p>
                     
                     <div class="glass-card" style="padding:15px; background:rgba(49, 130, 206, 0.1); border:1px solid var(--primary); margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h4 style="margin:0; color:var(--primary);">⚡ Global Reward Booster</h4>
-                            <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted);">Incentivise your fleet by boosting all existing reward points by a percentage.</p>
+                            <h4 style="margin:0; color:var(--primary);" data-i18n="global_booster">⚡ Global Reward Booster</h4>
+                            <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted);" data-i18n="global_booster_desc">Incentivise your fleet by boosting all existing reward points by a percentage.</p>
                         </div>
                         <div style="display:flex; gap:10px; align-items:center;">
                             <input type="number" id="boost-percent" value="10" min="1" max="100" style="width:70px; padding:8px; border-radius:6px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
-                            <button class="btn-primary" style="width:auto; padding:8px 20px;" onclick="boostDriverPoints()">Apply Boost</button>
+                            <button class="btn-primary" style="width:auto; padding:8px 20px;" onclick="boostDriverPoints()" data-i18n="apply_boost">Apply Boost</button>
                         </div>
                     </div>
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="padding:10px;">Tx Hash</th>
-                                    <th style="padding:10px;">Timestamp</th>
-                                    <th style="padding:10px;">Shipment ID</th>
-                                    <th style="padding:10px;">Driver ID (To)</th>
-                                    <th style="padding:10px;">Points 🏆</th>
+                                    <th style="padding:10px;" data-i18n="th_tx_hash">Tx Hash</th>
+                                    <th style="padding:10px;" data-i18n="th_timestamp">Timestamp</th>
+                                    <th style="padding:10px;" data-i18n="th_shipment_id">Shipment ID</th>
+                                    <th style="padding:10px;" data-i18n="th_driver_id_to">Driver ID (To)</th>
+                                    <th style="padding:10px;" data-i18n="th_points">Points 🏆</th>
                                 </tr>
                             </thead>
                             <tbody id="ledger-table-body">
@@ -882,40 +830,37 @@
                 <div class="glass-card section-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                         <div>
-                            <h2 style="margin:0; color:var(--primary);">AI Strategy Oracle 🧠</h2>
-                            <p class="subtitle">Simulate future growth scenarios and business strategies in a Digital Twin environment.</p>
+                            <h2 style="margin:0; color:var(--primary);" data-i18n="oracle_title">Automated Strategy 🧠</h2>
+                            <p class="subtitle" data-i18n="oracle_subtitle">Simulate future growth scenarios and business strategies in a Digital Twin environment.</p>
                         </div>
-                        <button class="btn-primary" style="width:auto; padding:12px 25px;" onclick="runOracleSimulation()">Run AI Forecast</button>
+                        <button class="btn-primary" style="width:auto; padding:12px 25px;" onclick="runOracleSimulation()"><span data-i18n="run_forecast">Run Automated Forecast</span></button>
                     </div>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
                         <!-- Parameters -->
                         <div class="glass-card" style="padding:20px; background:rgba(255,255,255,0.03);">
-                            <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">Simulation Parameters</h3>
+                            <h3 style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;" data-i18n="sim_params">Simulation Parameters</h3>
                             
                             <div class="input-group" style="margin-top:32px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Warehouse Expansion 
+                                    <span data-i18n="wh_expansion">Warehouse Expansion</span> 
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Adding hubs reduces last-mile distance and improves delivery speed, but increases fixed operational costs.">ⓘ</span>
-                                    <span><b id="val-wh">0</b> New Hubs</span>
+                                    <span><b id="val-wh">0</b> <span data-i18n="new_hubs">New Hubs</span></span>
                                 </label>
                                 <input type="range" id="param-wh" min="0" max="10" value="0" style="width:100%;" oninput="document.getElementById('val-wh').innerText=this.value">
                             </div>
 
                             <div class="input-group" style="margin-top:32px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Hub Location
+                                    <span data-i18n="hub_loc">Hub Location</span>
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Tier 1 cities have 25% higher demand but come with a significant rent premium per shipment.">ⓘ</span>
                                 </label>
-                                <select id="param-loc" style="width:100%; padding:8px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
-                                    <option value="tier2">Tier 2 (Industrial/Regional)</option>
-                                    <option value="tier1">Tier 1 (Metropolitan/Premium)</option>
-                                </select>
+                                
                             </div>
 
                             <div class="input-group" style="margin-top:32px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Fleet Increase 
+                                    <span data-i18n="fleet_inc">Fleet Increase</span> 
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Increasing fleet size allows you to handle more concurrent shipments, scaling your revenue potential.">ⓘ</span>
                                     <span>+<b id="val-fleet">0</b>%</span>
                                 </label>
@@ -924,7 +869,7 @@
 
                             <div class="input-group" style="margin-top:32px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Driver Incentives
+                                    <span data-i18n="driver_incen">Driver Incentives</span>
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Investment in driver rewards reduces turnover, lowers accident risk, and increases punctuality.">ⓘ</span>
                                     <span>+<b id="val-incentive">0</b>%</span>
                                 </label>
@@ -933,7 +878,7 @@
 
                             <div class="input-group" style="margin-top:32px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Green Fleet (EV) Ratio 
+                                    <span data-i18n="green_fleet">Green Fleet (EV) Ratio</span> 
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Converting to Electric Vehicles dramatically reduces CO2 emissions and fuel/maintenance costs.">ⓘ</span>
                                     <span><b id="val-green">0</b>%</span>
                                 </label>
@@ -942,7 +887,7 @@
 
                             <div class="input-group" style="margin-top:32px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Warehouse Automation 
+                                    <span data-i18n="wh_auto">Warehouse Automation</span> 
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Robotic sorting and IoT tracking reduces manual labor costs and eliminates processing delays.">ⓘ</span>
                                     <span>Level <b id="val-auto">0</b></span>
                                 </label>
@@ -951,7 +896,7 @@
 
                             <div class="input-group" style="margin-top:20px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Budget Allocation (Fintech)
+                                    <span data-i18n="budget_allocation">Budget Allocation</span>
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Amount of capital to inject into the active strategy for fleet financing or driver bonuses.">ⓘ</span>
                                     <span>₹<b id="val-budget">0</b>L</span>
                                 </label>
@@ -960,8 +905,8 @@
 
                             <div class="input-group" style="margin-top:20px;">
                                 <label style="display:flex; justify-content:space-between;">
-                                    Forecast Horizon 
-                                    <span class="info-icon" onclick="showInfoTip(this)" data-tip="The period over which the AI will simulate market fluctuations and operational results.">ⓘ</span>
+                                    <span data-i18n="forecast_horizon">Forecast Horizon</span> 
+                                    <span class="info-icon" onclick="showInfoTip(this)" data-tip="The period over which the Automated will simulate market fluctuations and operational results.">ⓘ</span>
                                     <span><b id="val-months">6</b> Months</span>
                                 </label>
                                 <input type="range" id="param-months" min="1" max="24" value="6" style="width:100%;" oninput="document.getElementById('val-months').innerText=this.value">
@@ -972,40 +917,40 @@
                         <div id="oracle-results" class="glass-card" style="padding:20px; background:rgba(0,0,0,0.3); border:1px dashed var(--card-border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
                             <div id="oracle-placeholder">
                                 <div style="font-size:3rem; margin-bottom:15px;">🔮</div>
-                                <h3>Ready to Forecast</h3>
-                                <p style="color:var(--text-muted); font-size:0.9rem;">Adjust parameters and click "Run AI Forecast" to see the future of your fleet.</p>
+                                <h3 data-i18n="ready_forecast">Ready to Forecast</h3>
+                                <p style="color:var(--text-muted); font-size:0.9rem;" data-i18n="strategy_desc">Adjust parameters and click "<span data-i18n="run_forecast">Run Automated Forecast</span>" to see the future of your fleet.</p>
                             </div>
                             
                             <div id="oracle-data" style="display:none; width:100%; text-align:left;">
-                                <h3 style="margin-top:0; color:var(--success);">Forecast Summary</h3>
+                                <h3 style="margin-top:0; color:var(--success);" data-i18n="forecast_summary">Forecast Summary</h3>
                                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
                                     <div class="glass-card result-card" style="padding:10px; position:relative; cursor:help;" id="profit-card">
-                                        <small style="color:var(--text-muted)">Projected Profit</small>
+                                        <small style="color:var(--text-muted)" data-i18n="proj_profit">Projected Profit</small>
                                         <h2 id="res-profit" style="margin:5px 0; color:var(--success);"></h2>
                                         <div class="calc-tooltip" id="profit-calc">Breakdown loading...</div>
                                     </div>
                                     <div class="glass-card" style="padding:10px;">
-                                        <small style="color:var(--text-muted)">ETA Success Rate</small>
+                                        <small style="color:var(--text-muted)" data-i18n="eta_success">ETA Success Rate</small>
                                         <h2 id="res-eta" style="margin:5px 0; color:var(--accent);"></h2>
                                     </div>
                                     <div class="glass-card" style="padding:10px;">
-                                        <small style="color:var(--text-muted)">CO2 Reduction</small>
+                                        <small style="color:var(--text-muted)" data-i18n="co2_red">CO2 Reduction</small>
                                         <h2 id="res-co2" style="margin:5px 0; color:var(--warning);"></h2>
                                     </div>
                                     <div class="glass-card" style="padding:10px;">
-                                        <small style="color:var(--text-muted)">ROI Percentage</small>
+                                        <small style="color:var(--text-muted)" data-i18n="roi_perc">ROI Percentage</small>
                                         <h2 id="res-roi" style="margin:5px 0; color:white;"></h2>
                                     </div>
                                 </div>
                                 
                                 <div class="glass-card" style="padding:15px; background:rgba(49, 130, 206, 0.1); border-left:4px solid var(--primary);">
-                                    <h4 style="margin:0 0 5px 0; color:var(--primary);">AI Recommendation</h4>
+                                    <h4 style="margin:0 0 5px 0; color:var(--primary);" data-i18n="auto_rec">Automated Recommendation</h4>
                                     <p id="res-ai-msg" style="font-size:0.9rem; margin:0; line-height:1.4;"></p>
                                 </div>
                                 
                                 <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
-                                    <span>Risk Level: <b id="res-risk"></b></span>
-                                    <button class="btn-primary" style="width:auto; padding:5px 15px; font-size:0.8rem;" onclick="applyOracleStrategy()">Apply to Strategy Plan</button>
+                                    <span><span data-i18n="risk_level">Risk Level:</span> <b id="res-risk"></b></span>
+                                    <button class="btn-primary" style="width:auto; padding:5px 15px; font-size:0.8rem;" onclick="applyOracleStrategy()" data-i18n="apply_strategy">Apply to Strategy Plan</button>
                                 </div>
                             </div>
                         </div>
@@ -1017,19 +962,19 @@
             <section id="strategy-plan" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h2 style="color:var(--accent); margin:0;">Operational Strategy Tracker 🎯</h2>
-                        <button class="btn-primary" style="width:auto; padding:8px 20px; background:var(--danger);" onclick="clearActiveStrategy()">Clear Active Strategy</button>
+                        <h2 style="color:var(--accent); margin:0;" data-i18n="op_strategy_title">Operational Strategy Tracker 🎯</h2>
+                        <button class="btn-primary" style="width:auto; padding:8px 20px; background:var(--danger);" onclick="clearActiveStrategy()" data-i18n="clear_strategy">Clear Active Strategy</button>
                     </div>
-                    <p class="subtitle">Real-time progress of your active AI-driven business strategy.</p>
+                    <p class="subtitle" data-i18n="strategy_subtitle">Real-time progress of your active Automated-driven business strategy.</p>
                     
                     <div id="no-strategy-msg" style="padding:40px; text-align:center; background:rgba(255,255,255,0.02); border-radius:12px; margin-top:20px;">
-                        <p style="color:var(--text-muted);">No active strategy plan found. Run a simulation in the <b>Strategy Oracle</b> to get started.</p>
+                        <p style="color:var(--text-muted);" data-i18n="no_strategy_msg">No active strategy plan found. Run a simulation in the <b>Strategy Oracle</b> to get started.</p>
                     </div>
 
                     <div id="active-strategy-content" style="display:none; margin-top:20px;">
                         <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px; margin-bottom:30px;">
                             <div class="glass-card" style="padding:20px; border-top:4px solid var(--success);">
-                                <h4>Revenue Forecast 📈</h4>
+                                <h4 data-i18n="rev_forecast">Revenue Forecast 📈</h4>
                                 <div id="strategy-revenue-forecast">
                                     <h2 id="sf-predicted" style="margin:10px 0 5px 0;">₹ 0</h2>
                                     <span id="sf-confidence" class="badge" style="background:var(--success)22; color:var(--success);">0% Confidence</span>
@@ -1037,16 +982,16 @@
                                 </div>
                             </div>
                             <div class="glass-card" style="padding:20px;">
-                                <h4>Growth Targets</h4>
+                                <h4 data-i18n="growth_targets">Growth Targets</h4>
                                 <div id="target-list"></div>
                             </div>
                             <div class="glass-card" style="padding:20px; border-left:4px solid var(--accent);">
-                                <h4>AI Performance Benchmark</h4>
+                                <h4 data-i18n="perf_benchmark">Automated Performance Benchmark</h4>
                                 <div id="benchmark-data"></div>
                             </div>
                         </div>
 
-                        <h3>Real-time Implementation Progress</h3>
+                        <h3 data-i18n="rt_progress">Real-time Implementation Progress</h3>
                         <div id="progress-bars-container">
                             <!-- Injected bars -->
                         </div>
@@ -1057,111 +1002,118 @@
             <!-- System Settings Section -->
             <!-- Network Resilience Section -->
             <!-- Bharat-Fuel Oracle Section -->
-            <section id="fuel-oracle" class="section-content" style="display:none;">
-                <div class="glass-card section-card" style="border-top: 4px solid #f59e0b;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <section id="fuel-oracle" class="section-content" data-layout-id="section-fuel" style="display:none;">
+                <div class="glass-card section-card" data-layout-container="fuel-content" style="border-top: 4px solid #f59e0b;">
+
+                    <div data-layout-id="fuel-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                         <div>
-                            <h2 style="margin:0; color:#f59e0b;">Bharat-Fuel & Toll Oracle 🛢️</h2>
-                            <p class="subtitle">AI-Optimized Cost Analysis: Toll + Fuel Variance across 28 States</p>
+                            <h2 style="margin:0; color:#f59e0b;" data-i18n="fuel_oracle_title">Bharat-Fuel & Toll Oracle 🛢️</h2>
+                            <p class="subtitle" data-i18n="fuel_desc">Automated-Optimized Cost Analysis: Toll + Fuel Variance across 28 States</p>
                         </div>
                         <div class="glass-card" style="padding:12px 24px; text-align:center; background:rgba(245, 158, 11, 0.1);">
-                            <small style="color:var(--text-muted)">Projected Fuel Savings</small>
+                            <small style="color:var(--text-muted)" data-i18n="proj_fuel_savings">Projected Fuel Savings</small>
                             <h2 id="fuel-savings-total" style="margin:0; color:#f59e0b;">₹12,450.00</h2>
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:32px;">
+
+                    <div data-layout-id="fuel-optimizer-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:32px;">
                         <!-- Price Heatmap -->
-                        <div class="glass-card" style="padding:24px; background:rgba(0,0,0,0.2);">
-                            <h3 style="margin:0 0 20px 0; font-size:1.1rem;">Inter-State Fuel Price Variance</h3>
+                        <div class="glass-card" data-layout-id="fuel-price-list-card" style="padding:24px; background:rgba(0,0,0,0.2);">
+                            <h3 style="margin:0 0 20px 0; font-size:1.1rem;" data-i18n="fuel_variance">Inter-State Fuel Price Variance</h3>
                             <div id="fuel-price-list" style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
                                 <!-- State prices injected here -->
                             </div>
                         </div>
 
                         <!-- Route Optimizer -->
-                        <div class="glass-card" style="padding:24px;">
-                            <h3 style="margin:0 0 20px 0; font-size:1.1rem;">AI Refuel Optimizer ⚡</h3>
+                        <div class="glass-card" data-layout-id="fuel-optimizer-card" style="padding:24px;">
+                            <h3 style="margin:0 0 20px 0; font-size:1.1rem;" data-i18n="fuel_title">Automated Refuel Optimizer ⚡</h3>
                             <div id="route-optimizer-ui">
-                                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Input your planned route to find the optimal refueling stops and toll savings.</p>
+                                <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="route_opt_desc">Input your planned route to find the optimal refueling stops and toll savings.</p>
                                 <div class="input-group">
-                                    <label>Route States (Comma separated)</label>
-                                    <input type="text" id="route-states-input" placeholder="e.g. Delhi, Haryana, Rajasthan, Gujarat" class="glass-card" style="width:100%; padding:12px; margin-top:8px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);">
+                                    <label data-i18n="route_states">Route States (Comma separated)</label>
+                                    <input type="text" id="route-states-input" placeholder="e.g. Delhi, Haryana, Rajasthan, Gujarat" data-i18n-placeholder="route_states_ph" class="glass-card" style="width:100%; padding:12px; margin-top:8px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);">
                                 </div>
-                                <button class="btn-primary" style="width:100%; margin-top:20px;" onclick="runFuelOptimization()">Analyze Cost Efficiency 🚀</button>
+                                <button class="btn-primary" style="width:100%; margin-top:20px;" onclick="runFuelOptimization()" data-i18n="analyze_cost">Analyze Cost Efficiency 🚀</button>
                                 
                                 <div id="fuel-optimization-result" style="margin-top:24px; display:none;">
                                     <div style="padding:20px; border-radius:12px; background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2);">
-                                        <h4 id="opt-best-state" style="margin:0; color:#f59e0b;">Optimal Stop: Gujarat</h4>
+                                        <h4 style="margin:0; color:#f59e0b;"><span data-i18n="opt_stop">Optimal Stop:</span> <span id="opt-best-state">Gujarat</span></h4>
                                         <p id="opt-suggestion" style="font-size:0.85rem; margin-top:10px; color:var(--text-muted);"></p>
-                                        <div style="margin-top:15px; font-size:1.1rem; font-weight:bold;">₹ <span id="opt-savings">0.00</span> / Liter Saved</div>
+                                        <div style="margin-top:15px; font-size:1.1rem; font-weight:bold;">₹ <span id="opt-savings">0.00</span> <span data-i18n="liter_saved">/ Liter Saved</span></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+
                     <!-- Market Trends Chart -->
-                    <div style="margin-top:32px;">
-                        <h3 style="margin:0 0 20px 0; font-size:1.1rem;">Historical Price Trends (30 Days)</h3>
+                    <div data-layout-id="fuel-trends-row" style="margin-top:32px;">
+                        <h3 style="margin:0 0 20px 0; font-size:1.1rem;" data-i18n="hist_price_trends">Historical Price Trends (30 Days)</h3>
                         <div class="glass-card" style="height:250px; padding:20px;">
                             <canvas id="fuelTrendChart"></canvas>
                         </div>
                     </div>
+
                 </div>
             </section>
 
-            <!-- Paisa-Fast (Fintech Bridge) Section -->
-            <section id="paisa-fast" class="section-content" style="display:none;">
-                <div class="glass-card section-card" style="border-top: 4px solid var(--success);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <!-- Payments Section -->
+            <section id="paisa-fast" class="section-content" data-layout-id="section-paisa-fast" style="display:none;">
+                <div class="glass-card section-card" data-layout-container="paisa-content" style="border-top: 4px solid var(--success); padding: 40px;">
+                    <div data-layout-id="paisa-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+
                         <div>
-                            <h2 style="margin:0; color:var(--success);">💰 Paisa-Fast Finance Portal</h2>
-                            <p class="subtitle">Real-time settlements, COD reconciliation, and fleet liquidity Oracle.</p>
+                            <h2 style="margin:0; color:var(--success);" data-i18n="payments_portal">💰 Payments Portal</h2>
+                            <p class="subtitle" data-i18n="payments_desc">Real-time settlements, COD reconciliation, and fleet liquidity Oracle.</p>
                         </div>
                         <div class="glass-card" style="padding:12px 24px; text-align:center; background:rgba(16, 185, 129, 0.1);">
-                            <small style="color:var(--text-muted)">Settled Revenue (Today)</small>
+                            <small style="color:var(--text-muted)" data-i18n="settled_rev">Settled Revenue (Today)</small>
                             <h2 id="fintech-daily-revenue" style="margin:0; color:var(--success);">₹ 0.00</h2>
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:20px; margin-bottom:32px;">
-                        <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--primary);">
-                            <small style="color:var(--text-muted)">Pending Digital Escrow</small>
+                    <div data-layout-id="paisa-stats-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:32px; margin-bottom:48px;">
+                        <div class="glass-card" data-layout-id="stat-escrow" style="padding:20px; border-bottom: 3px solid var(--primary);">
+                            <small style="color:var(--text-muted)" data-i18n="pending_escrow">Pending Digital Escrow</small>
                             <h3 id="fintech-cod" style="margin:10px 0 0 0;">₹ 0.00</h3>
                         </div>
-                        <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--warning);">
-                            <small style="color:var(--text-muted)">Unpaid Invoices</small>
+                        <div class="glass-card" data-layout-id="stat-unpaid" style="padding:20px; border-bottom: 3px solid var(--warning);">
+                            <small style="color:var(--text-muted)" data-i18n="unpaid_inv">Unpaid Invoices</small>
                             <h3 id="fintech-unpaid" style="margin:10px 0 0 0;">₹ 0.00</h3>
                         </div>
-                        <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--success);">
-                            <small style="color:var(--text-muted)">Net Profit (P&L)</small>
+                        <div class="glass-card" data-layout-id="stat-net-profit" style="padding:20px; border-bottom: 3px solid var(--success);">
+                            <small style="color:var(--text-muted)" data-i18n="net_profit">Net Profit (P&L)</small>
                             <h3 id="fintech-profit" style="margin:10px 0 0 0;">₹ 0.00</h3>
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:30px;">
+
+                    <div data-layout-id="paisa-charts-row" style="display:grid; grid-template-columns: 2fr 1fr; gap:40px; margin-bottom:48px;">
                         <!-- Revenue Trends -->
-                        <div class="glass-card" style="padding:24px;">
-                            <h3 style="margin:0 0 20px 0;">Revenue Velocity Analytics</h3>
+                        <div class="glass-card" data-layout-id="paisa-chart-velocity" style="padding:24px;">
+                            <h3 style="margin:0 0 20px 0;" data-i18n="rev_velocity">Revenue Velocity Analytics</h3>
                             <div style="height:300px;">
                                 <canvas id="fintechRevenueChart"></canvas>
                             </div>
                         </div>
 
                         <!-- Recent Settlements -->
-                        <div class="glass-card" style="padding:24px;">
-                            <h3 style="margin:0 0 20px 0;">Live Settlements</h3>
+                        <div class="glass-card" data-layout-id="paisa-live-settlements" style="padding:24px;">
+                            <h3 style="margin:0 0 20px 0;" data-i18n="live_settlements">Live Settlements</h3>
                             <div id="fintech-settlement-list" style="display:flex; flex-direction:column; gap:12px; max-height:300px; overflow-y:auto;">
                                 <!-- Injected via JS -->
-                                <p style="color:var(--text-muted); text-align:center;">Analyzing ledger...</p>
+                                <p style="color:var(--text-muted); text-align:center;" data-i18n="fetching_ledger">Analyzing ledger...</p>
                             </div>
                         </div>
                     </div>
 
-                    <div style="margin-top:32px; display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
-                        <div>
-                            <h3>Pending Driver Payouts 💸</h3>
+
+                    <div data-layout-id="paisa-tables-row" style="margin-top:48px; display:grid; grid-template-columns: 1fr 1fr; gap:40px;">
+                        <div data-layout-id="paisa-driver-payouts">
+                            <h3 style="margin-bottom:24px;">Pending Driver Payouts 💸</h3>
                             <div class="table-container">
                                 <table>
                                     <thead>
@@ -1177,15 +1129,15 @@
                                 </table>
                             </div>
                         </div>
-                        <div>
-                            <h3>Customer Payment Audit 🧾</h3>
+                        <div data-layout-id="paisa-payment-audit">
+                            <h3 style="margin-bottom:24px;">Customer Payment Audit 🧾</h3>
                             <div class="table-container">
                                 <table>
                                     <thead>
                                         <tr>
                                             <th>Shipment</th>
                                             <th>Amount</th>
-                                            <th>Status</th>
+                                            <th data-i18n="hub_status">Status</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -1197,16 +1149,17 @@
                         </div>
                     </div>
 
-                    <div style="margin-top:32px;">
-                        <h3>B2B Smart Contracts (Escrow)</h3>
+
+                    <div data-layout-id="paisa-b2b-escrow" style="margin-top:48px;">
+                        <h3 style="margin-bottom:24px;">B2B Smart Contracts (Escrow)</h3>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Contract ID</th>
+                                        <th data-i18n="contract_id">Contract ID</th>
                                         <th>Counterparty</th>
                                         <th>Value</th>
-                                        <th>Status</th>
+                                        <th data-i18n="hub_status">Status</th>
                                         <th>Settlement ETA</th>
                                     </tr>
                                 </thead>
@@ -1217,9 +1170,10 @@
                         </div>
                     </div>
 
-                    <div style="margin-top:32px;">
-                        <h3>🆘 Pending Driver Fund Requests</h3>
-                        <p style="color:var(--text-muted); font-size:0.85rem; margin-top:-10px;">Approve to instantly transfer funds into the driver's digital wallet.</p>
+
+                    <div data-layout-id="paisa-fund-requests-main" style="margin-top:48px;">
+                        <h3 style="margin-bottom:12px;">🆘 Pending Driver Fund Requests</h3>
+                        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:24px;">Approve to instantly transfer funds into the driver's digital wallet.</p>
                         <div class="table-container">
                             <table>
                                 <thead><tr><th>Driver</th><th>Requested Amount</th><th>Type</th><th>Action</th></tr></thead>
@@ -1229,15 +1183,17 @@
                             </table>
                         </div>
                     </div>
+
                 </div>
             </section>
 
-            <section id="network-resilience" class="section-content" style="display:none;">
-                <div class="glass-card section-card" style="border-top: 4px solid var(--warning);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+            <section id="network-resilience" class="section-content" data-layout-id="section-resilience" style="display:none;">
+                <div class="glass-card section-card" data-layout-container="resilience-content" style="border-top: 4px solid var(--warning);">
+
+                    <div data-layout-id="resilience-header" style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <h2 style="margin:0; color:var(--warning);">Network Resilience Intelligence 🦋</h2>
-                            <p class="subtitle">AI-driven simulation of cascading supply chain disruptions</p>
+                            <p class="subtitle" data-i18n="resilience_desc">Automated-driven simulation of cascading supply chain disruptions</p>
                         </div>
                         <div class="glass-card" style="padding:10px 20px; text-align:center; background:rgba(237, 137, 54, 0.1);">
                             <small style="color:var(--text-muted)">Total Downstream Delay Risk</small>
@@ -1245,9 +1201,10 @@
                         </div>
                     </div>
 
-                    <div style="margin-top:2rem; display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+
+                    <div data-layout-id="resilience-analysis-row" style="margin-top:2rem; display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
                         <!-- Risk Heatmap (Mock representation) -->
-                        <div class="glass-card" style="padding:24px; background:rgba(0,0,0,0.2);">
+                        <div class="glass-card" data-layout-id="resilience-matrix" style="padding:24px; background:rgba(0,0,0,0.2);">
                             <h3 style="margin:0 0 24px 0;">Downstream Impact Matrix</h3>
                             <div id="nr-matrix" style="min-height:300px; display:flex; flex-direction:column; gap:10px;">
                                 <!-- Detailed Rows -->
@@ -1256,8 +1213,8 @@
                         </div>
 
                         <!-- Mitigation Center -->
-                        <div class="glass-card" style="padding:24px;">
-                            <h3 style="margin:0 0 24px 0;">AI Mitigation Center</h3>
+                        <div class="glass-card" data-layout-id="resilience-mitigation" style="padding:24px;">
+                            <h3 style="margin:0 0 24px 0;" data-i18n="mitigation_center">Automated Mitigation Center</h3>
                             <div id="nr-mitigation" style="display:flex; flex-direction:column; gap:20px;">
                                 <div class="glass-card" style="padding:15px; border-left:4px solid var(--primary);">
                                     <h4 style="margin:0; color:var(--primary);">Operational Recommendation</h4>
@@ -1267,7 +1224,8 @@
                         </div>
                     </div>
 
-                    <div style="margin-top:3rem;">
+
+                    <div data-layout-id="resilience-disruptions" style="margin-top:3rem;">
                         <h3 style="margin:0 0 24px 0;">Active Disruption Chains</h3>
                         <div class="glass-card" style="overflow-x:auto;">
                             <table>
@@ -1286,6 +1244,7 @@
                             </table>
                         </div>
                     </div>
+
                 </div>
             </section>
 
@@ -1336,13 +1295,14 @@
             </section>
 
             <!-- Safety Center Section -->
-            <section id="safety" class="section-content" style="display:none;">
-                <div class="glass-card section-card" style="border-left: 4px solid var(--danger);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <section id="safety" class="section-content" data-layout-id="section-safety" style="display:none;">
+                <div class="glass-card section-card" data-layout-container="safety-content" style="border-left: 4px solid var(--danger);">
+
+                    <div data-layout-id="safety-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                         <div>
                             <h2 style="color:var(--danger); margin:0; font-size:2rem;">Safety Center 🛡️</h2>
                             <div style="width:60px; height:5px; background:var(--danger); margin:18px 0; border-radius:2px;"></div>
-                            <p class="subtitle" style="margin-bottom:0; font-size:1rem; opacity:0.8;">AI-monitored safety incidents, fatigue alerts, and Zen Mode activations.</p>
+                            <p class="subtitle" style="margin-bottom:0; font-size:1rem; opacity:0.8;" data-i18n="safety_desc">Automated-monitored safety incidents, fatigue alerts, and Zen Mode activations.</p>
                         </div>
                         <div style="text-align:right;">
                             <span style="font-size:0.8rem; color:var(--text-muted);">Fleet Safety Index:</span>
@@ -1350,14 +1310,15 @@
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:30px;">
-                        <div class="glass-card" style="padding:20px; background:rgba(229,62,62,0.05); border:1px solid rgba(229,62,62,0.2);">
+
+                    <div data-layout-id="safety-alerts-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:30px;">
+                        <div class="glass-card" data-layout-id="safety-fatigue-card" style="padding:20px; background:rgba(229,62,62,0.05); border:1px solid rgba(229,62,62,0.2);">
                             <h4 style="color:var(--danger); margin-top:0;">⚠️ Critical Fatigue Alerts</h4>
                             <div id="fatigue-alerts-list" style="max-height:250px; overflow-y:auto;">
                                 <!-- Injected -->
                             </div>
                         </div>
-                        <div class="glass-card" style="padding:20px; background:rgba(49, 130, 206, 0.05); border:1px solid rgba(49, 130, 206, 0.2);">
+                        <div class="glass-card" data-layout-id="safety-zen-card" style="padding:20px; background:rgba(49, 130, 206, 0.05); border:1px solid rgba(49, 130, 206, 0.2);">
                             <h4 style="color:var(--primary); margin-top:0;">🧘 Active Zen Mode Sessions</h4>
                             <div id="zen-sessions-list" style="max-height:250px; overflow-y:auto;">
                                 <!-- Injected -->
@@ -1365,24 +1326,28 @@
                         </div>
                     </div>
 
-                    <h3>Recent Incident Reports</h3>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Driver</th>
-                                    <th>Incident Type</th>
-                                    <th>Time</th>
-                                    <th>Location</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="incidents-table-body">
-                                <!-- Injected -->
-                            </tbody>
-                        </table>
+
+                    <div data-layout-id="safety-incidents-table">
+                        <h3>Recent Incident Reports</h3>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Driver</th>
+                                        <th>Incident Type</th>
+                                        <th>Time</th>
+                                        <th>Location</th>
+                                        <th data-i18n="hub_status">Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="incidents-table-body">
+                                    <!-- Injected -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+
                 </div>
             </section>
         </main>
@@ -1468,9 +1433,7 @@
         <h3>Manual Assignment</h3>
         <p style="font-size:0.85rem; margin-bottom:10px;">Select an available driver for this route segment:</p>
         <div class="input-group">
-            <select id="assign-driver-select" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px;">
-                <option value="">Loading drivers...</option>
-            </select>
+            
         </div>
         <div class="input-group">
             <button class="btn-primary" onclick="submitManualAssign()">Assign Driver</button>
@@ -1478,14 +1441,14 @@
         </div>
     </div>
 
-    <!-- AI Suggestion Modal -->
+    <!-- Automated Suggestion Modal -->
     <div id="suggestion-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10002; width:450px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid var(--primary);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; color:var(--primary);">🔮 AI Strategy Suggestion</h3>
+            <h3 style="margin:0; color:var(--primary);">🔮 Automated Strategy Suggestion</h3>
             <button style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;" onclick="document.getElementById('suggestion-modal').style.display='none'">✖</button>
         </div>
         <div style="background:rgba(49, 130, 206, 0.1); padding:15px; border-radius:10px; margin-bottom:20px; border-left:4px solid var(--primary);">
-            <p style="margin:0; font-size:0.95rem; line-height:1.5;">Our AI engine has identified a <b>strategically superior</b> location approximately <span id="sug-dist" style="color:var(--accent); font-weight:bold;"></span> away.</p>
+            <p style="margin:0; font-size:0.95rem; line-height:1.5;">Our Automated engine has identified a <b>strategically superior</b> location approximately <span id="sug-dist" style="color:var(--accent); font-weight:bold;"></span> away.</p>
             <p style="margin:10px 0 0 0; font-size:0.85rem; color:var(--text-muted);" id="sug-reason"></p>
         </div>
         <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
@@ -1544,40 +1507,40 @@
         <h3 style="margin-top:0; color:var(--accent);">✏️ Edit Warehouse</h3>
         <input type="hidden" id="edit-wh-id">
         <div class="input-group">
-            <label>Warehouse Name</label>
+            <label data-i18n="warehouse_name">Warehouse Name</label>
             <input type="text" id="edit-wh-name" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
         </div>
         <div style="display:flex; gap:10px; margin-top:15px;">
             <div class="input-group" style="flex:1;">
-                <label>Manager Name</label>
+                <label data-i18n="manager_name">Manager Name</label>
                 <input type="text" id="edit-wh-manager" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
             <div class="input-group" style="flex:1;">
-                <label>Contact Number</label>
+                <label data-i18n="contact_number">Contact Number</label>
                 <input type="text" id="edit-wh-contact" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
         </div>
         <div class="input-group" style="margin-top:15px;">
-            <label>Drone Fleet Size</label>
+            <label data-i18n="drone_fleet_size">Drone Fleet Size</label>
             <input type="number" id="edit-wh-drone" min="0" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
         </div>
         
         <p style="margin-top:15px; font-size:0.75rem; color:var(--text-muted);">Note: Location coordinates are locked for this hub.</p>
 
         <div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
-            <button class="btn-primary btn-accent" style="flex:1; min-width:140px; padding:12px;" onclick="submitEditWarehouse()">Save Changes</button>
-            <button class="btn-primary btn-danger" style="flex:1; min-width:140px; padding:12px;" onclick="decommissionWarehouse()">Decommission Hub</button>
-            <button class="btn-primary btn-outline" style="flex:1; min-width:140px; padding:12px;" onclick="document.getElementById('wh-edit-modal').style.display='none'">Cancel</button>
+            <button class="btn-primary btn-accent" style="flex:1; min-width:140px; padding:12px;" onclick="submitEditWarehouse()" data-i18n="save_changes">Save Changes</button>
+            <button class="btn-primary btn-danger" style="flex:1; min-width:140px; padding:12px;" onclick="decommissionWarehouse()" data-i18n="decommission_hub">Decommission Hub</button>
+            <button class="btn-primary btn-outline" style="flex:1; min-width:140px; padding:12px;" onclick="document.getElementById('wh-edit-modal').style.display='none'" data-i18n="btn_cancel">Cancel</button>
         </div>
     </div>
 
     <!-- Message Modal -->
     <!-- Old message-modal kept for compatibility (hidden by default) -->
     <div id="message-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:10001; width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-        <h3>Message Driver</h3>
+        <h3 data-i18n="message_driver_title">Message Driver</h3>
         <p style="font-size:0.85rem; margin-bottom:10px;">To: <span id="msg-driver-name"></span></p>
         <div class="input-group">
-            <textarea id="msg-content" placeholder="Type your message here..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; padding:10px;"></textarea>
+            <textarea id="msg-content" placeholder="Type your message here..." data-i18n-placeholder="placeholder_message" style="width:100%; height:80px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; padding:10px;"></textarea>
         </div>
         <div class="input-group">
             <button class="btn-primary" onclick="submitMessage()">Send Message</button>
@@ -1636,7 +1599,7 @@
 
         <h4>Recent Trip History</h4>
         <table style="font-size:0.85rem;">
-            <thead><tr><th>ID</th><th>Route</th><th>Date</th><th>Status</th></tr></thead>
+            <thead><tr><th>ID</th><th>Route</th><th>Date</th><th data-i18n="hub_status">Status</th></tr></thead>
             <tbody id="prof-trips-body"></tbody>
         </table>
     </div>
@@ -1658,7 +1621,7 @@
         </div>
         
         <div id="review-container" style="display:none; margin-top:20px; padding:15px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid var(--card-border);">
-            <h3 style="margin-top:0; color:var(--primary);">AI Journey Scorecard 📋</h3>
+            <h3 style="margin-top:0; color:var(--primary);">Automated Journey Scorecard 📋</h3>
             <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                 <span style="color:var(--text-muted);">Punctuality:</span> <strong id="rev-punct"></strong>
             </div>
@@ -1829,8 +1792,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="../js/translations.js"></script>
+    <script src="../js/voice.js"></script>
     <script src="../js/api.js"></script>
+    <script src="../js/custom_layout.js"></script>
     <script src="../js/manager.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.logistixLayout.init('manager');
+        });
+    </script>
 <script>
 const btn = document.getElementById('theme-toggle');
 

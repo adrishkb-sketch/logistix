@@ -2,8 +2,27 @@ const API_BASE = "http://localhost:8000/api";
 
 async function apiCall(endpoint, method = "GET", body = null) {
     // Dynamically retrieve security context (Company ID or Driver ID)
-    const context = localStorage.getItem('company_id') || localStorage.getItem('driver_id') || localStorage.getItem('tracking_token');
+    // Dynamically retrieve security context based on the endpoint type
+    let context = "";
+    const companyId = localStorage.getItem('company_id');
+    const driverId = localStorage.getItem('driver_id');
+    const trackingToken = localStorage.getItem('tracking_token');
+
+    if (endpoint.includes('/driver/')) {
+        context = driverId || companyId || "";
+    } else if (endpoint.includes('/manager/') || endpoint.includes('/shipments/')) {
+        context = companyId || "";
+    } else if (endpoint.includes('/tracking/')) {
+        context = trackingToken || driverId || companyId || "";
+    } else {
+        context = companyId || driverId || trackingToken || "";
+    }
     
+    if (!context && !endpoint.includes('/auth/')) {
+        console.warn("API Call attempted without security context:", endpoint);
+        throw new Error("AUTH_REQUIRED");
+    }
+
     const options = {
         method,
         headers: {
@@ -25,7 +44,9 @@ async function apiCall(endpoint, method = "GET", body = null) {
         return data;
     } catch (error) {
         console.error("API Call Failed:", error);
-        alert(error.message);
+        if (error.message !== "AUTH_REQUIRED") {
+            alert(error.message);
+        }
         throw error;
     }
 }

@@ -47,17 +47,22 @@
     <div class="background-animation"></div>
     <div id="theme-toggle" class="theme-switch" style="position:fixed; top:24px; right:24px;">🌙</div>
     
-    <!-- Language Selector -->
-    <div class="glass-card" style="position:fixed; top:24px; right:80px; display:flex; gap:6px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; height:auto; z-index:10002;">
-        <button class="lang-btn" onclick="setLanguage('en')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">EN</button>
-        <div style="width:1px; background:var(--border); margin:2px 0;"></div>
-        <button class="lang-btn" onclick="setLanguage('bn')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">বাং</button>
-        <div style="width:1px; background:var(--border); margin:2px 0;"></div>
-        <button class="lang-btn" onclick="setLanguage('hi')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">हिं</button>
+    <!-- Language Selector Dropdown -->
+    <div class="glass-card" style="position:fixed; top:24px; right:140px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; z-index:10002;">
+        <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
+        <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
+            <option value="en">English (EN)</option>
+            <option value="hi">हिंदी (HI)</option>
+            <option value="bn">বাংলা (BN)</option>
+        </select>
     </div>
 
+    <button id="modify-dash-btn" class="btn-primary btn-outline" style="position:fixed; top:24px; right:300px; padding:8px 16px; font-size:0.75rem; z-index:10002;" onclick="window.logistixLayout.toggleEditMode()" data-i18n="modify_dashboard">📐 Modify Dashboard</button>
+
+
+
     <div class="track-layout">
-        <a href="../index.html" style="text-decoration:none; color:var(--muted); font-weight:600; font-size:0.9rem;">← Back to Home</a>
+        <a href="../index.html" style="text-decoration:none; color:var(--muted); font-weight:600; font-size:0.9rem;" data-i18n="back_to_home">← Back to Home</a>
         
         <!-- Auth View -->
         <div id="auth-panel" class="auth-card glass-card" style="margin-top:60px;">
@@ -72,7 +77,7 @@
             </div>
 
             <div id="step-otp" style="display:none;">
-                <p style="text-align:center; color:var(--muted); margin-bottom:12px;">OTP sent to <span id="otp-phone-label" style="color:var(--text); font-weight:700;"></span></p>
+                <p style="text-align:center; color:var(--muted); margin-bottom:12px;"><span data-i18n="otp_sent_to">OTP sent to</span> <span id="otp-phone-label" style="color:var(--text); font-weight:700;"></span></p>
                 <div class="pin-row" id="pin-row">
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
@@ -80,7 +85,7 @@
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                 </div>
                 <button class="btn-primary" style="width:100%;" onclick="verifyCustomerOTP()" data-i18n="verify_otp">Track My Orders</button>
-                <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;">Change Phone Number</a></p>
+                <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;" data-i18n="change_phone">Change Phone Number</a></p>
             </div>
         </div>
 
@@ -95,49 +100,51 @@
         </div>
 
         <!-- Detail View -->
-        <div id="detail-panel" style="display:none; margin-top:40px;">
-            <button class="back-btn" onclick="showPanel('list')">← Back to List</button>
-            <div class="glass-card">
-                <div class="status-header">
+        <div id="detail-panel" style="display:none; margin-top:40px;" data-layout-container="track-detail-content">
+            <button class="back-btn" onclick="showPanel('list')" data-i18n="back_to_list" data-layout-id="track-back-btn">← Back to List</button>
+            <div class="glass-card" data-layout-id="track-main-card" data-layout-container="track-card-items">
+                <div class="status-header" data-layout-id="track-header">
                     <div>
                         <h2 id="det-id" style="margin-bottom:4px;">Order #---</h2>
                         <p id="det-desc" style="color:var(--muted); margin:0;"></p>
                     </div>
-                    <span id="det-status" class="status-pill status-active">In Transit</span>
+                    <span id="det-status" class="status-pill status-active">---</span>
                 </div>
 
-                <div id="track-map"></div>
+                <div id="track-map" data-layout-id="track-map-container"></div>
 
-                <div class="info-grid">
-                    <div class="info-item"><small>Expected Delivery</small><strong id="det-eta">---</strong></div>
-                    <div class="info-item"><small>Current Location</small><strong id="det-loc">---</strong></div>
-                    <div class="info-item"><small>Vehicle</small><strong id="det-vehicle">---</strong></div>
+                <div class="info-grid" data-layout-container="track-info-grid" data-layout-id="track-info-grid">
+                    <div class="info-item" data-layout-id="info-eta"><small data-i18n="expected_delivery">Expected Delivery</small><strong id="det-eta">---</strong></div>
+                    <div class="info-item" data-layout-id="info-location"><small data-i18n="current_location">Current Location</small><strong id="det-loc">---</strong></div>
+                    <div class="info-item" data-layout-id="info-vehicle"><small data-i18n="vehicle">Vehicle</small><strong id="det-vehicle">---</strong></div>
                 </div>
 
-                <div id="payment-box" class="glass-card" style="display:none; margin-top:20px; padding:20px; border-left:4px solid var(--primary); background:rgba(79, 140, 255, 0.05);">
+                <div id="payment-box" class="glass-card" data-layout-id="track-payment" style="display:none; margin-top:20px; padding:20px; border-left:4px solid var(--primary); background:rgba(79, 140, 255, 0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <small style="color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:bold;">Amount Due</small>
+                            <small style="color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; font-weight:bold;" data-i18n="amount_due">Amount Due</small>
                             <h2 id="det-amount" style="margin:5px 0 0 0; color:var(--primary);">₹ 0.00</h2>
-                            <p style="font-size:0.8rem; color:var(--text-muted); margin:5px 0 0 0;">Pay this amount to clear the shipment for final delivery.</p>
+                            <p style="font-size:0.8rem; color:var(--text-muted); margin:5px 0 0 0;" data-i18n="pay_due_desc">Pay this amount to clear the shipment for final delivery.</p>
                         </div>
-                        <button class="btn-primary" id="btn-pay-now" style="width:auto; padding:12px 24px;" onclick="simulatePayment()">Pay Now</button>
+                        <button class="btn-primary" id="btn-pay-now" style="width:auto; padding:12px 24px;" onclick="simulatePayment()" data-i18n="pay_now">Pay Now</button>
                     </div>
                 </div>
 
-                <div id="det-otp-box" class="otp-display" style="display:none;">
-                    <small style="text-transform:uppercase; letter-spacing:1px; font-weight:800;">Delivery Verification OTP</small>
+                <div id="det-otp-box" class="otp-display" data-layout-id="track-otp" style="display:none;">
+                    <small style="text-transform:uppercase; letter-spacing:1px; font-weight:800;" data-i18n="delivery_otp">Delivery Verification OTP</small>
                     <div id="det-otp" class="otp-code">0000</div>
-                    <p style="font-size:0.85rem; color:var(--muted); margin:0;">Share this with the driver only upon successful delivery.</p>
+                    <p style="font-size:0.85rem; color:var(--muted); margin:0;" data-i18n="share_otp_desc">Share this with the driver only upon successful delivery.</p>
                 </div>
 
-                <h4 style="margin-top:32px; margin-bottom:16px;">Journey Timeline</h4>
-                <div id="det-timeline" class="timeline"></div>
+                <div data-layout-id="track-timeline-container">
+                    <h4 style="margin-top:32px; margin-bottom:16px;" data-i18n="journey_timeline">Journey Timeline</h4>
+                    <div id="det-timeline" class="timeline"></div>
+                </div>
 
                 <!-- Rating Box -->
-                <div id="rating-box" class="glass-card" style="display:none; margin-top:32px; text-align:center; padding:32px; border: 1px solid var(--success); background: rgba(16, 185, 129, 0.05);">
-                    <h3 style="font-size:1.5rem; margin-bottom:8px;">How was your delivery? 🌟</h3>
-                    <p style="color:var(--muted); margin-bottom:24px;">Rate your experience with our driver.</p>
+                <div id="rating-box" class="glass-card" data-layout-id="track-rating" style="display:none; margin-top:32px; text-align:center; padding:32px; border: 1px solid var(--success); background: rgba(16, 185, 129, 0.05);">
+                    <h3 style="font-size:1.5rem; margin-bottom:8px;" data-i18n="rating_title">How was your delivery? 🌟</h3>
+                    <p style="color:var(--muted); margin-bottom:24px;" data-i18n="rating_desc">Rate your experience with our driver.</p>
                     <div style="display:flex; justify-content:center; gap:16px; margin-bottom:32px;">
                         <button class="rating-star" data-value="1" onclick="setRating(1)">⭐</button>
                         <button class="rating-star" data-value="2" onclick="setRating(2)">⭐</button>
@@ -146,16 +153,23 @@
                         <button class="rating-star" data-value="5" onclick="setRating(5)">⭐</button>
                     </div>
                     <input type="hidden" id="selected-rating" value="0">
-                    <button class="btn-primary" id="submit-rating-btn" style="background:var(--success); width:100%; font-weight:800; font-size:1.1rem; box-shadow:0 4px 15px rgba(16, 185, 129, 0.3);" onclick="submitRating()">Submit Rating</button>
+                    <button class="btn-primary" id="submit-rating-btn" style="background:var(--success); width:100%; font-weight:800; font-size:1.1rem; box-shadow:0 4px 15px rgba(16, 185, 129, 0.3);" onclick="submitRating()" data-i18n="submit_rating">Submit Rating</button>
                 </div>
             </div>
         </div>
+
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="../js/translations.js"></script>
     <script src="../js/api.js"></script>
+    <script src="../js/custom_layout.js"></script>
     <script src="../js/track.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.logistixLayout.init('track');
+        });
+    </script>
     <script>
         const btn = document.getElementById('theme-toggle');
         function setTheme(mode) {

@@ -3,7 +3,7 @@
 async function requestOTP() {
     const email = document.getElementById('signup-email').value;
     if (!email) {
-        alert("Please enter an email first.");
+        alert(getTranslation('auth_error_email'));
         return;
     }
     
@@ -31,10 +31,10 @@ document.addEventListener('submit', async (e) => {
     console.log("Processing form submission for:", target.id);
 
     const submitBtn = target.querySelector('button[type="submit"]');
-    const originalBtnText = submitBtn ? submitBtn.innerText : 'Submit';
+    const originalBtnText = submitBtn ? submitBtn.innerText : getTranslation('submit') || 'Submit';
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerText = 'Authenticating...';
+        submitBtn.innerText = getTranslation('authenticating');
     }
 
     try {
@@ -43,7 +43,7 @@ document.addEventListener('submit', async (e) => {
             const email = document.getElementById('manager-email')?.value;
             const password = document.getElementById('manager-password')?.value;
             
-            if (!email || !password) throw new Error("Email and password are required");
+            if (!email || !password) throw new Error(getTranslation('auth_error_missing'));
 
             const res = await apiCall('/auth/company/login', 'POST', { email, password });
             console.log("Login successful, storing credentials...");
@@ -60,7 +60,7 @@ document.addEventListener('submit', async (e) => {
             const login_id = document.getElementById('driver-id')?.value;
             const password = document.getElementById('driver-password')?.value;
             
-            if (!login_id || !password) throw new Error("ID and password are required");
+            if (!login_id || !password) throw new Error(getTranslation('auth_error_missing_driver'));
 
             const res = await apiCall('/auth/driver/login', 'POST', { login_id, password });
             localStorage.setItem('driver_id', res.driver_id);
@@ -82,7 +82,7 @@ document.addEventListener('submit', async (e) => {
                 otp,
                 company_data: { name, email, password }
             });
-            alert("Signup successful! Please login as Manager.");
+            alert(getTranslation('auth_success_signup'));
             if (window.closeModal) window.closeModal();
             else {
                 const m = document.getElementById('modal');

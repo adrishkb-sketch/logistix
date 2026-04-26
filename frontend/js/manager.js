@@ -3,9 +3,12 @@
 // Auth Check
 if (!localStorage.getItem('manager_id')) {
     window.location.href = '../index.html';
+    throw new Error("Redirecting to login...");
 }
 
-document.getElementById('welcome-msg').innerText = `Dashboard - ${localStorage.getItem('manager_name')}`;
+const mName = localStorage.getItem('manager_name') || getTranslation('manager');
+const nameEl = document.getElementById('manager-name');
+if (nameEl) nameEl.innerText = mName;
 
 let map, fleetMap;
 let markers = [];
@@ -315,7 +318,7 @@ function loadWarehousesList(warehouses) {
     if (!tbody) return;
     
     if (warehouses.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No warehouses deployed yet.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${getTranslation('no_warehouses')}</td></tr>`;
         return;
     }
     
@@ -324,15 +327,15 @@ function loadWarehousesList(warehouses) {
             <td style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${w.id.substring(0,8)}</td>
             <td><strong id="wh-name-display-${w.id}">${w.name}</strong></td>
             <td>
-                <div style="font-size:0.85rem; font-weight:bold; color:var(--primary);" id="wh-manager-display-${w.id}">${w.manager_name || 'N/A'}</div>
-                <div style="font-size:0.75rem; color:var(--text-muted);" id="wh-contact-display-${w.id}">📞 ${w.contact_number || 'N/A'}</div>
+                <div style="font-size:0.85rem; font-weight:bold; color:var(--primary);" id="wh-manager-display-${w.id}">${w.manager_name || getTranslation('na')}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);" id="wh-contact-display-${w.id}">📞 ${w.contact_number || getTranslation('na')}</div>
             </td>
             <td>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}</td>
             <td><span style="color:var(--primary); font-weight:bold;" id="wh-drone-display-${w.id}">${w.drone_count || 0}</span> 🛰️</td>
             <td>
                 <div style="display:flex; gap:8px;">
-                    <button class="btn-primary btn-accent" style="padding:6px 12px; font-size:0.75rem;" onclick="openEditWarehouse('${w.id}')">✏️ Edit</button>
-                    <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="locateWarehouse('${w.id}')">📍 Locate</button>
+                    <button class="btn-primary btn-accent" style="padding:6px 12px; font-size:0.75rem;" onclick="openEditWarehouse('${w.id}')">✏️ ${getTranslation('edit')}</button>
+                    <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="locateWarehouse('${w.id}')">📍 ${getTranslation('locate')}</button>
                 </div>
             </td>
         </tr>
@@ -1070,7 +1073,7 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
             // 2. Driver & Performance Intel
             const d = drivers.find(drv => drv.id === s.assigned_driver_id);
             const v = vehicles.find(vh => vh.id === s.assigned_vehicle_id);
-            const driverName = d ? d.name : 'Unassigned';
+            const driverName = d ? d.name : getTranslation('unassigned');
             
             let performanceMsg = '';
             let rowClass = 'status-ontime';
@@ -1082,47 +1085,47 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                 const ps = s.performance_stats;
                 if (ps.status === 'delayed') {
                     rowClass = 'status-delayed';
-                    performanceMsg = `<div style="color:var(--danger); font-size:0.7rem;">⚠️ Delay: ${ps.diff_mins}m</div>`;
+                    performanceMsg = `<div style="color:var(--danger); font-size:0.7rem;">⚠️ ${getTranslation('delayed')}: ${ps.diff_mins}m</div>`;
                 } else if (ps.status === 'early') {
                     rowClass = 'status-early';
-                    performanceMsg = `<div style="color:var(--success); font-size:0.7rem;">⚡ Early: ${Math.abs(ps.diff_mins)}m</div>`;
+                    performanceMsg = `<div style="color:var(--success); font-size:0.7rem;">⚡ ${getTranslation('early')}: ${Math.abs(ps.diff_mins)}m</div>`;
                 }
             } else if (diffMins > 0 && s.status !== 'delivered') {
                 rowClass = 'status-delayed';
-                performanceMsg = `<div style="color:var(--danger); font-size:0.7rem;">⏰ Overdue: ${diffMins}m</div>`;
+                performanceMsg = `<div style="color:var(--danger); font-size:0.7rem;">⏰ ${getTranslation('delayed')}: ${diffMins}m</div>`;
             }
 
             tr.className = rowClass;
             tr.innerHTML = `
                 <td>
                     <div style="font-weight:bold;">${s.description}</div>
-                    <div style="font-size:0.7rem; color:var(--text-muted); font-family:monospace;">ID: ${s.id.substring(0,8)}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); font-family:monospace;">${getTranslation('id_label')}: ${s.id.substring(0,8)}</div>
                     ${s.route_type === 'multi-leg' ? '<span style="font-size:0.65rem; color:var(--accent); font-weight:bold;">[HUB ROUTE]</span>' : ''}
                 </td>
                 <td>
                     <div style="width:80px; height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; margin-bottom:4px;">
                         <div style="width:${vitality}%; height:100%; background:${vColor};"></div>
                     </div>
-                    <small style="color:${vColor}; font-weight:bold;">${s.is_perishable ? `Vitality: ${vitality}%` : 'Stable'}</small>
+                    <small style="color:${vColor}; font-weight:bold;">${s.is_perishable ? `${getTranslation('vitality')}: ${vitality}%` : getTranslation('stable')}</small>
                 </td>
                 <td>
-                    <span class="status-pill status-${s.status}" style="font-size:0.7rem;">${s.status}</span>
-                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.stage}</div>
+                    <span class="status-pill status-${s.status}" style="font-size:0.7rem;">${getTranslation(s.status + '_label') || s.status}</span>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${getTranslation(s.stage.toLowerCase().replace(/ /g, '_')) || s.stage}</div>
                     ${performanceMsg}
                 </td>
                 <td>
-                    <div style="font-size:0.8rem; font-weight:600;">E-Way: ${s.eway_bill_no || 'N/A'}</div>
+                    <div style="font-size:0.8rem; font-weight:600;">${getTranslation('eway_label')}: ${s.eway_bill_no || getTranslation('na')}</div>
                     <div style="font-size:0.65rem; color:var(--text-muted);">
-                        Exp: ${s.eway_bill_expiry ? new Date(s.eway_bill_expiry).toLocaleString() : 'N/A'}
+                        ${getTranslation('exp_label')}: ${s.eway_bill_expiry ? new Date(s.eway_bill_expiry).toLocaleString() : getTranslation('na')}
                     </div>
                     ${s.eway_bill_expiry ? `
-                        <button class="btn-primary" style="padding:2px 6px; font-size:0.6rem; margin-top:4px; background:rgba(79, 140, 255, 0.1); color:var(--primary);" onclick="extendEwayBill('${s.id}')">Extend ➕</button>
+                        <button class="btn-primary" style="padding:2px 6px; font-size:0.6rem; margin-top:4px; background:rgba(79, 140, 255, 0.1); color:var(--primary);" onclick="extendEwayBill('${s.id}')">${getTranslation('extend')}</button>
                     ` : ''}
                 </td>
                 <td>
                     <div style="font-size:0.8rem; font-weight:600; color:var(--primary);">${driverName}</div>
                     <div style="font-size:0.7rem; color:var(--text-muted); cursor:${s.loading_blueprint ? 'pointer' : 'default'};" onclick="${s.loading_blueprint ? `viewCargoPlan('${s.id}')` : ''}">
-                        ${v ? v.number_plate : 'No Vehicle'}
+                        ${v ? v.number_plate : getTranslation('no_vehicle')}
                         ${s.loading_blueprint ? '<span style="color:var(--primary); margin-left:4px;">📦</span>' : ''}
                     </div>
                 </td>
@@ -1133,8 +1136,8 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--accent);" onclick="openTrackModal('${s.id}')" title="Track">📍</button>
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:rgba(255,255,255,0.05);" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" title="Message">💬</button>
                         ${s.status === 'pending' ? `
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--success);" onclick="autoAssign('${s.id}')">🤖 Auto</button>
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:#3182ce;" onclick="openManualAssign('${s.id}')">👤 Manual</button>
+                            <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--success);" onclick="autoAssign('${s.id}')">🤖 ${getTranslation('auto')}</button>
+                            <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:#3182ce;" onclick="openManualAssign('${s.id}')">👤 ${getTranslation('manual')}</button>
                         ` : ''}
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:rgba(0,0,0,0.2);" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')">✏️</button>
                         <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--danger);" onclick="deleteItem('shipments', '${s.id}')">🗑️</button>
@@ -2157,6 +2160,7 @@ function initWeatherMap() {
             polyline: true
         }
     });
+    weatherMap.addControl(drawControl);
 
     weatherMap.on(L.Draw.Event.CREATED, function (e) {
         const type = e.layerType;
@@ -2243,9 +2247,11 @@ function toggleDrawMode() {
     }
     
     if (type === 'cyclone' || type === 'flood' || type === 'heatwave' || type === 'earthquake' || type === 'riot' || type === 'hail') {
-        currentDrawHandler = new L.Draw.Circle(weatherMap, drawControl.options.draw.circle);
+        const options = typeof drawControl.options.draw.circle === 'object' ? drawControl.options.draw.circle : {};
+        currentDrawHandler = new L.Draw.Circle(weatherMap, options);
     } else {
-        currentDrawHandler = new L.Draw.Polyline(weatherMap, drawControl.options.draw.polyline);
+        const options = typeof drawControl.options.draw.polyline === 'object' ? drawControl.options.draw.polyline : {};
+        currentDrawHandler = new L.Draw.Polyline(weatherMap, options);
     }
     currentDrawHandler.enable();
 }
@@ -2689,7 +2695,7 @@ async function loadLeaderboard() {
                         <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name || item.number_plate}`}" style="width:30px; height:30px; border-radius:50%;">
                         <div>
                             <strong>${item.name || item.number_plate}</strong>
-                            ${category === 'driver' ? `<br><small style="color:var(--text-muted)">Trips: ${item.total_trips}</small>` : ''}
+                            ${category === 'driver' ? `<br><small style="color:var(--text-muted)">${getTranslation('stat_trips') || 'Trips'}: ${item.total_trips}</small>` : ''}
                         </div>
                     </div>
                 </td>

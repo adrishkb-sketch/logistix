@@ -1,14 +1,11 @@
 // Driver Dashboard Logic
-
-if (!localStorage.getItem('driver_id')) {
-    window.location.href = '../index.html';
-}
-
 const dId = localStorage.getItem('driver_id');
-if (dId) {
-    const nameEl = document.getElementById('driver-name');
-    if (nameEl) nameEl.innerText = `Hello, ${localStorage.getItem('driver_name') || 'Driver'}`;
+if (!dId) {
+    window.location.href = '../index.html';
+    throw new Error("Redirecting to login...");
 }
+const nameEl = document.getElementById('driver-name');
+if (nameEl) nameEl.innerText = localStorage.getItem('driver_name') || getTranslation('driver');
 
 let map;
 let marker;
@@ -34,7 +31,7 @@ async function checkSimulationStatus() {
             isHalted = status.halted_drivers.includes(dId);
             const haltBtn = document.getElementById('sim-halt-btn');
             if (haltBtn) {
-                haltBtn.innerText = isHalted ? "Resume Movement 🚛" : "Emergency Halt 🛑";
+                haltBtn.innerText = isHalted ? getTranslation('resume_movement') : getTranslation('emergency_halt');
                 haltBtn.style.background = isHalted ? "var(--success)" : "var(--danger)";
             }
         }
@@ -163,13 +160,13 @@ async function loadDashStats() {
             summaryBox.style.display = 'block';
             const b = stats.latest_breakdown;
             summaryContent.innerHTML = `
-                <div style="display:flex; justify-content:space-between;"><span>📏 Base Distance:</span> <span>+${b.base_distance}</span></div>
-                <div style="display:flex; justify-content:space-between;"><span>⏱️ Punctuality Bonus:</span> <span>+${b.punctuality_bonus}</span></div>
-                <div style="display:flex; justify-content:space-between;"><span>🛡️ Safety Incentive:</span> <span>+${b.safety_incentive}</span></div>
-                <div style="display:flex; justify-content:space-between;"><span>🧘 Wellness Bonus:</span> <span>+${b.wellness_bonus}</span></div>
-                ${b.customer_rating_bonus !== undefined ? `<div style="display:flex; justify-content:space-between;"><span>🌟 Receiver Rating Bonus:</span> <span>${b.customer_rating_bonus >= 0 ? '+' : ''}${b.customer_rating_bonus}</span></div>` : ''}
+                <div style="display:flex; justify-content:space-between;"><span>📏 ${getTranslation('base_distance')}:</span> <span>+${b.base_distance}</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>⏱️ ${getTranslation('punctuality_bonus')}:</span> <span>+${b.punctuality_bonus}</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>🛡️ ${getTranslation('safety_incentive')}:</span> <span>+${b.safety_incentive}</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>🧘 ${getTranslation('wellness_bonus')}:</span> <span>+${b.wellness_bonus}</span></div>
+                ${b.customer_rating_bonus !== undefined ? `<div style="display:flex; justify-content:space-between;"><span>🌟 ${getTranslation('receiver_rating_bonus')}:</span> <span>${b.customer_rating_bonus >= 0 ? '+' : ''}${b.customer_rating_bonus}</span></div>` : ''}
                 <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:8px 0;">
-                <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--success);"><span>Total Points:</span> <span>${b.total}</span></div>
+                <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--success);"><span>${getTranslation('total_points')}:</span> <span>${b.total}</span></div>
             `;
         } else {
             summaryBox.style.display = 'none';
@@ -194,17 +191,17 @@ async function loadDashStats() {
             const rescueInfo = document.getElementById('breakdown-rescue-info');
             
             if (v.status === 'maintenance') {
-                statusBadge.innerText = 'UNDER MAINTENANCE';
+                statusBadge.innerText = getTranslation('under_maintenance');
                 statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
                 statusBadge.style.color = 'var(--danger)';
-                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success); font-size:0.85rem;" onclick="completeMaintenance()">🔧 Mark Repaired</button>`;
+                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success); font-size:0.85rem;" onclick="completeMaintenance()">🔧 ${getTranslation('mark_repaired')}</button>`;
                 rescueInfo.style.display = 'block';
                 document.getElementById('rescue-details').innerText = "Vehicle is locked in maintenance mode. Click 'Mark Repaired' to resume duties.";
             } else {
-                statusBadge.innerText = v.status.toUpperCase().replace('_', '-');
+                statusBadge.innerText = (getTranslation(v.status) || v.status).toUpperCase().replace('_', '-');
                 statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
                 statusBadge.style.color = 'var(--success)';
-                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger); font-size:0.85rem;" onclick="reportBreakdown()">🚨 Report Breakdown</button>`;
+                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger); font-size:0.85rem;" onclick="reportBreakdown()">🚨 ${getTranslation('report_breakdown')}</button>`;
                 rescueInfo.style.display = 'none';
             }
         }
@@ -320,9 +317,9 @@ async function loadMissions(autoStartNext = false) {
         
         // Render Completed Orders
         const completedContainer = document.getElementById('completed-container');
-        let compHtml = '<h3>Completed Orders</h3>';
+        let compHtml = `<h3>${getTranslation('completed_orders')}</h3>`;
         if (completedShipments.length === 0) {
-            compHtml += '<p>No completed orders yet.</p>';
+            compHtml += `<p>${getTranslation('no_completed_orders')}</p>`;
         } else {
             completedShipments.forEach(s => {
                 const isWarehouseHandoff = s.is_leg && s.drop.address;
@@ -408,20 +405,19 @@ async function loadMissions(autoStartNext = false) {
             orderedStops.forEach((stop, idx) => {
                 const isCurrent = idx === 0;
                 const dotColor = stop.type === 'pickup' ? '#f6ad55' : '#48bb78';
-                const actionText = stop.type === 'pickup' ? '📦 Pickup' : '📍 Drop';
+                const actionText = stop.type === 'pickup' ? `📦 ${getTranslation('pickup')}` : `📍 ${getTranslation('drop')}`;
                 const s = stop.shipment;
                 
                 let actionBtn = '';
                 if (isCurrent) {
-                     if (stop.type === 'pickup') {
-                         actionBtn = `
+                          actionBtn = `
                             <input type="file" id="scan-file-${s.id}" style="display:none;" accept="image/*" onchange="scanCargo('${s.id}')">
-                            <button id="scan-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--warning); color:#000;" onclick="document.getElementById('scan-file-${s.id}').click()">📷 Scan Cargo (Required)</button>
-                            <button id="pickup-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; display:none;" onclick="confirmPickup('${s.id}')">Confirm Pickup</button>
+                            <button id="scan-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--warning); color:#000;" onclick="document.getElementById('scan-file-${s.id}').click()">📷 ${getTranslation('scan_cargo')} (${getTranslation('required')})</button>
+                            <button id="pickup-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; display:none;" onclick="confirmPickup('${s.id}')">${getTranslation('confirm_pickup')}</button>
                             <div id="scan-result-${s.id}" style="margin-top:5px; font-size:0.8rem; font-weight:bold;"></div>
                          `;
                     } else {
-                         actionBtn = `<button class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--success);" onclick="confirmDelivery('${s.id}', '${s.delivery_otp}')">Confirm Delivery (OTP)</button>`;
+                         actionBtn = `<button class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--success);" onclick="confirmDelivery('${s.id}', '${s.delivery_otp}')">${getTranslation('confirm_delivery')} (OTP)</button>`;
                     }
                 }
                 

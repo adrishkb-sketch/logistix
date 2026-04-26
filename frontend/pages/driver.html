@@ -54,18 +54,29 @@
 
     <div class="driver-layout">
         <div class="top-bar">
-            <h2 id="driver-name" style="font-weight:800;" data-i18n="driver_dashboard">Driver App</h2>
+            <h2 style="font-weight:800;"><span data-i18n="nav_driver_app">Driver App</span>: <span id="driver-name">Driver</span></h2>
             <div style="display:flex; gap:12px; align-items:center;">
-                <!-- Language Selector -->
-                <div class="glass-card" style="display:flex; gap:6px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; height:auto; background:rgba(255,255,255,0.05);">
-                    <button class="lang-btn" onclick="setLanguage('en')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">EN</button>
-                    <div style="width:1px; background:var(--border); margin:2px 0;"></div>
-                    <button class="lang-btn" onclick="setLanguage('bn')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">বাং</button>
-                    <div style="width:1px; background:var(--border); margin:2px 0;"></div>
-                    <button class="lang-btn" onclick="setLanguage('hi')" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.7rem; font-weight:bold;">हिं</button>
+                <!-- Language Selector Dropdown -->
+                <div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
+                    <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
+            <option value="en">English (EN)</option>
+            <option value="hi">हिंदी (HI)</option>
+            <option value="bn">বাংলা (BN)</option>
+        </select>
                 </div>
-                <div id="theme-toggle" class="theme-switch" style="width:36px; height:36px; font-size:1rem; margin:0;">🌙</div>
-                <button class="btn-primary" style="padding:8px 16px; background:var(--danger);" onclick="logout()" data-i18n="sign_out">Exit</button>
+
+                <!-- Voice Control Button & Help -->
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <button id="voice-trigger" class="glass-card" onclick="window.logistixVoice.toggle()" style="padding:6px 12px; font-size:0.8rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-i18n="btn_voice_control">🎙️ Automated Control</button>
+                    <button onclick="window.logistixVoice.showInstructions()" title="Voice Help" style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:white; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; font-size:0.8rem;">?</button>
+                </div>
+                
+                <button id="modify-dash-btn" class="btn-primary btn-outline" style="padding:8px 16px; font-size:0.75rem;" onclick="window.logistixLayout.toggleEditMode()" data-i18n="modify_dashboard">📐 Modify Dashboard</button>
+
+                
+                <button class="btn-primary" style="padding:8px 16px; background:var(--danger);" onclick="logout()" data-i18n="btn_exit">Exit 🚪</button>
+
             </div>
         </div>
 
@@ -73,131 +84,138 @@
         <div id="verification-screen" style="display:none; text-align:center;">
              <div class="glass-card section-card" style="padding:40px 20px;">
                 <div style="font-size:4rem; margin-bottom:20px;">🛡️</div>
-                <h2 style="margin-bottom:10px;">Security Verification</h2>
-                <p id="v-screen-msg" style="color:var(--text-muted); margin-bottom:30px;">To ensure safety and compliance, please verify your assigned vehicle's number plate.</p>
+                <h2 style="margin-bottom:10px;" data-i18n="security_verification">Security Verification</h2>
+                <p id="v-screen-msg" style="color:var(--text-muted); margin-bottom:30px;" data-i18n="v_screen_msg">To ensure safety and compliance, please verify your assigned vehicle's number plate.</p>
                 
                 <div id="v-upload-box">
                     <form id="verify-form-main">
                         <input type="file" id="plate-image-main" accept="image/*" required style="margin-bottom:20px; color:white; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); width:100%;">
-                        <button type="submit" class="btn-primary" id="verify-btn-main" style="padding:15px 30px; font-size:1.1rem; background:var(--accent);">🚀 Upload & Verify (AI)</button>
+                        <button type="submit" class="btn-primary" id="verify-btn-main" style="padding:15px 30px; font-size:1.1rem; background:var(--accent);"><span data-i18n="upload_verify_btn">🚀 Upload & Verify (Automated)</span></button>
                     </form>
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:15px;">Your photo will be analyzed by our AI for automatic approval.</p>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:15px;"><span data-i18n="analyzed_auto_desc">Your photo will be analyzed automatically for automatic approval.</span></p>
                 </div>
                 
                 <div id="v-pending-box" style="display:none;">
-                    <div class="pulse-warning" style="color:var(--warning); font-weight:bold; font-size:1.2rem; margin-bottom:15px;">⏳ Awaiting Approval</div>
-                    <p style="color:var(--text-muted);">AI could not verify the plate automatically. Your manager has been notified for manual review.</p>
-                    <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()">🔄 Refresh Status</button>
+                    <div class="pulse-warning" style="color:var(--warning); font-weight:bold; font-size:1.2rem; margin-bottom:15px;"><span data-i18n="awaiting_approval">⏳ Awaiting Approval</span></div>
+                    <p style="color:var(--text-muted);"><span data-i18n="v_pending_desc">Automated system could not verify the plate automatically. Your manager has been notified for manual review.</span></p>
+                    <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()"><span data-i18n="refresh_status">🔄 Refresh Status</span></button>
                 </div>
 
                 <div id="v-no-vehicle-box" style="display:none;">
                     <div style="font-size:4rem; margin-bottom:20px;">🚛</div>
-                    <h2 style="margin-bottom:10px;">Waiting for Assignment</h2>
-                    <p style="color:var(--text-muted); margin-bottom:30px;">Your manager has not assigned a vehicle to you yet. Please contact dispatch.</p>
-                    <button class="btn-primary" style="background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()">🔄 Check Assignment</button>
+                    <h2 style="margin-bottom:10px;" data-i18n="waiting_assignment">Waiting for Assignment</h2>
+                    <p style="color:var(--text-muted); margin-bottom:30px;"><span data-i18n="no_vehicle_desc">Your manager has not assigned a vehicle to you yet. Please contact dispatch.</span></p>
+                    <button class="btn-primary" style="background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()"><span data-i18n="check_assignment">🔄 Check Assignment</span></button>
                 </div>
                 </div>
              </div>
 
         <!-- Gated Main Content (Visible if verified) -->
         <div id="main-content" style="display:none;">
-            <div class="tabs">
-                <button class="tab-btn active" id="btn-tab-dash" onclick="switchDriverTab('dash')" data-i18n="active_mission">Tasks</button>
-                <button class="tab-btn" id="btn-tab-active" onclick="switchDriverTab('active')" data-i18n="roadmap">Live Route</button>
-                <button class="tab-btn" id="btn-tab-chat" onclick="switchDriverTab('chat')" data-i18n="nav_messages">Chat <span id="chat-badge" style="display:none; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
-                <button class="tab-btn" id="btn-tab-completed" onclick="switchDriverTab('completed')" data-i18n="last_trip_breakdown">History</button>
-                <button class="tab-btn" id="btn-tab-wallet" onclick="switchDriverTab('wallet')" data-i18n="wallet">Wallet 💰</button>
-                <button class="tab-btn" id="btn-tab-profile" onclick="switchDriverTab('profile')" data-i18n="account">Account</button>
+            <div class="tabs" data-layout-container="driver-tabs">
+                <button class="tab-btn active" id="btn-tab-dash" onclick="switchDriverTab('dash')" data-i18n="tab_tasks" data-layout-id="tab-tasks">Tasks</button>
+                <button class="tab-btn" id="btn-tab-active" onclick="switchDriverTab('active')" data-i18n="tab_live_route" data-layout-id="tab-live">Live Route</button>
+                <button class="tab-btn" id="btn-tab-chat" onclick="switchDriverTab('chat')" data-i18n="tab_chat" data-layout-id="tab-chat">Chat <span id="chat-badge" style="display:none; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
+                <button class="tab-btn" id="btn-tab-completed" onclick="switchDriverTab('completed')" data-i18n="tab_history" data-layout-id="tab-history">History</button>
+                <button class="tab-btn" id="btn-tab-wallet" onclick="switchDriverTab('wallet')" data-i18n="tab_wallet" data-layout-id="tab-wallet">Wallet 💰</button>
+                <button class="tab-btn" id="btn-tab-profile" onclick="switchDriverTab('profile')" data-i18n="tab_account" data-layout-id="tab-account">Account</button>
             </div>
 
             <div id="wallet-tab" style="display:none;">
                 <div class="glass-card" style="padding:24px; background:linear-gradient(135deg, var(--success)22, transparent); border-left:4px solid var(--success); margin-bottom:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <small style="color:var(--text-muted)">Withdrawable Balance</small>
+                            <small style="color:var(--text-muted)" data-i18n="withdrawable_balance">Withdrawable Balance</small>
                             <h1 id="w-balance" style="margin:0; color:var(--success);">₹ 0.00</h1>
                         </div>
-                        <button class="btn-primary" style="width:auto; padding:10px 20px; background:var(--success);" onclick="withdrawMoney()">Withdraw 💸</button>
+                        <button class="btn-primary" style="width:auto; padding:10px 20px; background:var(--success);" onclick="withdrawMoney()"><span data-i18n="withdraw_btn">Withdraw 💸</span></button>
                     </div>
                 </div>
 
-                <div class="stats-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
-                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
-                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Monthly Earning</div>
+                <div class="stats-grid" data-layout-container="driver-wallet-stats" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+                    <div class="glass-card" data-layout-id="stat-monthly-earning" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;" data-i18n="monthly_earning">Monthly Earning</div>
                         <div style="font-size:1.2rem; font-weight:bold;" id="w-today">₹ 0.00</div>
                     </div>
-                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
-                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Total Earnings</div>
+                    <div class="glass-card" data-layout-id="stat-total-earnings" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;" data-i18n="total_earnings">Total Earnings</div>
                         <div style="font-size:1.2rem; font-weight:bold;" id="w-bonus">₹ 0.00</div>
                     </div>
                 </div>
 
+
                 <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03);">
-                    <h4 style="margin:0 0 15px 0;">Request Funds ⛽🍔</h4>
+                    <h4 style="margin:0 0 15px 0;" data-i18n="request_funds_title">Request Funds ⛽🍔</h4>
                     <div style="display:flex; gap:10px;">
-                        <input type="number" id="fund-req-amount" placeholder="Amount (₹)" class="glass-card" style="width:100%; padding:10px; border:1px solid rgba(255,255,255,0.1); color:white; background:transparent;">
-                        <select id="fund-req-type" class="glass-card" style="padding:10px; border:1px solid rgba(255,255,255,0.1); color:white; background:#1a202c;">
-                            <option value="fuel">Fuel</option>
-                            <option value="food">Food</option>
-                            <option value="toll">Toll</option>
-                            <option value="maintenance">Maintenance</option>
-                        </select>
-                        <button class="btn-primary" style="padding:10px 20px; white-space:nowrap;" onclick="requestFunds()">Send</button>
+                        <input type="number" id="fund-req-amount" data-i18n-placeholder="amount_placeholder" placeholder="Amount (₹)" class="glass-card" style="width:100%; padding:10px; border:1px solid rgba(255,255,255,0.1); color:white; background:transparent;">
+                        <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
+            <option value="en">English (EN)</option>
+            <option value="hi">हिंदी (HI)</option>
+            <option value="bn">বাংলা (BN)</option>
+            <option value="ta">தமிழ் (TA)</option>
+            <option value="te">తెలుగు (TE)</option>
+            <option value="mr">मराठी (MR)</option>
+            <option value="gu">ગુજરાતી (GU)</option>
+            <option value="kn">ಕನ್ನಡ (KN)</option>
+            <option value="ml">മലയാളം (ML)</option>
+            <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+        </select>
+                        <button class="btn-primary" style="padding:10px 20px; white-space:nowrap;" onclick="requestFunds()"><span data-i18n="send">Send</span></button>
                     </div>
                 </div>
 
                 <div class="glass-card" style="padding:20px;">
-                    <h4 style="margin:0 0 15px 0;">Transaction History</h4>
+                    <h4 style="margin:0 0 15px 0;" data-i18n="transaction_history">Transaction History</h4>
                     <div id="wallet-transactions" style="display:flex; flex-direction:column; gap:12px;">
                         <!-- Injected via JS -->
-                        <p style="text-align:center; color:var(--text-muted); font-size:0.8rem;">Fetching ledger...</p>
+                        <p style="text-align:center; color:var(--text-muted); font-size:0.8rem;"><span data-i18n="fetching_ledger">Fetching ledger...</span></p>
                     </div>
                 </div>
             </div>
 
-            <div id="dash-tab" style="display:block;">
-                <div class="stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
-                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
-                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Points</div>
+            <div id="dash-tab" style="display:block;" data-layout-container="dash-content">
+                <div class="stats-grid" data-layout-id="dash-stats" data-layout-container="dash-stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+                    <div class="glass-card" data-layout-id="stat-points" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;" data-i18n="points">Points</div>
                         <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-earned">0</div>
                     </div>
-                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--success); text-align:center;">
-                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">On-Time</div>
+                    <div class="glass-card" data-layout-id="stat-ontime" style="padding:1rem; border-top:4px solid var(--success); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;" data-i18n="ontime">On-Time</div>
                         <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-ontime">0%</div>
                     </div>
-                    <div class="glass-card" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
-                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Score</div>
+                    <div class="glass-card" data-layout-id="stat-score" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
+                        <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;" data-i18n="score">Score</div>
                         <div style="font-size:1.4rem; font-weight:bold;" id="d-stat-safety">5.0</div>
                     </div>
                 </div>
                 
-                <div class="glass-card" style="padding:1rem; margin-bottom:1.5rem;">
-                    <h4 style="margin:0 0 10px 0; font-size:0.9rem;">Performance Velocity</h4>
+                <div class="glass-card" data-layout-id="dash-perf-velocity" style="padding:1rem; margin-bottom:1.5rem;">
+                    <h4 style="margin:0 0 10px 0; font-size:0.9rem;" data-i18n="performance_velocity">Performance Velocity</h4>
                     <div style="position: relative; height: 180px; width: 100%;">
                         <canvas id="driverPerfChart"></canvas>
                     </div>
                     <div style="margin-top:12px; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:0.75rem; color:var(--text-muted); line-height:1.4; border:1px solid rgba(255,255,255,0.05);">
-                        <b style="color:var(--primary);">💡 Performance Velocity</b><br>
-                        This chart shows your performance trend over your last 5 trips. Higher bars mean better safety and punctuality.
+                        <b style="color:var(--primary);" data-i18n="performance_velocity">💡 Performance Velocity</b><br>
+                        <span data-i18n="perf_velocity_desc">This chart shows your performance trend over your last 5 trips. Higher bars mean better safety and punctuality.</span>
                         <div style="margin-top:5px; display:flex; gap:10px; font-size:0.7rem;">
-                            <span><b>Trip -4:</b> Oldest</span>
-                            <span><b>Latest:</b> Most Recent</span>
+                            <span><b>Trip -4:</b> <span data-i18n="oldest">Oldest</span></span>
+                            <span><b>Latest:</b> <span data-i18n="most_recent">Most Recent</span></span>
                         </div>
                     </div>
                 </div>
                 
-                <div id="last-trip-summary" class="glass-card" style="display:none; padding:1rem; margin-bottom:1.5rem; border-left:4px solid var(--accent); background:linear-gradient(90deg, rgba(0, 242, 254, 0.05), transparent);">
-                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:var(--accent);">Last Trip Performance 🚀</h4>
+                <div id="last-trip-summary" data-layout-id="dash-last-trip" class="glass-card" style="display:none; padding:1rem; margin-bottom:1.5rem; border-left:4px solid var(--accent); background:linear-gradient(90deg, rgba(0, 242, 254, 0.05), transparent);">
+                    <h4 style="margin:0 0 10px 0; font-size:0.9rem; color:var(--accent);" data-i18n="last_trip_performance">Last Trip Performance 🚀</h4>
                     <div id="trip-breakdown-content" style="font-size:0.8rem; line-height:1.6;">
                         <!-- Injected via JS -->
                     </div>
                 </div>
 
-                <div class="glass-card" id="vehicle-status-card" style="padding:1.5rem; margin-bottom:1.5rem; border-left:4px solid var(--primary);">
+                <div class="glass-card" data-layout-id="dash-vehicle-status" id="vehicle-status-card" style="padding:1.5rem; margin-bottom:1.5rem; border-left:4px solid var(--primary);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h4 style="margin:0; font-size:1rem;">Vehicle Status</h4>
-                            <div id="vehicle-status-badge" class="status-pill" style="background:var(--success)22; color:var(--success); margin-top:5px; display:inline-block; font-size:0.75rem;">OPERATIONAL</div>
+                            <h4 style="margin:0; font-size:1rem;" data-i18n="vehicle_status">Vehicle Status</h4>
+                            <div id="vehicle-status-badge" class="status-pill" style="background:var(--success)22; color:var(--success); margin-top:5px; display:inline-block; font-size:0.75rem;" data-i18n="operational">OPERATIONAL</div>
                         </div>
                         <div id="vehicle-actions">
                             <!-- Injected via JS -->
@@ -209,42 +227,44 @@
                     </div>
                 </div>
 
-                <div class="glass-card" style="padding:1.5rem; text-align:center; background:linear-gradient(135deg, rgba(79, 140, 255, 0.05), transparent);">
-                    <h4 style="margin:0;">Active vehicle details</h4>
+                <div class="glass-card" data-layout-id="dash-active-details" style="padding:1.5rem; text-align:center; background:linear-gradient(135deg, rgba(79, 140, 255, 0.05), transparent);">
+                    <h4 style="margin:0;" data-i18n="active_vehicle_details">Active vehicle details</h4>
                     <div id="vehicle-mini-details" style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Loading...</div>
-                    <button class="btn-primary" style="margin-top:10px; width:auto; padding:8px 20px; font-size:0.85rem;" onclick="switchDriverTab('active')">View Live Route →</button>
+                    <button class="btn-primary" style="margin-top:10px; width:auto; padding:8px 20px; font-size:0.85rem;" onclick="switchDriverTab('active')" data-i18n="btn_view_live_route">View Live Route →</button>
                 </div>
             </div>
 
-            <div id="active-tab" style="display:none;">
-                <div id="instruction-banner" class="instruction-banner">
+
+            <div id="active-tab" style="display:none;" data-layout-container="active-content">
+                <div id="instruction-banner" class="instruction-banner" data-layout-id="active-instruction">
                     <!-- Injected via JS -->
                 </div>
 
-                <div id="simulation-ctrl" class="glass-card" style="display:none; padding:12px; border:1px solid var(--primary); background:rgba(59, 130, 246, 0.1); margin-bottom:15px; border-radius:12px;">
+                <div id="simulation-ctrl" class="glass-card" data-layout-id="active-simulation" style="display:none; padding:12px; border:1px solid var(--primary); background:rgba(59, 130, 246, 0.1); margin-bottom:15px; border-radius:12px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:0.8rem; color:var(--primary); font-weight:800;">🛰️ SIMULATION SANDBOX</span>
-                        <button id="sim-halt-btn" class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--danger);" onclick="toggleSimHalt()">Emergency Halt 🛑</button>
+                        <button id="sim-halt-btn" class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--danger);" onclick="toggleSimHalt()" data-i18n="btn_emergency_halt">Emergency Halt 🛑</button>
                     </div>
                 </div>
 
-                <div id="mission-container">
+                <div id="mission-container" data-layout-id="active-mission">
                     <!-- Dynamically injected -->
-                    <p>Loading your assigned routes...</p>
+                    <p data-i18n="loading_routes">Loading your assigned routes...</p>
                 </div>
 
-                <div style="position:relative;">
+                <div style="position:relative;" data-layout-id="active-map-container">
                     <div id="route-map" style="display:none;"></div>
-                    <button id="fullscreen-btn" class="btn-primary" style="display:none; position:absolute; top:10px; right:10px; z-index:1000; padding:5px 10px; font-size:0.8rem; width:auto;" onclick="toggleFullscreen()">Fullscreen</button>
+                    <button id="fullscreen-btn" class="btn-primary" style="display:none; position:absolute; top:10px; right:10px; z-index:1000; padding:5px 10px; font-size:0.8rem; width:auto;" onclick="toggleFullscreen()" data-i18n="btn_fullscreen">Fullscreen</button>
                 </div>
                 
                 <div id="alert-container"></div>
             </div>
 
+
             <div id="chat-tab" style="display:none;">
                 <div class="glass-card section-card" style="padding:1.5rem; border-left:4px solid var(--accent);">
-                    <h3 style="margin-bottom:4px;">Message Manager 💬</h3>
-                    <p class="subtitle" style="margin-bottom:16px; font-size:0.85rem;">Direct line to fleet operations for help or updates.</p>
+                    <h3 style="margin-bottom:4px;" data-i18n="message_manager_title">Message Manager 💬</h3>
+                    <p class="subtitle" style="margin-bottom:16px; font-size:0.85rem;" data-i18n="message_manager_desc">Direct line to fleet operations for help or updates.</p>
 
                     <div id="driver-messages" style="min-height:280px; max-height:420px; overflow-y: auto; margin-bottom: 16px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border); display:flex; flex-direction:column;">
                         <!-- Messages injected here -->
@@ -258,8 +278,8 @@
                         <button onclick="driverChatPickPhoto()" title="Send Photo" style="background:rgba(255,255,255,0.08);border:1px solid var(--card-border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;">📷</button>
                         <button id="driver-voice-btn" onclick="driverChatToggleRecording()" title="Voice Note" style="background:rgba(255,255,255,0.08);border:1px solid var(--card-border);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:1.1rem;">🎙️</button>
                         <input id="driver-photo-input" type="file" accept="image/*" style="display:none;" onchange="driverChatHandlePhoto(this)">
-                        <input type="text" id="manager-msg-content" placeholder="Type a message..." style="flex:1; padding:10px 14px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit; font-size:0.95rem;" onkeydown="if(event.key==='Enter')sendMessageToManager()">
-                        <button class="btn-primary" style="width:auto; padding:10px 22px;" onclick="sendMessageToManager()">Send</button>
+                        <input type="text" id="manager-msg-content" placeholder="Type a message..." data-i18n-placeholder="placeholder_message" style="flex:1; padding:10px 14px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit; font-size:0.95rem;" onkeydown="if(event.key==='Enter')sendMessageToManager()">
+                        <button class="btn-primary" style="width:auto; padding:10px 22px;" onclick="sendMessageToManager()" data-i18n="btn_send">Send</button>
                     </div>
                 </div>
             </div>
@@ -278,31 +298,31 @@
                     </div>
                     <input type="file" id="profile-upload" style="display:none;" accept="image/*" onchange="uploadProfilePic()">
                     
-                    <h2 id="p-name">Driver Name</h2>
+                    <h2 id="p-name" data-i18n="driver_name">Driver Name</h2>
                     <p id="p-login" style="color:var(--text-muted); margin-bottom:20px;">@login_id</p>
                     
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:left;">
                         <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                            <small style="color:var(--text-muted)">Total Trips</small>
+                            <small style="color:var(--text-muted)" data-i18n="total_trips">Total Trips</small>
                             <h4 id="p-trips">0</h4>
                         </div>
                         <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                            <small style="color:var(--text-muted)">Safety Score</small>
+                            <small style="color:var(--text-muted)" data-i18n="safety_score">Safety Score</small>
                             <h4 id="p-safety">100%</h4>
                         </div>
                         <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                            <small style="color:var(--text-muted)">Punctuality</small>
+                            <small style="color:var(--text-muted)" data-i18n="punctuality">Punctuality</small>
                             <h4 id="p-punct">100%</h4>
                         </div>
                         <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05)">
-                            <small style="color:var(--text-muted)">Avg Rating</small>
+                            <small style="color:var(--text-muted)" data-i18n="avg_rating">Avg Rating</small>
                             <h4 id="p-rating">5.0 ⭐</h4>
                         </div>
                         <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05); grid-column: span 2;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div>
                                     <small style="color:var(--text-muted)">Platform Tenure</small>
-                                    <h4 id="p-experience" style="margin:0; color:var(--primary);">0 Days</h4>
+                                    <h4 id="p-experience" style="margin:0; color:var(--primary);" data-i18n="platform_tenure">0 Days</h4>
                                 </div>
                                 <div style="text-align:right;">
                                     <small style="color:var(--text-muted)">Reward Points 🏆</small>
@@ -315,90 +335,90 @@
                     <div style="margin-top:25px; text-align:left;">
                         <div class="glass-card" style="padding:15px; background:linear-gradient(135deg, rgba(245,101,101,0.1), rgba(0,0,0,0)); border: 1px solid rgba(245,101,101,0.2);">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <h4 style="margin:0; color:var(--danger);">🛡️ Medical Health Card</h4>
-                                <span id="h-status" class="badge" style="background:var(--success); font-size:0.7rem;">FIT TO DRIVE</span>
+                                <h4 style="margin:0; color:var(--danger);" data-i18n="medical_health_card">🛡️ Medical Health Card</h4>
+                                <span id="h-status" class="badge" style="background:var(--success); font-size:0.7rem;" data-i18n="fit_to_drive">FIT TO DRIVE</span>
                             </div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                                 <div style="text-align:center;">
-                                    <div style="font-size:0.7rem; color:var(--text-muted);">HEART RATE</div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted);" data-i18n="heart_rate">HEART RATE</div>
                                     <div style="font-size:1.2rem; font-weight:bold; color:var(--danger);" id="h-rate">-- BPM</div>
                                 </div>
                                 <div style="text-align:center;">
-                                    <div style="font-size:0.7rem; color:var(--text-muted);">BLOOD PRESSURE</div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted);" data-i18n="blood_pressure">BLOOD PRESSURE</div>
                                     <div style="font-size:1.2rem; font-weight:bold;" id="h-bp">--/--</div>
                                 </div>
                                 <div style="text-align:center;">
-                                    <div style="font-size:0.7rem; color:var(--text-muted);">OXYGEN (SpO2)</div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted);" data-i18n="oxygen_level">OXYGEN (SpO2)</div>
                                     <div style="font-size:1.2rem; font-weight:bold; color:var(--accent);" id="h-o2">--%</div>
                                 </div>
                                 <div style="text-align:center;">
-                                    <div style="font-size:0.7rem; color:var(--text-muted);">STRESS INDEX</div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted);" data-i18n="stress_index">STRESS INDEX</div>
                                     <div style="font-size:1.2rem; font-weight:bold;" id="h-stress">--</div>
                                 </div>
                             </div>
-                            <button class="btn-primary" style="margin-top:15px; width:100%; font-size:0.8rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);" onclick="openHealthModal()">Update Vitals</button>
-                            <p style="margin-top:10px; font-size:0.7rem; color:var(--text-muted); text-align:center;">Last Sync: <span id="h-sync">Just now</span> via Wearable AI</p>
+                            <button class="btn-primary" style="margin-top:15px; width:100%; font-size:0.8rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);" onclick="openHealthModal()" data-i18n="btn_update_vitals">Update Vitals</button>
+                            <p style="margin-top:10px; font-size:0.7rem; color:var(--text-muted); text-align:center;"><span data-i18n="last_sync">Last Sync</span>: <span id="h-sync">Just now</span> <span data-i18n="via_wearable">via Wearable Systems</span></p>
                         </div>
                     </div>
 
                     <div style="margin-top:25px; text-align:left;">
-                        <label style="font-size:0.85rem; color:var(--text-muted)">Fatigue Meter</label>
+                        <label style="font-size:0.85rem; color:var(--text-muted)" data-i18n="fatigue_meter">Fatigue Meter</label>
                         <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; margin-top:5px; overflow:hidden;">
                             <div id="p-fatigue-bar" style="width:0%; height:100%; background:var(--primary); transition:width 0.5s ease;"></div>
                         </div>
                     </div>
                     
-                    <button class="btn-primary" style="margin-top:30px; background:var(--secondary);" onclick="startRest()">Start 12h Rest Period</button>
+                    <button class="btn-primary" style="margin-top:30px; background:var(--secondary);" onclick="startRest()" data-i18n="btn_start_rest">Start 12h Rest Period</button>
                 </div>
             </div>
     
     <!-- Persistent Report Issue Button -->
-    <button id="report-issue-btn" onclick="openIncidentModal()" style="display:none; position:fixed; bottom:20px; right:20px; background:var(--danger); color:white; border:none; padding:14px 24px; border-radius:30px; font-weight:bold; font-size:1rem; cursor:pointer; box-shadow:0 10px 25px rgba(229,62,62,0.4); z-index:1000; transition:all 0.2s ease;">
+    <button id="report-issue-btn" onclick="openIncidentModal()" style="display:none; position:fixed; bottom:20px; right:20px; background:var(--danger); color:white; border:none; padding:14px 24px; border-radius:30px; font-weight:bold; font-size:1rem; cursor:pointer; box-shadow:0 10px 25px rgba(229,62,62,0.4); z-index:1000; transition:all 0.2s ease;" data-i18n="btn_report_issue">
         🚨 Report Issue
     </button>
 
     <!-- Incident Modal -->
     <div id="incident-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); text-align:center;">
-        <h2 style="color:var(--danger); margin-bottom:10px;">Report an Incident</h2>
-        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">This will instantly notify the manager and update your logs.</p>
+        <h2 style="color:var(--danger); margin-bottom:10px;" data-i18n="incident_report_title">Report an Incident</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;" data-i18n="incident_report_desc">This will instantly notify the manager and update your logs.</p>
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown')">🛠️ Breakdown</button>
-            <button class="btn-primary" style="background:#3182ce;" onclick="submitIncident('challan')">👮 Challan</button>
-            <button class="btn-primary" style="background:#d69e2e;" onclick="submitIncident('traffic')">🚦 Traffic</button>
-            <button class="btn-primary" style="background:var(--accent);" onclick="submitIncident('toll')">🎫 Toll Plaza</button>
-            <button class="btn-primary" style="background:#48bb78;" onclick="submitIncident('refuel')">⛽ Refuel</button>
-            <button class="btn-primary" style="background:#805ad5;" onclick="submitIncident('weather')">⛈️ Weather</button>
+            <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown')" data-i18n="incident_breakdown">🛠️ Breakdown</button>
+            <button class="btn-primary" style="background:#3182ce;" onclick="submitIncident('challan')" data-i18n="incident_challan">👮 Challan</button>
+            <button class="btn-primary" style="background:#d69e2e;" onclick="submitIncident('traffic')" data-i18n="incident_traffic">🚦 Traffic</button>
+            <button class="btn-primary" style="background:var(--accent);" onclick="submitIncident('toll')" data-i18n="incident_toll">🎫 Toll Plaza</button>
+            <button class="btn-primary" style="background:#48bb78;" onclick="submitIncident('refuel')" data-i18n="incident_refuel">⛽ Refuel</button>
+            <button class="btn-primary" style="background:#805ad5;" onclick="submitIncident('weather')" data-i18n="incident_weather">⛈️ Weather</button>
         </div>
-        <button class="btn-primary" style="margin-top:20px; background:transparent; border:1px solid white;" onclick="document.getElementById('incident-modal').style.display='none'">Cancel</button>
+        <button class="btn-primary" style="margin-top:20px; background:transparent; border:1px solid white;" onclick="document.getElementById('incident-modal').style.display='none'" data-i18n="btn_cancel">Cancel</button>
     </div>
 
     <!-- Stationary Warning Modal -->
     <div id="stationary-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); text-align:center; border:2px solid var(--warning);">
-        <h2 style="color:var(--warning); margin-bottom:10px;">Are you okay?</h2>
-        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">We noticed you haven't moved in a while. Do you need to report an issue?</p>
+        <h2 style="color:var(--warning); margin-bottom:10px;" data-i18n="are_you_okay">Are you okay?</h2>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;" data-i18n="stationary_msg">We noticed you haven't moved in a while. Do you need to report an issue?</p>
         
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <button class="btn-primary" style="background:#dd6b20;" onclick="submitIncident('breakdown', true)">🛠️ Breakdown</button>
             <button class="btn-primary" style="background:var(--warning); color:#000;" onclick="submitIncident('toll', true)">🎫 Toll Plaza</button>
             <button class="btn-primary" style="background:var(--accent);" onclick="submitIncident('refuel', true)">⛽ Refuel</button>
-            <button class="btn-primary" style="background:var(--success);" onclick="document.getElementById('stationary-modal').style.display='none'">👍 I'm Fine</button>
+            <button class="btn-primary" style="background:var(--success);" onclick="document.getElementById('stationary-modal').style.display='none'" data-i18n="btn_im_fine">👍 I'm Fine</button>
         </div>
     </div>
 
     <!-- Zen Mode Overlay -->
     <div id="zen-overlay" class="zen-overlay">
         <div class="zen-breathing"></div>
-        <h1 style="color:var(--primary); font-size:2.5rem; margin-bottom:10px;">ZEN MODE ACTIVE</h1>
-        <p style="font-size:1.2rem; margin-bottom:30px; line-height:1.6;">AI detected high fatigue or erratic patterns.<br>Your safety is our priority. Take a deep breath.</p>
+        <h1 style="color:var(--primary); font-size:2.5rem; margin-bottom:10px;" data-i18n="zen_mode_active">ZEN MODE ACTIVE</h1>
+        <p style="font-size:1.2rem; margin-bottom:30px; line-height:1.6;" data-i18n="zen_mode_desc">Automated detected high fatigue or erratic patterns.<br>Your safety is our priority. Take a deep breath.</p>
         
         <div class="glass-card" style="width:100%; max-width:400px; border: 1px solid var(--primary);">
-            <h3 style="color:var(--primary); margin-bottom:15px;">📍 Rerouting to Safety</h3>
+            <h3 style="color:var(--primary); margin-bottom:15px;" data-i18n="rerouting_safety">📍 Rerouting to Safety</h3>
             <p id="zen-rest-stop-name" style="font-size:1.1rem; font-weight:bold;"></p>
             <p id="zen-rest-stop-amenities" style="color:var(--text-muted); font-size:0.9rem; margin-top:5px;"></p>
             <div style="margin-top:20px; display:flex; gap:10px;">
-                <button class="btn-primary" style="flex:1;" onclick="confirmArrival()">I have Arrived & Resting</button>
-                <button class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="deactivateZen()">I'm Fine, Resume Route</button>
+                <button class="btn-primary" style="flex:1;" onclick="confirmArrival()" data-i18n="btn_arrived_resting">I have Arrived & Resting</button>
+                <button class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="deactivateZen()" data-i18n="btn_resume_route">I'm Fine, Resume Route</button>
             </div>
         </div>
     </div>
@@ -407,80 +427,80 @@
     <div id="loader-modal" class="zen-overlay" style="padding:20px; display:none; background:rgba(10,25,41,0.98);">
         <div style="width:100%; max-width:500px; text-align:left;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="color:var(--primary); margin:0;">🏗️ AR Cargo Optimizer</h2>
+                <h2 style="color:var(--primary); margin:0;" data-i18n="cargo_optimizer_title">🏗️ AR Cargo Optimizer</h2>
                 <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('loader-modal').style.display='none'">✖</button>
             </div>
             
             <div id="loader-step-1" class="glass-card" style="margin-bottom:20px; border:1px dashed var(--primary);">
-                <h3>Step 1: Scan Cargo Hold</h3>
-                <p style="font-size:0.9rem; color:var(--text-muted);">Photograph your vehicle's empty cargo area for AI volume analysis.</p>
+                <h3 data-i18n="cargo_step_1">Step 1: Scan Cargo Hold</h3>
+                <p style="font-size:0.9rem; color:var(--text-muted);" data-i18n="cargo_step_1_desc">Photograph your vehicle's empty cargo area for automated volume analysis.</p>
                 <input type="file" id="vehicle-photo" accept="image/*" style="margin-top:15px; color:white;">
-                <button class="btn-primary" style="margin-top:15px;" onclick="analyzeLoading()">Analyze & Generate Blueprint</button>
+                <button class="btn-primary" style="margin-top:15px;" onclick="analyzeLoading()" data-i18n="btn_analyze_cargo">Analyze & Generate Blueprint</button>
             </div>
 
             <div id="loader-result" style="display:none;">
                 <div class="glass-card" style="background:rgba(0,242,254,0.05); border:1px solid var(--primary); padding:15px; margin-bottom:20px; text-align:center;">
-                    <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:5px;">🚀 SPACE UTILIZATION BOOST</div>
+                    <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:5px;" data-i18n="space_utilization_boost">🚀 SPACE UTILIZATION BOOST</div>
                     <div style="font-size:2rem; font-weight:bold; color:var(--primary);">+22% Efficiency</div>
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;">AI has packed 14 items into 3 optimized layers.</p>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;" data-i18n="cargo_optimized_msg">Automated has packed 14 items into 3 optimized layers.</p>
                 </div>
 
-                <h4 style="color:var(--primary); margin-bottom:10px;">3D STACKING BLUEPRINT</h4>
+                <h4 style="color:var(--primary); margin-bottom:10px;" data-i18n="cargo_blueprint_title">3D STACKING BLUEPRINT</h4>
                 <div id="stacking-blueprint" style="margin-bottom:20px; border-left:2px solid var(--primary); padding-left:15px;">
                     <!-- Blueprint nodes injected -->
                 </div>
 
-                <button class="btn-primary" onclick="document.getElementById('loader-modal').style.display='none'">Confirm & Start Loading</button>
+                <button class="btn-primary" onclick="document.getElementById('loader-modal').style.display='none'" data-i18n="btn_confirm_loading">Confirm & Start Loading</button>
             </div>
         </div>
     </div>
 
     <!-- Verification Modal (QR + Photo) -->
     <div id="verify-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:350px; text-align:center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
-        <h3 style="margin-top:0;">🛡️ Shipment Verification</h3>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;">Scan package QR and upload proof.</p>
+        <h3 style="margin-top:0;" data-i18n="shipment_verification_title">🛡️ Shipment Verification</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="shipment_verification_desc">Scan package QR and upload proof.</p>
         
         <div id="qr-reader" style="width:100%; border-radius:8px; overflow:hidden; border:1px solid var(--primary); margin-bottom:15px;"></div>
         
-        <div id="qr-success-msg" style="display:none; color:var(--success); font-weight:bold; margin-bottom:15px;">✅ QR Code Matched!</div>
+        <div id="qr-success-msg" style="display:none; color:var(--success); font-weight:bold; margin-bottom:15px;" data-i18n="qr_matched">✅ QR Code Matched!</div>
         
         <div class="input-group" style="margin-top:10px;">
-            <label>Pickup Evidence (Photo)</label>
+            <label data-i18n="pickup_evidence_label">Pickup Evidence (Photo)</label>
             <input type="file" id="v-photo" accept="image/*" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); padding:5px; border-radius:4px;">
         </div>
         
         <div style="margin-top:20px; display:flex; gap:10px;">
-            <button class="btn-primary" id="btn-submit-verify" disabled onclick="submitVerification()">Complete Pickup</button>
+            <button class="btn-primary" id="btn-submit-verify" disabled onclick="submitVerification()" data-i18n="btn_complete_pickup">Complete Pickup</button>
             <button class="btn-primary" style="background:transparent; border:1px solid white;" onclick="closeVerifyModal()">Cancel</button>
         </div>
     </div>
 
     <!-- Health Vitals Modal -->
     <div id="health-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-        <h2 style="margin-bottom:15px; font-size:1.2rem;">❤️ Update Health Vitals</h2>
+        <h2 style="margin-bottom:15px; font-size:1.2rem;" data-i18n="update_health_title">❤️ Update Health Vitals</h2>
         <form id="health-form">
             <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Heart Rate (BPM)</label>
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;" data-i18n="label_heart_rate">Heart Rate (BPM)</label>
                 <input type="number" id="v-heart-rate" required placeholder="e.g. 72" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
             <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Blood Pressure (mmHg)</label>
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;" data-i18n="label_blood_pressure">Blood Pressure (mmHg)</label>
                 <input type="text" id="v-bp" required placeholder="e.g. 120/80" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
             <div style="margin-bottom:15px;">
-                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Oxygen Level (SpO2 %)</label>
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;" data-i18n="label_oxygen">Oxygen Level (SpO2 %)</label>
                 <input type="number" id="v-oxygen" required placeholder="e.g. 98" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
             <div style="margin-bottom:20px;">
-                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Stress Index (0-100)</label>
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;" data-i18n="label_stress">Stress Index (0-100)</label>
                 <input type="range" id="v-stress" min="0" max="100" style="width:100%;">
                 <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-muted);">
-                    <span>Relaxed</span>
-                    <span>Stressed</span>
+                    <span data-i18n="label_relaxed">Relaxed</span>
+                    <span data-i18n="label_stressed">Stressed</span>
                 </div>
             </div>
             <div style="display:flex; gap:10px;">
-                <button type="submit" class="btn-primary" style="flex:1;">Update Vitals</button>
+                <button type="submit" class="btn-primary" style="flex:1;" data-i18n="btn_update_vitals">Update Vitals</button>
                 <button type="button" class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="closeHealthModal()">Cancel</button>
             </div>
         </form>
@@ -491,8 +511,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="../js/translations.js"></script>
+    <script src="../js/voice.js"></script>
     <script src="../js/api.js"></script>
+    <script src="../js/custom_layout.js"></script>
     <script src="../js/driver.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.logistixLayout.init('driver');
+        });
+    </script>
     <!-- Theme Script -->
     <script>
     const btn = document.getElementById('theme-toggle');

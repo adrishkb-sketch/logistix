@@ -41,7 +41,7 @@ function showPanel(panelId) {
 function renderOrderList(orders) {
     const list = document.getElementById('orders-list');
     if (!orders || orders.length === 0) {
-        list.innerHTML = '<p style="text-align:center; color:var(--muted);">No orders found for this number.</p>';
+        list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found') || 'No orders found for this number.'}</p>`;
         return;
     }
     
@@ -66,7 +66,7 @@ async function loadCustomerOrders() {
         const myOrders = await apiCall('/auth/customer/shipments');
         
         if (myOrders.length === 0) {
-            list.innerHTML = '<p style="text-align:center; color:var(--muted);">No orders found for this number.</p>';
+            list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found') || 'No orders found for this number.'}</p>`;
             return;
         }
         
@@ -99,9 +99,9 @@ async function viewOrder(id) {
         statusEl.className = `status-pill status-${s.status}`;
         
         const eta = new Date(s.expected_delivery);
-        document.getElementById('det-eta').innerText = s.status === 'delivered' ? 'Delivered' : eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        document.getElementById('det-loc').innerText = s.current_location ? `${s.current_location.lat.toFixed(2)}, ${s.current_location.lng.toFixed(2)}` : 'Pending';
-        document.getElementById('det-vehicle').innerText = s.assigned_vehicle_id ? 'Vehicle Linked' : 'Awaiting Fleet';
+        document.getElementById('det-eta').innerText = s.status === 'delivered' ? getTranslation('delivered_label') : eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('det-loc').innerText = s.current_location ? `${s.current_location.lat.toFixed(2)}, ${s.current_location.lng.toFixed(2)}` : getTranslation('pending_label');
+        document.getElementById('det-vehicle').innerText = s.assigned_vehicle_id ? getTranslation('vehicle_linked') : getTranslation('awaiting_fleet');
         
         // Payment Box
         const payBox = document.getElementById('payment-box');
@@ -111,7 +111,7 @@ async function viewOrder(id) {
             document.getElementById('det-amount').innerText = `₹ ${(s.finance?.suggested_price || 0).toLocaleString()}`;
         } else if (s.payment_status === 'paid') {
             payBox.style.display = 'block';
-            document.getElementById('det-amount').innerText = `PAID`;
+            document.getElementById('det-amount').innerText = getTranslation('paid');
             document.getElementById('det-amount').style.color = 'var(--success)';
             payBtn.style.display = 'none';
         } else {
@@ -253,7 +253,7 @@ async function simulatePayment() {
     alert("Simulating redirect to Payment Gateway (UPI/Card)...");
     setTimeout(async () => {
         alert("Payment Successful! Informing Logistix Manager for confirmation.");
-        document.getElementById('btn-pay-now').innerText = "Awaiting Manager Confirmation...";
+        document.getElementById('btn-pay-now').innerText = getTranslation('awaiting_manager_conf');
         document.getElementById('btn-pay-now').disabled = true;
     }, 2000);
 }
