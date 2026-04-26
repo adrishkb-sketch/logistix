@@ -161,3 +161,68 @@ function buildAudioPlayer(src, accentColor = 'rgba(255,255,255,0.18)') {
 
     return wrap;
 }
+
+/* ── GLOBAL UI / RESPONSIVE LOGIC ───────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Inject Mobile Header if on a dashboard page and it's missing
+    const layout = document.querySelector('.dashboard-layout');
+    if (layout && !document.querySelector('.mobile-header')) {
+        const header = document.createElement('div');
+        header.className = 'mobile-header';
+        header.innerHTML = `
+            <button class="menu-toggle" id="global-menu-toggle">☰</button>
+            <div style="font-weight:800; font-size:1.1rem;">Logistix</div>
+            <div id="header-theme-placeholder"></div>
+        `;
+        document.body.prepend(header);
+
+        // Move theme toggle to header on mobile if exists
+        const themeBtn = document.getElementById('theme-toggle');
+        if (themeBtn) {
+            document.getElementById('header-theme-placeholder').appendChild(themeBtn);
+        }
+    }
+
+    // 2. Sidebar Toggle Logic
+    const toggleBtn = document.getElementById('global-menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (toggleBtn && sidebar) {
+        // Create overlay if not exists
+        let overlay = document.querySelector('.sidebar-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'sidebar-overlay';
+            document.body.appendChild(overlay);
+        }
+
+        const toggleSidebar = () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+        };
+
+        toggleBtn.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+
+        // Close sidebar when clicking links on mobile
+        sidebar.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 1024) toggleSidebar();
+            });
+        });
+    }
+
+    // 3. Global Reveal Animation Initializer
+    if (typeof revealOnScroll === 'undefined') {
+        const reveals = document.querySelectorAll('.reveal');
+        const runReveal = () => {
+            reveals.forEach(el => {
+                const top = el.getBoundingClientRect().top;
+                if (top < window.innerHeight - 80) el.classList.add('active');
+            });
+        };
+        window.addEventListener('scroll', runReveal);
+        runReveal();
+    }
+});
