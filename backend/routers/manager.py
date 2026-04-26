@@ -668,11 +668,8 @@ def request_account_deletion(company_id: str):
     otp = str(random.randint(100000, 999999))
     deletion_otp_store[company_id] = otp
     
-    print(f"\n--- [DELETE ACCOUNT OTP] ---")
-    print(f"To: {company['email']}")
-    print(f"Your OTP for permanent account deletion is: {otp}")
-    print(f"WARNING: This action cannot be undone.")
-    print(f"----------------------------\n")
+    from backend.services.email_service import EmailService
+    EmailService.send_otp_email(company["email"], otp)
     
     return {"message": "OTP sent to your registered email."}
 

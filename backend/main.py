@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
+from dotenv import load_dotenv
+
+# Load environment variables globally
+load_dotenv()
 
 from backend.routers import auth, manager, driver, shipment, tracking, simulation, fuel_oracle
 

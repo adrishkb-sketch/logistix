@@ -26,14 +26,21 @@ class OTPVerify(BaseModel):
 
 @router.post("/company/request-otp")
 def request_otp(data: OTPRequest):
-    # Simulate sending OTP
     otp = str(random.randint(100000, 999999))
     otp_store[data.email] = otp
-    print(f"\n--- [MOCK OTP EMAIL] ---")
-    print(f"To: {data.email}")
-    print(f"Your Logistix verification code is: {otp}")
-    print(f"------------------------\n")
-    return {"message": "OTP generated. Check server console.", "email": data.email}
+    
+    from backend.services.email_service import EmailService
+    success = EmailService.send_otp_email(data.email, otp)
+    
+    if not success:
+        # Fallback to mock in case of failure for now
+        print(f"\n--- [FALLBACK MOCK OTP EMAIL] ---")
+        print(f"To: {data.email}")
+        print(f"Code: {otp}")
+        print(f"----------------------------------\n")
+        return {"message": "Email service failed. Check server console for code.", "email": data.email}
+        
+    return {"message": "Verification code sent to your email.", "email": data.email}
 
 @router.post("/company/verify-signup")
 def verify_signup(data: OTPVerify):

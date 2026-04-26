@@ -8,7 +8,8 @@ async function requestOTP() {
     }
     
     try {
-        await apiCall('/auth/company/request-otp', 'POST', { email });
+        const res = await apiCall('/auth/company/request-otp', 'POST', { email });
+        alert(res.message); // Inform user to check email
         document.getElementById('step-1').style.display = 'none';
         document.getElementById('step-2').style.display = 'block';
     } catch(e) {
