@@ -980,7 +980,7 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
         description: document.getElementById('description').value,
         is_perishable: document.getElementById('is-perishable').checked,
         receiver_name: document.getElementById('receiver-name').value,
-        receiver_phone: document.getElementById('receiver-phone').value,
+        receiver_phone: document.getElementById('receiver-phone').value.length === 10 ? "+91" + document.getElementById('receiver-phone').value : document.getElementById('receiver-phone').value,
         eway_bill_no: document.getElementById('eway-no').value,
         eway_bill_expiry: document.getElementById('eway-expiry').value,
         labels: [] // Ensure labels is present as expected by ShipmentCreate
@@ -1455,7 +1455,7 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             driving_score: 100.0, // New drivers start with a perfect score
             safety_rating: safetyRating.toFixed(1),
             on_time_rate: 100, // Initial perfect rate
-            phone_number: document.getElementById('d-phone').value
+            phone_number: document.getElementById('d-phone').value.length === 10 ? "+91" + document.getElementById('d-phone').value : document.getElementById('d-phone').value
         };
         await apiCall('/manager/drivers', 'POST', driverData);
         document.getElementById('add-driver-form').reset();
@@ -3071,9 +3071,39 @@ async function requestDeleteAccount() {
         alert(res.message);
         document.getElementById('delete-account-step1').style.display = 'none';
         document.getElementById('delete-account-step2').style.display = 'block';
+        startOTPTimer('resend-link-del', 'timer-val-del', requestDeleteAccount);
     } catch(err) {
         alert("Failed to request account deletion.");
     }
+}
+
+function startOTPTimer(linkId, valId, retryFn) {
+    let timeLeft = 10;
+    const link = document.getElementById(linkId);
+    const val = document.getElementById(valId);
+    
+    if (!link || !val) return;
+
+    link.style.opacity = '0.5';
+    link.style.pointerEvents = 'none';
+    link.innerHTML = `Resend OTP (<span id="${valId}">${timeLeft}</span>s)`;
+    
+    const timer = setInterval(() => {
+        timeLeft--;
+        const v = document.getElementById(valId);
+        if (v) v.innerText = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            link.style.opacity = '1';
+            link.style.pointerEvents = 'auto';
+            link.innerHTML = `Resend OTP Now`;
+            link.onclick = (e) => {
+                e.preventDefault();
+                retryFn();
+            };
+        }
+    }, 1000);
 }
 
 async function confirmDeleteAccount() {

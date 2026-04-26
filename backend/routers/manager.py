@@ -48,6 +48,10 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
         try:
             vals = row.values.tolist()
             if len(vals) < 9: continue
+            phone = str(vals[8]).strip()
+            if len(phone) == 10 and phone.isdigit():
+                phone = "+91" + phone
+                
             d = {
                 "name": str(vals[0]),
                 "login_id": str(vals[1]),
@@ -57,7 +61,7 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
                 "years_experience": float(vals[5]),
                 "past_accidents": int(vals[6]),
                 "traffic_violations": int(vals[7]),
-                "phone_number": str(vals[8]),
+                "phone_number": phone,
                 "company_id": company_id
             }
             drivers.append(d)
@@ -198,6 +202,13 @@ def get_journey_review(shipment_id: str):
 # Drivers CRUD
 @router.post("/drivers")
 def create_driver(driver: Driver):
+    # Check for duplicate phone or login ID
+    all_drivers = drivers_db.get_all()
+    if any(d.get("phone_number") == driver.phone_number for d in all_drivers):
+        raise HTTPException(status_code=400, detail="A driver with this phone number is already registered.")
+    if any(d.get("login_id") == driver.login_id for d in all_drivers):
+        raise HTTPException(status_code=400, detail="This Login ID is already taken.")
+
     from backend.services.driver_intel import calculate_driver_performance_score
     driver_data = driver.model_dump()
     driver_data["driving_score"] = calculate_driver_performance_score(driver_data)
@@ -669,8 +680,15 @@ def request_account_deletion(company_id: str):
     deletion_otp_store[company_id] = otp
     
     from backend.services.email_service import EmailService
-    EmailService.send_otp_email(company["email"], otp)
+    success = EmailService.send_otp_email(company["email"], otp)
     
+    if not success:
+        print(f"\n--- [FALLBACK MOCK DELETION OTP] ---")
+        print(f"To: {company['email']}")
+        print(f"Code: {otp}")
+        print(f"------------------------------------\n")
+        return {"message": "Email delivery failed. Check server console for code."}
+        
     return {"message": "OTP sent to your registered email."}
 
 @router.post("/system/delete-account-confirm")

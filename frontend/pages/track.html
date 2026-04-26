@@ -71,7 +71,10 @@
 
             <div id="step-phone">
                 <label style="font-size:0.85rem; color:var(--muted); display:block; margin-bottom:8px;" data-i18n="phone_number">Phone Number</label>
-                <input type="tel" id="cust-phone" placeholder="+91 98765 43210" style="margin-bottom:20px;">
+                <div style="display:flex; gap:8px; margin-bottom:20px;">
+                    <span style="background:rgba(255,255,255,0.05); padding:12px; border-radius:12px; border:1px solid var(--border); color:var(--muted); font-weight:800;">+91</span>
+                    <input type="tel" id="cust-phone" placeholder="9876543210" maxlength="10" pattern="[0-9]{10}" required style="flex:1; margin-bottom:0;">
+                </div>
                 <button class="btn-primary" style="width:100%;" onclick="requestCustomerOTP()" data-i18n="send_otp">Send OTP</button>
                 <p id="phone-error" style="color:var(--danger); font-size:0.85rem; margin-top:12px; display:none; text-align:center;"></p>
             </div>
@@ -85,6 +88,9 @@
                     <input class="pin-box" maxlength="1" type="text" inputmode="numeric">
                 </div>
                 <button class="btn-primary" style="width:100%;" onclick="verifyCustomerOTP()" data-i18n="verify_otp">Track My Orders</button>
+                <p id="resend-timer-container" style="text-align:center; margin-top:20px; font-size:0.85rem; color:var(--text-muted);">
+                    Didn't receive code? <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val">10</span>s)</span>
+                </p>
                 <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;" data-i18n="change_phone">Change Phone Number</a></p>
             </div>
         </div>

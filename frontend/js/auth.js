@@ -12,9 +12,39 @@ async function requestOTP() {
         alert(res.message); // Inform user to check email
         document.getElementById('step-1').style.display = 'none';
         document.getElementById('step-2').style.display = 'block';
+        startOTPTimer('resend-link', 'timer-val', requestOTP);
     } catch(e) {
         // Error handled in api.js
     }
+}
+
+function startOTPTimer(linkId, valId, retryFn) {
+    let timeLeft = 10;
+    const link = document.getElementById(linkId);
+    const val = document.getElementById(valId);
+    
+    if (!link || !val) return;
+
+    link.style.opacity = '0.5';
+    link.style.pointerEvents = 'none';
+    link.innerHTML = `Resend OTP (<span id="${valId}">${timeLeft}</span>s)`;
+    
+    const timer = setInterval(() => {
+        timeLeft--;
+        const v = document.getElementById(valId);
+        if (v) v.innerText = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            link.style.opacity = '1';
+            link.style.pointerEvents = 'auto';
+            link.innerHTML = `Resend OTP Now`;
+            link.onclick = (e) => {
+                e.preventDefault();
+                retryFn();
+            };
+        }
+    }, 1000);
 }
 
 // Global Event Listener for form submissions (Delegation)

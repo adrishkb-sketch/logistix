@@ -1,17 +1,53 @@
 let currentShipmentId = null;
 
 async function requestCustomerOTP() {
-    const phone = document.getElementById('cust-phone').value.trim();
+    let phone = document.getElementById('cust-phone').value.trim();
     if (!phone) return alert("Please enter your phone number.");
     
+    // Auto-prepend +91 if only 10 digits provided
+    if (phone.length === 10 && !isNaN(phone)) {
+        phone = "+91" + phone;
+    }
+    
     try {
-        // Mock OTP send
+        const res = await apiCall('/auth/customer/request-otp', 'POST', { phone });
+        alert(res.message);
         document.getElementById('step-phone').style.display = 'none';
         document.getElementById('step-otp').style.display = 'block';
         document.getElementById('otp-phone-label').innerText = phone;
+        startOTPTimer('resend-link', 'timer-val', requestCustomerOTP);
     } catch (e) {
-        alert("Failed to send OTP.");
+        // Error already handled by apiCall
     }
+}
+
+function startOTPTimer(linkId, valId, retryFn) {
+    let timeLeft = 10;
+    const link = document.getElementById(linkId);
+    const val = document.getElementById(valId);
+    
+    if (!link || !val) return;
+
+    link.style.opacity = '0.5';
+    link.style.pointerEvents = 'none';
+    link.innerHTML = `Resend OTP (<span id="${valId}">${timeLeft}</span>s)`;
+    
+    const timer = setInterval(() => {
+        timeLeft--;
+        const v = document.getElementById(valId);
+        if (v) v.innerText = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            link.style.opacity = '1';
+            link.style.pointerEvents = 'auto';
+            link.innerHTML = `Resend OTP Now`;
+            link.onclick = (e) => {
+                e.preventDefault();
+                retryFn();
+            };
+        }
+    }, 1000);
 }
 
 async function verifyCustomerOTP() {

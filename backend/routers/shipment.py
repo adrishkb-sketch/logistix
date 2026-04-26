@@ -66,13 +66,17 @@ async def bulk_parse(company_id: str, file: Optional[UploadFile] = File(None), u
             vals = row.values.tolist()
             if len(vals) < 9: continue
             
+            phone = str(vals[7]).strip()
+            if len(phone) == 10 and phone.isdigit():
+                phone = "+91" + phone
+            
             s = {
                 "pickup": {"lat": float(vals[0]), "lng": float(vals[1])},
                 "drop": {"lat": float(vals[2]), "lng": float(vals[3])},
                 "weight": float(vals[4]),
                 "description": str(vals[5]),
                 "receiver_name": str(vals[6]),
-                "receiver_phone": str(vals[7]),
+                "receiver_phone": phone,
                 "is_perishable": str(vals[8]).lower() in ['yes', 'y', 'true', '1'],
                 "eway_bill_no": str(vals[9]) if len(vals) > 9 else None,
                 "eway_bill_expiry": str(vals[10]) if len(vals) > 10 else None,

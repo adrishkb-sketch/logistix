@@ -527,9 +527,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     <button type="button" class="btn btn-primary" onclick="requestOTP()" data-i18n="btn_request_otp">Request OTP</button>
                 </div>
                 <div id="step-2" style="display:none;">
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;" data-i18n="otp_sent_to">OTP sent to your console.</p>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;" data-i18n="otp_sent_to">OTP sent to your email.</p>
                     <input id="signup-otp" type="text" placeholder="6-digit OTP" data-i18n-placeholder="placeholder_otp" required>
                     <button type="submit" class="btn btn-primary" data-i18n="btn_verify_register">Verify & Register</button>
+                    <p id="resend-timer-container" style="text-align:center; margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
+                        Didn't receive code? <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val">10</span>s)</span>
+                    </p>
                 </div>
             </form>
             `;

@@ -19,11 +19,14 @@ class EmailService:
         sender_email = os.getenv("SMTP_EMAIL")
         sender_password = os.getenv("SMTP_PASSWORD")
         
-        print(f"DEBUG: sender_email={sender_email}")
-        print(f"DEBUG: sender_password={'SET' if sender_password else 'MISSING'}")
+        # Clean credentials to avoid common .env formatting issues
+        if sender_email: sender_email = sender_email.strip().strip('"').strip("'")
+        if sender_password: sender_password = sender_password.strip().strip('"').strip("'")
+        
+        print(f"DEBUG: Attempting to send email to {receiver_email} using {sender_email}")
         
         if not sender_email or not sender_password:
-            print("ERROR: Email credentials missing in .env")
+            print("ERROR: Email credentials missing or empty in .env")
             return False
             
         message = MIMEMultipart("alternative")
@@ -52,14 +55,20 @@ class EmailService:
         message.attach(MIMEText(html, "html"))
         
         try:
-            with smtplib.SMTP(EmailService.SMTP_SERVER, EmailService.SMTP_PORT) as server:
+            # Set a 15-second timeout for the connection
+            with smtplib.SMTP(EmailService.SMTP_SERVER, EmailService.SMTP_PORT, timeout=15) as server:
+                server.set_debuglevel(1) # Enable SMTP debug output to console
                 server.starttls()
                 server.login(sender_email, sender_password)
                 server.sendmail(sender_email, receiver_email, message.as_string())
-            print(f"OTP Email sent successfully to {receiver_email}")
+            print(f"SUCCESS: OTP Email sent to {receiver_email}")
             return True
+        except smtplib.SMTPAuthenticationError:
+            print("ERROR: Authentication failed. Please check your Gmail App Password.")
+            return False
+        except smtplib.SMTPConnectError:
+            print("ERROR: Could not connect to Gmail SMTP server. Check your internet or firewall.")
+            return False
         except Exception as e:
-            print(f"CRITICAL ERROR sending email: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"CRITICAL ERROR sending email: {type(e).__name__}: {e}")
             return False

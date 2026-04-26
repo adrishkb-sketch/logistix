@@ -347,7 +347,10 @@
                                 </div>
                                 <div class="input-group">
                                     <label data-i18n="label_receiver_phone">Receiver Phone</label>
-                                    <input type="text" id="receiver-phone" placeholder="+91 9876543210" required data-i18n-placeholder="placeholder_phone">
+                                    <div style="display:flex; gap:8px;">
+                                        <span style="background:rgba(255,255,255,0.05); padding:12px; border-radius:12px; border:1px solid var(--border); color:var(--muted); font-weight:800;">+91</span>
+                                        <input type="tel" id="receiver-phone" placeholder="9876543210" maxlength="10" pattern="[0-9]{10}" required style="flex:1;">
+                                    </div>
                                 </div>
                                 <div class="input-group">
                                     <label data-i18n="label_eway_no">E-Way Bill Number 📄</label>
@@ -493,7 +496,10 @@
                             </div>
                             <div class="input-group span-2">
                                 <label data-i18n="label_contact_number">Contact Number</label>
-                                <input type="text" id="d-phone" placeholder="+91 9876543210" required data-i18n-placeholder="placeholder_phone">
+                                <div style="display:flex; gap:8px;">
+                                    <span style="background:rgba(255,255,255,0.05); padding:12px; border-radius:12px; border:1px solid var(--border); color:var(--muted); font-weight:800;">+91</span>
+                                    <input type="tel" id="d-phone" placeholder="9876543210" maxlength="10" pattern="[0-9]{10}" required style="flex:1;">
+                                </div>
                             </div>
                             <div class="input-group span-2">
                                 <button type="submit" class="btn-primary" data-i18n="btn_register_driver">Register New Driver</button>
@@ -1289,6 +1295,9 @@
                                 <input type="text" id="delete-otp" placeholder="Enter 6-digit OTP" style="padding:10px; border-radius:8px; border:1px solid var(--danger); background:rgba(0,0,0,0.3); color:white; flex:1;">
                                 <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="confirmDeleteAccount()">Confirm</button>
                             </div>
+                            <p id="resend-timer-container-del" style="margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
+                                Didn't receive code? <span id="resend-link-del" style="color:var(--danger); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val-del">10</span>s)</span>
+                            </p>
                         </div>
                     </div>
                 </div>

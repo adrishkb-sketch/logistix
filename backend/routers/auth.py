@@ -26,6 +26,11 @@ class OTPVerify(BaseModel):
 
 @router.post("/company/request-otp")
 def request_otp(data: OTPRequest):
+    # Check if company already exists
+    existing = [c for c in companies_db.get_all() if c.get("email") == data.email]
+    if existing:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This email is already registered. Please login instead.")
+
     otp = str(random.randint(100000, 999999))
     otp_store[data.email] = otp
     
@@ -92,17 +97,30 @@ def customer_request_otp(data: CustomerOTPRequest):
     phone = data.phone.strip()
     if not phone:
         raise HTTPException(status_code=400, detail="Phone number is required")
+    
+    # Auto-prepend +91 if only 10 digits are provided
+    if len(phone) == 10 and phone.isdigit():
+        phone = "+91" + phone
+
     all_shipments = shipments_db.get_all()
     matched = [s for s in all_shipments if s.get("receiver_phone") == phone]
     if not matched:
         raise HTTPException(status_code=404, detail="No orders found for this phone number")
+    
     otp = str(random.randint(100000, 999999))
     customer_otp_store[phone] = otp
-    print(f"\n--- [MOCK CUSTOMER OTP SMS] ---")
-    print(f"To: {phone}")
-    print(f"Your Logistix tracking code is: {otp}")
-    print(f"--------------------------------\n")
-    return {"message": "OTP sent. Check server console.", "phone": phone}
+    
+    from backend.services.whatsapp_service import WhatsAppService
+    success = WhatsAppService.send_otp(phone, otp)
+    
+    if not success:
+        print(f"\n--- [FALLBACK MOCK CUSTOMER OTP SMS] ---")
+        print(f"To: {phone}")
+        print(f"Code: {otp}")
+        print(f"----------------------------------------\n")
+        return {"message": "WhatsApp delivery failed. Check server console for code.", "phone": phone}
+        
+    return {"message": "OTP sent to your WhatsApp number.", "phone": phone}
 
 @router.post("/customer/verify-otp")
 def customer_verify_otp(data: CustomerOTPVerify):
