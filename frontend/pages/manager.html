@@ -338,19 +338,21 @@
                         <!-- Deployment Control Center -->
                         <div class="responsive-flex-column" style="display:flex; gap:12px; margin-bottom:24px; background:rgba(79, 140, 255, 0.05); padding:20px; border-radius:16px; border:1px solid rgba(79, 140, 255, 0.1);">
                             <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
-                                <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Search by Pincode</label>
-                                <div style="display:flex; gap:8px;">
-                                    <input type="text" id="search-pincode" placeholder="e.g. 560001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.9rem;">
-                                    <button class="btn-primary" onclick="deployByPincode()" style="width:auto; padding:0 20px;">Find Location 🔍</button>
+                                <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="label_search_pincode">Search by Pincode</label>
+                                <div class="responsive-flex-column" style="display:flex; gap:8px;">
+                                    <input type="text" id="search-pincode" data-i18n-placeholder="placeholder_pincode" placeholder="e.g. 560001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; height:50px;">
+                                    <button class="btn-primary" onclick="deployByPincode()" style="width:auto; padding:0 24px; height:50px;" data-i18n="btn_find_location">Find Location 🔍</button>
                                 </div>
                             </div>
                             <div style="width:1px; background:rgba(255,255,255,0.1); margin:0 10px;" class="hide-on-mobile"></div>
                             <div style="flex:1.2; display:flex; flex-direction:column; gap:8px;">
-                                <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Manual Coordinates</label>
-                                <div style="display:flex; gap:8px;">
-                                    <input type="number" id="search-lat" placeholder="Latitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.9rem;">
-                                    <input type="number" id="search-lng" placeholder="Longitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.9rem;">
-                                    <button class="btn-primary" onclick="deployByCoords()" style="width:auto; padding:0 20px; background:var(--accent);">Analyze & Deploy 🚀</button>
+                                <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="label_manual_coords">Manual Coordinates</label>
+                                <div class="responsive-flex-column" style="display:flex; gap:8px;">
+                                    <div style="display:flex; gap:8px; flex:1;">
+                                        <input type="number" id="search-lat" data-i18n-placeholder="placeholder_lat" placeholder="Latitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; height:50px;">
+                                        <input type="number" id="search-lng" data-i18n-placeholder="placeholder_lng" placeholder="Longitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; height:50px;">
+                                    </div>
+                                    <button class="btn-primary" onclick="deployByCoords()" style="width:auto; padding:0 24px; background:var(--accent); height:50px;" data-i18n="btn_analyze_deploy">Analyze & Deploy 🚀</button>
                                 </div>
                             </div>
                         </div>
