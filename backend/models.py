@@ -18,6 +18,10 @@ class DriverLogin(BaseModel):
     login_id: str
     password: str
 
+class ManualAssignRequest(BaseModel):
+    driver_id: str
+    vehicle_id: str
+
 class SmartContractTx(BaseModel):
     tx_hash: str = Field(default_factory=lambda: f"0x{uuid.uuid4().hex}")
     from_address: str = "Logistix_Escrow"

@@ -1489,6 +1489,24 @@
 
     <div id="alert-container"></div>
 
+    <!-- Manual Assignment Modal -->
+    <div id="manual-assign-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:500px; max-width:90vw; padding:30px; border:1px solid rgba(255,255,255,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0;">Manual Assignment</h3>
+            <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('manual-assign-modal').style.display='none'">&times;</button>
+        </div>
+        <p class="subtitle" style="margin-bottom:25px;">Select a driver and vehicle from your active fleet.</p>
+        
+        <div class="input-group span-2" style="margin-bottom:25px;">
+            <label style="display:block; margin-bottom:10px; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted);">Available Fleet Pairs</label>
+            <select id="manual-assign-select" class="polished-glass-input" style="width:100%; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:white;">
+                <option value="">Loading fleet...</option>
+            </select>
+        </div>
+        
+        <button class="btn-primary" onclick="submitManualAssign()" style="width:100%; padding:14px; font-weight:800; letter-spacing:1px;">CONFIRM ASSIGNMENT</button>
+    </div>
+
     <!-- Live Track Modal -->
     <div id="track-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:600px; max-width:90vw; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">

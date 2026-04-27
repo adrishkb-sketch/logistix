@@ -563,8 +563,12 @@ def auto_assign(shipment_id: str):
         print(f"AUTO_ASSIGN_ERROR: {err_msg}")
         raise HTTPException(status_code=500, detail=f"Critical Assignment Error:\n{err_msg}")
 
+from backend.models import ManualAssignRequest
+
 @router.post("/{shipment_id}/assign")
-def manual_assign(shipment_id: str, driver_id: str, vehicle_id: str):
+def manual_assign(shipment_id: str, data: ManualAssignRequest):
+    driver_id = data.driver_id
+    vehicle_id = data.vehicle_id
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
@@ -572,8 +576,8 @@ def manual_assign(shipment_id: str, driver_id: str, vehicle_id: str):
     from backend.database import JSONDatabase
     d = JSONDatabase("drivers").get_by_id(driver_id)
     v = JSONDatabase("vehicles").get_by_id(vehicle_id)
-    driver_name = d["name"] if d else "Unknown"
-    plate = v["number_plate"] if v else "Unknown"
+    driver_name = d.get("name", "Unknown") if d else "Unknown"
+    plate = v.get("number_plate", "Unknown") if v else "Unknown"
     
     from backend.models import ShipmentEvent
     log_event = ShipmentEvent(

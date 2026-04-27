@@ -1224,6 +1224,9 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                             </button>
                         ` : ''}
                         
+                        <button class="action-btn-pill" style="background:rgba(0,0,0,0.2);" onclick="openManualAssignModal('${s.id}')" title="Change Assignment">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/></svg>
+                        </button>
                         <button class="action-btn-pill" style="background:rgba(0,0,0,0.2);" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')" title="Edit">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                         </button>
@@ -1273,6 +1276,9 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                                         <span style="font-size:0.55rem; font-weight:800; margin-left:2px;">AUTO</span>
                                     </button>
                                 ` : ''}
+                                <button class="action-btn-pill" style="padding:4px; background:rgba(255,255,255,0.1);" onclick="openManualAssignModal('${leg.id}')" title="Manual Assign">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/></svg>
+                                </button>
                             </div>
                         </td>
                     `;
@@ -1300,7 +1306,54 @@ async function autoSplit(id) {
         const res = await apiCall(`/shipments/${id}/split/auto?company_id=${localStorage.getItem('manager_id')}`, 'POST');
         alert(res.message);
         loadShipments();
-    } catch(e) {}
+    } catch(e) {
+        alert("Auto split failed.");
+    }
+}
+
+let currentAssignId = null;
+async function openManualAssignModal(id) {
+    currentAssignId = id;
+    const select = document.getElementById('manual-assign-select');
+    select.innerHTML = '<option value="">Loading fleet...</option>';
+    document.getElementById('manual-assign-modal').style.display = 'block';
+
+    try {
+        const [drivers, vehicles] = await Promise.all([
+            apiCall('/manager/drivers?company_id=' + localStorage.getItem('manager_id')),
+            apiCall('/manager/vehicles?company_id=' + localStorage.getItem('manager_id'))
+        ]);
+        const pairs = drivers.filter(d => d.assigned_vehicle_id);
+        select.innerHTML = '<option value="">Select Driver & Vehicle</option>';
+        pairs.forEach(d => {
+            const v = vehicles.find(v => v.id === d.assigned_vehicle_id);
+            if (v) {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify({ driver_id: d.id, vehicle_id: v.id });
+                opt.textContent = `${d.name} (${v.type} - ${v.number_plate})`;
+                select.appendChild(opt);
+            }
+        });
+    } catch(e) {
+        select.innerHTML = '<option value="">Error loading fleet</option>';
+    }
+}
+
+async function submitManualAssign() {
+    const val = document.getElementById('manual-assign-select').value;
+    if (!val) return alert("Please select a driver/vehicle pair.");
+    const { driver_id, vehicle_id } = JSON.parse(val);
+    try {
+        await apiCall(`/shipments/${currentAssignId}/assign`, 'POST', {
+            driver_id: driver_id,
+            vehicle_id: vehicle_id
+        });
+        alert("Assignment updated successfully!");
+        document.getElementById('manual-assign-modal').style.display = 'none';
+        loadShipments();
+    } catch(e) {
+        alert("Failed to assign manually.");
+    }
 }
 
 async function openManualSplit(id) {
