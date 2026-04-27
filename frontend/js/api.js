@@ -54,9 +54,11 @@ async function apiCall(endpoint, method = "GET", body = null) {
             return text;
         }
     } catch (error) {
-        console.error("API Call Failed:", error);
+        console.error(`API Call Failed [${endpoint}]:`, error);
         if (error.message !== "AUTH_REQUIRED") {
-            alert(error.message);
+            // Provide a cleaner, more diagnostic alert
+            const cleanMsg = error.message.length > 100 ? error.message.substring(0, 100) + "..." : error.message;
+            alert(`🚨 API Error [${endpoint}]:\n${cleanMsg}`);
         }
         throw error;
     }
