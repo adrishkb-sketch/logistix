@@ -1191,17 +1191,37 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     </div>
                 </td>
                 <td>
-                    <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem;" onclick="openQRModal('${s.id}')" title="Shipment QR">🔳</button>
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem;" onclick="openLogsModal('${s.id}')" title="Timeline">📜</button>
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--accent);" onclick="openTrackModal('${s.id}')" title="Track">📍</button>
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:rgba(255,255,255,0.05);" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" title="Message">💬</button>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <button class="action-btn-pill" onclick="openQRModal('${s.id}')" title="Shipment QR">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16h.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+                        </button>
+                        <button class="action-btn-pill" onclick="openLogsModal('${s.id}')" title="Timeline">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                        </button>
+                        <button class="action-btn-pill" style="background:var(--accent);" onclick="openTrackModal('${s.id}')" title="Track">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </button>
+                        <button class="action-btn-pill" style="background:rgba(255,255,255,0.05);" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" title="Message">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+                        </button>
+                        
                         ${s.status === 'pending' ? `
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--success);" onclick="autoAssign('${s.id}')">🤖 ${getTranslation('auto')}</button>
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:#3182ce;" onclick="openManualAssign('${s.id}')">👤 ${getTranslation('manual')}</button>
+                            <button class="action-btn-pill btn-success" style="background:var(--success);" onclick="autoAssign('${s.id}')" title="Auto Assign">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                                <span style="font-size:0.6rem; font-weight:800; margin-left:4px;">AUTO</span>
+                            </button>
+                            <button class="action-btn-pill" style="background:#3182ce;" onclick="openManualSplit('${s.id}')" title="Manual Split">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 22h18"/><path d="M10 9V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v4"/><path d="M10 14V9h4v5"/><path d="M3 14h18"/><path d="M10 22v-5h4v5"/></svg>
+                                <span style="font-size:0.6rem; font-weight:800; margin-left:4px;">MANUAL</span>
+                            </button>
                         ` : ''}
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:rgba(0,0,0,0.2);" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')">✏️</button>
-                        <button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--danger);" onclick="deleteItem('shipments', '${s.id}')">🗑️</button>
+                        
+                        <button class="action-btn-pill" style="background:rgba(0,0,0,0.2);" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                        </button>
+                        <button class="action-btn-pill btn-danger" style="background:var(--danger);" onclick="deleteItem('shipments', '${s.id}')" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                        </button>
                     </div>
                 </td>
             `;

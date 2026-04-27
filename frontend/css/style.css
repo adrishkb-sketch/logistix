@@ -599,6 +599,40 @@ body.light-mode .btn-outline:hover {
     letter-spacing: normal;
 }
 
+/* Shipment Action Pills */
+.action-btn-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 34px;
+    height: 34px;
+}
+
+body.light-mode .action-btn-pill {
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.action-btn-pill:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn-pill svg {
+    flex-shrink: 0;
+}
+
+.action-btn-pill.btn-success:hover { background: var(--success) !important; color: white; border-color: white; }
+.action-btn-pill.btn-danger:hover { background: var(--danger) !important; color: white; border-color: white; }
+
 .info-icon:hover::after {
     opacity: 1;
     visibility: visible;
