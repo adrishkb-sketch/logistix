@@ -117,6 +117,7 @@ def check_weather_alerts(shipment: dict, lat: float, lng: float):
             if not existing:
                 cond = cell.get('condition') or cell.get('type') or 'Weather Anomaly'
                 new_alert = Alert(
+                    company_id=shipment.get("company_id"),
                     type="weather",
                     description=f"Vehicle entered {cond} zone at {lat}, {lng}",
                     severity=cell.get("severity", "medium"),
@@ -169,6 +170,7 @@ def check_street_intel_alerts(shipment: dict):
                 existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "street_intel" and a.get("status") == "active"]
                 if not existing:
                     new_alert = Alert(
+                        company_id=shipment.get("company_id"),
                         type="street_intel",
                         description=f"Vehicle '{v_type}' is too large for delivery zone '{zone['name']}'.",
                         severity="high",
@@ -205,6 +207,7 @@ def check_compliance_alerts(shipment: dict):
         existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "compliance" and a.get("status") == "active"]
         if not existing:
             new_alert = Alert(
+                company_id=shipment.get("company_id"),
                 type="compliance",
                 description=f"E-Way Bill {shipment.get('eway_bill_no')} is at risk of expiry before delivery.",
                 severity="critical" if eta_dt > expiry_dt else "high",
