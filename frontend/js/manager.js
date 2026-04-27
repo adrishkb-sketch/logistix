@@ -176,6 +176,10 @@ function initMap() {
 async function processLocationDeployment(lat, lng) {
     // 1. Center Map & Add Temporary Marker
     map.setView([lat, lng], 13);
+    
+    // Smooth scroll to map
+    document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
     if (window.tempMarker) map.removeLayer(window.tempMarker);
     window.tempMarker = L.marker([lat, lng], { draggable: true }).addTo(map)
         .bindPopup("Selected Deployment Site").openPopup();
@@ -395,6 +399,9 @@ function locateWarehouse(id) {
     if (marker) {
         map.setView(marker.getLatLng(), 15);
         marker.openPopup();
+
+        // Smooth scroll to map
+        document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
         
         // Visual highlight
         if (highlightCircle) map.removeLayer(highlightCircle);
