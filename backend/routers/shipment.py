@@ -661,7 +661,7 @@ def manual_split(shipment_id: str, req: ManualSplitRequest):
         raise HTTPException(status_code=400, detail="Invalid shipment for splitting. Cannot split shipments already in transit or delivered.")
         
     warehouses = warehouses_db.get_all()
-    selected_whs = [w for w_id in req.warehouse_ids for w in warehouses if w["id"] == w_id]
+    selected_whs = [w for w_id in req.warehouse_ids for w in warehouses if w.get("id") == w_id]
     
     if len(selected_whs) != len(req.warehouse_ids):
         raise HTTPException(status_code=404, detail="One or more warehouses not found")
@@ -733,11 +733,12 @@ def _generate_legs(parent_shipment, leg_data):
         )
         
         leg_shipment = Shipment(
+            company_id=parent_shipment.get("company_id"),
             pickup=Location(**leg["pickup"]),
             drop=Location(**leg["drop"]),
-            weight=parent_shipment["weight"],
-            description=f"{parent_shipment['description']} (Leg {i+1})",
-            parent_id=parent_shipment["id"],
+            weight=parent_shipment.get("weight", 0),
+            description=f"{parent_shipment.get('description', 'Shipment')} (Leg {i+1})",
+            parent_id=parent_shipment.get("id"),
             is_leg=True,
             leg_order=i+1,
             route_type="direct",
