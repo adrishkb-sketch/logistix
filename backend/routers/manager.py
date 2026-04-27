@@ -43,6 +43,11 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
     
     if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
     
+    # Fetch warehouses for name-to-id mapping
+    whs = warehouses_db.get_all()
+    wh_map = {w.get("name").lower(): w.get("id") for w in whs if w.get("company_id") == company_id}
+    wh_ids = {w.get("id"): w.get("id") for w in whs if w.get("company_id") == company_id}
+
     drivers = []
     for _, row in df.iterrows():
         try:
@@ -52,12 +57,16 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
             if len(phone) == 10 and phone.isdigit():
                 phone = "+91" + phone
                 
+            hub_val = str(vals[4]).strip()
+            # Try to match by ID first, then by name
+            hub_id = wh_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
+
             d = {
                 "name": str(vals[0]),
                 "login_id": str(vals[1]),
                 "password": str(vals[2]),
                 "license_type": str(vals[3]),
-                "base_warehouse_id": str(vals[4]),
+                "base_warehouse_id": hub_id,
                 "years_experience": float(vals[5]),
                 "past_accidents": int(vals[6]),
                 "traffic_violations": int(vals[7]),
@@ -71,7 +80,6 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
 @router.post("/drivers/bulk-confirm")
 async def bulk_confirm_drivers(drivers: List[Driver]):
     for d in drivers:
-        # Use calculate_driver_performance_score if needed
         from backend.services.driver_intel import calculate_driver_performance_score
         d_dict = d.model_dump()
         d_dict["driving_score"] = calculate_driver_performance_score(d_dict)
@@ -98,14 +106,23 @@ async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File
     
     if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
     
+    # Fetch warehouses for name-to-id mapping
+    whs = warehouses_db.get_all()
+    wh_map = {w.get("name").lower(): w.get("id") for w in whs if w.get("company_id") == company_id}
+    wh_ids = {w.get("id"): w.get("id") for w in whs if w.get("company_id") == company_id}
+
     vehicles = []
     for _, row in df.iterrows():
         try:
             vals = row.values.tolist()
             if len(vals) < 5: continue
+            
+            hub_val = str(vals[1]).strip()
+            hub_id = wh_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
+
             v = {
                 "type": str(vals[0]),
-                "base_warehouse_id": str(vals[1]),
+                "base_warehouse_id": hub_id,
                 "number_plate": str(vals[2]).upper(),
                 "capacity": float(vals[3]),
                 "fuel_efficiency": float(vals[4]),

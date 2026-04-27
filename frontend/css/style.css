@@ -6,11 +6,14 @@
     --primary: #4f8cff;
     --primary-rgb: 79, 140, 255;
     --accent: #6366f1;
+    --accent-rgb: 99, 102, 241;
     --card: rgba(255, 255, 255, 0.05);
     --border: rgba(255, 255, 255, 0.08);
     --success: #10b981;
+    --success-rgb: 16, 185, 129;
     --warning: #f59e0b;
     --danger: #ef4444;
+    --danger-rgb: 239, 68, 68;
     --sidebar-w: 260px;
     --glass-blur: 25px;
 }
@@ -22,9 +25,31 @@ body.light-mode {
     --primary: #2563eb;
     --primary-rgb: 37, 99, 235;
     --accent: #4f46e5;
+    --accent-rgb: 79, 70, 229;
     --card: rgba(255, 255, 255, 0.45);
     --border: rgba(0, 0, 0, 0.08);
     --glass-blur: 25px;
+}
+
+/* Glass Modal Enhancement */
+.modal-glass {
+    background: var(--card) !important;
+    backdrop-filter: blur(var(--glass-blur)) !important;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) !important;
+}
+
+.close-modal-btn {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.8rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.close-modal-btn:hover {
+    opacity: 1;
 }
 
 * {

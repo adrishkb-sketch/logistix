@@ -3828,7 +3828,11 @@ function renderDriverBulkPreview(drivers) {
     currentBulkDrivers = drivers;
     document.getElementById('driver-bulk-count').innerText = drivers.length;
     document.getElementById('driver-preview-section').style.display = 'block';
-    document.getElementById('driver-preview-body').innerHTML = drivers.map(d => `<tr><td>${d.name}</td><td>${d.license_type}</td><td>${d.base_warehouse_id}</td><td>${d.contact_number}</td></tr>`).join('');
+    document.getElementById('driver-preview-body').innerHTML = drivers.map(d => {
+        const wh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
+        const hubName = wh ? wh.name : d.base_warehouse_id;
+        return `<tr><td>${d.name}</td><td>${d.license_type}</td><td>${hubName}</td><td>${d.contact_number}</td></tr>`;
+    }).join('');
 }
 async function confirmDriverBulk() {
     try {
@@ -3864,7 +3868,11 @@ function renderVehicleBulkPreview(vehicles) {
     currentBulkVehicles = vehicles;
     document.getElementById('vehicle-bulk-count').innerText = vehicles.length;
     document.getElementById('vehicle-preview-section').style.display = 'block';
-    document.getElementById('vehicle-preview-body').innerHTML = vehicles.map(v => `<tr><td>${v.type}</td><td>${v.base_warehouse_id}</td><td>${v.number_plate}</td><td>${v.capacity}kg</td></tr>`).join('');
+    document.getElementById('vehicle-preview-body').innerHTML = vehicles.map(v => {
+        const wh = globalWarehouses.find(w => w.id === v.base_warehouse_id);
+        const hubName = wh ? wh.name : v.base_warehouse_id;
+        return `<tr><td>${v.type}</td><td>${hubName}</td><td>${v.number_plate}</td><td>${v.capacity}kg</td></tr>`;
+    }).join('');
 }
 async function confirmVehicleBulk() {
     try {
