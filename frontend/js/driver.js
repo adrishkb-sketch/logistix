@@ -306,7 +306,6 @@ async function loadMissions(autoStartNext = false) {
             vUploadBox.style.display = 'none';
             vPendingBox.style.display = 'none';
             vNoVehicleBox.style.display = 'block';
-            vScreenMsg.innerText = "Vehicle Assignment Pending";
         }
 
         const shipments = await apiCall(`/driver/${dId}/shipments`);

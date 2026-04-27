@@ -282,20 +282,20 @@ def suggest_warehouse_location(data: dict):
         offset_lng = 0.01 + abs(math.cos(lng * 10)) * 0.02
         s_lat = lat + offset_lat
         s_lng = lng + offset_lng
-        reason = "AI identified this as a high-potential future growth node based on regional logistics density."
+        reason = "strategy_ai_reason"
     else:
         # 2. Find centroid of nearby shipments
         nearby = [s for s in my_ships if abs(s["drop"]["lat"] - lat) < 1.0 and abs(s["drop"]["lng"] - lng) < 1.0]
         if nearby:
             s_lat = sum(s["drop"]["lat"] for s in nearby) / len(nearby)
             s_lng = sum(s["drop"]["lng"] for s in nearby) / len(nearby)
-            reason = f"Optimized node to service {len(nearby)} active delivery points in this sector."
+            reason = "strategy_reason_sector"
         else:
             avg_lat = sum(s["drop"]["lat"] for s in my_ships) / len(my_ships)
             avg_lng = sum(s["drop"]["lng"] for s in my_ships) / len(my_ships)
             s_lat = (lat + avg_lat) / 2
             s_lng = (lng + avg_lng) / 2
-            reason = "Strategically positioned to bridge the gap between existing delivery clusters."
+            reason = "strategy_reason_bridge"
 
     # 3. GET ACTUAL ROAD DISTANCE FROM MAP ENGINE (OSRM)
     dist_km = 0

@@ -222,7 +222,12 @@ async function processLocationDeployment(lat, lng) {
         if (res.strategic_improvement || res.distance_km) {
             suggestedWhLoc = { lat: res.suggested_lat, lng: res.suggested_lng };
             document.getElementById('sug-dist').innerText = `${res.distance_km} km`;
-            if (res.reason) document.getElementById('sug-reason').innerText = res.reason;
+            
+            const reasonEl = document.getElementById('sug-reason');
+            if (res.reason) {
+                reasonEl.innerText = getTranslation(res.reason) || res.reason;
+            }
+            
             document.getElementById('suggestion-modal').style.display = 'block';
             if (window.updatePageTranslations) updatePageTranslations();
         } else {
