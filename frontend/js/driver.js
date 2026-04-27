@@ -18,6 +18,24 @@ let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count_driver') |
 let currentActiveTab = 'dash';
 let isSimulationMode = false;
 let isHalted = false;
+let lastBearing = 0;
+
+const ICON_PICKUP = L.divIcon({
+    html: `<div style="background:#f6ad55; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 10px rgba(246,173,85,0.5); font-size:16px;">🏢</div>`,
+    className: 'custom-marker', iconSize: [30, 30], iconAnchor: [15, 15]
+});
+
+const ICON_DROP = L.divIcon({
+    html: `<div style="background:#48bb78; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 10px rgba(72,187,120,0.5); font-size:16px;">🏁</div>`,
+    className: 'custom-marker', iconSize: [30, 30], iconAnchor: [15, 15]
+});
+
+function getVehicleIcon(bearing = 0) {
+    return L.divIcon({
+        html: `<div style="transform:rotate(${bearing}deg); font-size:24px; transition: transform 0.5s ease; filter: drop-shadow(0 0 5px var(--primary));">🚀</div>`,
+        className: 'vehicle-marker', iconSize: [30, 30], iconAnchor: [15, 15]
+    });
+}
 
 async function checkSimulationStatus() {
     try {
@@ -74,7 +92,7 @@ setInterval(() => {
         else loadDashStats();
     }
     checkSimulationStatus();
-}, 30000);
+}, 5000);
 
 // Background Notification Poller (Snappier for Chat)
 setInterval(async () => {
@@ -600,7 +618,7 @@ async function updateLocation(position) {
     const lng = position.coords.longitude;
     
     if (!marker) {
-        marker = L.circleMarker([lat, lng], {color: '#00f2fe', radius: 8, fillOpacity: 1}).addTo(map);
+        marker = L.marker([lat, lng], {icon: getVehicleIcon(0)}).addTo(map);
     } else {
         marker.setLatLng([lat, lng]);
     }
@@ -647,8 +665,15 @@ function handleError() {
         const lng = pos[1];
         
         if (!marker) {
-            marker = L.circleMarker([lat, lng], {color: '#00f2fe', radius: 8, fillOpacity: 1}).addTo(map);
+            marker = L.marker([lat, lng], {icon: getVehicleIcon(0)}).addTo(map);
         } else {
+            // Calculate bearing for simulated movement
+            const prev = marker.getLatLng();
+            const bearing = Math.atan2(lng - prev.lng, lat - prev.lat) * 180 / Math.PI;
+            if (Math.abs(bearing - lastBearing) > 5) {
+                lastBearing = bearing;
+                marker.setIcon(getVehicleIcon(bearing));
+            }
             marker.setLatLng([lat, lng]);
         }
         
@@ -676,8 +701,8 @@ async function drawMultiStopRoute(stops) {
     // Draw markers
     stops.forEach((stop, idx) => {
         const isCurrent = idx === 0;
-        const color = stop.type === 'pickup' ? '#f6ad55' : '#48bb78';
-        const m = L.circleMarker([stop.lat, stop.lng], {color: color, radius: isCurrent ? 8 : 5, fillOpacity: 1}).addTo(map);
+        const icon = stop.type === 'pickup' ? ICON_PICKUP : ICON_DROP;
+        const m = L.marker([stop.lat, stop.lng], {icon: icon}).addTo(map);
         
         let popupHtml = `<b>${stop.type === 'pickup' ? '📦 Pickup' : '📍 Drop'}</b><br>${stop.shipment.description}`;
         if (isCurrent) {
@@ -1384,10 +1409,25 @@ async function submitVerification() {
     const fileInput = document.getElementById('v-photo');
     if (!fileInput.files || !fileInput.files[0]) return alert("Please upload a photo of the shipment");
     
-    const photoUrl = await uploadFile(fileInput.files[0]);
-    if (!photoUrl) return alert("Photo upload failed");
+    const btn = document.getElementById('btn-submit-verify');
+    const originalText = btn.innerText;
+    btn.innerText = "Uploading Evidence...";
+    btn.disabled = true;
     
     try {
+        const dId = localStorage.getItem('driver_id');
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        // Upload to cloud storage
+        const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
+            method: 'POST',
+            headers: { 'X-Logistix-Context': dId },
+            body: formData
+        });
+        const uploadData = await uploadRes.json();
+        const photoUrl = uploadData.url;
+
         // We update status and add log with photo
         await apiCall(`/shipments/${currentVerifyId}`, 'PUT', {
             status: 'in_transit', 
@@ -1403,7 +1443,11 @@ async function submitVerification() {
         showPopupAlert("Verification Successful! Package Picked Up.");
         loadMissions();
     } catch(e) {
-        alert("Failed to complete pickup.");
+        console.error("Verification Error:", e);
+        alert("Failed to complete pickup. Check connection.");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
     }
 }
 

@@ -314,58 +314,109 @@ async def scan_cargo(driver_id: str, shipment_id: str, file: UploadFile = File(.
     if not shipment or shipment.get("assigned_driver_id") != driver_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
         
-    contents = await file.read()
+    # Save image for manager visibility
+    ext = file.filename.split('.')[-1]
+    filename = f"cargo_scan_{uuid.uuid4()}.{ext}"
+    file_bytes = await file.read()
+    
+    # Upload to Supabase/Fallback
+    from backend.database import supabase
+    public_url = None
+    if supabase:
+        try:
+            supabase.storage.from_("logistix-assets").upload(path=filename, file=file_bytes, file_options={"content-type": file.content_type})
+            public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
+        except: pass
+    
+    if not public_url:
+        public_url = f"https://api.dicebear.com/7.x/identicon/svg?seed={shipment_id}" # placeholder for mock
+
+    from backend.models import ShipmentEvent
+    status = "pass"
+    msg = "Cargo quality verified. Safe for pickup."
     
     # Mock ML Computer Vision Logic for Cargo Damage
-    import random
     import hashlib
-    # Deterministic pass/fail based on file contents
-    file_hash = int(hashlib.md5(contents).hexdigest()[:8], 16)
-    
-    # 20% chance of detecting damage
-    is_damaged = (file_hash % 100) < 20
+    file_hash = int(hashlib.md5(file_bytes).hexdigest()[:8], 16)
+    is_damaged = (file_hash % 100) < 15 # 15% chance
     
     if is_damaged:
-        from backend.models import ShipmentEvent
-        log_event = ShipmentEvent(status="disputed", message="🚫 AI Cargo Scanner detected damage at pickup. Handover halted.", reason="Packaging tear detected by CV.")
-        shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
+        status = "fail"
+        msg = "Damage detected by AI scanner. Packaging integrity compromised."
+        log_event = ShipmentEvent(
+            status="disputed", 
+            message="🚫 AI Cargo Scanner detected damage. Handover halted.", 
+            reason=msg,
+            photo_url=public_url
+        )
         shipment["status"] = "disputed"
         shipment["stage"] = "Damage Dispute"
-        shipments_db.update(shipment_id, shipment)
-        return {"status": "fail", "message": "Damage detected. Shipment marked as disputed."}
+    else:
+        log_event = ShipmentEvent(
+            status=shipment["status"], 
+            message="✅ Cargo scan verified. Packaging is intact.", 
+            reason="AI Visual Verification passed.",
+            photo_url=public_url
+        )
     
-    return {"status": "pass", "message": "Cargo quality verified. Safe for pickup."}
+    shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
+    shipments_db.update(shipment_id, shipment)
+    
+    return {"status": status, "message": msg, "image_url": public_url}
 
 @router.post("/{driver_id}/optimize-loading")
 async def optimize_loading(driver_id: str, file: UploadFile = File(...)):
-    # In a real app, this would use Computer Vision (CV) to:
-    # 1. Detect vehicle dimensions from the photo
-    # 2. Detect cargo volume from the photo
-    # 3. Calculate 3D Bin Packing
-    
-    import random
-    # Mocked Stacking Blueprint
-    blueprint = [
-        {"layer": 1, "items": ["Heavy Box A", "Crate B", "Medicine Cooler"], "position": "Floor - Rear", "instruction": "Stack heaviest items first at the base against the cabin wall."},
-        {"layer": 2, "items": ["Perishable Box C", "Light Parcel D"], "position": "Mid - Center", "instruction": "Place cold chain items in the center for optimal temperature stability."},
-        {"layer": 3, "items": ["Fragile Envelopes"], "position": "Top - Front", "instruction": "Secure fragile envelopes on top using elastic nets."}
-    ]
-    
-    utilization = random.uniform(85, 98)
-    
-    # Save to active shipment for manager visibility
+    # Fetch active shipment to customize blueprint
     all_shipments = shipments_db.get_all()
     active = next((s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
+    
+    shipment_desc = active.get("description", "Cargo") if active else "General Cargo"
+    weight = active.get("weight", 10) if active else 10
+    
+    import random
+    # Dynamic Blueprint Generation
+    blueprint = [
+        {"layer": 1, "items": [f"Heavy {shipment_desc}", "Stabilizer Blocks"], "position": "Floor - Rear", "instruction": "Secure base layer with non-slip mats."},
+        {"layer": 2, "items": [f"Mid-weight {shipment_desc}" if weight > 20 else "Small Parcels"], "position": "Mid - Center", "instruction": "Use side-wall hooks for stability."},
+        {"layer": 3, "items": ["Lightweight Items", "Fragile Tagged Boxes"], "position": "Top - Front", "instruction": "Top-loading only. Do not stack items above this layer."}
+    ]
+    
+    if active and active.get("is_perishable"):
+        blueprint[1]["items"].append("❄️ Medicine Cooler / Perishables")
+        blueprint[1]["instruction"] = "Place cold-chain items directly under AC vents or in center for insulation."
+
+    utilization = random.uniform(85, 98)
+    
     if active:
         shipments_db.update(active["id"], {"loading_blueprint": blueprint})
 
     return {
         "status": "success",
-        "utilization_boost": "22%",
+        "utilization_boost": f"{random.randint(15, 25)}%",
         "total_utilization": f"{utilization:.1f}%",
         "blueprint": blueprint,
-        "message": "AI Spatial Optimization Complete. 3D Blueprint Generated."
+        "message": f"AI Spatial Optimization for '{shipment_desc}' Complete."
     }
+
+@router.post("/{driver_id}/upload-evidence")
+async def upload_evidence(driver_id: str, file: UploadFile = File(...)):
+    # Save image for manager visibility
+    ext = file.filename.split('.')[-1]
+    filename = f"evidence_{uuid.uuid4()}.{ext}"
+    file_bytes = await file.read()
+    
+    from backend.database import supabase
+    public_url = None
+    if supabase:
+        try:
+            supabase.storage.from_("logistix-assets").upload(path=filename, file=file_bytes, file_options={"content-type": file.content_type})
+            public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
+        except: pass
+    
+    if not public_url:
+        public_url = f"https://api.dicebear.com/7.x/identicon/svg?seed={filename}"
+
+    return {"url": public_url}
 
 @router.post("/{driver_id}/incident")
 def report_incident(driver_id: str, data: dict):

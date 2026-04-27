@@ -152,6 +152,13 @@
                     </div>
                 </div>
 
+                <div id="simulation-ctrl" class="glass-card" style="display:none; padding:12px; border:1px solid var(--primary); background:rgba(59, 130, 246, 0.1); margin-bottom:15px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.8rem; color:var(--primary); font-weight:800;">🛰️ SIMULATION SANDBOX ACTIVE</span>
+                        <button id="sim-halt-btn" class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--danger);" onclick="toggleSimHalt()" data-i18n="btn_emergency_halt">Emergency Halt 🛑</button>
+                    </div>
+                </div>
+
 
                 <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03);">
                     <h4 style="margin:0 0 15px 0;" data-i18n="request_funds_title">Request Funds ⛽🍔</h4>
@@ -247,13 +254,6 @@
             <div id="active-tab" style="display:none;" data-layout-container="active-content">
                 <div id="instruction-banner" class="instruction-banner" data-layout-id="active-instruction">
                     <!-- Injected via JS -->
-                </div>
-
-                <div id="simulation-ctrl" class="glass-card" data-layout-id="active-simulation" style="display:none; padding:12px; border:1px solid var(--primary); background:rgba(59, 130, 246, 0.1); margin-bottom:15px; border-radius:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:0.8rem; color:var(--primary); font-weight:800;">🛰️ SIMULATION SANDBOX</span>
-                        <button id="sim-halt-btn" class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--danger);" onclick="toggleSimHalt()" data-i18n="btn_emergency_halt">Emergency Halt 🛑</button>
-                    </div>
                 </div>
 
                 <div id="mission-container" data-layout-id="active-mission">

@@ -452,14 +452,31 @@ def update_shipment(shipment_id: str, data: dict):
                     )
                     reviews_db.insert(review.model_dump())
             
+    # Check for explicit log entry from driver app
+    if data.get("log_entry"):
+        from backend.models import ShipmentEvent
+        le = data["log_entry"]
+        log_event = ShipmentEvent(
+            status=le.get("status", shipment.get("status")),
+            message=le.get("message", "System Update"),
+            reason=le.get("reason"),
+            photo_url=le.get("photo_url")
+        )
+        shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
+        # Remove from data to avoid duplicate log creation below
+        del data["log_entry"]
+    elif status_changed or stage_changed:
+        from backend.models import ShipmentEvent
         log_event = ShipmentEvent(
             status=data.get("status", shipment.get("status")),
             message=msg,
             reason=data.get("reason", None)
         )
-        data["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
-        
-    shipments_db.update(shipment_id, data)
+        shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
+    
+    # Merge other updates
+    shipment.update(data)
+    shipments_db.update(shipment_id, shipment)
     return {"message": "Shipment updated successfully"}
 
 @router.post("/{shipment_id}/rescue")

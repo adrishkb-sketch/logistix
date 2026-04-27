@@ -15,6 +15,18 @@ let markers = [];
 let volumeChart, fleetChart;
 let weatherMap;
 let weatherMarkers = [];
+let currentMarkers = [];
+let warehouses = [];
+
+const ICON_PICKUP = L.divIcon({
+    html: `<div style="background:#f6ad55; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 10px rgba(246,173,85,0.5); font-size:16px;">🏢</div>`,
+    className: 'custom-marker', iconSize: [30, 30], iconAnchor: [15, 15]
+});
+
+const ICON_DROP = L.divIcon({
+    html: `<div style="background:#48bb78; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 10px rgba(72,187,120,0.5); font-size:16px;">🏁</div>`,
+    className: 'custom-marker', iconSize: [30, 30], iconAnchor: [15, 15]
+});
 
 // Real-time Refresh Loop
 let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count') || '-1');
@@ -353,9 +365,7 @@ async function loadMapData() {
                 markers.push(m);
             } else if (s.status === 'pending' || s.status === 'assigned') {
                  // Pickup location marker
-                 const m = L.circleMarker([s.pickup.lat, s.pickup.lng], {
-                    color: '#f6ad55', radius: 5, fillOpacity: 1
-                }).addTo(map).bindPopup(`Pickup: ${s.id.slice(0,6)}...`);
+                 const m = L.marker([s.pickup.lat, s.pickup.lng], {icon: ICON_PICKUP}).addTo(map).bindPopup(`Pickup: ${s.id.slice(0,6)}...`);
                 markers.push(m);
             }
             
@@ -1071,8 +1081,6 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
 
 // Shipments Table Rendering
 let globalShipments = [];
-let globalVehicles = [];
-let globalWarehouses = [];
 
 async function loadShipments() {
     try {
@@ -1529,8 +1537,8 @@ async function openTrackModal(shipmentId) {
             const start = seg.pickup;
             const end = seg.drop;
             
-            const startMarker = L.circleMarker([start.lat, start.lng], {color: '#f6ad55', radius: 5, fillOpacity: 1}).addTo(trackMap);
-            const endMarker = L.circleMarker([end.lat, end.lng], {color: '#48bb78', radius: 5, fillOpacity: 1}).addTo(trackMap);
+            const startMarker = L.marker([start.lat, start.lng], {icon: ICON_PICKUP}).addTo(trackMap);
+            const endMarker = L.marker([end.lat, end.lng], {icon: ICON_DROP}).addTo(trackMap);
             trackMarkers.push(startMarker, endMarker);
             
             if (seg.route_type === 'drone-leg') {
