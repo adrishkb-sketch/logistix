@@ -3643,38 +3643,46 @@ let pickedCoords = null;
 function openMapPicker(targetId) {
     currentPickerTarget = targetId;
     const modal = document.getElementById('map-picker-modal');
-    modal.style.display = 'block';
+    modal.style.display = 'flex'; // Use flex to ensure layout is triggered
     
     document.getElementById('map-picker-title').innerText = targetId === 'pickup-loc' ? 'Select Pickup Location' : 'Select Drop Location';
     document.getElementById('current-pick-display').innerText = 'Click on map to pick a location...';
     pickedCoords = null;
 
     if (!pickingMap) {
-        pickingMap = L.map('picking-map').setView([20.5937, 78.9629], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(pickingMap);
-        
-        applyOfficialBorders(pickingMap);
+        // Give a small timeout to let the modal display and layout
+        setTimeout(() => {
+            pickingMap = L.map('picking-map').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(pickingMap);
+            
+            applyOfficialBorders(pickingMap);
 
-        pickingMap.on('click', function(e) {
-            const { lat, lng } = e.latlng;
-            pickedCoords = { lat, lng };
+            pickingMap.on('click', function(e) {
+                const { lat, lng } = e.latlng;
+                pickedCoords = { lat, lng };
+                
+                if (pickingMarker) {
+                    pickingMarker.setLatLng(e.latlng);
+                } else {
+                    pickingMarker = L.marker(e.latlng).addTo(pickingMap);
+                }
+                
+                document.getElementById('current-pick-display').innerText = `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            });
             
-            if (pickingMarker) {
-                pickingMarker.setLatLng(e.latlng);
-            } else {
-                pickingMarker = L.marker(e.latlng).addTo(pickingMap);
-            }
-            
-            document.getElementById('current-pick-display').innerText = `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        });
+            // Refresh size immediately after init
+            setTimeout(() => pickingMap.invalidateSize(), 50);
+        }, 50);
     } else {
-        setTimeout(() => pickingMap.invalidateSize(), 100);
-        if (pickingMarker) {
-            pickingMap.removeLayer(pickingMarker);
-            pickingMarker = null;
-        }
+        setTimeout(() => {
+            pickingMap.invalidateSize();
+            if (pickingMarker) {
+                pickingMap.removeLayer(pickingMarker);
+                pickingMarker = null;
+            }
+        }, 50);
     }
 
     // Pre-fill if exists
