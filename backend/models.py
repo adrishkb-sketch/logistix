@@ -167,6 +167,8 @@ class Shipment(BaseModel):
     # Compliance Guardian Fields
     eway_bill_no: Optional[str] = None
     eway_bill_expiry: Optional[str] = None # ISO format
+    pickup_warehouse_id: Optional[str] = None
+    drop_warehouse_id: Optional[str] = None
 
 class ShipmentCreate(BaseModel):
     pickup: Location

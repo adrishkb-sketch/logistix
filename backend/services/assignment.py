@@ -50,6 +50,13 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 is_heatwave = True
                 break
 
+    # 1. Identify Target Hub and Leg Type
+    p_wh_id = shipment.get("pickup_warehouse_id")
+    d_wh_id = shipment.get("drop_warehouse_id")
+    is_first_mile = d_wh_id and not p_wh_id
+    is_last_mile = p_wh_id and not d_wh_id
+    is_middle_mile = p_wh_id and d_wh_id
+    
     for d in drivers:
         # Recalculate vital stats for real-time accuracy
         d["fatigue_score"] = calculate_fatigue(d)
@@ -63,15 +70,20 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             vehicle = next((v for v in vehicles if v.get("id") == d.get("assigned_vehicle_id")), None)
             if vehicle and vehicle.get("status") in ["available", "assigned"]:
                 v_type = vehicle.get("type", "")
+                v_base = vehicle.get("base_warehouse_id")
+                
+                # MIDDLE MILE TRUCK ENFORCEMENT
+                if is_middle_mile and "Truck" not in v_type:
+                    continue
                 
                 # WEATHER/HEATWAVE BLOCK: Safety constraint (Strict)
                 if (weather["condition"] in ["Storm", "Rain"] or is_heatwave) and v_type in ["Bike/Scooty", "Bike", "Scooty"]:
-                    continue # Strictly forbid bikes in bad weather or heatwaves
+                    continue 
                 
                 # Check Vehicle Health vs Distance
                 health = vehicle.get("vehicle_health_score", 100)
                 if dist > 50 and health < 60:
-                    continue # Do not send unhealthy vehicles on long trips
+                    continue 
                 
                 # Calculate current load
                 v_id = vehicle.get("id")
@@ -81,44 +93,41 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 new_total_weight = current_weight + shipment.get("weight", 0)
                 if new_total_weight <= vehicle.get("capacity", 0):
                     
-                    # Base Warehouse limits
-                    if vehicle.get("base_warehouse_id"):
-                        wh = next((w for w in warehouses if w.get("id") == vehicle.get("base_warehouse_id")), None)
+                    score_modifier = 0
+                    
+                    # WAREHOUSE BASE PREFERENCE (User Requirement)
+                    if is_first_mile and v_base == d_wh_id:
+                        score_modifier += 1000 # Strong preference for hub-based collector
+                    
+                    if is_last_mile and v_base == p_wh_id:
+                        score_modifier += 1000 # Strong preference for hub-based deliverer
+                        
+                    if is_middle_mile:
+                        if v_base == d_wh_id:
+                            score_modifier += 800 # BACKHAUL: Truck returning home (Priority)
+                        elif v_base == p_wh_id:
+                            score_modifier += 500 # OUTBOUND: Truck leaving home
+                    
+                    # Base Warehouse limits (Bikes etc)
+                    if v_base:
+                        wh = next((w for w in warehouses if w.get("id") == v_base), None)
                         if wh:
                             base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
-                            
                             if v_type == "Bike/Scooty" and base_dist > 15: continue
                             if v_type == "EV-Cargo" and base_dist > 40: continue
-                    
-                    # Check route distance constraints
-                    if dist > 50 and v_type == "Bike/Scooty":
-                        continue # Skip short range vehicles for long distance routes
                     
                     # TRUCK GROUPING & WAIT LOGIC
                     wait_time_mins = 0
                     if "Truck" in v_type:
                         if new_total_weight >= vehicle.get("capacity", 0) * 0.9:
-                            # Truck is full (90%+), release immediately
                             wait_time_mins = 0
                         else:
-                            # Wait for more shipments (mandatory 2 hours / 120 mins)
-                            # In a real app, this would be 120 - (now - first_load_time)
                             wait_time_mins = 120
 
-                    score_modifier = 0
                     if weather["condition"] in ["Storm", "Rain"]:
                         if v_type in ["Truck (Heavy)", "Delivery Van"]: score_modifier += 20
                     if dist < 30 and v_type == "Bike/Scooty": score_modifier += 10
                     if dist > 50 and "Truck" in v_type: score_modifier += 10
-                    
-                    # REVERSE LOGISTICS BOOST:
-                    if vehicle.get("base_warehouse_id"):
-                        base_wh = next((w for w in warehouses if w.get("id") == vehicle.get("base_warehouse_id")), None)
-                        if base_wh:
-                            dist_drop_to_base = haversine(shipment["drop"]["lat"], shipment["drop"]["lng"], base_wh["lat"], base_wh["lng"])
-                            if dist_drop_to_base < 50:
-                                score_modifier += 40 
-                                vehicle["is_backhaul"] = True
                     
                     available_pairs.append({
                         "driver": d, 
