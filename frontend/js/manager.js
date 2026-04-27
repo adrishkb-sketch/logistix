@@ -168,55 +168,90 @@ function initMap() {
     applyOfficialBorders(map);
 
     // Map click to add warehouse
-    map.on('click', async function(e) {
-        const { lat, lng } = e.latlng;
-        
-        // WATER CHECK: Hardened detection for Oceans and Seas
-        try {
-            const terrain = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`).then(r => r.json());
-            const dName = (terrain.display_name || "").toLowerCase();
-            const isWater = terrain.type === 'water' || 
-                            terrain.type === 'river' ||
-                            terrain.category === 'natural' || 
-                            dName.includes('ocean') || 
-                            dName.includes('sea') || 
-                            dName.includes('bay') ||
-                            dName.includes('river') ||
-                            dName.includes('canal') ||
-                            dName.includes('waterway') ||
-                            !terrain.address; // Deep ocean has no address object
-
-            if (isWater) {
-                return alert("🚨 Invalid Deployment Zone: Warehouse cannot be created in the middle of a water body.");
-            }
-        } catch(e) {
-            console.warn("Terrain check skipped due to API timeout");
-        }
-
-        pendingWhLoc = { lat, lng };
-        
-        // AI Check
-        try {
-            const res = await apiCall(`/manager/warehouses/suggest`, 'POST', {
-                lat, lng, 
-                company_id: localStorage.getItem('manager_id')
-            });
-            if (res.strategic_improvement || res.distance_km) {
-                suggestedWhLoc = { lat: res.suggested_lat, lng: res.suggested_lng };
-                document.getElementById('sug-dist').innerText = `${res.distance_km} km`;
-                // If API returns a reason, we show it, otherwise fallback to localized default
-                if (res.reason) document.getElementById('sug-reason').innerText = res.reason;
-                document.getElementById('suggestion-modal').style.display = 'block';
-                if (window.updatePageTranslations) updatePageTranslations();
-            } else {
-                openWhModal(lat, lng);
-            }
-        } catch(err) {
-            openWhModal(lat, lng);
-        }
-    });
+    map.on('click', e => processLocationDeployment(e.latlng.lat, e.latlng.lng));
     
     loadMapData();
+}
+
+async function processLocationDeployment(lat, lng) {
+    // 1. Center Map & Add Temporary Marker
+    map.setView([lat, lng], 13);
+    if (window.tempMarker) map.removeLayer(window.tempMarker);
+    window.tempMarker = L.marker([lat, lng], { draggable: true }).addTo(map)
+        .bindPopup("Selected Deployment Site").openPopup();
+    
+    window.tempMarker.on('dragend', function(e) {
+        const newPos = e.target.getLatLng();
+        processLocationDeployment(newPos.lat, newPos.lng);
+    });
+
+    // 2. WATER CHECK: Hardened detection for Oceans and Seas
+    try {
+        const terrain = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`).then(r => r.json());
+        const dName = (terrain.display_name || "").toLowerCase();
+        const isWater = terrain.type === 'water' || 
+                        terrain.type === 'river' ||
+                        terrain.category === 'natural' || 
+                        dName.includes('ocean') || 
+                        dName.includes('sea') || 
+                        dName.includes('bay') ||
+                        dName.includes('river') ||
+                        dName.includes('canal') ||
+                        dName.includes('waterway') ||
+                        !terrain.address;
+
+        if (isWater) {
+            return alert("🚨 Invalid Deployment Zone: Warehouse cannot be created in the middle of a water body.");
+        }
+    } catch(e) {
+        console.warn("Terrain check skipped due to API timeout");
+    }
+
+    pendingWhLoc = { lat, lng };
+    
+    // 3. AI Check
+    try {
+        const res = await apiCall(`/manager/warehouses/suggest`, 'POST', {
+            lat, lng, 
+            company_id: localStorage.getItem('manager_id')
+        });
+        if (res.strategic_improvement || res.distance_km) {
+            suggestedWhLoc = { lat: res.suggested_lat, lng: res.suggested_lng };
+            document.getElementById('sug-dist').innerText = `${res.distance_km} km`;
+            if (res.reason) document.getElementById('sug-reason').innerText = res.reason;
+            document.getElementById('suggestion-modal').style.display = 'block';
+            if (window.updatePageTranslations) updatePageTranslations();
+        } else {
+            openWhModal(lat, lng);
+        }
+    } catch(err) {
+        openWhModal(lat, lng);
+    }
+}
+
+async function deployByPincode() {
+    const pin = document.getElementById('search-pincode').value;
+    if (!pin) return alert("Please enter a valid pincode");
+    
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${pin}&country=India`).then(r => r.json());
+        if (res && res.length > 0) {
+            const { lat, lon } = res[0];
+            processLocationDeployment(parseFloat(lat), parseFloat(lon));
+        } else {
+            alert("Pincode not found. Please try manual coordinates.");
+        }
+    } catch(e) {
+        alert("Search failed. Check your connection.");
+    }
+}
+
+async function deployByCoords() {
+    const lat = parseFloat(document.getElementById('search-lat').value);
+    const lng = parseFloat(document.getElementById('search-lng').value);
+    
+    if (isNaN(lat) || isNaN(lng)) return alert("Please enter valid Latitude and Longitude");
+    processLocationDeployment(lat, lng);
 }
 
 async function applyOfficialBorders(mapInstance) {
@@ -263,6 +298,11 @@ async function deleteWarehouse(id) {
     } catch(e) {
         alert("Failed to delete warehouse.");
     }
+}
+async function triggerManualAICheck() {
+    if (!pendingWhLoc) return;
+    document.getElementById('wh-modal').style.display = 'none';
+    processLocationDeployment(pendingWhLoc.lat, pendingWhLoc.lng);
 }
 
 async function loadMapData() {
@@ -423,6 +463,8 @@ async function decommissionWarehouse() {
 
 function openWhModal(lat, lng) {
     pendingWhLoc = {lat, lng};
+    document.getElementById('display-lat').innerText = lat.toFixed(6);
+    document.getElementById('display-lng').innerText = lng.toFixed(6);
     document.getElementById('wh-modal').style.display = 'block';
 }
 

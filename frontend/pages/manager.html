@@ -325,14 +325,34 @@
             <section id="warehouses" class="section-content" data-layout-id="section-warehouses" style="display:none;">
                 <div data-layout-container="warehouses-content">
                     <div class="glass-card section-card" data-layout-id="warehouses-map">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
-                            <div>
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; flex-wrap:wrap; gap:20px;">
+                            <div style="flex:1; min-width:300px;">
                                 <h2 style="margin:0; font-size:1.8rem; font-weight:800; color:var(--primary); letter-spacing:-0.02em;" data-i18n="infra_title">Network Infrastructure</h2>
-                                <p style="margin:8px 0 0 0; color:var(--text-muted); font-size:0.95rem; line-height:1.6; max-width:600px;" data-i18n="infra_desc">Visualize and manage your regional hubs. Click anywhere on the map to deploy a new infrastructure node and expand your logistics reach.</p>
+                                <p style="margin:8px 0 0 0; color:var(--text-muted); font-size:0.95rem; line-height:1.6; max-width:600px;" data-i18n="infra_desc">Visualize and manage your regional hubs. Click anywhere on the map or use the controls below to deploy a new infrastructure node.</p>
                             </div>
                             <button class="btn-primary" style="width:auto; padding:12px 24px; font-size:0.9rem; font-weight:700; display:flex; align-items:center; gap:10px; border-radius:12px; background:rgba(79, 140, 255, 0.1); color:var(--primary); border:1px solid rgba(79, 140, 255, 0.2);" onclick="loadMapData()">
                                 <span style="font-size:1.1rem;">🔄</span> <span data-i18n="refresh_map">Refresh Map</span>
                             </button>
+                        </div>
+
+                        <!-- Deployment Control Center -->
+                        <div class="responsive-flex-column" style="display:flex; gap:12px; margin-bottom:24px; background:rgba(79, 140, 255, 0.05); padding:20px; border-radius:16px; border:1px solid rgba(79, 140, 255, 0.1);">
+                            <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+                                <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Search by Pincode</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="text" id="search-pincode" placeholder="e.g. 560001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.9rem;">
+                                    <button class="btn-primary" onclick="deployByPincode()" style="width:auto; padding:0 20px;">Find Location 🔍</button>
+                                </div>
+                            </div>
+                            <div style="width:1px; background:rgba(255,255,255,0.1); margin:0 10px;" class="hide-on-mobile"></div>
+                            <div style="flex:1.2; display:flex; flex-direction:column; gap:8px;">
+                                <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Manual Coordinates</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input type="number" id="search-lat" placeholder="Latitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.9rem;">
+                                    <input type="number" id="search-lng" placeholder="Longitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.9rem;">
+                                    <button class="btn-primary" onclick="deployByCoords()" style="width:auto; padding:0 20px; background:var(--accent);">Analyze & Deploy 🚀</button>
+                                </div>
+                            </div>
                         </div>
                         <div id="map"></div>
                     </div>
@@ -1558,6 +1578,16 @@
             <label>Warehouse Name</label>
             <input type="text" id="wh-name-input" placeholder="e.g. North Hub" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:var(--text); border:1px solid var(--primary);">
         </div>
+        <div style="display:flex; gap:10px; margin-top:15px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;">
+            <div style="flex:1;">
+                <label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Latitude</label>
+                <div id="display-lat" style="font-family:monospace; color:var(--primary); font-weight:700;">-</div>
+            </div>
+            <div style="flex:1;">
+                <label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Longitude</label>
+                <div id="display-lng" style="font-family:monospace; color:var(--primary); font-weight:700;">-</div>
+            </div>
+        </div>
         <div style="display:flex; gap:10px; margin-top:15px;">
             <div class="input-group" style="flex:1;">
                 <label>Manager Name</label>
@@ -1573,6 +1603,11 @@
             <input type="number" id="wh-drone-count" value="0" min="0" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
         </div>
         
+        <div style="margin-top:15px; padding:12px; background:rgba(79, 140, 255, 0.05); border:1px solid rgba(79, 140, 255, 0.1); border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size:0.8rem; color:var(--text-muted);">Want an AI-optimized site?</div>
+            <button class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--accent);" onclick="triggerManualAICheck()">AI Strategy Audit 🔮</button>
+        </div>
+
         <div style="margin-top:15px; padding:10px; background:rgba(229, 62, 62, 0.1); border-left:3px solid var(--danger); border-radius:4px;">
             <p style="margin:0; font-size:0.75rem; color:var(--danger); line-height:1.4;">
                 ⚠️ <b>Warning:</b> Geographic coordinates are permanent once chosen. To change the location, you must decommission this hub and create a new one.
