@@ -404,13 +404,13 @@ def get_cascading_impact(company_id: str):
     all_shipments = shipments_db.get_all()
     my_ships = [s for s in all_shipments if s.get("company_id") == company_id]
     
-    delayed_ships = [s for s in my_ships if s.get("performance_stats", {}).get("status") == "delayed" and s.get("status") == "in_transit"]
+    delayed_ships = [s for s in my_ships if (s.get("performance_stats") or {}).get("status") == "delayed" and s.get("status") == "in_transit"]
     
     risks = []
     total_impact_hours = 0
     
     for s in delayed_ships:
-        perf = s.get("performance_stats", {})
+        perf = s.get("performance_stats") or {}
         delay_mins = perf.get("diff_mins", 0)
         total_impact_hours += delay_mins / 60
         
