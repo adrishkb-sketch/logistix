@@ -576,11 +576,11 @@ def unverify_driver(driver_id: str, company_id: str):
     return {"message": "Driver unverified successfully"}
 
 @router.get("/leaderboard")
-def get_leaderboard(category: str = "driver", sort_by: str = "overall"):
+def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "overall"):
     from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue, calculate_vehicle_efficiency_score
     
     if category == "driver":
-        drivers = drivers_db.get_all()
+        drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
         processed = []
         for d in drivers:
             d["fatigue_score"] = calculate_fatigue(d)
@@ -600,7 +600,7 @@ def get_leaderboard(category: str = "driver", sort_by: str = "overall"):
         target_key = key_map.get(sort_by, "overall_score")
         return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
     else:
-        vehicles = vehicles_db.get_all()
+        vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id]
         processed = []
         for v in vehicles:
             v["efficiency_score"] = calculate_vehicle_efficiency_score(v)
