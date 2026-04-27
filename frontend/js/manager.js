@@ -889,64 +889,111 @@ async function loadNetworkResilience() {
 
 async function loadSafetyCenter() {
     try {
+        const mId = localStorage.getItem('manager_id');
         const [drivers, alerts, shipments] = await Promise.all([
-            apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/tracking/alerts/active?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`)
+            apiCall(`/manager/drivers?company_id=${mId}`),
+            apiCall(`/tracking/alerts/active?company_id=${mId}`),
+            apiCall(`/shipments?company_id=${mId}`)
         ]);
+
+        // Calculate Fleet Safety Index
+        const avgScore = drivers.length ? drivers.reduce((acc, d) => acc + (d.driving_score || 95), 0) / drivers.length : 100;
+        const safetyIndexEl = document.getElementById('fleet-safety-index');
+        if (safetyIndexEl) {
+            safetyIndexEl.innerText = `${avgScore.toFixed(1)}%`;
+            safetyIndexEl.style.color = avgScore > 85 ? 'var(--success)' : (avgScore > 70 ? 'var(--warning)' : 'var(--danger)');
+        }
 
         // 1. Fatigue Alerts
         const fatigueContainer = document.getElementById('fatigue-alerts-list');
-        const tiredDrivers = drivers.filter(d => (d.fatigue_score || 0) > 70).sort((a,b) => b.fatigue_score - a.fatigue_score);
+        const tiredDrivers = drivers.filter(d => (d.fatigue_score || 0) > 65).sort((a,b) => b.fatigue_score - a.fatigue_score);
         fatigueContainer.innerHTML = tiredDrivers.length ? tiredDrivers.map(d => `
-            <div class="glass-card" style="margin-bottom:10px; border-left:4px solid ${d.fatigue_score > 90 ? 'var(--danger)' : 'var(--warning)'}; padding:10px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <b>${d.name}</b>
-                    <span style="color:${d.fatigue_score > 90 ? 'var(--danger)' : 'var(--warning)'}">${d.fatigue_score.toFixed(0)}% Fatigue</span>
+            <div class="glass-card" style="margin-bottom:12px; border-left:4px solid ${d.fatigue_score > 85 ? 'var(--danger)' : 'var(--warning)'}; padding:14px; background:rgba(255,255,255,0.02);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:800; font-size:1rem;">${d.name}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">ID: ${d.login_id} • ${d.license_type}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="color:${d.fatigue_score > 85 ? 'var(--danger)' : 'var(--warning)'}; font-weight:900; font-size:1.2rem;">${d.fatigue_score.toFixed(0)}%</div>
+                        <small style="text-transform:uppercase; font-size:0.6rem; letter-spacing:1px; color:var(--text-muted);">FATIGUE LEVEL</small>
+                    </div>
                 </div>
-                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;">Driver ID: ${d.login_id} | Trips: ${d.total_trips || 0}</div>
-                <button class="btn-primary" style="margin-top:8px; padding:4px 10px; font-size:0.75rem; width:auto;" onclick="openMessageModal('null', '${d.id}')">💬 Order Emergency Rest</button>
+                <div style="display:flex; gap:10px; margin-top:12px;">
+                    <button class="btn-primary" style="flex:1; padding:8px; font-size:0.7rem; background:var(--danger);" onclick="openMessageModal('null', '${d.id}', 'EMERGENCY: Automated detected critical fatigue. You are ordered to halt at the nearest safe zone for 12 hours.')">🛑 FORCE HALT</button>
+                    <button class="btn-primary" style="flex:1; padding:8px; font-size:0.7rem; background:rgba(255,255,255,0.1);" onclick="liveTrackByDriver('${d.id}')">📍 LOCATE</button>
+                </div>
             </div>
-        `).join('') : '<p style="color:var(--text-muted); font-size:0.85rem;">All drivers are within safety fatigue levels.</p>';
+        `).join('') : '<div style="text-align:center; padding:40px 0;"><div style="font-size:2rem; margin-bottom:10px;">✅</div><p style="color:var(--text-muted); font-size:0.85rem;">All drivers are within safe fatigue thresholds.</p></div>';
 
         // 2. Zen Mode Sessions
         const zenContainer = document.getElementById('zen-sessions-list');
         const zenDrivers = drivers.filter(d => d.is_zen_mode);
         zenContainer.innerHTML = zenDrivers.length ? zenDrivers.map(d => `
-            <div class="glass-card" style="margin-bottom:10px; border-left:4px solid var(--primary); padding:10px;">
-                <div style="display:flex; justify-content:space-between;">
-                    <b>${d.name}</b>
-                    <span class="pulse-warning" style="color:var(--primary); font-weight:bold;">🧘 ZEN MODE ACTIVE</span>
+            <div class="glass-card" style="margin-bottom:12px; border-left:4px solid var(--primary); padding:14px; background:rgba(49, 130, 206, 0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:800; font-size:1rem;">${d.name}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                            Auto-Reroute: <b>${d.zen_destination ? d.zen_destination.name : 'Safety Haven'}</b>
+                        </div>
+                    </div>
+                    <div class="pulse-warning" style="background:var(--primary); color:white; padding:4px 8px; border-radius:6px; font-size:0.65rem; font-weight:800;">🧘 ZEN ACTIVE</div>
                 </div>
-                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;">AI Rerouted to: ${d.zen_destination ? d.zen_destination.name : 'Safety Point'}</div>
-                <div style="display:flex; gap:5px; margin-top:8px;">
-                    <button class="btn-primary" style="padding:4px 10px; font-size:0.75rem; width:auto;" onclick="liveTrackByDriver('${d.id}')">📍 Track Safety Route</button>
-                    <button class="btn-primary" style="padding:4px 10px; font-size:0.75rem; width:auto; background:rgba(255,255,255,0.1);" onclick="openMessageModal('null', '${d.id}')">💬 Msg</button>
+                <div style="display:flex; gap:10px; margin-top:12px;">
+                    <button class="btn-primary" style="flex:1; padding:8px; font-size:0.7rem;" onclick="liveTrackByDriver('${d.id}')">📍 TRACK SAFETY PATH</button>
+                    <button class="btn-primary" style="flex:1; padding:8px; font-size:0.7rem; background:rgba(255,255,255,0.1);" onclick="openMessageModal('null', '${d.id}')">💬 CONNECT</button>
                 </div>
             </div>
-        `).join('') : '<p style="color:var(--text-muted); font-size:0.85rem;">No active safety reroutes currently.</p>';
+        `).join('') : '<div style="text-align:center; padding:40px 0;"><div style="font-size:2rem; margin-bottom:10px;">🛡️</div><p style="color:var(--text-muted); font-size:0.85rem;">No active Zen Mode safety interventions.</p></div>';
 
         // 3. Incidents Table
         const incidentBody = document.getElementById('incidents-table-body');
         let incidents = [];
         shipments.forEach(s => {
             (s.logs || []).forEach(log => {
-                if (log.message.includes("ISSUE:") || log.status === "delayed" || log.status === "disputed") {
+                if (log.message.includes("ISSUE:") || log.message.includes("BREAKDOWN") || log.status === "delayed" || log.status === "disputed" || log.status === "safety_halt") {
                     incidents.push({ shipment: s, log: log, driver: drivers.find(d => d.id === s.assigned_driver_id) });
                 }
             });
         });
 
-        incidentBody.innerHTML = incidents.length ? incidents.sort((a,b) => new Date(b.log.timestamp) - new Date(a.log.timestamp)).map(i => `
-            <tr>
-                <td><b>${i.driver ? i.driver.name : 'System'}</b></td>
-                <td><span style="color:var(--danger); font-weight:bold;">${i.log.message}</span></td>
-                <td>${new Date(i.log.timestamp).toLocaleTimeString()}</td>
-                <td>${i.log.location ? `${i.log.location.lat.toFixed(3)}, ${i.log.location.lng.toFixed(3)}` : 'N/A'}</td>
-                <td><span class="status-pill status-${i.shipment.status}">${i.shipment.status}</span></td>
-                <td><button class="btn-primary" style="padding:4px 8px; font-size:0.7rem;" onclick="openLogsModal('${i.shipment.id}')">📋 Solve</button></td>
+        incidentBody.innerHTML = incidents.length ? incidents.sort((a,b) => new Date(b.log.timestamp) - new Date(a.log.timestamp)).slice(0, 20).map(i => `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:12px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${i.driver?.name || 'sys'}" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.05);">
+                        <div>
+                            <b>${i.driver ? i.driver.name : 'Automated System'}</b>
+                            <br><small style="color:var(--text-muted)">${i.shipment.id.substring(0,8)}</small>
+                        </div>
+                    </div>
+                </td>
+                <td style="padding:12px;">
+                    <span style="color:${i.log.status === 'delayed' ? 'var(--warning)' : 'var(--danger)'}; font-weight:800; font-size:0.85rem;">
+                        ${i.log.message.replace('ISSUE: ', '')}
+                    </span>
+                </td>
+                <td style="padding:12px; font-size:0.8rem; color:var(--text-muted);">
+                    ${new Date(i.log.timestamp).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'})}
+                </td>
+                <td style="padding:12px; font-family:monospace; font-size:0.75rem;">
+                    ${i.log.location ? `${i.log.location.lat.toFixed(4)}, ${i.log.location.lng.toFixed(4)}` : 'Node Alpha-1'}
+                </td>
+                <td style="padding:12px;">
+                    <span class="status-pill status-${i.shipment.status}" style="font-size:0.6rem;">${i.shipment.status.toUpperCase()}</span>
+                </td>
+                <td style="padding:12px; text-align:right;">
+                    <button class="btn-primary" style="padding:6px 12px; font-size:0.7rem; background:var(--accent);" onclick="openLogsModal('${i.shipment.id}')">📋 ANALYZE</button>
+                </td>
             </tr>
-        `).join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No safety incidents detected.</td></tr>';
+        `).join('') : '<tr><td colspan="6" style="text-align:center; padding:50px; color:var(--text-muted);">🛡️ Zero active safety incidents in the last 24 hours.</td></tr>';
+
+    } catch (e) { 
+        console.error("Safety Center Load Error:", e);
+        showPopupAlert("Failed to sync safety data from neural cloud.");
+    }
+}
 
         // 4. Score
         const safetyScore = (drivers.reduce((acc, d) => acc + (d.safety_index || 100), 0) / drivers.length) || 100;
@@ -4538,4 +4585,77 @@ window.formatDisplayPlate = function(plate) {
         formatted += val[i];
     }
     return formatted;
+}
+
+window.showMergeSuggestions = async function() {
+    const modal = document.getElementById('merge-modal');
+    const container = document.getElementById('merge-suggestions-container');
+    modal.style.display = 'flex';
+    container.innerHTML = '<p style="text-align:center;">Scanning for merge opportunities...</p>';
+    
+    try {
+        const data = await apiCall('/manager/merge-suggestions', 'GET');
+        
+        if (!data.suggestions || data.suggestions.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">No new merge opportunities found at this time.</p>';
+            return;
+        }
+        
+        container.innerHTML = data.suggestions.map((sug, index) => {
+            const shipIds = sug.shipment_ids.map(id => id.substring(0,8)).join(', ');
+            return `
+                <div class="glass-card" style="margin-bottom:15px; padding:20px; border-left:4px solid var(--accent);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h4 style="margin:0 0 5px 0;">Dest: ${sug.target_hub_name || sug.target_hub_id}</h4>
+                            <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">
+                                <b>Shipments (${sug.count}):</b> ${shipIds} <br>
+                                <b>Total Weight:</b> ${sug.total_weight} kg
+                            </p>
+                            <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--warning);">Reason: ${sug.reason}</p>
+                        </div>
+                        <button class="btn-primary btn-success" style="padding:6px 16px; font-size:0.8rem;" onclick="approveMerge(${index}, '${sug.target_hub_id}')" id="btn-merge-${index}">Approve Merge</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Store suggestions globally so we can access shipment_ids
+        window.currentMergeSuggestions = data.suggestions;
+        
+    } catch (e) {
+        container.innerHTML = '<p style="text-align:center; color:var(--danger);">Failed to fetch merge suggestions.</p>';
+    }
+}
+
+window.approveMerge = async function(index, hubId) {
+    const btn = document.getElementById(`btn-merge-${index}`);
+    btn.disabled = true;
+    btn.innerText = 'Merging...';
+    
+    const sug = window.currentMergeSuggestions[index];
+    
+    try {
+        await apiCall('/manager/approve-merge', 'POST', {
+            target_hub_id: hubId,
+            shipment_ids: sug.shipment_ids
+        });
+        
+        btn.innerText = 'Merged ✅';
+        btn.style.background = 'var(--success)';
+        
+        // Reload shipments
+        if (typeof loadShipments === 'function') {
+            loadShipments();
+        }
+        
+        setTimeout(() => {
+            showMergeSuggestions(); // Refresh list
+        }, 1500);
+        
+    } catch (e) {
+        btn.disabled = false;
+        btn.innerText = 'Approve Merge';
+        alert('Merge failed.');
+    }
 }

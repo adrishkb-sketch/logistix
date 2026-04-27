@@ -63,7 +63,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         p_wh = next((w for w in warehouses if w["id"] == p_wh_id), None)
         if p_wh and p_wh.get("drone_count", 0) > 0:
             from backend.services.route_engine import check_drone_viability
-            drone_intel = check_drone_viability(p_wh["lat"], p_wh["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+            drone_intel = check_drone_viability(p_wh["lat"], p_wh["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"], shipment.get("weight", 0))
             if drone_intel["viable"]:
                 # Automated Drone Assignment
                 finance_data = estimate_delivery_cost(shipment, "drone")
@@ -145,14 +145,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                             if v_type == "Bike/Scooty" and base_dist > 15: continue
                             if v_type == "EV-Cargo" and base_dist > 40: continue
                     
-                    # TRUCK GROUPING & WAIT LOGIC
                     wait_time_mins = 0
-                    if "Truck" in v_type:
-                        if new_total_weight >= vehicle.get("capacity", 0) * 0.9:
-                            wait_time_mins = 0
-                        else:
-                            wait_time_mins = 120
-
                     if weather["condition"] in ["Storm", "Rain"]:
                         if v_type in ["Truck (Heavy)", "Delivery Van"]: score_modifier += 20
                     
@@ -242,15 +235,15 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
                 "assigned_vehicle_id": new_v["id"],
                 "status": "assigned"
             })
-            history = s.get("history", [])
-            history.append({
+            logs = s.get("logs", [])
+            logs.append({
                 "status": "assigned",
                 "message": f"🚑 RESCUE: Shipments transferred to {new_d['name']} due to vehicle breakdown.",
                 "reason": "Automatic rescue initiated.",
                 "location": location,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat() + "Z"
             })
-            shipments_db.update(s["id"], {"history": history})
+            shipments_db.update(s["id"], {"logs": logs})
         vehicles_db.update(new_v["id"], {"status": "assigned"})
         return {"driver_name": new_d["name"], "vehicle_id": new_v["id"]}
     return None

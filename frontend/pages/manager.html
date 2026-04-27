@@ -449,6 +449,7 @@
                                 <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" class="polished-glass-input" data-i18n-placeholder="search_shipment_placeholder">
                                 <div class="shipments-board-buttons">
                                     <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem;" data-i18n="btn_auto_bulk_assign">⚡ Auto Bulk Assign</button>
+                                    <button class="btn-primary" onclick="showMergeSuggestions()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem; background:var(--warning);">🔗 Merge Suggestions</button>
                                     <button class="ai-optimize-btn" onclick="optimizeFleet()" style="white-space: nowrap;">
                                         <span style="font-size:0.95rem;">🚛</span> 
                                         <span data-i18n="btn_optimize_fleet">Optimize Fleet</span>
@@ -2016,5 +2017,18 @@ setTheme(localStorage.getItem('theme') || 'dark');
             <button class="btn-primary" style="flex:1; background:rgba(var(--primary-rgb), 0.1); color:var(--primary); border:1px solid var(--primary);" onclick="closeBroadcastModal()">Cancel</button>
         </div>
     </div>
+    <!-- Merge Suggestions Modal -->
+    <div id="merge-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:20000; align-items:center; justify-content:center;">
+        <div class="glass-card modal-glass" style="width:600px; max-width:90vw; padding:30px; position:relative;">
+            <button class="close-modal-btn" style="position:absolute; top:20px; right:20px;" onclick="document.getElementById('merge-modal').style.display='none'">✖</button>
+            <h2 style="margin:0 0 10px 0; color:var(--warning);">🔗 Middle-Mile Merge Suggestions</h2>
+            <p style="color:var(--text-muted); margin-bottom:20px;">Review and approve AI-suggested group merges for middle-mile logistics to improve truck utility.</p>
+            
+            <div id="merge-suggestions-container" style="max-height:60vh; overflow-y:auto; padding-right:10px;">
+                <p style="text-align:center;">Loading suggestions...</p>
+            </div>
+        </div>
+    </div>
+    
 </body>
 </html>

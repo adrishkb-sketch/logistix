@@ -1043,3 +1043,75 @@ def reject_fund_request(alert_id: str):
     alerts_db.update(alert_id, {"status": "resolved", "rejection_note": "Denied by Manager"})
     
     return {"message": "Fund request rejected."}
+
+@router.get("/merge-suggestions")
+def get_merge_suggestions(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
+    all_shipments = shipments_db.get_all()
+    # Find active shipments (assigned/pending)
+    active = [s for s in all_shipments if s.get("company_id") == company_id and s.get("status") in ["pending", "assigned"] and s.get("drop_warehouse_id")]
+    
+    # Group by drop_warehouse_id
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for s in active:
+        groups[s["drop_warehouse_id"]].append(s)
+        
+    suggestions = []
+    for wh_id, ships in groups.items():
+        if len(ships) > 1:
+            total_weight = sum(s.get("weight", 0) for s in ships)
+            wh = warehouses_db.get_by_id(wh_id)
+            wh_name = wh.get("name", "Unknown Hub") if wh else "Unknown Hub"
+            suggestions.append({
+                "hub_id": wh_id,
+                "hub_name": wh_name,
+                "shipment_ids": [s["id"] for s in ships],
+                "shipment_count": len(ships),
+                "total_weight": total_weight
+            })
+    return suggestions
+
+@router.post("/approve-merge")
+def approve_merge(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    company_id = data.get("company_id")
+    verify_context(company_id, x_logistix_context)
+    hub_id = data.get("hub_id")
+    shipment_ids = data.get("shipment_ids", [])
+    
+    if not hub_id or not shipment_ids:
+        raise HTTPException(status_code=400, detail="Missing hub_id or shipment_ids")
+        
+    # Find a truck that can handle the weight and is going to/from this hub
+    vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id and v.get("status") in ["available", "assigned"] and "Truck" in v.get("type", "")]
+    
+    if not vehicles:
+        raise HTTPException(status_code=400, detail="No available trucks found to handle the merged shipment.")
+        
+    # Assign the shipments to the first available truck
+    chosen_vehicle = vehicles[0]
+    driver_id = chosen_vehicle.get("assigned_driver_id")
+    if not driver_id:
+        raise HTTPException(status_code=400, detail="Chosen truck does not have an assigned driver.")
+        
+    vehicles_db.update(chosen_vehicle["id"], {"status": "in_transit"})
+    
+    for sid in shipment_ids:
+        s = shipments_db.get_by_id(sid)
+        if s:
+            logs = s.get("logs", [])
+            logs.append({
+                "status": "assigned",
+                "message": f"MERGED: Shipment grouped onto Heavy Truck {chosen_vehicle['number_plate']}.",
+                "reason": "Manager approved merge for efficiency.",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
+            shipments_db.update(sid, {
+                "assigned_driver_id": driver_id,
+                "assigned_vehicle_id": chosen_vehicle["id"],
+                "status": "assigned",
+                "stage": "Middle-Mile Hub Transit",
+                "logs": logs
+            })
+            
+    return {"message": f"Successfully merged {len(shipment_ids)} shipments onto Truck {chosen_vehicle['number_plate']}"}

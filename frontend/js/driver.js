@@ -455,12 +455,12 @@ async function loadMissions(autoStartNext = false) {
                 if (isCurrent) {
                           actionBtn = `
                             <input type="file" id="scan-file-${s.id}" style="display:none;" accept="image/*" onchange="scanCargo('${s.id}')">
-                            <button id="scan-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--warning); color:#000;" onclick="document.getElementById('scan-file-${s.id}').click()">📷 ${getTranslation('scan_cargo')} (${getTranslation('required')})</button>
-                            <button id="pickup-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; display:none;" onclick="confirmPickup('${s.id}')">${getTranslation('confirm_pickup')}</button>
+                            <button id="scan-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px;" onclick="document.getElementById('scan-file-${s.id}').click()">📷 ${getTranslation('scan_cargo')} (${getTranslation('required')})</button>
+                            <button id="pickup-btn-${s.id}" class="btn-primary btn-success" style="margin-top:10px; width:auto; padding: 5px 15px; display:none;" onclick="confirmPickup('${s.id}')">${getTranslation('confirm_pickup')}</button>
                             <div id="scan-result-${s.id}" style="margin-top:5px; font-size:0.8rem; font-weight:bold;"></div>
                          `;
                     } else {
-                         actionBtn = `<button class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--success);" onclick="confirmDelivery('${s.id}', '${s.delivery_otp}')">${getTranslation('confirm_delivery')} (OTP)</button>`;
+                         actionBtn = `<button class="btn-primary btn-success" style="margin-top:10px; width:auto; padding: 5px 15px;" onclick="confirmDelivery('${s.id}', '${s.delivery_otp}')">${getTranslation('confirm_delivery')} (OTP)</button>`;
                     }
                 
                 html += `
@@ -485,11 +485,20 @@ async function loadMissions(autoStartNext = false) {
 
                             <div style="display:flex; gap:10px; margin: 10px 0;">
                                 <button class="btn-primary" style="flex:1; padding:8px; font-size:0.8rem;" onclick="openLoadingOptimizer('${s.id}')">🏗️ Optimize Loading (AR)</button>
-                                <button class="btn-primary" style="flex:1; padding:8px; font-size:0.8rem; background:rgba(255,255,255,0.1);" onclick="openScanner('${s.id}')">📷 Scan Cargo</button>
+                                <button class="btn-primary btn-outline" style="flex:1; padding:8px; font-size:0.8rem;" onclick="openScanner('${s.id}')">📷 Scan Cargo</button>
                             </div>
 
                             <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ Deadline:</b> ${new Date(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery).toLocaleString()}</p>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Location:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
+                            
+                            ${s.is_leg ? `
+                                <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(245, 158, 11, 0.1); border:1px solid var(--warning); border-left: 4px solid var(--warning);">
+                                    <p style="margin:0; font-size:0.75rem; color:var(--warning); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">🤝 Rendezvous Protocol</p>
+                                    <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">Meet at ${stop.type === 'pickup' ? 'Outbound Hub' : 'Receiving Hub'}</p>
+                                    <p style="margin:2px 0 0 0; font-size:0.9rem; color:var(--text-muted);">Coordinate with depot manager for handoff.</p>
+                                </div>
+                            ` : ''}
+
                             ${s.performance_stats ? `
                                 <div style="margin:8px 0; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -656,22 +665,24 @@ async function updateLocation(position) {
 }
 
 function handleError() {
-    console.warn("Real GPS failed, falling back to simulated GPS movement for demo.");
+    console.warn("Real GPS failed, falling back to manual click-to-move GPS movement for demo.");
     
-    if (routeCoords.length === 0) return;
+    if (!map) return;
     
-    // Simulate moving smoothly along the OSRM route
-    setInterval(async () => {
-        if (simIndex >= routeCoords.length) return; // Reached destination
+    showNotification("Map Click-to-Move enabled. Click anywhere on the map to manually move your vehicle.", "success");
+    
+    map.on('click', async function(e) {
+        if (isHalted) {
+            showNotification("Vehicle is currently halted. Cannot move.", "error");
+            return;
+        }
         
-        const pos = routeCoords[simIndex];
-        const lat = pos[0];
-        const lng = pos[1];
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
         
         if (!marker) {
             marker = L.marker([lat, lng], {icon: getVehicleIcon(0)}).addTo(map);
         } else {
-            // Calculate bearing for simulated movement
             const prev = marker.getLatLng();
             const bearing = Math.atan2(lng - prev.lng, lat - prev.lat) * 180 / Math.PI;
             if (Math.abs(bearing - lastBearing) > 5) {
@@ -689,9 +700,7 @@ function handleError() {
         try {
             await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng});
         } catch(e) {}
-        
-        simIndex += 2; // Move a bit faster through the coordinates array
-    }, 1000);
+    });
 }
 
 async function drawMultiStopRoute(stops) {
@@ -1294,6 +1303,10 @@ setInterval(async () => {
         triggerZenMode("extreme_fatigue");
     }
 }, 10000);
+
+function openScanner(shipmentId) {
+    document.getElementById(`scan-file-${shipmentId}`).click();
+}
 
 async function openLoadingOptimizer(shipmentId) {
     document.getElementById('loader-modal').style.display = 'flex';
