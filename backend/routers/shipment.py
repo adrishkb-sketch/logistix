@@ -540,8 +540,8 @@ def auto_assign(shipment_id: str):
             v_db = JSONDatabase("vehicles")
             d = d_db.get_by_id(assigned_data["assigned_driver_id"])
             v = v_db.get_by_id(assigned_data["assigned_vehicle_id"])
-            driver_name = d["name"] if d else "Unknown"
-            plate = v["number_plate"] if v else "Unknown"
+            driver_name = d.get("name", "Unknown") if d else "Unknown"
+            plate = v.get("number_plate", "Unknown") if v else "Unknown"
             
             log_event = ShipmentEvent(
                 status="assigned", 
@@ -727,74 +727,79 @@ def auto_split(shipment_id: str):
     
     # Check if we should even split
     if total_dist < 50:
-        # Too short for a split journey unless manually requested
         return {"message": "Shipment distance is small. Direct delivery recommended.", "action": "none"}
 
-    if w_start["id"] == w_end["id"]:
-        # Case: Both pickup and drop are served by the same warehouse hub
-        # Leg 1: Pickup -> Hub
-        legs.append({
-            "pickup": p_loc, 
-            "drop": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]},
-            "drop_warehouse_id": w_start["id"]
-        })
-        # Leg 2: Hub -> Drop
-        legs.append({
-            "pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, 
-            "drop": d_loc,
-            "pickup_warehouse_id": w_start["id"]
-        })
-    else:
-        # Case: Multi-hub journey
-        # Leg 1: Pickup -> Hub 1 (First Mile)
-        legs.append({
-            "pickup": p_loc, 
-            "drop": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]},
-            "drop_warehouse_id": w_start["id"]
-        })
+    # 1. Identify start and end hubs
+    w_start = min(warehouses, key=lambda w: haversine(p_loc["lat"], p_loc["lng"], w["lat"], w["lng"]))
+    w_end = min(warehouses, key=lambda w: haversine(d_loc["lat"], d_loc["lng"], w["lat"], w["lng"]))
+    
+    # Leg 1: Pickup -> Hub 1 (First Mile)
+    legs.append({
+        "pickup": p_loc, 
+        "drop": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]},
+        "drop_warehouse_id": w_start["id"]
+    })
+    
+    # Middle Mile: Sequence of Hubs (Multi-hop)
+    current_wh = w_start
+    while haversine(current_wh["lat"], current_wh["lng"], w_end["lat"], w_end["lng"]) > 10:
+        dist_to_end = haversine(current_wh["lat"], current_wh["lng"], w_end["lat"], w_end["lng"])
         
-        # Intermediate Hub logic
-        dist_between_hubs = haversine(w_start["lat"], w_start["lng"], w_end["lat"], w_end["lng"])
-        if dist_between_hubs > 500:
-             mid_lat, mid_lng = (w_start["lat"] + w_end["lat"])/2, (w_start["lng"] + w_end["lng"])/2
-             w_mid = min(warehouses, key=lambda w: haversine(mid_lat, mid_lng, w["lat"], w["lng"]))
-             if w_mid["id"] != w_start["id"] and w_mid["id"] != w_end["id"]:
-                  legs.append({
-                      "pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, 
-                      "drop": {"lat": w_mid["lat"], "lng": w_mid["lng"], "address": w_mid["name"]},
-                      "pickup_warehouse_id": w_start["id"],
-                      "drop_warehouse_id": w_mid["id"]
-                  })
-                  legs.append({
-                      "pickup": {"lat": w_mid["lat"], "lng": w_mid["lng"], "address": w_mid["name"]}, 
-                      "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]},
-                      "pickup_warehouse_id": w_mid["id"],
-                      "drop_warehouse_id": w_end["id"]
-                  })
-             else:
-                  legs.append({
-                      "pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, 
-                      "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]},
-                      "pickup_warehouse_id": w_start["id"],
-                      "drop_warehouse_id": w_end["id"]
-                  })
+        if dist_to_end <= 350:
+            # Final Middle Mile Leg: Direct to End Hub
+            legs.append({
+                "pickup": {"lat": current_wh["lat"], "lng": current_wh["lng"], "address": current_wh["name"]}, 
+                "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]},
+                "pickup_warehouse_id": current_wh["id"],
+                "drop_warehouse_id": w_end["id"]
+            })
+            break
         else:
-             legs.append({
-                 "pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, 
-                 "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]},
-                 "pickup_warehouse_id": w_start["id"],
-                 "drop_warehouse_id": w_end["id"]
-             })
-        
-        # Leg Last: Hub 2 -> Drop (Last Mile)
-        legs.append({
-            "pickup": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]}, 
-            "drop": d_loc,
-            "pickup_warehouse_id": w_end["id"]
-        })
+            # Find an intermediate hub roughly 300km away towards the end
+            # Vector math for target point
+            ratio = 300 / dist_to_end
+            target_lat = current_wh["lat"] + (w_end["lat"] - current_wh["lat"]) * ratio
+            target_lng = current_wh["lng"] + (w_end["lng"] - current_wh["lng"]) * ratio
+            
+            # Find the closest warehouse to this ideal 300km point
+            w_mid = min(warehouses, key=lambda w: haversine(target_lat, target_lng, w["lat"], w["lng"]))
+            
+            if w_mid["id"] == current_wh["id"] or w_mid["id"] == w_end["id"]:
+                # No useful intermediate hub found, just go to end
+                legs.append({
+                    "pickup": {"lat": current_wh["lat"], "lng": current_wh["lng"], "address": current_wh["name"]}, 
+                    "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]},
+                    "pickup_warehouse_id": current_wh["id"],
+                    "drop_warehouse_id": w_end["id"]
+                })
+                break
+            
+            legs.append({
+                "pickup": {"lat": current_wh["lat"], "lng": current_wh["lng"], "address": current_wh["name"]}, 
+                "drop": {"lat": w_mid["lat"], "lng": w_mid["lng"], "address": w_mid["name"]},
+                "pickup_warehouse_id": current_wh["id"],
+                "drop_warehouse_id": w_mid["id"]
+            })
+            current_wh = w_mid
+
+    # Leg Last: Hub 2 -> Drop (Last Mile)
+    legs.append({
+        "pickup": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]}, 
+        "drop": d_loc,
+        "pickup_warehouse_id": w_end["id"]
+    })
     
     _generate_legs(shipment, legs)
-    return {"message": f"Successfully planned optimized {len(legs)}-leg journey via Hub Network."}
+    
+    # AUTO-ASSIGN ALL LEGS IMMEDIATELY (User Requirement)
+    # We fetch again to get the newly created leg IDs from DB
+    all_new_legs = [s for s in shipments_db.get_all() if s.get("parent_id") == shipment_id and s.get("is_leg")]
+    for leg in all_new_legs:
+        try:
+            auto_assign(leg["id"])
+        except: pass
+        
+    return {"message": f"Successfully planned optimized {len(legs)}-leg journey via Hub Network and auto-assigned fleet."}
 
 def _generate_legs(parent_shipment, leg_data):
     from backend.models import ShipmentEvent
@@ -849,7 +854,9 @@ def _generate_legs(parent_shipment, leg_data):
             is_perishable=parent_shipment.get("is_perishable", False),
             vitality=parent_shipment.get("vitality", 100),
             pickup_warehouse_id=leg.get("pickup_warehouse_id"),
-            drop_warehouse_id=leg.get("drop_warehouse_id")
+            drop_warehouse_id=leg.get("drop_warehouse_id"),
+            eway_bill_no=parent_shipment.get("eway_bill_no"),
+            eway_bill_expiry=parent_shipment.get("eway_bill_expiry")
         )
         shipments_db.insert(leg_shipment.model_dump())
         

@@ -38,6 +38,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     available_pairs = []
     
     from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue
+    from backend.services.finance_engine import estimate_delivery_cost
     
     # 1. Check for Heatwave in pickup zone
     weather_cells_db = JSONDatabase("weather_cells")
@@ -126,14 +127,25 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
                     if weather["condition"] in ["Storm", "Rain"]:
                         if v_type in ["Truck (Heavy)", "Delivery Van"]: score_modifier += 20
-                    if dist < 30 and v_type == "Bike/Scooty": score_modifier += 10
+                    
+                    if dist < 30 and v_type in ["Bike/Scooty", "Bike", "Scooty"]:
+                        score_modifier += 500 # Strong preference for small vehicles in urban legs
+                        if is_first_mile or is_last_mile:
+                            score_modifier += 500 # Extra boost for hub-based first/last mile
+                    
                     if dist > 50 and "Truck" in v_type: score_modifier += 10
+                    
+                    # 5. Operational Cost Penalty (Profit Optimization)
+                    finance_data = estimate_delivery_cost(shipment, v_type.lower())
+                    total_op_cost = finance_data.get("total_cost", 0)
+                    score_modifier -= (total_op_cost / 5) # Penalize high cost routes
                     
                     available_pairs.append({
                         "driver": d, 
                         "vehicle": vehicle, 
                         "score_modifier": score_modifier,
-                        "wait_time_mins": wait_time_mins
+                        "wait_time_mins": wait_time_mins,
+                        "finance_data": finance_data
                     })
                 
     if not available_pairs:
@@ -154,7 +166,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "assigned_driver_id": best_pair["driver"].get("id"),
         "assigned_vehicle_id": best_pair["vehicle"].get("id"),
         "status": "assigned",
-        "stage": "Assigned to Driver"
+        "stage": "Assigned to Driver",
+        "finance": best_pair.get("finance_data")
     }
 
     if best_pair["wait_time_mins"] > 0:
