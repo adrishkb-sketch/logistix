@@ -1,4 +1,6 @@
-const API_BASE = "/api"; 
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? (window.location.port === '8000' ? "/api" : "http://localhost:8000/api")
+    : "/api";
 
 async function apiCall(endpoint, method = "GET", body = null) {
     // Dynamically retrieve security context (Company ID or Driver ID)

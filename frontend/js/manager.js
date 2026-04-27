@@ -1243,11 +1243,23 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     lTr.style.background = 'rgba(255,255,255,0.02)';
                     const lVitality = leg.is_perishable ? (leg.vitality || 100) : 100;
                     
+                    const ld = drivers.find(d => d.id === leg.assigned_driver_id);
+                    const lv = vehicles.find(v => v.id === leg.assigned_vehicle_id);
+                    const lDriverName = ld ? ld.name : getTranslation('unassigned');
+                    const lPlate = lv ? lv.number_plate : getTranslation('no_vehicle');
+
                     lTr.innerHTML = `
                         <td style="padding-left:30px; font-size:0.8rem; color:var(--text-muted);">↳ Leg ${leg.leg_order}: ${leg.description}</td>
                         <td><div style="width:50px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;"><div style="width:${lVitality}%; height:100%; background:var(--success);"></div></div></td>
                         <td><span style="font-size:0.65rem; padding:2px 6px; border-radius:10px; background:rgba(255,255,255,0.05);">${leg.status}</span></td>
-                        <td colspan="2">
+                        <td>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">${getTranslation('eway_label')}: ${leg.eway_bill_no || getTranslation('na')}</div>
+                        </td>
+                        <td>
+                            <div style="font-size:0.8rem; font-weight:600; color:var(--primary);">${lDriverName}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">${lPlate}</div>
+                        </td>
+                        <td>
                             <div style="display:flex; gap:6px; align-items:center;">
                                 <button class="action-btn-pill" style="padding:4px;" onclick="openLogsModal('${leg.id}')" title="Logs">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>

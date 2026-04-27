@@ -11,6 +11,9 @@ from datetime import datetime
 router = APIRouter()
 shipments_db = JSONDatabase("shipments")
 drivers_db = JSONDatabase("drivers")
+vehicles_db = JSONDatabase("vehicles")
+warehouses_db = JSONDatabase("warehouses")
+alerts_db = JSONDatabase("alerts")
 
 @router.get("/{driver_id}/shipments")
 def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Header(None)):
@@ -115,7 +118,9 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
             s["last_location_time"] = now.isoformat() + "Z"
 
             driver = drivers_db.get_by_id(driver_id)
-            vehicles_db = JSONDatabase("vehicles")
+            if not driver:
+                continue
+
             vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"]) if driver.get("assigned_vehicle_id") else None
             
             perf = check_shipment_performance(s, driver, vehicle)
@@ -183,7 +188,6 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
             
             if not in_warehouse and s.get("at_warehouse_id"):
                 wh_id = s.get("at_warehouse_id")
-                from backend.database import JSONDatabase
                 wh_name = "Warehouse"
                 w_obj = JSONDatabase("warehouses").get_by_id(wh_id)
                 if w_obj: wh_name = w_obj["name"]
@@ -377,9 +381,6 @@ def report_incident(driver_id: str, data: dict):
     from backend.models import ShipmentEvent, Alert
     from backend.database import JSONDatabase
     from backend.services.route_engine import haversine
-    alerts_db = JSONDatabase("alerts")
-    vehicles_db = JSONDatabase("vehicles")
-    
     # Update driver stats
     if incident_type == "challan":
         driver["challan_count"] = driver.get("challan_count", 0) + 1
@@ -488,7 +489,6 @@ def get_driver_stats(driver_id: str):
     latest_breakdown = latest_trip.get("points_breakdown") if latest_trip else None
     
     # Vehicle stats
-    vehicles_db = JSONDatabase("vehicles")
     vehicle_health = 100.0
     fuel_efficiency = 0.0
     v_id = driver.get("assigned_vehicle_id")
@@ -534,11 +534,8 @@ def report_breakdown(driver_id: str, location: Dict[str, Any]):
         raise HTTPException(status_code=404, detail="Driver or vehicle not found")
     
     vehicle_id = driver["assigned_vehicle_id"]
-    from backend.database import JSONDatabase
-    vehicles_db = JSONDatabase("vehicles")
     vehicles_db.update(vehicle_id, {"status": "maintenance"})
     
-    alerts_db = JSONDatabase("alerts")
     alerts_db.insert({
         "id": str(uuid.uuid4()),
         "company_id": driver["company_id"],
@@ -561,8 +558,6 @@ def maintenance_complete(driver_id: str):
         raise HTTPException(status_code=404, detail="Driver or vehicle not found")
         
     vehicle_id = driver["assigned_vehicle_id"]
-    from backend.database import JSONDatabase
-    vehicles_db = JSONDatabase("vehicles")
     vehicles_db.update(vehicle_id, {"status": "available"})
     return {"message": "Vehicle is now available for duty"}
 
