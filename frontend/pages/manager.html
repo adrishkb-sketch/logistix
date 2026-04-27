@@ -340,7 +340,7 @@
                             <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
                                 <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="label_search_pincode">Search by Pincode</label>
                                 <div class="responsive-flex-column" style="display:flex; gap:8px;">
-                                    <input type="text" id="search-pincode" data-i18n-placeholder="placeholder_pincode" placeholder="e.g. 560001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; height:50px;">
+                                    <input type="text" id="search-pincode" data-i18n-placeholder="placeholder_pincode" placeholder="e.g. 560001" class="polished-glass-input">
                                     <button class="btn-primary" onclick="deployByPincode()" style="width:auto; padding:0 24px; height:50px;" data-i18n="btn_find_location">Find Location 🔍</button>
                                 </div>
                             </div>
@@ -349,8 +349,8 @@
                                 <label style="font-size:0.8rem; color:var(--primary); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;" data-i18n="label_manual_coords">Manual Coordinates</label>
                                 <div class="responsive-flex-column" style="display:flex; gap:8px;">
                                     <div style="display:flex; gap:8px; flex:1;">
-                                        <input type="number" id="search-lat" data-i18n-placeholder="placeholder_lat" placeholder="Latitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; height:50px;">
-                                        <input type="number" id="search-lng" data-i18n-placeholder="placeholder_lng" placeholder="Longitude" step="0.0001" style="flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; height:50px;">
+                                        <input type="number" id="search-lat" data-i18n-placeholder="placeholder_lat" placeholder="Latitude" step="0.0001" class="polished-glass-input">
+                                        <input type="number" id="search-lng" data-i18n-placeholder="placeholder_lng" placeholder="Longitude" step="0.0001" class="polished-glass-input">
                                     </div>
                                     <button class="btn-primary" onclick="deployByCoords()" style="width:auto; padding:0 24px; background:var(--accent); height:50px;" data-i18n="btn_analyze_deploy">Analyze & Deploy 🚀</button>
                                 </div>
@@ -446,7 +446,7 @@
                         <div class="shipments-board-header">
                             <h3 style="margin:0;" data-i18n="shipments_board_title">Shipments Board</h3>
                             <div class="shipments-board-actions">
-                                <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" class="shipments-search-input" data-i18n-placeholder="search_shipment_placeholder">
+                                <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" class="polished-glass-input" data-i18n-placeholder="search_shipment_placeholder">
                                 <div class="shipments-board-buttons">
                                     <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem;" data-i18n="btn_auto_bulk_assign">⚡ Auto Bulk Assign</button>
                                     <button class="ai-optimize-btn" onclick="optimizeFleet()" style="white-space: nowrap;">
@@ -595,12 +595,12 @@
                             </div>
                         </form>
                         <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
-                            <input type="text" id="driver-search" placeholder="Search by name or ID..." oninput="renderDriversTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;" data-i18n-placeholder="search_driver_placeholder">
+                            <input type="text" id="driver-search" placeholder="Search by name or ID..." oninput="renderDriversTable()" class="polished-glass-input" data-i18n-placeholder="search_driver_placeholder">
                             <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderDriversTable()">🔍</button>
                         </div>
                         <div class="table-container">
                             <table>
-                                <thead><tr><th data-i18n="th_name_id">Name / System ID</th><th data-i18n="th_metrics">Metrics</th><th data-i18n="th_score_safety">Driving Score / Safety</th><th data-i18n="label_violations">Challans</th><th data-i18n="reward_points">Reward Points</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_linked_vehicle">Linked Vehicle</th></tr></thead>
+                                <thead><tr><th data-i18n="th_name_id">Name / System ID</th><th data-i18n="label_login_id">Login ID</th><th data-i18n="th_metrics">Metrics</th><th data-i18n="th_score_safety">Driving Score / Safety</th><th data-i18n="label_violations">Challans</th><th data-i18n="reward_points">Reward Points</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_linked_vehicle">Linked Vehicle</th></tr></thead>
                                 <tbody id="drivers-table-body"></tbody>
                             </table>
                         </div>
@@ -646,7 +646,7 @@
                             </div>
                         </form>
                         <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
-                            <input type="text" id="vehicle-search" placeholder="Search by plate or ID..." oninput="renderVehiclesTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;" data-i18n-placeholder="search_vehicle_placeholder">
+                            <input type="text" id="vehicle-search" placeholder="Search by plate or ID..." oninput="renderVehiclesTable()" class="polished-glass-input" data-i18n-placeholder="search_vehicle_placeholder">
                             <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderVehiclesTable()">🔍</button>
                         </div>
                         <div class="table-container">

@@ -1942,6 +1942,7 @@ window.renderDriversTable = function() {
         
         dtbody.innerHTML += `<tr>
             <td><b>${d.name}</b><br><small style="color:var(--accent); font-family:monospace;">${d.system_id || 'ID: ' + d.id.substring(0,8)}</small></td>
+            <td><small style="font-family:monospace;">${d.login_id || 'N/A'}</small></td>
             <td><span class="badge" style="background:rgba(255,255,255,0.1)">${d.license_type}</span><br><small>Tenure: ${diffDays} Days</small></td>
             <td>${d.driving_score ? d.driving_score.toFixed(1) : '100.0'}/100<br><small>Safety: ${d.safety_rating || 5.0}⭐</small></td>
             <td><span style="color:${d.challan_count > 0 ? 'var(--danger)' : 'var(--success)'}">${d.challan_count}</span></td>
