@@ -637,21 +637,29 @@ function logout() {
 
 async function loadInsights() {
     try {
-        const container = document.getElementById('alerts-container');
+        const company_id = localStorage.getItem('manager_id');
+        
+        // Load data in parallel but handle errors individually
         const [alerts, stats, cascade, pl] = await Promise.all([
-            apiCall(`/tracking/alerts/active?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/manager/dashboard/stats?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/manager/analytics/cascade?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/manager/finance/p-and-l?company_id=${localStorage.getItem('manager_id')}`).catch(() => ({ net_profit: 0 }))
+            apiCall(`/tracking/alerts/active?company_id=${company_id}`).catch(err => { console.error("Alerts failed:", err); return []; }),
+            apiCall(`/manager/dashboard/stats?company_id=${company_id}`).catch(err => { console.error("Stats failed:", err); return null; }),
+            apiCall(`/manager/analytics/cascade?company_id=${company_id}`).catch(err => { console.error("Cascade failed:", err); return { risks: [], active_risk_count: 0, total_impact_hours: 0 }; }),
+            apiCall(`/manager/finance/p-and-l?company_id=${company_id}`).catch(err => { console.error("P&L failed:", err); return { net_profit: 0 }; })
         ]);
         
-        // Update Stats Grid
-        document.getElementById('stat-timely').innerText = `${stats.timely_percent}%`;
-        document.getElementById('stat-delay').innerText = `${stats.avg_delay_mins}m`;
-        document.getElementById('stat-active').innerText = stats.active_shipments;
-        document.getElementById('stat-drivers').innerText = stats.total_drivers;
-        document.getElementById('stat-warehouses').innerText = stats.total_warehouses;
-        document.getElementById('stat-vehicles').innerText = stats.total_vehicles;
+        // Update Stats Grid if stats loaded
+        if (stats) {
+            document.getElementById('stat-timely').innerText = `${stats.timely_percent || 0}%`;
+            document.getElementById('stat-delay').innerText = `${stats.avg_delay_mins || 0}m`;
+            document.getElementById('stat-active').innerText = stats.active_shipments || 0;
+            document.getElementById('stat-drivers').innerText = stats.total_drivers || 0;
+            document.getElementById('stat-warehouses').innerText = stats.total_warehouses || 0;
+            document.getElementById('stat-vehicles').innerText = stats.total_vehicles || 0;
+            
+            // Render Charts
+            renderManagerCharts(stats);
+        }
+        
         if (document.getElementById('stat-profits')) {
             document.getElementById('stat-profits').innerText = `₹ ${(pl.net_profit || 0).toLocaleString()}`;
         }
