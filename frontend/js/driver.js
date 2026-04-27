@@ -419,7 +419,6 @@ async function loadMissions(autoStartNext = false) {
                     } else {
                          actionBtn = `<button class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px; background:var(--success);" onclick="confirmDelivery('${s.id}', '${s.delivery_otp}')">${getTranslation('confirm_delivery')} (OTP)</button>`;
                     }
-                }
                 
                 html += `
                     <div class="timeline-node">
