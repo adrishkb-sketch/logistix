@@ -545,7 +545,7 @@ document.getElementById('verify-form-main')?.addEventListener('submit', async (e
     btn.disabled = true;
     
     try {
-        const res = await fetch(`http://localhost:8000/api/driver/${dId}/verify`, {
+        const res = await fetch(`${API_BASE}/driver/${dId}/verify`, {
             method: 'POST',
             body: formData
         });

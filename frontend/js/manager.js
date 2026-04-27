@@ -1875,6 +1875,11 @@ async function loadDriversAndVehicles() {
                 badge.innerText = verifCount;
                 badge.style.display = verifCount > 0 ? 'inline-block' : 'none';
             }
+
+            const verifSection = document.getElementById('manual-verifications-section');
+            if (verifSection) {
+                verifSection.style.display = verifCount > 0 ? 'block' : 'none';
+            }
         }
 
         // Verified Vehicles Table
