@@ -47,6 +47,8 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
     whs = warehouses_db.get_all()
     wh_map = {w.get("name").lower(): w.get("id") for w in whs if w.get("company_id") == company_id}
     wh_ids = {w.get("id"): w.get("id") for w in whs if w.get("company_id") == company_id}
+    # Add support for 8-char short IDs (as shown in the infrastructure table)
+    wh_short_ids = {w.get("id")[:8]: w.get("id") for w in whs if w.get("company_id") == company_id}
 
     drivers = []
     for _, row in df.iterrows():
@@ -58,8 +60,10 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
                 phone = "+91" + phone
                 
             hub_val = str(vals[4]).strip()
-            # Try to match by ID first, then by name
-            hub_id = wh_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
+            # Try to match by Full ID first, then Short ID (8 chars), then by Name
+            hub_id = wh_ids.get(hub_val) or wh_short_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
+            
+            challans = int(vals[7])
 
             d = {
                 "name": str(vals[0]),
@@ -69,7 +73,8 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
                 "base_warehouse_id": hub_id,
                 "years_experience": float(vals[5]),
                 "past_accidents": int(vals[6]),
-                "traffic_violations": int(vals[7]),
+                "traffic_violations": challans,
+                "challan_count": challans,
                 "contact_number": phone,
                 "company_id": company_id
             }
@@ -110,6 +115,7 @@ async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File
     whs = warehouses_db.get_all()
     wh_map = {w.get("name").lower(): w.get("id") for w in whs if w.get("company_id") == company_id}
     wh_ids = {w.get("id"): w.get("id") for w in whs if w.get("company_id") == company_id}
+    wh_short_ids = {w.get("id")[:8]: w.get("id") for w in whs if w.get("company_id") == company_id}
 
     vehicles = []
     for _, row in df.iterrows():
@@ -118,7 +124,8 @@ async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File
             if len(vals) < 5: continue
             
             hub_val = str(vals[1]).strip()
-            hub_id = wh_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
+            # Try to match by Full ID first, then Short ID (8 chars), then by Name
+            hub_id = wh_ids.get(hub_val) or wh_short_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
 
             v = {
                 "type": str(vals[0]),
