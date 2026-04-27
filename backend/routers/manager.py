@@ -410,7 +410,8 @@ def get_cascading_impact(company_id: str):
     total_impact_hours = 0
     
     for s in delayed_ships:
-        delay_mins = s["performance_stats"].get("diff_mins", 0)
+        perf = s.get("performance_stats", {})
+        delay_mins = perf.get("diff_mins", 0)
         total_impact_hours += delay_mins / 60
         
         # Predictive cascading to hubs or final legs
@@ -419,16 +420,17 @@ def get_cascading_impact(company_id: str):
             # Find subsequent legs
             subs = [ls for ls in my_ships if ls.get("parent_id") == s.get("parent_id") and ls.get("leg_order", 0) > s.get("leg_order", 0)]
             for sub in subs:
+                sub_drop = sub.get("drop") or {}
                 impact_hubs.append({
-                    "id": sub["id"],
-                    "location": sub["drop"].get("address", "Final Destination"),
+                    "id": sub.get("id", "unknown"),
+                    "location": sub_drop.get("address", "Final Destination"),
                     "risk_level": "critical" if delay_mins > 60 else "moderate",
                     "est_delay_mins": delay_mins + 15 # +15m overhead per cascade
                 })
         
         risks.append({
             "source_shipment_id": s.get("id"),
-            "description": s.get("description"),
+            "description": s.get("description", "Unnamed Shipment"),
             "current_delay": f"{delay_mins}m",
             "impact_hubs": impact_hubs or [{"id": "direct", "location": "Final Receiver", "risk_level": "moderate", "est_delay_mins": delay_mins}],
             "severity": "high" if delay_mins > 45 else "medium"
