@@ -513,7 +513,7 @@ def unlink_vehicle(driver_id: str):
     return {"message": "Unlinked successfully"}
 
 @router.post("/verify-driver/{driver_id}")
-def manual_verify_driver(driver_id: str, status: str):
+def manual_verify_driver(driver_id: str, status: str, vehicle_id: Optional[str] = None):
     if status not in ["verified", "unverified"]:
         raise HTTPException(status_code=400, detail="Invalid status")
     
@@ -521,8 +521,16 @@ def manual_verify_driver(driver_id: str, status: str):
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
         
-    drivers_db.update(driver_id, {"verification_status": status})
-    return {"message": f"Driver marked as {status}"}
+    update_data = {"verification_status": status}
+    if status == "verified" and vehicle_id:
+        # Check if vehicle is already assigned
+        all_drivers = drivers_db.get_all()
+        if any(d.get("assigned_vehicle_id") == vehicle_id and d.get("id") != driver_id for d in all_drivers):
+            raise HTTPException(status_code=400, detail="This vehicle is already assigned to another driver.")
+        update_data["assigned_vehicle_id"] = vehicle_id
+        
+    drivers_db.update(driver_id, update_data)
+    return {"message": f"Driver marked as {status}" + (f" and linked to vehicle {vehicle_id}" if vehicle_id else "")}
 
 @router.post("/unverify-driver/{driver_id}")
 def unverify_driver(driver_id: str, company_id: str):

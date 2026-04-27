@@ -1858,17 +1858,35 @@ async function loadDriversAndVehicles() {
             drivers.forEach(d => {
                 if (d.verification_status === "pending_manual") {
                     verifCount++;
-                    const v = vehicles.find(vh => vh.id === d.assigned_vehicle_id);
-                    const plate = v ? v.number_plate : 'Unknown';
+                    const assignedVehicle = vehicles.find(vh => vh.id === d.assigned_vehicle_id);
+                    const unlinkedVehicles = vehicles.filter(vh => !drivers.some(dr => dr.assigned_vehicle_id === vh.id));
+                    
+                    let vehicleDisplay = '';
+                    if (assignedVehicle) {
+                        vehicleDisplay = `<span class="badge" style="background:var(--success)22; color:var(--success);">${assignedVehicle.number_plate}</span>`;
+                    } else {
+                        vehicleDisplay = `
+                            <div style="display:flex; flex-direction:column; gap:5px;">
+                                <small style="color:var(--warning);">No vehicle linked</small>
+                                <select id="verif-v-select-${d.id}" style="padding:4px; font-size:0.75rem; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white; border-radius:4px;">
+                                    <option value="">Select Vehicle</option>
+                                    ${unlinkedVehicles.map(vh => `<option value="${vh.id}">${vh.number_plate} (${vh.type})</option>`).join('')}
+                                </select>
+                            </div>
+                        `;
+                    }
+
+                    const imgUrl = d.verification_image || '#';
+                    const imgHtml = imgUrl !== '#' ? `<img src="${imgUrl}" style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:pointer;" onclick="window.open('${imgUrl}', '_blank')">` : '<span style="color:var(--text-muted);">No Image</span>';
                     
                     verifTbody.innerHTML += `<tr>
-                        <td style="padding:15px 20px;"><b>${d.name}</b></td>
-                        <td style="padding:15px 20px;"><span style="font-family:monospace; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:6px;">${plate}</span></td>
-                        <td style="padding:15px 20px;"><img src="${d.verification_image.startsWith('http') ? d.verification_image : 'http://localhost:8000/images/' + d.verification_image}" style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3);"></td>
-                        <td style="padding:15px 20px;">
-                            <div style="display:flex; gap:10px;">
-                                <button class="btn-primary btn-success" style="padding:8px 16px; font-size:0.75rem;" onclick="manualVerify('${d.id}', 'verified')">Approve</button>
-                                <button class="btn-primary btn-danger" style="padding:8px 16px; font-size:0.75rem;" onclick="manualVerify('${d.id}', 'unverified')">Reject</button>
+                        <td style="padding:15px 20px;"><b>${d.name}</b><br><small>${d.system_id || d.id.slice(0,8)}</small></td>
+                        <td style="padding:15px 20px;">${vehicleDisplay}</td>
+                        <td style="padding:15px 20px;">${imgHtml}</td>
+                        <td style="padding:15px 20px; text-align:right;">
+                            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                                <button class="btn-primary btn-success" style="padding:8px 16px; font-size:0.75rem;" onclick="manualVerify('${d.id}', 'verified')">Approve ✅</button>
+                                <button class="btn-primary btn-danger" style="padding:8px 16px; font-size:0.75rem;" onclick="manualVerify('${d.id}', 'unverified')">Reject ❌</button>
                             </div>
                         </td>
                     </tr>`;
@@ -2093,9 +2111,20 @@ window.renderVehiclesTable = function() {
 
 async function manualVerify(driverId, status) {
     try {
-        await apiCall(`/manager/verify-driver/${driverId}?status=${status}&company_id=${localStorage.getItem('manager_id')}`, 'POST');
+        let url = `/manager/verify-driver/${driverId}?status=${status}&company_id=${localStorage.getItem('manager_id')}`;
+        
+        if (status === 'verified') {
+            const vSelect = document.getElementById(`verif-v-select-${driverId}`);
+            if (vSelect && vSelect.value) {
+                url += `&vehicle_id=${vSelect.value}`;
+            }
+        }
+        
+        await apiCall(url, 'POST');
         loadDriversAndVehicles();
-    } catch (e) {}
+    } catch (e) {
+        console.error("Verification failed", e);
+    }
 }
 
 async function unverifyDriver(driverId) {

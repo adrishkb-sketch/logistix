@@ -487,6 +487,17 @@ def get_driver_stats(driver_id: str):
     latest_trip = sorted_delivered[-1] if sorted_delivered else None
     latest_breakdown = latest_trip.get("points_breakdown") if latest_trip else None
     
+    # Vehicle stats
+    vehicles_db = JSONDatabase("vehicles")
+    vehicle_health = 100.0
+    fuel_efficiency = 0.0
+    v_id = driver.get("assigned_vehicle_id")
+    if v_id:
+        v = vehicles_db.get_by_id(v_id)
+        if v:
+            vehicle_health = v.get("vehicle_health_score", 100.0)
+            fuel_efficiency = v.get("fuel_efficiency", 0.0)
+
     return {
         "total_trips": len(my_ships),
         "delivered_count": len(delivered),
@@ -495,7 +506,9 @@ def get_driver_stats(driver_id: str):
         "latest_breakdown": latest_breakdown,
         "reward_points": driver.get("reward_points", 0),
         "fatigue_score": driver.get("fatigue_score", 0),
-        "perf_history": perf_history
+        "perf_history": perf_history,
+        "vehicle_health": vehicle_health,
+        "fuel_efficiency": fuel_efficiency
     }
 
 @router.post("/{driver_id}/health")

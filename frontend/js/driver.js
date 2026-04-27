@@ -204,6 +204,25 @@ async function loadDashStats() {
                 actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger); font-size:0.85rem;" onclick="reportBreakdown()">🚨 ${getTranslation('report_breakdown')}</button>`;
                 rescueInfo.style.display = 'none';
             }
+            
+            // Enrich details with health and efficiency
+            const health = stats.vehicle_health || 100;
+            const healthColor = health > 70 ? 'var(--success)' : (health > 30 ? 'var(--warning)' : 'var(--danger)');
+            document.getElementById('vehicle-mini-details').innerHTML = `
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                        <span>🛡️ ${getTranslation('vehicle_health')}</span>
+                        <span style="color:${healthColor}">${health.toFixed(1)}%</span>
+                    </div>
+                    <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                        <div style="width:${health}%; height:100%; background:${healthColor}; transition:width 0.5s ease;"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:0.8rem;">
+                        <span>⛽ ${getTranslation('label_fuel_efficiency')}</span>
+                        <span style="color:var(--accent)">${stats.fuel_efficiency || 0} km/L</span>
+                    </div>
+                </div>
+            `;
         }
     } catch(e) {}
 }
