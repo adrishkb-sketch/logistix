@@ -1503,7 +1503,7 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             login_id: document.getElementById('d-login').value,
             password: document.getElementById('d-pass').value,
             license_type: document.getElementById('d-license').value,
-            base_warehouse_id: document.getElementById('d-base').value,
+            base_warehouse_id: document.getElementById('d-hub').value,
             years_experience: exp,
             past_accidents: accidents,
             traffic_violations: challans,
@@ -1511,7 +1511,7 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             driving_score: 100.0, // New drivers start with a perfect score
             safety_rating: safetyRating.toFixed(1),
             on_time_rate: 100, // Initial perfect rate
-            phone_number: document.getElementById('d-phone').value.length === 10 ? "+91" + document.getElementById('d-phone').value : document.getElementById('d-phone').value
+            phone_number: document.getElementById('d-phone') ? (document.getElementById('d-phone').value.length === 10 ? "+91" + document.getElementById('d-phone').value : document.getElementById('d-phone').value) : "N/A"
         };
         await apiCall('/manager/drivers', 'POST', driverData);
         document.getElementById('add-driver-form').reset();
@@ -1529,7 +1529,7 @@ document.getElementById('add-vehicle-form').addEventListener('submit', async (e)
             capacity: parseFloat(document.getElementById('v-cap').value),
             speed: 60,
             fuel_efficiency: parseFloat(document.getElementById('v-eff').value),
-            base_warehouse_id: document.getElementById('v-base').value,
+            base_warehouse_id: document.getElementById('v-hub').value,
             vehicle_health_score: 100 // New vehicles start at perfect health
         };
         await apiCall('/manager/vehicles', 'POST', vehicleData);
@@ -1828,12 +1828,19 @@ async function loadDriversAndVehicles() {
         globalVehicles = vehicles;
         globalWarehouses = warehouses;
         
-        // Populate Hub Filters
+        // Populate Hub Filters and Add-Form Hubs
         const dHubFilter = document.getElementById('driver-filter-hub');
         const vHubFilter = document.getElementById('vehicle-filter-hub');
+        const dHubSelect = document.getElementById('d-hub');
+        const vHubSelect = document.getElementById('v-hub');
+        
         const hubsHtml = '<option value="">All Hubs</option>' + warehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        const baseHubsHtml = '<option value="">Select Base Hub</option>' + warehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+        
         if (dHubFilter) dHubFilter.innerHTML = hubsHtml;
         if (vHubFilter) vHubFilter.innerHTML = hubsHtml;
+        if (dHubSelect) dHubSelect.innerHTML = baseHubsHtml;
+        if (vHubSelect) vHubSelect.innerHTML = baseHubsHtml;
 
         renderDriversTable();
         renderVehiclesTable();
@@ -1903,6 +1910,8 @@ window.renderDriversTable = function() {
     const dtbody = document.getElementById('drivers-table-body');
     const dSelect = document.getElementById('link-driver');
     if (!dtbody) return;
+    if (!Array.isArray(globalDrivers)) globalDrivers = [];
+    if (!Array.isArray(globalWarehouses)) globalWarehouses = [];
     
     dtbody.innerHTML = '';
     if (dSelect) dSelect.innerHTML = '<option value="">Select Driver</option>';
@@ -1948,6 +1957,7 @@ window.renderDriversTable = function() {
         </tr>`;
         if (dSelect) dSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
     });
+    if (window.updatePageTranslations) updatePageTranslations();
 };
 
 window.renderLinkedPairs = function() {
@@ -1968,6 +1978,7 @@ window.renderLinkedPairs = function() {
             </td>
         </tr>`;
     });
+    if (window.updatePageTranslations) updatePageTranslations();
 };
 
 window.unlinkVehicle = async function(driverId) {
@@ -1984,6 +1995,8 @@ window.renderVehiclesTable = function() {
     const vtbody = document.getElementById('vehicles-table-body');
     const vSelect = document.getElementById('link-vehicle');
     if (!vtbody) return;
+    if (!Array.isArray(globalVehicles)) globalVehicles = [];
+    if (!Array.isArray(globalWarehouses)) globalWarehouses = [];
     
     vtbody.innerHTML = '';
     if (vSelect) vSelect.innerHTML = '<option value="">Select Vehicle</option>';
