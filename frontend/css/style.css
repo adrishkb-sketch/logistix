@@ -4,6 +4,7 @@
     --text: #ffffff;
     --muted: #9aa4b2;
     --primary: #4f8cff;
+    --primary-rgb: 79, 140, 255;
     --accent: #6366f1;
     --card: rgba(255, 255, 255, 0.05);
     --border: rgba(255, 255, 255, 0.08);
@@ -11,17 +12,19 @@
     --warning: #f59e0b;
     --danger: #ef4444;
     --sidebar-w: 260px;
-    --glass-blur: 12px;
+    --glass-blur: 25px;
 }
 
 body.light-mode {
-    --bg: #f6f8fc;
+    --bg: #f8fafc;
     --text: #0f172a;
-    --muted: #475569;
+    --muted: #64748b;
     --primary: #2563eb;
+    --primary-rgb: 37, 99, 235;
     --accent: #4f46e5;
-    --card: rgba(255, 255, 255, 0.7);
-    --border: rgba(0, 0, 0, 0.05);
+    --card: rgba(255, 255, 255, 0.45);
+    --border: rgba(0, 0, 0, 0.08);
+    --glass-blur: 25px;
 }
 
 * {
@@ -1113,6 +1116,27 @@ body.light-mode .btn-outline:hover {
 
 .mobile-header {
     display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    z-index: 10005;
+    padding: 0 16px;
+    align-items: center;
+    justify-content: space-between;
+    backdrop-filter: blur(10px);
+}
+
+@media (max-width: 1024px) {
+    .mobile-header {
+        display: flex;
+    }
+    .top-bar #theme-toggle {
+        display: none;
+    }
 }
 
 @media (max-width: 1024px) {

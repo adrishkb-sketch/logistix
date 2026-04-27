@@ -166,7 +166,7 @@ function buildAudioPlayer(src, accentColor = 'rgba(255,255,255,0.18)') {
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inject Mobile Header if on a dashboard page and it's missing (Mobile Only)
     const layout = document.querySelector('.dashboard-layout');
-    if (layout && !document.querySelector('.mobile-header') && window.innerWidth <= 1024) {
+    if (layout && !document.querySelector('.mobile-header')) {
         const header = document.createElement('div');
         header.className = 'mobile-header';
         header.innerHTML = `
@@ -176,11 +176,25 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         document.body.prepend(header);
 
-        // Move theme toggle to header on mobile if exists
+        // Move theme toggle only on small screens
         const themeBtn = document.getElementById('theme-toggle');
-        if (themeBtn) {
-            document.getElementById('header-theme-placeholder').appendChild(themeBtn);
-        }
+        const placeholder = document.getElementById('header-theme-placeholder');
+        
+        const syncThemeBtnPosition = () => {
+            if (window.innerWidth <= 1024) {
+                if (themeBtn && placeholder && themeBtn.parentElement !== placeholder) {
+                    placeholder.appendChild(themeBtn);
+                }
+            } else {
+                const topBar = document.querySelector('.top-bar');
+                if (themeBtn && topBar && themeBtn.parentElement !== topBar) {
+                    topBar.appendChild(themeBtn);
+                }
+            }
+        };
+
+        syncThemeBtnPosition();
+        window.addEventListener('resize', syncThemeBtnPosition);
     }
 
     // 2. Sidebar Toggle Logic
