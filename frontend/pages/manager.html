@@ -697,21 +697,25 @@
                         <h2 style="margin:0; font-size:1.6rem; color:var(--success);">Verified Vehicles</h2>
                         <div style="width:50px; height:4px; background:var(--success); margin:16px 0; border-radius:2px;"></div>
                         <p class="subtitle" style="margin-bottom:32px; font-size:0.95rem;">List of all vehicles successfully verified automatically or Manual review.</p>
-                        <div class="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th data-i18n="vehicle_type">Vehicle Type</th>
-                                        <th>Number Plate</th>
-                                        <th>System ID</th>
-                                        <th>Verified Driver</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="verified-vehicles-table-body">
-                                    <!-- Verified vehicles injected here -->
-                                </tbody>
-                            </table>
+                        <div style="margin-top:40px; border-top:1px solid var(--border); padding-top:30px;">
+                            <h3 style="margin:0 0 10px 0; color:var(--success);" data-i18n="title_verified_fleet">Verified Fleet Registry</h3>
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Master list of all vehicles and drivers who have successfully completed security verification.</p>
+                            <div class="table-container" style="background:rgba(72, 187, 120, 0.05); border-radius:12px; border:1px solid rgba(72, 187, 120, 0.1);">
+                                <table style="width:100%;">
+                                    <thead>
+                                        <tr style="text-align:left; border-bottom:1px solid var(--border);">
+                                            <th style="padding:12px;" data-i18n="vehicle_type">Vehicle Type</th>
+                                            <th style="padding:12px;">Number Plate</th>
+                                            <th style="padding:12px;">System ID</th>
+                                            <th style="padding:12px;">Verified Driver</th>
+                                            <th style="padding:12px; text-align:right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="verified-vehicles-table-body">
+                                        <!-- Verified vehicles injected here -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
