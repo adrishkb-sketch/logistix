@@ -40,8 +40,13 @@ def process_number_plate_image(image_path: str, expected_plate: str) -> Dict[str
                 'scale': True
             }
             files = {'file': f}
-            response = requests.post(OCR_API_URL, data=payload, files=files, timeout=20)
-            result = response.json()
+            try:
+                response = requests.post(OCR_API_URL, data=payload, files=files, timeout=25)
+                response.raise_for_status()
+                result = response.json()
+            except Exception as req_err:
+                print(f"[OCR Cloud] Network/API Error: {req_err}")
+                return {"verified": False, "message": f"Cloud OCR Connection failed: {str(req_err)}", "detected_text": "NETWORK_ERROR", "confidence": 0.0}
 
         if result.get("OCRExitCode") != 1:
             error = result.get("ErrorMessage", "Unknown API error")

@@ -546,19 +546,29 @@ document.getElementById('verify-form-main')?.addEventListener('submit', async (e
     btn.disabled = true;
     
     try {
+        console.log(`[Verification] Uploading to ${API_BASE}/driver/${dId}/verify...`);
         const res = await fetch(`${API_BASE}/driver/${dId}/verify`, {
             method: 'POST',
             body: formData
         });
+        
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({detail: "Server Error"}));
+            throw new Error(errData.detail || "Verification failed on server");
+        }
+        
         const data = await res.json();
+        console.log("[Verification] Success:", data);
+        
         if (data.status === "verified") {
-            alert("Verification Successful! " + data.ml_result.message);
+            alert("✅ Verification Successful!\n" + (data.ml_result.message || ""));
         } else {
-            alert("Verification Pending. " + data.ml_result.message);
+            alert("⏳ Verification Pending.\n" + (data.ml_result.message || "Manual review required."));
         }
         loadMissions();
     } catch (err) {
-        alert("Verification failed");
+        console.error("[Verification] Error:", err);
+        alert("❌ Verification Error: " + err.message);
         btn.innerText = "🚀 Upload & Verify (AI)";
         btn.disabled = false;
     }

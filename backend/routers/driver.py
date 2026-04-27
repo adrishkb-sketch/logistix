@@ -213,76 +213,97 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
 
 @router.post("/{driver_id}/verify")
 async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
-    driver = drivers_db.get_by_id(driver_id)
-    if not driver:
-        raise HTTPException(status_code=404, detail="Driver not found")
+    print(f"[Verification] Received request for driver {driver_id}")
+    try:
+        driver = drivers_db.get_by_id(driver_id)
+        if not driver:
+            print(f"[Verification] Error: Driver {driver_id} not found")
+            raise HTTPException(status_code=404, detail="Driver not found")
+            
+        v_id = driver.get("assigned_vehicle_id")
+        vehicles_db = JSONDatabase("vehicles")
+        expected_plate = "UNKNOWN"
         
-    v_id = driver.get("assigned_vehicle_id")
-    vehicles_db = JSONDatabase("vehicles")
-    expected_plate = "UNKNOWN"
-    
-    if v_id:
-        vehicle = vehicles_db.get_by_id(v_id)
-        if vehicle:
-            expected_plate = vehicle.get("number_plate", "UNKNOWN")
-    
-    # Save image locally for OCR
-    ext = file.filename.split('.')[-1]
-    filename = f"{uuid.uuid4()}.{ext}"
-    filepath = f"data/images/{filename}"
-    
-    os.makedirs("data/images", exist_ok=True)
-    file_bytes = await file.read()
-    with open(filepath, "wb") as buffer:
-        buffer.write(file_bytes)
+        if v_id:
+            vehicle = vehicles_db.get_by_id(v_id)
+            if vehicle:
+                expected_plate = vehicle.get("number_plate", "UNKNOWN")
         
-    # Upload to Supabase Storage
-    from backend.database import supabase
-    public_url = None
-    if supabase:
-        try:
-            supabase.storage.from_("logistix-assets").upload(
-                file=file_bytes,
-                path=filename,
-                file_options={"content-type": file.content_type}
-            )
-            public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
-        except Exception as e:
-            print(f"Supabase Upload Error: {e}")
+        # Save image locally for OCR
+        ext = file.filename.split('.')[-1]
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = f"data/images/{filename}"
+        
+        os.makedirs("data/images", exist_ok=True)
+        file_bytes = await file.read()
+        with open(filepath, "wb") as buffer:
+            buffer.write(file_bytes)
+            
+        print(f"[Verification] Image saved to {filepath}. Processing OCR...")
+            
+        # Upload to Supabase Storage
+        from backend.database import supabase
+        public_url = None
+        if supabase:
+            try:
+                supabase.storage.from_("logistix-assets").upload(
+                    file=file_bytes,
+                    path=filename,
+                    file_options={"content-type": file.content_type}
+                )
+                public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
+                print(f"[Verification] Supabase Upload Success: {public_url}")
+            except Exception as e:
+                print(f"[Verification] Supabase Upload Error: {e}")
+                public_url = f"/images/{filename}" # fallback
+        else:
             public_url = f"/images/{filename}" # fallback
-    else:
-        public_url = f"/images/{filename}" # fallback
+            
+        # Process ML
+        try:
+            ml_result = process_number_plate_image(filepath, expected_plate)
+        except Exception as e:
+            print(f"[Verification] OCR Process Error: {e}")
+            ml_result = {"verified": False, "message": f"OCR Error: {str(e)}", "detected_norm": ""}
         
-    # Process ML
-    ml_result = process_number_plate_image(filepath, expected_plate)
-    
-    # Auto-link logic if no vehicle was assigned
-    if not v_id and ml_result.get("detected_norm"):
-        from backend.services.ocr_service import normalize
-        found_norm = ml_result["detected_norm"]
-        all_vehicles = vehicles_db.get_all()
-        # Find vehicle where normalized plate matches detected norm
-        target_v = next((v for v in all_vehicles if normalize(v.get("number_plate", "")) == found_norm), None)
-        if target_v:
-            v_id = target_v["id"]
-            drivers_db.update(driver_id, {"assigned_vehicle_id": v_id})
-            ml_result["verified"] = True
-            ml_result["message"] = f"Vehicle {target_v.get('number_plate')} identified and assigned to you."
-            print(f"[Verification] Auto-linked driver {driver_id} to vehicle {v_id}")
+        print(f"[Verification] OCR Result: {ml_result}")
 
-    # Update status
-    new_status = "verified" if ml_result["verified"] else "pending_manual"
-    drivers_db.update(driver_id, {
-        "verification_status": new_status,
-        "verification_image": public_url,
-        "verification_message": ml_result["message"]
-    })
-    
-    return {
-        "status": new_status,
-        "ml_result": ml_result,
-        "image_url": public_url
-    }
+        # Auto-link logic if no vehicle was assigned
+        if not v_id and ml_result.get("detected_norm"):
+            try:
+                from backend.services.ocr_service import normalize
+                found_norm = ml_result["detected_norm"]
+                all_vehicles = vehicles_db.get_all()
+                target_v = next((v for v in all_vehicles if normalize(v.get("number_plate", "")) == found_norm), None)
+                if target_v:
+                    v_id = target_v["id"]
+                    drivers_db.update(driver_id, {"assigned_vehicle_id": v_id})
+                    ml_result["verified"] = True
+                    ml_result["message"] = f"Vehicle {target_v.get('number_plate')} identified and assigned to you."
+                    print(f"[Verification] Auto-linked driver {driver_id} to vehicle {v_id}")
+            except Exception as e:
+                print(f"[Verification] Auto-link Error: {e}")
+
+        # Update status
+        new_status = "verified" if ml_result["verified"] else "pending_manual"
+        drivers_db.update(driver_id, {
+            "verification_status": new_status,
+            "verification_image": public_url,
+            "verification_message": ml_result["message"]
+        })
+        
+        print(f"[Verification] Status updated to {new_status} for driver {driver_id}")
+        
+        return {
+            "status": new_status,
+            "ml_result": ml_result,
+            "image_url": public_url
+        }
+    except Exception as e:
+        import traceback
+        print(f"[Verification] CRITICAL ERROR: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{driver_id}/scan-cargo/{shipment_id}")
 async def scan_cargo(driver_id: str, shipment_id: str, file: UploadFile = File(...)):
