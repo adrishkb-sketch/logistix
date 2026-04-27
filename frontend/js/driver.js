@@ -1,4 +1,8 @@
 // Driver Dashboard Logic
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? (window.location.port === '8000' ? "/api" : "http://localhost:8000/api")
+    : "/api";
+
 const dId = localStorage.getItem('driver_id');
 if (!dId) {
     window.location.href = '../index.html';
@@ -1376,7 +1380,7 @@ async function openVerifyModal(shipmentId) {
     document.getElementById('btn-submit-verify').disabled = true;
     
     // Fetch shipment to get qr_code_data
-    const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id') || ''}`); // Driver context
+    const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('company_id') || ''}`); // Driver context
     const s = shipments.find(item => item.id === shipmentId);
     if (!s) return;
 
@@ -1419,14 +1423,16 @@ async function submitVerification() {
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
 
-        // Upload to cloud storage
+        // Upload to cloud storage via backend proxy
         const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
             method: 'POST',
             headers: { 'X-Logistix-Context': dId },
             body: formData
         });
+        
+        if (!uploadRes.ok) throw new Error("Upload failed");
         const uploadData = await uploadRes.json();
-        const photoUrl = uploadData.url;
+        const photoUrl = uploadData.image_url || uploadData.url;
 
         // We update status and add log with photo
         await apiCall(`/shipments/${currentVerifyId}`, 'PUT', {

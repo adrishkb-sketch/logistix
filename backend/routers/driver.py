@@ -400,7 +400,10 @@ async def optimize_loading(driver_id: str, file: UploadFile = File(...)):
 
 @router.post("/{driver_id}/upload-evidence")
 async def upload_evidence(driver_id: str, file: UploadFile = File(...)):
-    # Save image for manager visibility
+    # 1. Find active shipment
+    all_s = shipments_db.get_all()
+    active = next((s for s in all_s if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
+    
     ext = file.filename.split('.')[-1]
     filename = f"evidence_{uuid.uuid4()}.{ext}"
     file_bytes = await file.read()
@@ -416,7 +419,19 @@ async def upload_evidence(driver_id: str, file: UploadFile = File(...)):
     if not public_url:
         public_url = f"https://api.dicebear.com/7.x/identicon/svg?seed={filename}"
 
-    return {"url": public_url}
+    # 2. Update shipment history if active
+    if active:
+        from datetime import datetime
+        history = active.get("logs", [])
+        history.append({
+            "status": active["status"],
+            "message": "📸 Delivery/Pickup evidence uploaded by driver.",
+            "photo_url": public_url,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        })
+        shipments_db.update(active["id"], {"logs": history})
+
+    return {"url": public_url, "image_url": public_url}
 
 @router.post("/{driver_id}/incident")
 def report_incident(driver_id: str, data: dict):
