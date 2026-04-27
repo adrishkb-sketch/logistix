@@ -474,6 +474,20 @@ def update_shipment(shipment_id: str, data: dict):
         )
         shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
     
+    # Credit driver's wallet on delivery
+    if data.get("status") == "delivered" and shipment.get("status") != "delivered":
+        d_id = shipment.get("assigned_driver_id")
+        if d_id and d_id != "DRONE-SYSTEM":
+            d_db = JSONDatabase("drivers")
+            driver = d_db.get_by_id(d_id)
+            if driver:
+                payout = shipment.get("finance", {}).get("driver_payout", 0)
+                new_balance = driver.get("wallet_balance", 0) + payout
+                d_db.update(d_id, {
+                    "wallet_balance": new_balance,
+                    "total_earnings": driver.get("total_earnings", 0) + payout
+                })
+
     # Merge other updates
     shipment.update(data)
     shipments_db.update(shipment_id, shipment)
@@ -555,21 +569,33 @@ def auto_assign(shipment_id: str):
             from backend.models import ShipmentEvent
             d_db = JSONDatabase("drivers")
             v_db = JSONDatabase("vehicles")
-            d = d_db.get_by_id(assigned_data["assigned_driver_id"])
-            v = v_db.get_by_id(assigned_data["assigned_vehicle_id"])
-            driver_name = d.get("name", "Unknown") if d else "Unknown"
-            plate = v.get("number_plate", "Unknown") if v else "Unknown"
             
-            log_event = ShipmentEvent(
-                status="assigned", 
-                message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}."
-            )
+            d_id = assigned_data.get("assigned_driver_id")
+            v_id = assigned_data.get("assigned_vehicle_id")
+            
+            if d_id == "DRONE-SYSTEM":
+                log_event = ShipmentEvent(
+                    status="in_transit", 
+                    message=f"🛰️ AI deployed autonomous drone {v_id} for the last-mile segment."
+                )
+            else:
+                d = d_db.get_by_id(d_id)
+                v = v_db.get_by_id(v_id)
+                driver_name = d.get("name", "Unknown") if d else "Unknown"
+                plate = v.get("number_plate", "Unknown") if v else "Unknown"
+                
+                log_event = ShipmentEvent(
+                    status="assigned", 
+                    message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}."
+                )
+            
             assigned_data["logs"] = (shipment.get("logs") or []) + [log_event.model_dump()]
             
             updated = shipments_db.update(shipment_id, assigned_data)
             try:
-                from backend.services.assignment import reoptimize_driver_route
-                reoptimize_driver_route(assigned_data["assigned_driver_id"])
+                if d_id != "DRONE-SYSTEM":
+                    from backend.services.assignment import reoptimize_driver_route
+                    reoptimize_driver_route(d_id)
             except: pass
             return {"message": "Auto-assigned successfully", "shipment": updated}
         
@@ -617,9 +643,9 @@ def manual_assign(shipment_id: str, data: ManualAssignRequest):
     return {"message": "Assigned manually", "shipment": updated}
 
 @router.post("/bulk-assign")
-def bulk_assign():
+def bulk_assign(company_id: str):
     # Only consider shipments that aren't yet picked up or delivered
-    pending = [s for s in shipments_db.get_all() if s.get("status") == "pending"]
+    pending = [s for s in shipments_db.get_all() if s.get("status") == "pending" and s.get("company_id") == company_id]
     assigned_count = 0
     failed_count = 0
     
@@ -645,9 +671,9 @@ def bulk_assign():
     return {"message": f"Bulk assignment complete. Assigned {assigned_count}, Failed {failed_count}"}
 
 @router.post("/consolidate")
-def consolidate_shipments():
+def consolidate_shipments(company_id: str):
     all_shipments = shipments_db.get_all()
-    pending = [s for s in all_shipments if s.get("status") == "pending"]
+    pending = [s for s in all_shipments if s.get("status") == "pending" and s.get("company_id") == company_id]
     consolidated_count = 0
     
     from backend.services.route_engine import haversine
@@ -840,15 +866,12 @@ def _generate_legs(parent_shipment, leg_data):
     for i, leg in enumerate(leg_data):
         dist = haversine(leg["pickup"]["lat"], leg["pickup"]["lng"], leg["drop"]["lat"], leg["drop"]["lng"])
         
-        # Assumption logic for initial ETA:
         is_middle_mile = (i > 0 and i < len(leg_data) - 1) or (len(leg_data) > 1 and dist > 100)
         
-        # Speed assumption: 60km/h for middle-mile trucks, 35km/h for first/last mile urban legs
         speed = 60.0 if is_middle_mile else 35.0
         travel_time_hours = dist / speed
         
-        # Truck legs wait at warehouses for 2 hours to group shipments (User requirement)
-        wait_time_hours = 2.0 if is_middle_mile else 0.5 # 0.5h for small vehicle handoff
+        wait_time_hours = 2.0 if is_middle_mile else 0.5 
         
         raw_eta = current_time + timedelta(hours=travel_time_hours + wait_time_hours)
         expected_time = snap_eta_to_business_hours(raw_eta)
@@ -859,6 +882,10 @@ def _generate_legs(parent_shipment, leg_data):
             location=leg["pickup"]
         )
         
+        # Estimate cost for this specific leg (using default vehicle type for now)
+        v_pref = "truck" if is_middle_mile else "van"
+        finance = estimate_delivery_cost(leg, v_pref)
+
         leg_shipment = Shipment(
             company_id=parent_shipment.get("company_id"),
             pickup=Location(**leg["pickup"]),
@@ -877,11 +904,11 @@ def _generate_legs(parent_shipment, leg_data):
             pickup_warehouse_id=leg.get("pickup_warehouse_id"),
             drop_warehouse_id=leg.get("drop_warehouse_id"),
             eway_bill_no=parent_shipment.get("eway_bill_no"),
-            eway_bill_expiry=parent_shipment.get("eway_bill_expiry")
+            eway_bill_expiry=parent_shipment.get("eway_bill_expiry"),
+            finance=finance
         )
         shipments_db.insert(leg_shipment.model_dump())
         
-        # Next leg starts after a 1 hour buffer (for warehouse processing/unloading)
         current_time = expected_time + timedelta(hours=1)
 @router.delete("/{shipment_id}")
 def delete_shipment(shipment_id: str):

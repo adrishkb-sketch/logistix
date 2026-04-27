@@ -1203,9 +1203,13 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                 <td>
                     <div style="font-size:0.8rem; font-weight:600; color:var(--primary);">${driverName}</div>
                     <div style="font-size:0.7rem; color:var(--text-muted); cursor:${s.loading_blueprint ? 'pointer' : 'default'};" onclick="${s.loading_blueprint ? `viewCargoPlan('${s.id}')` : ''}">
-                        ${v ? v.number_plate : getTranslation('no_vehicle')}
+                        ${v ? v.number_plate : (s.assigned_driver_id === 'DRONE-SYSTEM' ? '🚁 Autonomous Drone' : getTranslation('no_vehicle'))}
                         ${s.loading_blueprint ? '<span style="color:var(--primary); margin-left:4px;">📦</span>' : ''}
                     </div>
+                </td>
+                <td>
+                    <div style="font-size:0.8rem; font-weight:700; color:var(--success);">₹${(s.finance?.suggested_price || 0).toLocaleString()}</div>
+                    <div style="font-size:0.6rem; color:var(--text-muted);">Profit: <span style="color:var(--success);">₹${(s.finance?.margin || 0).toLocaleString()}</span></div>
                 </td>
                 <td>
                     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
@@ -1269,7 +1273,10 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                         </td>
                         <td>
                             <div style="font-size:0.8rem; font-weight:600; color:var(--primary);">${lDriverName}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">${lPlate}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">${leg.assigned_driver_id === 'DRONE-SYSTEM' ? '🚁 Drone' : lPlate}</div>
+                        </td>
+                        <td>
+                            <div style="font-size:0.75rem; color:var(--success); font-weight:bold;">₹${(leg.finance?.suggested_price || 0).toLocaleString()}</div>
                         </td>
                         <td>
                             <div style="display:flex; gap:6px; align-items:center;">
@@ -1455,7 +1462,7 @@ async function autoAssign(id) {
 async function bulkAssign() {
     if (!confirm("Are you sure you want to auto-assign all pending shipments?")) return;
     try {
-        const res = await apiCall(`/shipments/bulk-assign`, 'POST', { company_id: localStorage.getItem('manager_id') });
+        const res = await apiCall(`/shipments/bulk-assign?company_id=${localStorage.getItem('manager_id')}`, 'POST');
         alert(res.message);
         loadShipments();
     } catch(e) {}
@@ -1700,7 +1707,6 @@ async function openMessageModal(shipmentId, driverId) {
     miniChatShipmentId = shipmentId === 'null' ? null : shipmentId;
     miniChatDriverId = driverId;
 
-    // Ensure globalDrivers is populated
     if (!globalDrivers.length) {
         const mId = localStorage.getItem('manager_id');
         try {
@@ -1709,7 +1715,6 @@ async function openMessageModal(shipmentId, driverId) {
     }
     const driver = globalDrivers.find(d => d.id === driverId) || { name: 'Driver' };
 
-    // Build or show mini chat popup
     let popup = document.getElementById('mini-chat-popup');
     if (!popup) {
         popup = document.createElement('div');
@@ -1728,13 +1733,13 @@ async function openMessageModal(shipmentId, driverId) {
             </div>
             <div id="mini-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
             <div id="mini-chat-media-preview" style="display:none;padding:8px 16px;background:rgba(0,0,0,0.2);border-top:1px solid var(--border);align-items:center;gap:10px;"></div>
-            <div style="padding:12px 16px;border-top:1px solid var(--border);">
+            <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;">
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <button onclick="miniChatPickPhoto()" title="Send Photo" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:1rem;">📷</button>
-                    <button id="mini-chat-voice-btn" onclick="miniChatToggleRecording()" title="Voice Note" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:1rem;">🎙️</button>
+                    <button onclick="miniChatPickPhoto()" title="Send Photo" class="chat-icon-btn" style="padding:8px 10px;font-size:1rem;">📷</button>
+                    <button id="mini-chat-voice-btn" onclick="miniChatToggleRecording()" title="Voice Note" class="chat-icon-btn" style="padding:8px 10px;font-size:1rem;">🎙️</button>
                     <input id="mini-chat-photo-input" type="file" accept="image/*" style="display:none;" onchange="miniChatHandlePhoto(this)">
-                    <input id="mini-chat-input" type="text" placeholder="Message..." style="flex:1;background:rgba(0,0,0,0.2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;color:white;font-family:inherit;font-size:0.9rem;" onkeydown="if(event.key==='Enter')miniChatSend()">
-                    <button onclick="miniChatSend()" style="background:var(--primary);border:none;color:white;border-radius:10px;padding:8px 16px;cursor:pointer;font-weight:700;">Send</button>
+                    <input id="mini-chat-input" type="text" placeholder="Message..." class="chat-text-input" style="flex:1;min-width:100px;font-size:0.9rem;" onkeydown="if(event.key==='Enter')miniChatSend()">
+                    <button onclick="miniChatSend()" class="btn-primary" style="padding:8px 16px;border-radius:10px;font-weight:700;">Send</button>
                 </div>
             </div>
         `;
@@ -1747,8 +1752,6 @@ async function openMessageModal(shipmentId, driverId) {
             z-index: 99999; animation: slideUp 0.3s ease;
         `;
         document.body.appendChild(popup);
-
-        // Draggable
         makeDraggable(popup, document.getElementById('mini-chat-header'));
     }
 
@@ -1758,6 +1761,12 @@ async function openMessageModal(shipmentId, driverId) {
     miniChatMediaData = null;
     document.getElementById('mini-chat-media-preview').style.display = 'none';
     document.getElementById('mini-chat-media-preview').innerHTML = '';
+    
+    const input = document.getElementById('mini-chat-input');
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 100);
+    }
 
     await miniChatLoadHistory();
 }
@@ -4192,6 +4201,7 @@ async function initFintechOracle() {
         document.getElementById('fintech-daily-revenue').innerText = `₹ ${stats.daily_revenue.toLocaleString()}`;
         document.getElementById('fintech-cod').innerText = `₹ ${(stats.digital_escrow || 0).toLocaleString()}`;
         document.getElementById('fintech-unpaid').innerText = `₹ ${stats.unpaid_invoices.toLocaleString()}`;
+        document.getElementById('fintech-drone-maint').innerText = `₹ ${(stats.drone_maintenance || 0).toLocaleString()}`;
         document.getElementById('fintech-profit').innerText = `₹ ${pl.net_profit.toLocaleString()}`;
 
         // Render Settlements

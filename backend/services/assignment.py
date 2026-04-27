@@ -51,13 +51,36 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 is_heatwave = True
                 break
 
-    # 1. Identify Target Hub and Leg Type
+    # Identify Target Hub and Leg Type
     p_wh_id = shipment.get("pickup_warehouse_id")
     d_wh_id = shipment.get("drop_warehouse_id")
     is_first_mile = d_wh_id and not p_wh_id
     is_last_mile = p_wh_id and not d_wh_id
     is_middle_mile = p_wh_id and d_wh_id
-    
+
+    # DRONE PRIORITY: Last Mile Handoff
+    if is_last_mile:
+        p_wh = next((w for w in warehouses if w["id"] == p_wh_id), None)
+        if p_wh and p_wh.get("drone_count", 0) > 0:
+            from backend.services.route_engine import check_drone_viability
+            drone_intel = check_drone_viability(p_wh["lat"], p_wh["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+            if drone_intel["viable"]:
+                # Automated Drone Assignment
+                finance_data = estimate_delivery_cost(shipment, "drone")
+                
+                # Consume drone
+                p_wh["drone_count"] -= 1
+                warehouses_db.update(p_wh["id"], {"drone_count": p_wh["drone_count"]})
+                
+                return {
+                    "assigned_driver_id": "DRONE-SYSTEM", # Autonomous
+                    "assigned_vehicle_id": f"DRONE-{p_wh['id'][:4]}",
+                    "status": "in_transit",
+                    "stage": "Drone Air Delivery",
+                    "route_type": "drone-leg",
+                    "finance": finance_data
+                }
+
     for d in drivers:
         # Recalculate vital stats for real-time accuracy
         d["fatigue_score"] = calculate_fatigue(d)

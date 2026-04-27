@@ -821,8 +821,11 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     
     unpaid_invoices = unpaid_total
     
-    bonus_pool = daily_revenue * 0.05 # 5% of daily revenue goes to driver bonus pool
+    bonus_pool = daily_revenue * 0.05 
     
+    # Drone Maintenance calculation
+    drone_maintenance = sum(s.get("finance", {}).get("drone_maintenance", 0) for s in comp_ships)
+
     # Recent settlements (top 5)
     recent = sorted(comp_txs, key=lambda x: x["timestamp"], reverse=True)[:5]
     settlements_list = []
@@ -852,8 +855,9 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     return {
         "daily_revenue": round(daily_revenue, 2),
         "digital_escrow": round(unpaid_total, 2),
-        "unpaid_invoices": round(unpaid_invoices, 2),
+        "unpaid_invoices": round(unpaid_total, 2),
         "bonus_pool": round(bonus_pool, 2),
+        "drone_maintenance": round(drone_maintenance, 2),
         "recent_settlements": settlements_list,
         "escrow_contracts": [
             {"id": "CON-AUTO", "counterparty": "Logistix Reserve", "value": round(unpaid_total * 1.2, 2), "status": "Guaranteed", "eta": "Auto"},

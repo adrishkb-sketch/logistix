@@ -966,7 +966,7 @@ body.light-mode .action-btn-pill {
     color: var(--text);
     font-family: inherit;
     font-size: 0.95rem;
-    min-width: 0;
+    min-width: 100px;
 }
 
 .chat-send-btn {
