@@ -21,10 +21,17 @@ async function apiCall(endpoint, method = "GET", body = null) {
         context = companyId || driverId || trackingToken || "";
     }
     
-    if (!context && !endpoint.includes('/auth/')) {
+    if ((!context || context === "null") && !endpoint.includes('/auth/')) {
         console.warn("API Call attempted without security context:", endpoint);
+        // If we are on a dashboard and lose context, redirect to login
+        if (window.location.pathname.includes('/pages/')) {
+            window.location.href = '../index.html';
+        }
         throw new Error("AUTH_REQUIRED");
     }
+    
+    // Final sanitization to prevent "null" strings in headers/params
+    if (context === "null") context = "";
 
     const options = {
         method,

@@ -79,6 +79,7 @@ setInterval(async () => {
     // Background message check for notifications
     try {
         const mId = localStorage.getItem('manager_id');
+        if (!mId || mId === "null") return;
         const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`);
         
         // Show notification if total count has increased since last SEEN
@@ -112,7 +113,7 @@ setInterval(async () => {
 setInterval(async () => {
     try {
         const companyId = localStorage.getItem('manager_id');
-        if (!companyId) return;
+        if (!companyId || companyId === "null") return;
         const fundRequests = await apiCall(`/manager/finance/fund-requests?company_id=${companyId}`);
         const badge = document.getElementById('paisa-badge');
         const link = document.getElementById('nav-link-paisa-fast');
