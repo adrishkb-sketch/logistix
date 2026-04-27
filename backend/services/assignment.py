@@ -73,11 +73,22 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 v_type = vehicle.get("type", "")
                 v_base = vehicle.get("base_warehouse_id")
                 
+                # STRICT HUB FILTERING (User Requirement)
+                if is_first_mile:
+                    if v_base != d_wh_id:
+                        continue # MUST be based at the collection hub
+                elif is_last_mile:
+                    if v_base != p_wh_id:
+                        continue # MUST be based at the delivery hub
+                elif is_middle_mile:
+                    if v_base != p_wh_id and v_base != d_wh_id:
+                        continue # MUST be based at one of the leg's hubs (Outbound or Backhaul)
+
                 # MIDDLE MILE TRUCK ENFORCEMENT
                 if is_middle_mile and "Truck" not in v_type:
                     continue
                 
-                # WEATHER/HEATWAVE BLOCK: Safety constraint (Strict)
+                # WEATHER/HEATWAVE BLOCK
                 if (weather["condition"] in ["Storm", "Rain"] or is_heatwave) and v_type in ["Bike/Scooty", "Bike", "Scooty"]:
                     continue 
                 
@@ -96,18 +107,12 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     
                     score_modifier = 0
                     
-                    # WAREHOUSE BASE PREFERENCE (User Requirement)
-                    if is_first_mile and v_base == d_wh_id:
-                        score_modifier += 1000 # Strong preference for hub-based collector
-                    
-                    if is_last_mile and v_base == p_wh_id:
-                        score_modifier += 1000 # Strong preference for hub-based deliverer
-                        
+                    # BACKHAUL/OUTBOUND BOOSTS for Middle Mile
                     if is_middle_mile:
                         if v_base == d_wh_id:
-                            score_modifier += 800 # BACKHAUL: Truck returning home (Priority)
+                            score_modifier += 800 # BACKHAUL
                         elif v_base == p_wh_id:
-                            score_modifier += 500 # OUTBOUND: Truck leaving home
+                            score_modifier += 500 # OUTBOUND
                     
                     # Base Warehouse limits (Bikes etc)
                     if v_base:
