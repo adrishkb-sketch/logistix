@@ -1520,28 +1520,32 @@
     </div>
 
     <!-- Automated Suggestion Modal -->
-    <div id="suggestion-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10002; width:450px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid var(--primary);">
+    <div id="suggestion-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10002; width:90%; max-width:450px; max-height:95vh; overflow-y:auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6); border: 1px solid var(--primary); padding: 24px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; color:var(--primary);">🔮 Automated Strategy Suggestion</h3>
+            <h3 style="margin:0; color:var(--primary); font-size: 1.1rem;" data-i18n="strategy_suggestion_title">🔮 Automated Strategy Suggestion</h3>
             <button style="background:none; border:none; color:var(--text); font-size:1.2rem; cursor:pointer; opacity:0.6;" onclick="document.getElementById('suggestion-modal').style.display='none'">✖</button>
         </div>
         <div style="background:rgba(49, 130, 206, 0.1); padding:15px; border-radius:10px; margin-bottom:20px; border-left:4px solid var(--primary);">
-            <p style="margin:0; font-size:0.95rem; line-height:1.5;">Our Automated engine has identified a <b>strategically superior</b> location approximately <span id="sug-dist" style="color:var(--accent); font-weight:bold;"></span> away.</p>
-            <p style="margin:10px 0 0 0; font-size:0.85rem; color:var(--text-muted);" id="sug-reason"></p>
+            <p style="margin:0; font-size:0.95rem; line-height:1.5;">
+                <span data-i18n="strategy_suggestion_desc1">Our Automated engine has identified a <b>strategically superior</b> location approximately</span>
+                <span id="sug-dist" style="color:var(--accent); font-weight:bold;"></span>
+                <span data-i18n="strategy_suggestion_desc2">away.</span>
+            </p>
+            <p style="margin:10px 0 0 0; font-size:0.85rem; color:var(--text-muted);" id="sug-reason" data-i18n="strategy_ai_reason">AI identified this as a high-potential future growth node based on regional logistics density.</p>
         </div>
-        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px;">
-            <div style="display:flex; gap:10px;">
-                <input type="text" id="sug-manager" placeholder="Manager Name" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);">
-                <input type="text" id="sug-contact" placeholder="Contact Number" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);">
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:15px;">
+            <div class="responsive-flex-column" style="display:flex; gap:10px;">
+                <input type="text" id="sug-manager" data-i18n-placeholder="manager_name_placeholder" placeholder="Manager Name" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);">
+                <input type="text" id="sug-contact" data-i18n-placeholder="contact_number_placeholder" placeholder="Contact Number" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);">
             </div>
-            <div style="display:flex; gap:10px;">
+            <div class="responsive-flex-column" style="display:flex; gap:10px;">
                 <div style="flex:1;">
-                    <label style="font-size:0.8rem; color:var(--text-muted);">Initial Drone Fleet</label>
+                    <label style="font-size:0.8rem; color:var(--text-muted);" data-i18n="initial_drone_fleet">Initial Drone Fleet</label>
                     <input type="number" id="sug-drone-count" value="0" min="0" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text); margin-top:5px;">
                 </div>
-                <div style="flex:2; display:flex; gap:10px; align-items:flex-end;">
-                    <button class="btn-primary" onclick="confirmSuggestedLocation()" style="flex:2; height:45px; padding:0 8px; font-size:0.85rem; line-height:1.2;">Adopt Strategic Location</button>
-                    <button class="btn-primary" onclick="stayWithManualLocation()" style="flex:1; background:rgba(var(--primary-rgb), 0.1); border:1px solid var(--primary); color:var(--primary); height:45px; font-size:0.85rem;">Stay Manual</button>
+                <div style="flex:2; display:flex; gap:10px; align-items:flex-end;" class="responsive-flex-column">
+                    <button class="btn-primary" onclick="confirmSuggestedLocation()" style="flex:2; height:45px; padding:0 8px; font-size:0.85rem; line-height:1.2;" data-i18n="btn_adopt_location">Adopt Strategic Location</button>
+                    <button class="btn-primary" onclick="stayWithManualLocation()" style="flex:1; background:rgba(var(--primary-rgb), 0.1); border:1px solid var(--primary); color:var(--primary); height:45px; font-size:0.85rem;" data-i18n="btn_stay_manual">Stay Manual</button>
                 </div>
             </div>
         </div>

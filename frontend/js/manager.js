@@ -204,8 +204,10 @@ function initMap() {
             if (res.strategic_improvement || res.distance_km) {
                 suggestedWhLoc = { lat: res.suggested_lat, lng: res.suggested_lng };
                 document.getElementById('sug-dist').innerText = `${res.distance_km} km`;
-                document.getElementById('sug-reason').innerText = res.reason;
+                // If API returns a reason, we show it, otherwise fallback to localized default
+                if (res.reason) document.getElementById('sug-reason').innerText = res.reason;
                 document.getElementById('suggestion-modal').style.display = 'block';
+                if (window.updatePageTranslations) updatePageTranslations();
             } else {
                 openWhModal(lat, lng);
             }
@@ -236,19 +238,7 @@ async function applyOfficialBorders(mapInstance) {
     }
 }
 
-async function confirmSuggestedLocation() {
-    const wh = window.pendingWh;
-    if (!wh) return;
-    await saveWarehouse(wh.name, wh.suggested_lat, wh.suggested_lng);
-    document.getElementById('suggestion-modal').style.display = 'none';
-}
 
-async function stayWithManualLocation() {
-    const wh = window.pendingWh;
-    if (!wh) return;
-    await saveWarehouse(wh.name, wh.manual_lat, wh.manual_lng);
-    document.getElementById('suggestion-modal').style.display = 'none';
-}
 
 async function saveWarehouse(name, lat, lng) {
     try {
