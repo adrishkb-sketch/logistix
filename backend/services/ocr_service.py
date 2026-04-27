@@ -21,6 +21,13 @@ def fuzzy_score(a: str, b: str) -> float:
     if not a or not b: return 0.0
     return difflib.SequenceMatcher(None, a, b).ratio()
 
+def format_plate_display(s: str) -> str:
+    """Format a clean 10-char plate string with spaces: XX XX XX XXXX"""
+    clean = re.sub(r'[^A-Z0-9]', '', s.upper())
+    if len(clean) == 10:
+        return f"{clean[0:2]} {clean[2:4]} {clean[4:6]} {clean[6:10]}"
+    return s # Return as is if not 10 chars
+
 def process_number_plate_image(image_path: str, expected_plate: str) -> Dict[str, Any]:
     """
     Calls the OCR.space API to process the image. 
@@ -62,28 +69,32 @@ def process_number_plate_image(image_path: str, expected_plate: str) -> Dict[str
         detected_norm = normalize(detected_text)
         expected_norm = normalize(expected_plate)
         
+        # Space-formatted versions for display/matching logic
+        detected_formatted = format_plate_display(detected_norm)
+        expected_formatted = format_plate_display(expected_norm)
+        
         score = fuzzy_score(detected_norm, expected_norm)
         
         # Hard check: If the normalized expected plate exists anywhere in the normalized detected text
         is_match = (expected_norm in detected_norm) or (score >= 0.65)
 
-        print(f"[OCR Cloud] Expected: '{expected_plate}' | Detected: '{detected_text}' | Score: {score:.2f}")
+        print(f"[OCR Cloud] Expected: '{expected_formatted}' | Detected: '{detected_formatted}' | Score: {score:.2f}")
 
         if is_match:
             return {
                 "verified": True,
-                "detected_text": detected_text,
+                "detected_text": detected_formatted,
                 "detected_norm": detected_norm,
                 "confidence": round(score, 2),
-                "message": f"Verified via Cloud OCR: {detected_text}"
+                "message": f"Verified via Cloud OCR: {detected_formatted}"
             }
         else:
             return {
                 "verified": False,
-                "detected_text": detected_text,
+                "detected_text": detected_formatted,
                 "detected_norm": detected_norm,
                 "confidence": round(score, 2),
-                "message": f"Match failed. Expected {expected_plate}, but found {detected_text}."
+                "message": f"Match failed. Expected {expected_formatted}, but found {detected_formatted}."
             }
 
     except Exception as e:
