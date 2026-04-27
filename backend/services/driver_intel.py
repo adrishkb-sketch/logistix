@@ -13,7 +13,10 @@ def calculate_fatigue(driver: Dict[str, Any]) -> float:
     if not last_rest:
         return current_fatigue
         
-    last_rest_dt = datetime.fromisoformat(last_rest)
+    try:
+        last_rest_dt = datetime.fromisoformat(last_rest.replace("Z", "+00:00"))
+    except:
+        return current_fatigue
     now = datetime.utcnow()
     rest_duration = now - last_rest_dt
     

@@ -11,10 +11,19 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     # 3. Apply constraints: short legs (<30km) -> prefer bike/van. Long legs (>50km) -> prefer truck.
     
     from backend.services.route_engine import haversine, predict_weather_impact
-    dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+    # Ensure coordinates exist
+    p_lat = shipment.get("pickup", {}).get("lat")
+    p_lng = shipment.get("pickup", {}).get("lng")
+    d_lat = shipment.get("drop", {}).get("lat")
+    d_lng = shipment.get("drop", {}).get("lng")
+    
+    if p_lat is None or p_lng is None or d_lat is None or d_lng is None:
+        return None
+        
+    dist = haversine(p_lat, p_lng, d_lat, d_lng)
     
     # Predict weather for the route (pickup point)
-    weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
+    weather = predict_weather_impact(p_lat, p_lng)
     
     company_id = shipment.get("company_id")
     drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
