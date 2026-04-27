@@ -359,7 +359,7 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     drivers = [d for d in d_db.get_all() if d.get("company_id") == company_id]
     
     # 1. Timely Delivery %
-    delivered = [s for s in shipments if s["status"] == "delivered"]
+    delivered = [s for s in shipments if s.get("status") == "delivered"]
     timely = [s for s in delivered if s.get("actual_delivery", "") <= s.get("expected_delivery", "9999")]
     timely_percent = (len(timely) / len(delivered) * 100) if delivered else 100
     
@@ -369,8 +369,8 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         if s.get("actual_delivery") and s.get("expected_delivery"):
             from datetime import datetime
             try:
-                actual = datetime.fromisoformat(s["actual_delivery"])
-                expected = datetime.fromisoformat(s["expected_delivery"])
+                actual = datetime.fromisoformat(s.get("actual_delivery"))
+                expected = datetime.fromisoformat(s.get("expected_delivery"))
                 diff = (actual - expected).total_seconds() / 60
                 if diff > 0: delays.append(diff)
             except: pass
@@ -388,7 +388,7 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     
     return {
         "total_shipments": len(shipments),
-        "active_shipments": len([s for s in shipments if s["status"] != "delivered"]),
+        "active_shipments": len([s for s in shipments if s.get("status") != "delivered"]),
         "total_drivers": len(drivers),
         "total_vehicles": len(vehicles),
         "total_warehouses": len(warehouses),
@@ -404,7 +404,7 @@ def get_cascading_impact(company_id: str):
     all_shipments = shipments_db.get_all()
     my_ships = [s for s in all_shipments if s.get("company_id") == company_id]
     
-    delayed_ships = [s for s in my_ships if s.get("performance_stats", {}).get("status") == "delayed" and s["status"] == "in_transit"]
+    delayed_ships = [s for s in my_ships if s.get("performance_stats", {}).get("status") == "delayed" and s.get("status") == "in_transit"]
     
     risks = []
     total_impact_hours = 0
@@ -427,8 +427,8 @@ def get_cascading_impact(company_id: str):
                 })
         
         risks.append({
-            "source_shipment_id": s["id"],
-            "description": s["description"],
+            "source_shipment_id": s.get("id"),
+            "description": s.get("description"),
             "current_delay": f"{delay_mins}m",
             "impact_hubs": impact_hubs or [{"id": "direct", "location": "Final Receiver", "risk_level": "moderate", "est_delay_mins": delay_mins}],
             "severity": "high" if delay_mins > 45 else "medium"
