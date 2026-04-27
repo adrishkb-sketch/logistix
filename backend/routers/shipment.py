@@ -699,12 +699,18 @@ def bulk_assign(company_id: str):
     assigned_count = 0
     failed_count = 0
     
+    from backend.database import JSONDatabase
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    from backend.services.assignment import auto_assign_shipment
+    
     for s in pending:
         assigned_data = auto_assign_shipment(s)
         if assigned_data:
             from backend.models import ShipmentEvent
             d = drivers_db.get_by_id(assigned_data["assigned_driver_id"])
-            v = JSONDatabase("vehicles").get_by_id(assigned_data["assigned_vehicle_id"])
+            v = vehicles_db.get_by_id(assigned_data["assigned_vehicle_id"])
             driver_name = d["name"] if d else "Unknown"
             plate = v["number_plate"] if v else "Unknown"
             

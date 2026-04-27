@@ -526,6 +526,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             window.logistixLayout.init('driver');
+            if (typeof switchDriverTab === 'function') {
+                switchDriverTab('dash');
+            }
         });
     </script>
     <!-- Theme Script -->
