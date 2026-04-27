@@ -1431,45 +1431,6 @@ async function autoAssign(id) {
     } catch(e) {}
 }
 
-async function openManualAssign(id) {
-    currentAssignId = id;
-    try {
-        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
-        // Only show verified drivers who have an assigned vehicle
-        const available = drivers.filter(d => d.verification_status === 'verified' && d.assigned_vehicle_id);
-        
-        const select = document.getElementById('assign-driver-select');
-        select.innerHTML = '<option value="">Select a Driver</option>';
-        available.forEach(d => {
-            select.innerHTML += `<option value="${d.id}">${d.name} (${d.license_type})</option>`;
-        });
-        
-        document.getElementById('assign-modal').style.display = 'block';
-    } catch(e) {}
-}
-
-async function submitManualAssign() {
-    const driverId = document.getElementById('assign-driver-select').value;
-    if (!driverId) {
-        alert("Please select a driver");
-        return;
-    }
-    
-    try {
-        // Need to get the driver's vehicle ID for the manual assign API
-        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
-        const driver = drivers.find(d => d.id === driverId);
-        if (!driver || !driver.assigned_vehicle_id) {
-            alert("Driver missing assigned vehicle");
-            return;
-        }
-        
-        const res = await apiCall(`/shipments/${currentAssignId}/assign?driver_id=${driverId}&vehicle_id=${driver.assigned_vehicle_id}&company_id=${localStorage.getItem('manager_id')}`, 'POST');
-        alert(res.message);
-        document.getElementById('assign-modal').style.display = 'none';
-        loadShipments();
-    } catch(e) {}
-}
 
 async function bulkAssign() {
     if (!confirm("Are you sure you want to auto-assign all pending shipments?")) return;
@@ -2296,7 +2257,6 @@ async function unverifyDriver(driverId) {
 let currentEditType = null;
 let currentEditId = null;
 let currentSplitId = null;
-let currentAssignId = null;
 
 window.openEditModal = function(type, id, val1, val2, val3, val4) {
     currentEditType = type;
