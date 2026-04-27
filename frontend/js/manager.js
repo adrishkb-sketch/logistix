@@ -1875,6 +1875,10 @@ async function loadDriversAndVehicles() {
                 }
             });
             
+            if (verifCount === 0) {
+                verifTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:var(--text-muted);">🎉 All caught up! No pending manual verifications.</td></tr>';
+            }
+            
             const badge = document.getElementById('verif-badge');
             if (badge) {
                 badge.innerText = verifCount;
@@ -1891,8 +1895,10 @@ async function loadDriversAndVehicles() {
         const verifiedTbody = document.getElementById('verified-vehicles-table-body');
         if (verifiedTbody) {
             verifiedTbody.innerHTML = '';
+            let registryCount = 0;
             drivers.forEach(d => {
                 if (d.verification_status === "verified" && d.assigned_vehicle_id) {
+                    registryCount++;
                     const v = vehicles.find(vh => vh.id === d.assigned_vehicle_id);
                     if (v) {
                         const hasActiveShipment = shipments.some(s => s.assigned_driver_id === d.id && ["assigned", "in_transit", "picked_up"].includes(s.status));
@@ -1910,6 +1916,10 @@ async function loadDriversAndVehicles() {
                     }
                 }
             });
+            
+            if (registryCount === 0) {
+                verifiedTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No verified assets in registry yet.</td></tr>';
+            }
         }
     } catch(err) {
         console.error("Dashboard load failed", err);

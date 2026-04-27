@@ -277,7 +277,9 @@ async function loadMissions(autoStartNext = false) {
         const vScreenMsg = document.getElementById('v-screen-msg');
         const reportBtn = document.getElementById('report-issue-btn');
 
-        if (me && me.verification_status === "unverified") {
+        const vStatus = me ? (me.verification_status || "unverified") : "unverified";
+        
+        if (vStatus === "unverified") {
             mainContent.style.display = 'none';
             if (reportBtn) reportBtn.style.display = 'none';
             vScreen.style.display = 'block';

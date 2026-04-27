@@ -594,24 +594,7 @@
                                 <button type="submit" class="btn-primary" data-i18n="btn_register_driver">Register New Driver</button>
                             </div>
                         </form>
-                        <!-- Manual Verification Section -->
-                        <div id="manual-verifications-section" class="glass-card" style="display:none; margin-bottom:32px; border:1px solid var(--warning); padding:24px;">
-                            <h3 style="margin:0 0 10px 0; color:var(--warning);">⚠️ Pending Manual Verifications</h3>
-                            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px;">AI could not confidently verify these number plates. Please review the images below.</p>
-                            <div class="table-container" style="background:rgba(0,0,0,0.2); border-radius:12px;">
-                                <table style="width:100%;">
-                                    <thead>
-                                        <tr style="text-align:left; border-bottom:1px solid var(--border);">
-                                            <th style="padding:12px;">Driver</th>
-                                            <th style="padding:12px;">Assigned Plate</th>
-                                            <th style="padding:12px;">Captured Image</th>
-                                            <th style="padding:12px; text-align:right;">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="verifications-table-body"></tbody>
-                                </table>
-                            </div>
-                        </div>
+
 
                         <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
                             <input type="text" id="driver-search" placeholder="Search by name or ID..." oninput="renderDriversTable()" class="polished-glass-input" data-i18n-placeholder="search_driver_placeholder">
