@@ -1,6 +1,6 @@
 import math
 from backend.services.route_engine import haversine
-from backend.routers.fuel_oracle import get_live_fuel_prices
+from backend.routers.fuel_oracle import get_fuel_prices
 
 def estimate_delivery_cost(shipment: dict, vehicle_type: str = "van") -> dict:
     # 1. Distance & Route Complexity
@@ -8,13 +8,23 @@ def estimate_delivery_cost(shipment: dict, vehicle_type: str = "van") -> dict:
     
     # 2. Fuel Cost (State-aware)
     # Get fuel price for pickup state (approximation)
-    prices = get_live_fuel_prices()
+    prices = get_fuel_prices()
+    
+    def get_state_price(state_name, fallback):
+        state_data = prices.get(state_name)
+        if state_data:
+            return state_data.get("diesel", fallback)
+        return fallback
+
     # Default to 95 if no state match
     fuel_price = 95.0
     # Simple state detection (mock)
-    if shipment["pickup"]["lat"] > 25: fuel_price = prices.get("Delhi", 96)
-    elif shipment["pickup"]["lat"] < 15: fuel_price = prices.get("Tamil Nadu", 102)
-    elif shipment["pickup"]["lng"] > 85: fuel_price = prices.get("West Bengal", 106)
+    if shipment["pickup"]["lat"] > 25: 
+        fuel_price = get_state_price("Delhi", 96)
+    elif shipment["pickup"]["lat"] < 15: 
+        fuel_price = get_state_price("Tamil Nadu", 102)
+    elif shipment["pickup"]["lng"] > 85: 
+        fuel_price = get_state_price("West Bengal", 106)
     
     efficiency = 15.0 # km/l default
     if vehicle_type == "truck": efficiency = 6.0
