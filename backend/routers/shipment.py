@@ -519,32 +519,34 @@ def auto_assign(shipment_id: str):
 
         assigned_data = auto_assign_shipment(shipment)
         
-    if assigned_data:
-        from backend.models import ShipmentEvent
-        d = drivers_db.get_by_id(assigned_data["assigned_driver_id"])
-        v = JSONDatabase("vehicles").get_by_id(assigned_data["assigned_vehicle_id"])
-        driver_name = d["name"] if d else "Unknown"
-        plate = v["number_plate"] if v else "Unknown"
+        if assigned_data:
+            from backend.models import ShipmentEvent
+            d_db = JSONDatabase("drivers")
+            v_db = JSONDatabase("vehicles")
+            d = d_db.get_by_id(assigned_data["assigned_driver_id"])
+            v = v_db.get_by_id(assigned_data["assigned_vehicle_id"])
+            driver_name = d["name"] if d else "Unknown"
+            plate = v["number_plate"] if v else "Unknown"
+            
+            log_event = ShipmentEvent(
+                status="assigned", 
+                message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}."
+            )
+            assigned_data["logs"] = (shipment.get("logs") or []) + [log_event.model_dump()]
+            
+            updated = shipments_db.update(shipment_id, assigned_data)
+            try:
+                from backend.services.assignment import reoptimize_driver_route
+                reoptimize_driver_route(assigned_data["assigned_driver_id"])
+            except: pass
+            return {"message": "Auto-assigned successfully", "shipment": updated}
         
-        log_event = ShipmentEvent(
-            status="assigned", 
-            message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}."
-        )
-        assigned_data["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
-        
-        updated = shipments_db.update(shipment_id, assigned_data)
-        try:
-            from backend.services.assignment import reoptimize_driver_route
-            reoptimize_driver_route(assigned_data["assigned_driver_id"])
-        except: pass
-        return {"message": "Auto-assigned successfully", "shipment": updated}
+        raise HTTPException(status_code=400, detail="No suitable driver/vehicle available")
         
     except Exception as e:
         err_msg = traceback.format_exc()
         print(f"AUTO_ASSIGN_ERROR: {err_msg}")
         raise HTTPException(status_code=500, detail=f"Critical Assignment Error:\n{err_msg}")
-    
-    raise HTTPException(status_code=400, detail="No suitable driver/vehicle available")
 
 @router.post("/{shipment_id}/assign")
 def manual_assign(shipment_id: str, driver_id: str, vehicle_id: str):
