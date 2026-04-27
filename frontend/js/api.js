@@ -4,7 +4,8 @@ async function apiCall(endpoint, method = "GET", body = null) {
     // Dynamically retrieve security context (Company ID or Driver ID)
     // Dynamically retrieve security context based on the endpoint type
     let context = "";
-    const companyId = localStorage.getItem('company_id');
+    const managerId = localStorage.getItem('manager_id');
+    const companyId = localStorage.getItem('company_id') || managerId;
     const driverId = localStorage.getItem('driver_id');
     const trackingToken = localStorage.getItem('tracking_token');
 
@@ -36,12 +37,22 @@ async function apiCall(endpoint, method = "GET", body = null) {
     
     try {
         const response = await fetch(`${API_BASE}${endpoint}`, options);
-        const data = await response.json();
         
-        if (!response.ok) {
-            throw new Error(data.detail || data.message || "API Error");
+        // Handle non-JSON responses (like Internal Server Errors from server)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || data.message || "API Error");
+            }
+            return data;
+        } else {
+            const text = await response.text();
+            if (!response.ok) {
+                throw new Error(text || `Server Error (${response.status})`);
+            }
+            return text;
         }
-        return data;
     } catch (error) {
         console.error("API Call Failed:", error);
         if (error.message !== "AUTH_REQUIRED") {

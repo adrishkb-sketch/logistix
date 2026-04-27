@@ -395,7 +395,7 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         "timely_percent": round(timely_percent, 1),
         "avg_delay_mins": round(avg_delay, 1),
         "fleet_dist": fleet_dist,
-        "revenue": sum([s.get("weight", 0) * 10 for s in delivered]), # Mock revenue
+        "revenue": sum([(s.get("weight") or 0) * 10 for s in delivered]), # Mock revenue
         "perf_history": [random.randint(85, 100) for _ in range(7)]
     }
 
