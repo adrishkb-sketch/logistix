@@ -1899,7 +1899,6 @@ async function loadDriversAndVehicles() {
             
             const badge = document.getElementById('verif-badge');
             if (badge) {
-                badge.innerText = verifCount;
                 badge.style.display = verifCount > 0 ? 'inline-block' : 'none';
             }
 
