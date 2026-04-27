@@ -1209,7 +1209,7 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                         <button class="action-btn-pill" style="background:var(--accent);" onclick="openTrackModal('${s.id}')" title="Track">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                         </button>
-                        <button class="action-btn-pill" style="background:rgba(255,255,255,0.05);" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" title="Message">
+                        <button class="action-btn-pill" style="background:rgba(255,255,255,0.05);" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" title="Message Driver" ${!s.assigned_driver_id ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
                         </button>
                         
@@ -1270,6 +1270,9 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                                 <button class="action-btn-pill" style="padding:4px; background:var(--accent);" onclick="openTrackModal('${leg.id}')" title="Track">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                                 </button>
+                                <button class="action-btn-pill" style="padding:4px; background:rgba(255,255,255,0.05);" onclick="openMessageModal('${leg.id}', '${leg.assigned_driver_id}')" title="Message Driver" ${!leg.assigned_driver_id ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
+                                </button>
                                 ${leg.status === 'pending' || leg.status === 'awaiting_assignment' ? `
                                     <button class="action-btn-pill btn-success" style="padding:4px 8px; background:var(--success);" onclick="autoAssign('${leg.id}')" title="Auto Assign">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
@@ -1323,7 +1326,14 @@ async function openManualAssignModal(id) {
             apiCall('/manager/drivers?company_id=' + localStorage.getItem('manager_id')),
             apiCall('/manager/vehicles?company_id=' + localStorage.getItem('manager_id'))
         ]);
+        
         const pairs = drivers.filter(d => d.assigned_vehicle_id);
+        
+        if (pairs.length === 0) {
+            select.innerHTML = '<option value="">No driver-vehicle pairs available</option>';
+            return;
+        }
+
         select.innerHTML = '<option value="">Select Driver & Vehicle</option>';
         pairs.forEach(d => {
             const v = vehicles.find(v => v.id === d.assigned_vehicle_id);
@@ -1335,7 +1345,8 @@ async function openManualAssignModal(id) {
             }
         });
     } catch(e) {
-        select.innerHTML = '<option value="">Error loading fleet</option>';
+        console.error("Manual Assign Fleet Load Error:", e);
+        select.innerHTML = '<option value="">Error loading fleet assets</option>';
     }
 }
 
@@ -1673,13 +1684,19 @@ let miniChatMediaRecorder = null;
 let miniChatRecording = false;
 
 async function openMessageModal(shipmentId, driverId) {
+    if (!driverId || driverId === 'null' || driverId === 'undefined') {
+        alert("Cannot message: No driver assigned to this shipment/leg.");
+        return;
+    }
     miniChatShipmentId = shipmentId === 'null' ? null : shipmentId;
     miniChatDriverId = driverId;
 
     // Ensure globalDrivers is populated
     if (!globalDrivers.length) {
         const mId = localStorage.getItem('manager_id');
-        globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
+        try {
+            globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
+        } catch(e) { console.error("Failed to load global drivers for chat", e); }
     }
     const driver = globalDrivers.find(d => d.id === driverId) || { name: 'Driver' };
 
