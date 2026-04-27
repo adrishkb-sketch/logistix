@@ -140,12 +140,29 @@ setInterval(async () => {
     } catch(e) {}
 }, 8000); // Check every 8s
 
+function updateMapTheme(mapInstance) {
+    if (!mapInstance) return;
+    const theme = localStorage.getItem('theme') || 'dark';
+    const tileUrl = theme === 'dark' 
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    
+    // Find and remove existing tile layer
+    mapInstance.eachLayer(layer => {
+        if (layer instanceof L.TileLayer && !layer.options.isOverlay) {
+            mapInstance.removeLayer(layer);
+        }
+    });
+
+    L.tileLayer(tileUrl, {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(mapInstance);
+}
+
 function initMap() {
     // Default to a central location (e.g., India center)
     map = L.map('map').setView([20.5937, 78.9629], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    updateMapTheme(map);
 
     // Apply Official Indian Boundaries (SOI Compliant Overlay)
     applyOfficialBorders(map);
@@ -2126,9 +2143,14 @@ function initWeatherMap() {
     }
     
     // Define Map Layers
-    const standard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-    const terrain = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png', {
-        attribution: 'Map tiles by Stamen Design'
+    const theme = localStorage.getItem('theme') || 'dark';
+    const standardUrl = theme === 'dark' 
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+    const standard = L.tileLayer(standardUrl, { attribution: '&copy; CARTO' });
+    const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)'
     });
     const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri'
@@ -4079,3 +4101,20 @@ function initDraggablePanels() {
 
 // Run after the DOM and weather section are ready
 document.addEventListener('DOMContentLoaded', initDraggablePanels);
+window.addEventListener('themeChanged', () => {
+    updateMapTheme(map);
+    if (weatherMap) {
+        // For weather map, we might need to update the base layer if it's the standard one
+        const theme = localStorage.getItem('theme') || 'dark';
+        const standardUrl = theme === 'dark' 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        
+        weatherMap.eachLayer(layer => {
+            if (layer instanceof L.TileLayer && !layer.options.isOverlay && !layer._url.includes('arcgisonline') && !layer._url.includes('opentopomap')) {
+                weatherMap.removeLayer(layer);
+            }
+        });
+        L.tileLayer(standardUrl, { attribution: '&copy; CARTO' }).addTo(weatherMap);
+    }
+});

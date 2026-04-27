@@ -187,6 +187,7 @@
                 btn.innerText = '🌙';
             }
             localStorage.setItem('theme', mode);
+            window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
         }
         btn.onclick = () => {
             const isLight = document.body.classList.contains('light-mode');

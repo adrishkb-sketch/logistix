@@ -484,7 +484,11 @@ async function loadMissions(autoStartNext = false) {
             
             if (!map) {
                 map = L.map('route-map').setView([orderedStops[0].lat, orderedStops[0].lng], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                const theme = localStorage.getItem('theme') || 'dark';
+                const tileUrl = theme === 'dark' 
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
                 applyOfficialBorders(map);
                 
                 if (navigator.geolocation) {
@@ -1466,3 +1470,19 @@ async function completeDelivery(shipmentId) {
         alert("Error: " + e.message + ". If payment is pending, the customer must pay first.");
     }
 }
+
+window.addEventListener('themeChanged', (e) => {
+    if (!map) return;
+    const theme = e.detail.mode;
+    const tileUrl = theme === 'dark' 
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    
+    map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+            map.removeLayer(layer);
+        }
+    });
+    L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
+});
+

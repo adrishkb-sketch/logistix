@@ -235,7 +235,11 @@ function initMap(shipment) {
         const mapContainer = document.getElementById('track-map');
         if (!mapContainer) return;
         trackMap = L.map('track-map').setView([loc.lat, loc.lng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+        const theme = localStorage.getItem('theme') || 'dark';
+        const tileUrl = theme === 'dark' 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(trackMap);
     } else {
         trackMap.setView([loc.lat, loc.lng], 13);
         if (trackMarker) trackMap.removeLayer(trackMarker);
@@ -293,3 +297,19 @@ async function simulatePayment() {
         document.getElementById('btn-pay-now').disabled = true;
     }, 2000);
 }
+
+window.addEventListener('themeChanged', (e) => {
+    if (!trackMap) return;
+    const theme = e.detail.mode;
+    const tileUrl = theme === 'dark' 
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    
+    trackMap.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+            trackMap.removeLayer(layer);
+        }
+    });
+    L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(trackMap);
+});
+

@@ -1891,6 +1891,7 @@ function setTheme(mode) {
         btn.innerText = '🌙';
     }
     localStorage.setItem('theme', mode);
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
 }
 
 btn.onclick = () => {
