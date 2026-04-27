@@ -1530,7 +1530,7 @@ document.getElementById('add-vehicle-form').addEventListener('submit', async (e)
         const vehicleData = {
             company_id: localStorage.getItem('manager_id'),
             type: document.getElementById('v-type').value,
-            number_plate: document.getElementById('v-plate').value,
+            number_plate: document.getElementById('v-plate').value.replace(/\s/g, ''),
             capacity: parseFloat(document.getElementById('v-cap').value),
             speed: 60,
             fuel_efficiency: parseFloat(document.getElementById('v-eff').value),
@@ -1922,7 +1922,7 @@ async function loadDriversAndVehicles() {
                         const hasActiveShipment = shipments.some(s => s.assigned_driver_id === d.id && ["assigned", "in_transit", "picked_up"].includes(s.status));
                         verifiedTbody.innerHTML += `<tr>
                             <td>${v.type}</td>
-                            <td><b>${v.number_plate}</b></td>
+                            <td><b style="font-family:monospace; letter-spacing:1px;">${formatDisplayPlate(v.number_plate)}</b></td>
                             <td><small>${v.system_id || v.id.slice(0,8)}</small></td>
                             <td>${d.name}</td>
                             <td>
@@ -2089,7 +2089,7 @@ window.renderVehiclesTable = function() {
         
         vtbody.innerHTML += `<tr>
             <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || 'ID: ' + v.id.substring(0,8)}</small></td>
-            <td>${v.number_plate || '<span style="color:var(--text-muted)">Not Set</span>'}</td>
+            <td><b style="font-family:monospace; letter-spacing:1px;">${formatDisplayPlate(v.number_plate)}</b></td>
             <td><span style="color:${healthColor}; font-weight:bold;">${v.vehicle_health_score || 100}%</span></td>
             <td>${v.capacity}kg<br><small>Eff: ${v.fuel_efficiency}km/l</small></td>
             <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
@@ -4251,3 +4251,29 @@ async function validateVehiclePlate(plate) {
     }
 }
 window.validateVehiclePlate = validateVehiclePlate;
+
+window.handlePlateInput = function(input) {
+    let val = input.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    if (val.length > 10) val = val.substring(0, 10);
+    
+    let formatted = "";
+    for (let i = 0; i < val.length; i++) {
+        if (i === 2 || i === 4 || i === 6) formatted += " ";
+        formatted += val[i];
+    }
+    input.value = formatted;
+    
+    // Validate clean version
+    validateVehiclePlate(val);
+}
+
+window.formatDisplayPlate = function(plate) {
+    if (!plate) return 'N/A';
+    let val = plate.replace(/\s/g, '').toUpperCase();
+    let formatted = "";
+    for (let i = 0; i < val.length; i++) {
+        if (i === 2 || i === 4 || i === 6) formatted += " ";
+        formatted += val[i];
+    }
+    return formatted;
+}

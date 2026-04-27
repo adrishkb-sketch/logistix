@@ -632,7 +632,7 @@
                             </div>
                             <div class="input-group">
                                 <label data-i18n="label_number_plate">Number Plate</label>
-                                <input type="text" id="v-plate" placeholder="e.g. MH12AB1234" required data-i18n-placeholder="placeholder_plate" oninput="validateVehiclePlate(this.value)">
+                                <input type="text" id="v-plate" placeholder="e.g. MH 12 AB 1234" maxlength="13" required data-i18n-placeholder="placeholder_plate" oninput="handlePlateInput(this)">
                                 <small id="plate-warning" style="color:var(--danger); display:none;">🚨 Plate already registered!</small>
                             </div>
                             <div class="input-group">
