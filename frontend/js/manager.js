@@ -1360,7 +1360,7 @@ async function submitManualSplit() {
 
 async function autoAssign(id) {
     try {
-        await apiCall(`/shipments/${id}/auto-assign`, 'POST', { company_id: localStorage.getItem('manager_id') });
+        await apiCall(`/shipments/${id}/auto-assign`, 'POST');
         alert("Assigned Successfully");
         loadShipments();
     } catch(e) {}

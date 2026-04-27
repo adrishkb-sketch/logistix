@@ -508,17 +508,16 @@ def dispatch_rescue(shipment_id: str):
 
 @router.post("/{shipment_id}/auto-assign")
 def auto_assign(shipment_id: str):
-    shipment = shipments_db.get_by_id(shipment_id)
-    if not shipment:
-        raise HTTPException(status_code=404, detail="Shipment not found")
-    
-    if shipment.get("assigned_driver_id"):
-        return {"message": "Already assigned", "shipment": shipment}
-
+    import traceback
     try:
+        shipment = shipments_db.get_by_id(shipment_id)
+        if not shipment:
+            raise HTTPException(status_code=404, detail="Shipment not found")
+        
+        if shipment.get("assigned_driver_id"):
+            return {"message": "Already assigned", "shipment": shipment}
+
         assigned_data = auto_assign_shipment(shipment)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Assignment Logic Error: {str(e)}")
         
     if assigned_data:
         from backend.models import ShipmentEvent
@@ -539,6 +538,11 @@ def auto_assign(shipment_id: str):
             reoptimize_driver_route(assigned_data["assigned_driver_id"])
         except: pass
         return {"message": "Auto-assigned successfully", "shipment": updated}
+        
+    except Exception as e:
+        err_msg = traceback.format_exc()
+        print(f"AUTO_ASSIGN_ERROR: {err_msg}")
+        raise HTTPException(status_code=500, detail=f"Critical Assignment Error:\n{err_msg}")
     
     raise HTTPException(status_code=400, detail="No suitable driver/vehicle available")
 
