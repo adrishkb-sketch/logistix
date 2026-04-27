@@ -277,16 +277,17 @@ async function loadMissions(autoStartNext = false) {
         const vScreenMsg = document.getElementById('v-screen-msg');
         const reportBtn = document.getElementById('report-issue-btn');
 
-        if (me && me.assigned_vehicle_id) {
+        if (me && me.verification_status === "unverified") {
+            mainContent.style.display = 'none';
+            if (reportBtn) reportBtn.style.display = 'none';
+            vScreen.style.display = 'block';
+            vUploadBox.style.display = 'block';
+            vPendingBox.style.display = 'none';
             vNoVehicleBox.style.display = 'none';
-            if (me.verification_status === "unverified") {
-                mainContent.style.display = 'none';
-                if (reportBtn) reportBtn.style.display = 'none';
-                vScreen.style.display = 'block';
-                vUploadBox.style.display = 'block';
-                vPendingBox.style.display = 'none';
-                vScreenMsg.innerText = "To ensure safety and compliance, please verify your assigned vehicle's number plate.";
-            } else if (me.verification_status === "pending_manual") {
+            vScreenMsg.innerText = getTranslation('v_verify_desc');
+        } else if (me && me.assigned_vehicle_id) {
+            vNoVehicleBox.style.display = 'none';
+            if (me.verification_status === "pending_manual") {
                 mainContent.style.display = 'none';
                 if (reportBtn) reportBtn.style.display = 'none';
                 vScreen.style.display = 'block';
@@ -299,7 +300,7 @@ async function loadMissions(autoStartNext = false) {
                 loadDashStats();
             }
         } else {
-            // No vehicle assigned
+            // No vehicle assigned AND verified? (Shouldn't happen but fallback)
             mainContent.style.display = 'none';
             if (reportBtn) reportBtn.style.display = 'none';
             vScreen.style.display = 'block';

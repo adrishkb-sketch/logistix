@@ -68,6 +68,7 @@ def process_number_plate_image(image_path: str, expected_plate: str) -> Dict[str
             return {
                 "verified": True,
                 "detected_text": detected_text,
+                "detected_norm": detected_norm,
                 "confidence": round(score, 2),
                 "message": f"Verified via Cloud OCR: {detected_text}"
             }
@@ -75,6 +76,7 @@ def process_number_plate_image(image_path: str, expected_plate: str) -> Dict[str
             return {
                 "verified": False,
                 "detected_text": detected_text,
+                "detected_norm": detected_norm,
                 "confidence": round(score, 2),
                 "message": f"Match failed. Expected {expected_plate}, but found {detected_text}."
             }

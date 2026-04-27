@@ -217,12 +217,14 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
         
-    if not driver.get("assigned_vehicle_id"):
-        raise HTTPException(status_code=400, detail="No vehicle assigned to driver")
-        
+    v_id = driver.get("assigned_vehicle_id")
     vehicles_db = JSONDatabase("vehicles")
-    vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"])
-    expected_plate = vehicle.get("number_plate", "UNKNOWN")
+    expected_plate = "UNKNOWN"
+    
+    if v_id:
+        vehicle = vehicles_db.get_by_id(v_id)
+        if vehicle:
+            expected_plate = vehicle.get("number_plate", "UNKNOWN")
     
     # Save image locally for OCR
     ext = file.filename.split('.')[-1]
@@ -254,6 +256,20 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
     # Process ML
     ml_result = process_number_plate_image(filepath, expected_plate)
     
+    # Auto-link logic if no vehicle was assigned
+    if not v_id and ml_result.get("detected_norm"):
+        from backend.services.ocr_service import normalize
+        found_norm = ml_result["detected_norm"]
+        all_vehicles = vehicles_db.get_all()
+        # Find vehicle where normalized plate matches detected norm
+        target_v = next((v for v in all_vehicles if normalize(v.get("number_plate", "")) == found_norm), None)
+        if target_v:
+            v_id = target_v["id"]
+            drivers_db.update(driver_id, {"assigned_vehicle_id": v_id})
+            ml_result["verified"] = True
+            ml_result["message"] = f"Vehicle {target_v.get('number_plate')} identified and assigned to you."
+            print(f"[Verification] Auto-linked driver {driver_id} to vehicle {v_id}")
+
     # Update status
     new_status = "verified" if ml_result["verified"] else "pending_manual"
     drivers_db.update(driver_id, {
