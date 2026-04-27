@@ -755,7 +755,7 @@ function renderManagerCharts(stats) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true, // Keep it circular
             cutout: '75%',
             plugins: { 
                 legend: { 
@@ -763,7 +763,7 @@ function renderManagerCharts(stats) {
                     labels: { 
                         color: '#94a3b8', 
                         font: chartFont,
-                        padding: 25,
+                        padding: 20,
                         usePointStyle: true,
                         pointStyle: 'circle'
                     } 
