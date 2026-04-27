@@ -68,46 +68,48 @@ def predict_weather_impact(lat: float, lng: float) -> dict:
     if seed < 60: return {"condition": "Cloudy", "multiplier": 1.1, "icon": "☁️"}
     return {"condition": "Clear", "multiplier": 1.0, "icon": "☀️"}
 
-def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigue: int, health: int, lat: float = 0, lng: float = 0) -> dict:
+def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigue: int, health: int, lat: float = 0, lng: float = 0, wait_time_mins: int = 0) -> dict:
     """
     AI Model to calculate adjusted ETA.
     """
     # Base speed in km/h
     base_speed = 40 # Average city speed
-    if v_type == "truck": base_speed = 60
-    if v_type in ["bike", "scooty"]: base_speed = 35
+    if "truck" in v_type.lower(): base_speed = 60
+    if v_type.lower() in ["bike", "scooty"]: base_speed = 35
     
     base_time_mins = (distance_km / base_speed) * 60
     
     # Weather Impact
     w_mult = weather["multiplier"]
     # Bikes/Scootys are hit harder by rain
-    if weather["condition"] in ["Rain", "Storm"] and v_type in ["bike", "scooty"]:
+    if weather["condition"] in ["Rain", "Storm"] and v_type.lower() in ["bike", "scooty"]:
         w_mult *= 1.8
         
     # Fatigue Impact (Driver slows down)
     f_mult = 1.0 + (fatigue / 200.0) # Max +50% delay
     
     # Traffic Impact
-    traffic = simulate_traffic(lat, lng) if 'lat' in locals() else {"delay_mult": 1.0, "level": "Unknown"}
+    traffic = simulate_traffic(lat, lng) if lat != 0 else {"delay_mult": 1.0, "level": "Unknown"}
     t_mult = traffic["delay_mult"]
 
     # Health Impact (Vehicle issues)
     h_mult = 1.0 + ((100 - health) / 200.0) # Max +50% delay
     
-    adjusted_time = base_time_mins * w_mult * f_mult * h_mult * t_mult
+    adjusted_time = (base_time_mins * w_mult * f_mult * h_mult * t_mult) + wait_time_mins
     delay = adjusted_time - base_time_mins
     
     return {
         "base_mins": round(base_time_mins),
         "adjusted_mins": round(adjusted_time),
         "delay_mins": round(delay),
+        "wait_time_mins": wait_time_mins,
         "weather": weather["condition"],
         "weather_icon": weather["icon"],
         "factors": {
             "weather_impact": round((w_mult - 1) * 100),
             "fatigue_impact": round((f_mult - 1) * 100),
-            "health_impact": round((h_mult - 1) * 100)
+            "health_impact": round((h_mult - 1) * 100),
+            "wait_impact_mins": wait_time_mins
         }
     }
 

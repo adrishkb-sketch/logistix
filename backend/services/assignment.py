@@ -39,6 +39,17 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     
     from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue
     
+    # 1. Check for Heatwave in pickup zone
+    weather_cells_db = JSONDatabase("weather_cells")
+    cells = weather_cells_db.get_all()
+    is_heatwave = False
+    for cell in cells:
+        cond = (cell.get("condition") or cell.get("type") or "").lower()
+        if "heat" in cond or "heatwave" in cond:
+            if haversine(p_lat, p_lng, cell.get("lat", 0), cell.get("lng", 0)) <= cell.get("radius", 50):
+                is_heatwave = True
+                break
+
     for d in drivers:
         # Recalculate vital stats for real-time accuracy
         d["fatigue_score"] = calculate_fatigue(d)
@@ -51,6 +62,12 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if d.get("assigned_vehicle_id") and d.get("verification_status") == "verified":
             vehicle = next((v for v in vehicles if v.get("id") == d.get("assigned_vehicle_id")), None)
             if vehicle and vehicle.get("status") in ["available", "assigned"]:
+                v_type = vehicle.get("type", "")
+                
+                # WEATHER/HEATWAVE BLOCK: Safety constraint (Strict)
+                if (weather["condition"] in ["Storm", "Rain"] or is_heatwave) and v_type in ["Bike/Scooty", "Bike", "Scooty"]:
+                    continue # Strictly forbid bikes in bad weather or heatwaves
+                
                 # Check Vehicle Health vs Distance
                 health = vehicle.get("vehicle_health_score", 100)
                 if dist > 50 and health < 60:
@@ -61,46 +78,54 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 active_for_vehicle = [s for s in all_shipments if s.get("assigned_vehicle_id") == v_id and s.get("status") in ["assigned", "in_transit"]]
                 current_weight = sum(s.get("weight", 0) for s in active_for_vehicle)
                 
-                if current_weight + shipment.get("weight", 0) <= vehicle.get("capacity", 0):
+                new_total_weight = current_weight + shipment.get("weight", 0)
+                if new_total_weight <= vehicle.get("capacity", 0):
                     
                     # Base Warehouse limits
                     if vehicle.get("base_warehouse_id"):
                         wh = next((w for w in warehouses if w.get("id") == vehicle.get("base_warehouse_id")), None)
                         if wh:
                             base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
-                            v_type = vehicle.get("type", "")
                             
                             if v_type == "Bike/Scooty" and base_dist > 15: continue
                             if v_type == "EV-Cargo" and base_dist > 40: continue
-                            
+                    
                     # Check route distance constraints
-                    v_type_short = vehicle.get("type", "")
-                    if dist > 50 and v_type_short == "Bike/Scooty":
+                    if dist > 50 and v_type == "Bike/Scooty":
                         continue # Skip short range vehicles for long distance routes
                     
-                    # WEATHER BLOCK: Safety constraint
-                    if weather["condition"] in ["Storm", "Rain"] and v_type_short == "Bike/Scooty":
-                        if d.get("safety_rating", 5) < 4: continue # Unsafe bikes in rain
-                    
+                    # TRUCK GROUPING & WAIT LOGIC
+                    wait_time_mins = 0
+                    if "Truck" in v_type:
+                        if new_total_weight >= vehicle.get("capacity", 0) * 0.9:
+                            # Truck is full (90%+), release immediately
+                            wait_time_mins = 0
+                        else:
+                            # Wait for more shipments (mandatory 2 hours / 120 mins)
+                            # In a real app, this would be 120 - (now - first_load_time)
+                            wait_time_mins = 120
+
                     score_modifier = 0
                     if weather["condition"] in ["Storm", "Rain"]:
-                        if v_type_short in ["Truck (Heavy)", "Delivery Van"]: score_modifier += 20
-                        if v_type_short == "Bike/Scooty": score_modifier -= 30
-                    if dist < 30 and v_type_short == "Bike/Scooty": score_modifier += 10
-                    if dist > 50 and v_type_short in ["Truck (Heavy)", "Truck (Small)"]: score_modifier += 10
+                        if v_type in ["Truck (Heavy)", "Delivery Van"]: score_modifier += 20
+                    if dist < 30 and v_type == "Bike/Scooty": score_modifier += 10
+                    if dist > 50 and "Truck" in v_type: score_modifier += 10
                     
                     # REVERSE LOGISTICS BOOST:
-                    # If vehicle is away from its base warehouse, and shipment destination is NEAR its base warehouse
                     if vehicle.get("base_warehouse_id"):
                         base_wh = next((w for w in warehouses if w.get("id") == vehicle.get("base_warehouse_id")), None)
                         if base_wh:
-                            # Check if the shipment drop is near vehicle's home base
                             dist_drop_to_base = haversine(shipment["drop"]["lat"], shipment["drop"]["lng"], base_wh["lat"], base_wh["lng"])
-                            if dist_drop_to_base < 50: # Shipment drop is within 50km of vehicle home base
-                                score_modifier += 40 # Significant boost for back-haul
+                            if dist_drop_to_base < 50:
+                                score_modifier += 40 
                                 vehicle["is_backhaul"] = True
                     
-                    available_pairs.append({"driver": d, "vehicle": vehicle, "score_modifier": score_modifier})
+                    available_pairs.append({
+                        "driver": d, 
+                        "vehicle": vehicle, 
+                        "score_modifier": score_modifier,
+                        "wait_time_mins": wait_time_mins
+                    })
                 
     if not available_pairs:
         return None
@@ -112,12 +137,27 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         p["driver"].get("fatigue_score", 0)
     ))[0]
     
-    return {
+    # Update expected delivery if there's a wait time
+    from datetime import datetime, timedelta
+    from backend.services.time_utils import snap_eta_to_business_hours
+    
+    res = {
         "assigned_driver_id": best_pair["driver"].get("id"),
         "assigned_vehicle_id": best_pair["vehicle"].get("id"),
         "status": "assigned",
         "stage": "Assigned to Driver"
     }
+
+    if best_pair["wait_time_mins"] > 0:
+        current_eta_str = shipment.get("expected_delivery")
+        if current_eta_str:
+            try:
+                curr_eta = datetime.fromisoformat(current_eta_str.replace("Z", ""))
+                new_eta = curr_eta + timedelta(minutes=best_pair["wait_time_mins"])
+                res["expected_delivery"] = snap_eta_to_business_hours(new_eta).isoformat() + "Z"
+            except: pass
+    
+    return res
 
 def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, Any]):
     from backend.database import JSONDatabase

@@ -699,21 +699,53 @@ def auto_split(shipment_id: str):
     warehouses = warehouses_db.get_all()
     if not warehouses:
         raise HTTPException(status_code=400, detail="No warehouses available for splitting")
-        
-    w_pickup = min(warehouses, key=lambda w: haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], w["lat"], w["lng"]))
-    w_drop = min(warehouses, key=lambda w: haversine(shipment["drop"]["lat"], shipment["drop"]["lng"], w["lat"], w["lng"]))
+    
+    p_loc = shipment["pickup"]
+    d_loc = shipment["drop"]
+    total_dist = haversine(p_loc["lat"], p_loc["lng"], d_loc["lat"], d_loc["lng"])
+    
+    # 1. Identify start and end hubs
+    w_start = min(warehouses, key=lambda w: haversine(p_loc["lat"], p_loc["lng"], w["lat"], w["lng"]))
+    w_end = min(warehouses, key=lambda w: haversine(d_loc["lat"], d_loc["lng"], w["lat"], w["lng"]))
     
     legs = []
-    if w_pickup["id"] == w_drop["id"]:
-        legs.append({"pickup": shipment["pickup"], "drop": {"lat": w_pickup["lat"], "lng": w_pickup["lng"], "address": w_pickup["name"]}})
-        legs.append({"pickup": {"lat": w_drop["lat"], "lng": w_drop["lng"], "address": w_drop["name"]}, "drop": shipment["drop"]})
+    
+    # Check if we should even split
+    if total_dist < 50:
+        # Too short for a split journey unless manually requested
+        return {"message": "Shipment distance is small. Direct delivery recommended.", "action": "none"}
+
+    if w_start["id"] == w_end["id"]:
+        # Case: Both pickup and drop are served by the same warehouse hub
+        # Leg 1: Pickup -> Hub
+        legs.append({"pickup": p_loc, "drop": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}})
+        # Leg 2: Hub -> Drop
+        legs.append({"pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, "drop": d_loc})
     else:
-        legs.append({"pickup": shipment["pickup"], "drop": {"lat": w_pickup["lat"], "lng": w_pickup["lng"], "address": w_pickup["name"]}})
-        legs.append({"pickup": {"lat": w_pickup["lat"], "lng": w_pickup["lng"], "address": w_pickup["name"]}, "drop": {"lat": w_drop["lat"], "lng": w_drop["lng"], "address": w_drop["name"]}})
-        legs.append({"pickup": {"lat": w_drop["lat"], "lng": w_drop["lng"], "address": w_drop["name"]}, "drop": shipment["drop"]})
+        # Case: Multi-hub journey
+        # Leg 1: Pickup -> Hub 1 (First Mile)
+        legs.append({"pickup": p_loc, "drop": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}})
         
+        # Intermediate Hub logic for extremely long distances
+        dist_between_hubs = haversine(w_start["lat"], w_start["lng"], w_end["lat"], w_end["lng"])
+        if dist_between_hubs > 500:
+             # Find a midpoint hub if available to reduce truck fatigue/fuel risk
+             mid_lat, mid_lng = (w_start["lat"] + w_end["lat"])/2, (w_start["lng"] + w_end["lng"])/2
+             w_mid = min(warehouses, key=lambda w: haversine(mid_lat, mid_lng, w["lat"], w["lng"]))
+             if w_mid["id"] != w_start["id"] and w_mid["id"] != w_end["id"]:
+                  legs.append({"pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, "drop": {"lat": w_mid["lat"], "lng": w_mid["lng"], "address": w_mid["name"]}})
+                  legs.append({"pickup": {"lat": w_mid["lat"], "lng": w_mid["lng"], "address": w_mid["name"]}, "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]}})
+             else:
+                  legs.append({"pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]}})
+        else:
+             # Leg 2: Hub 1 -> Hub 2 (Middle Mile - Trunk)
+             legs.append({"pickup": {"lat": w_start["lat"], "lng": w_start["lng"], "address": w_start["name"]}, "drop": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]}})
+        
+        # Leg Last: Hub 2 -> Drop (Last Mile)
+        legs.append({"pickup": {"lat": w_end["lat"], "lng": w_end["lng"], "address": w_end["name"]}, "drop": d_loc})
+    
     _generate_legs(shipment, legs)
-    return {"message": f"Auto split into {len(legs)} legs"}
+    return {"message": f"Successfully planned optimized {len(legs)}-leg journey via Hub Network."}
 
 def _generate_legs(parent_shipment, leg_data):
     from backend.models import ShipmentEvent
@@ -732,13 +764,23 @@ def _generate_legs(parent_shipment, leg_data):
     
     for i, leg in enumerate(leg_data):
         dist = haversine(leg["pickup"]["lat"], leg["pickup"]["lng"], leg["drop"]["lat"], leg["drop"]["lng"])
-        eta_hours = dist / 40.0
-        raw_eta = current_time + timedelta(hours=eta_hours)
+        
+        # Assumption logic for initial ETA:
+        is_middle_mile = (i > 0 and i < len(leg_data) - 1) or (len(leg_data) > 1 and dist > 100)
+        
+        # Speed assumption: 60km/h for middle-mile trucks, 35km/h for first/last mile urban legs
+        speed = 60.0 if is_middle_mile else 35.0
+        travel_time_hours = dist / speed
+        
+        # Truck legs wait at warehouses for 2 hours to group shipments (User requirement)
+        wait_time_hours = 2.0 if is_middle_mile else 0.5 # 0.5h for small vehicle handoff
+        
+        raw_eta = current_time + timedelta(hours=travel_time_hours + wait_time_hours)
         expected_time = snap_eta_to_business_hours(raw_eta)
         
         leg_log = ShipmentEvent(
             status="pending",
-            message=f"Created as Leg {i+1} of a split route.",
+            message=f"Created as Leg {i+1} of a split route. Optimized for { 'Trunk (Truck)' if is_middle_mile else 'Last-Mile' } delivery.",
             location=leg["pickup"]
         )
         
@@ -752,13 +794,15 @@ def _generate_legs(parent_shipment, leg_data):
             is_leg=True,
             leg_order=i+1,
             route_type="direct",
-            expected_delivery=expected_time.isoformat(),
+            expected_delivery=expected_time.isoformat() + "Z",
             delivery_otp=parent_shipment.get("delivery_otp"),
-            logs=[leg_log]
+            logs=[leg_log.model_dump()],
+            is_perishable=parent_shipment.get("is_perishable", False),
+            vitality=parent_shipment.get("vitality", 100)
         )
         shipments_db.insert(leg_shipment.model_dump())
         
-        # Next leg starts after a 1 hour buffer (for warehouse processing)
+        # Next leg starts after a 1 hour buffer (for warehouse processing/unloading)
         current_time = expected_time + timedelta(hours=1)
 @router.delete("/{shipment_id}")
 def delete_shipment(shipment_id: str):
