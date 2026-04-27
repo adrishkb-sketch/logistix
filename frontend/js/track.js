@@ -290,12 +290,20 @@ document.addEventListener('input', (e) => {
 });
 
 async function simulatePayment() {
-    alert("Simulating redirect to Payment Gateway (UPI/Card)...");
-    setTimeout(async () => {
-        alert("Payment Successful! Informing Logistix Manager for confirmation.");
-        document.getElementById('btn-pay-now').innerText = getTranslation('awaiting_manager_conf');
-        document.getElementById('btn-pay-now').disabled = true;
-    }, 2000);
+    const btn = document.getElementById('btn-pay-now');
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerText = "Processing Payment...";
+
+    try {
+        await apiCall(`/shipments/${currentShipmentId}/pay`, 'POST');
+        alert("Payment Successful! Your order is now ready for delivery verification.");
+        viewOrder(currentShipmentId); // Refresh UI
+    } catch (e) {
+        alert("Payment failed. Please try again.");
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
 }
 
 window.addEventListener('themeChanged', (e) => {

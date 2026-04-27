@@ -386,6 +386,12 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     # 4. Warehouse Count
     warehouses = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
     
+    # 5. Financial Overview (Real data from Ledger)
+    comp_txs = [t for t in ledger_db.get_all() if t.get("company_id") == company_id]
+    revenue = sum(t["amount"] for t in comp_txs if t["type"] == "REVENUE")
+    expenses = sum(t["amount"] for t in comp_txs if t["type"] == "EXPENSE")
+    net_profit = revenue - expenses
+
     return {
         "total_shipments": len(shipments),
         "active_shipments": len([s for s in shipments if s.get("status") != "delivered"]),
@@ -395,7 +401,8 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         "timely_percent": round(timely_percent, 1),
         "avg_delay_mins": round(avg_delay, 1),
         "fleet_dist": fleet_dist,
-        "revenue": sum([(s.get("weight") or 0) * 10 for s in delivered]), # Mock revenue
+        "revenue": round(revenue, 2),
+        "net_profit": round(net_profit, 2),
         "perf_history": [random.randint(85, 100) for _ in range(7)]
     }
 
@@ -852,6 +859,26 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         labels.append(day_date.strftime("%d %b"))
         values.append(round(day_rev, 2))
         
+    # Real Smart Contracts (Escrow) based on active shipments
+    escrow_contracts = []
+    for s in comp_ships:
+        if s.get("status") in ["assigned", "in_transit", "at_warehouse"]:
+            escrow_contracts.append({
+                "id": f"ESC-{s.get('id')[:6].upper()}",
+                "counterparty": s.get("receiver_name") or "Retail Partner",
+                "value": s.get("finance", {}).get("suggested_price", 0),
+                "status": "⛓️ LOCKED",
+                "eta": "On Delivery"
+            })
+        elif s.get("status") == "delivered" and s.get("payment_status") == "unpaid":
+             escrow_contracts.append({
+                "id": f"ESC-{s.get('id')[:6].upper()}",
+                "counterparty": s.get("receiver_name") or "Retail Partner",
+                "value": s.get("finance", {}).get("suggested_price", 0),
+                "status": "⏳ AWAITING PMT",
+                "eta": "Immediate"
+            })
+
     return {
         "daily_revenue": round(daily_revenue, 2),
         "digital_escrow": round(unpaid_total, 2),
@@ -859,9 +886,7 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         "bonus_pool": round(bonus_pool, 2),
         "drone_maintenance": round(drone_maintenance, 2),
         "recent_settlements": settlements_list,
-        "escrow_contracts": [
-            {"id": "CON-AUTO", "counterparty": "Logistix Reserve", "value": round(unpaid_total * 1.2, 2), "status": "Guaranteed", "eta": "Auto"},
-        ],
+        "escrow_contracts": escrow_contracts[:10], # Limit to top 10
         "chart_data": {
             "labels": labels,
             "values": values

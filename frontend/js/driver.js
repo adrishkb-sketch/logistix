@@ -760,26 +760,7 @@ function showDynamicAlert(type, msg) {
 }
 
 async function confirmDelivery(shipmentId, correctOtp) {
-    const inputOtp = prompt("Enter 4-digit Delivery OTP given to customer:");
-    if (!inputOtp) return;
-    
-    if (inputOtp === correctOtp || inputOtp === '1234') { // Allow 1234 as master bypass for demo
-        try {
-            await apiCall(`/shipments/${shipmentId}`, 'PUT', {status: 'delivered', stage: 'Completed'});
-            showPopupAlert("Delivery Successful! Loading next destination...");
-            
-            // Clear old simulated movement
-            routeCoords = [];
-            simIndex = 0;
-            
-            await loadMissions();
-            
-        } catch(e) {
-            alert("Failed to update status.");
-        }
-    } else {
-        alert("Incorrect OTP! Please verify with customer.");
-    }
+    completeDelivery(shipmentId);
 }
 
 function showPopupAlert(msg) {

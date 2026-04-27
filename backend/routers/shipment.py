@@ -105,6 +105,45 @@ async def bulk_confirm(shipments: List[ShipmentCreate]):
 class ShipmentRating(BaseModel):
     rating: float # 1-5
 
+@router.post("/{shipment_id}/pay")
+def pay_shipment(shipment_id: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    if shipment.get("payment_status") == "paid":
+        return {"message": "Already paid"}
+        
+    price = shipment.get("finance", {}).get("suggested_price", 0)
+    
+    # 1. Update Shipment
+    from backend.models import ShipmentEvent
+    from datetime import datetime
+    new_log = {
+        "status": shipment.get("status"),
+        "message": f"💰 PAYMENT RECEIVED: ₹{price.toLocaleString() if hasattr(price, 'toLocaleString') else price} paid by customer via Digital Gateway.",
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+    
+    shipments_db.update(shipment_id, {
+        "payment_status": "paid",
+        "logs": shipment.get("logs", []) + [new_log]
+    })
+    
+    # 2. Record in Ledger
+    ledger_db = JSONDatabase("ledger")
+    ledger_db.insert({
+        "id": str(uuid.uuid4()),
+        "company_id": shipment.get("company_id"),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "type": "REVENUE",
+        "amount": price,
+        "description": f"Customer Payment for Shipment #{shipment_id[:8]}",
+        "category": "shipping_fee"
+    })
+    
+    return {"message": "Payment successful", "amount": price}
+    
 @router.post("/{shipment_id}/rate")
 def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
     shipment = shipments_db.get_by_id(shipment_id)
@@ -474,19 +513,9 @@ def update_shipment(shipment_id: str, data: dict):
         )
         shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
     
-    # Credit driver's wallet on delivery
+    # Credit driver's wallet on delivery (MOVED TO driver.py/complete_delivery)
     if data.get("status") == "delivered" and shipment.get("status") != "delivered":
-        d_id = shipment.get("assigned_driver_id")
-        if d_id and d_id != "DRONE-SYSTEM":
-            d_db = JSONDatabase("drivers")
-            driver = d_db.get_by_id(d_id)
-            if driver:
-                payout = shipment.get("finance", {}).get("driver_payout", 0)
-                new_balance = driver.get("wallet_balance", 0) + payout
-                d_db.update(d_id, {
-                    "wallet_balance": new_balance,
-                    "total_earnings": driver.get("total_earnings", 0) + payout
-                })
+        pass
         
         # RECORD FINANCIAL LEDGER ENTRY
         finance = shipment.get("finance", {})
