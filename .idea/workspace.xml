@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="11472a96-f390-43dd-8cbb-cf9433a633f1" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/backend/routers/manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routers/manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/routers/shipment.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routers/shipment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/driver.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/driver.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/manager.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/manager.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/track.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/track.js" afterDir="false" />
-    </list>
+    <list default="true" id="11472a96-f390-43dd-8cbb-cf9433a633f1" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

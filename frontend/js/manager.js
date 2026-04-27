@@ -995,13 +995,6 @@ async function loadSafetyCenter() {
     }
 }
 
-        // 4. Score
-        const safetyScore = (drivers.reduce((acc, d) => acc + (d.safety_index || 100), 0) / drivers.length) || 100;
-        document.getElementById('fleet-safety-index').innerText = `${safetyScore.toFixed(1)}%`;
-
-    } catch(e) {}
-}
-
 async function liveTrackByDriver(driverId) {
     const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`);
     const active = shipments.find(s => s.assigned_driver_id === driverId && s.status !== 'delivered');
