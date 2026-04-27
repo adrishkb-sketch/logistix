@@ -1296,16 +1296,49 @@ async function openManualSplit(id) {
     try {
         const warehouses = await apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`);
         const container = document.getElementById('split-wh-container');
+        const searchInput = document.getElementById('split-wh-search');
+        if (searchInput) searchInput.value = '';
+        
         container.innerHTML = '';
         warehouses.forEach(w => {
-            container.innerHTML += `
-                <label style="display:block; margin-bottom:5px;">
-                    <input type="checkbox" value="${w.id}" class="wh-checkbox"> ${w.name}
-                </label>
+            const item = document.createElement('div');
+            item.className = 'wh-split-item';
+            item.style.display = 'flex';
+            item.style.alignItems = 'center';
+            item.style.gap = '12px';
+            item.style.padding = '10px 15px';
+            item.style.marginBottom = '8px';
+            item.style.background = 'rgba(255,255,255,0.03)';
+            item.style.borderRadius = '12px';
+            item.style.transition = 'all 0.2s ease';
+            item.style.cursor = 'pointer';
+            
+            item.innerHTML = `
+                <input type="checkbox" value="${w.id}" class="wh-checkbox" id="wh-split-${w.id}" style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
+                <label for="wh-split-${w.id}" style="flex:1; cursor:pointer; font-weight:600; font-size:0.9rem; color:var(--text);">${w.name}</label>
             `;
+            
+            // Toggle checkbox when clicking the row
+            item.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    const cb = item.querySelector('input');
+                    cb.checked = !cb.checked;
+                }
+            });
+
+            container.appendChild(item);
         });
         document.getElementById('split-modal').style.display = 'block';
     } catch(e) {}
+}
+
+function filterSplitWarehouses() {
+    const q = document.getElementById('split-wh-search').value.toLowerCase();
+    const items = document.querySelectorAll('.wh-split-item');
+    items.forEach(item => {
+        const name = item.querySelector('label').innerText.toLowerCase();
+        item.style.display = name.includes(q) ? 'flex' : 'none';
+    });
 }
 
 async function submitManualSplit() {

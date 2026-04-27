@@ -1549,10 +1549,17 @@
     </div>
 
     <!-- Split Modal -->
-    <div id="split-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:400px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
-        <h3>Manual Route Split</h3>
-        <p style="font-size:0.85rem; margin-bottom:10px;">Select intermediate warehouses to route this shipment through:</p>
-        <div id="split-wh-container" style="margin-bottom:15px; max-height:200px; overflow-y:auto;">
+    <div id="split-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:450px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 25px;">
+        <h3 style="margin-top:0;">Manual Route Split</h3>
+        <p style="font-size:0.85rem; margin-bottom:15px; color:var(--text-muted);">Select intermediate warehouses to route this shipment through:</p>
+        
+        <div class="input-group" style="margin-bottom:15px;">
+            <input type="text" id="split-wh-search" placeholder="🔍 Search warehouses..." 
+                style="width:100%; padding:10px 15px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text);"
+                onkeyup="filterSplitWarehouses()">
+        </div>
+
+        <div id="split-wh-container" style="margin-bottom:20px; max-height:250px; overflow-y:auto; padding-right:5px;">
             <!-- Checkboxes injected via JS -->
         </div>
         <div class="input-group">
