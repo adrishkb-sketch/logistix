@@ -40,7 +40,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             continue
             
         if d.get("assigned_vehicle_id") and d.get("verification_status") == "verified":
-            vehicle = next((v for v in vehicles if v["id"] == d["assigned_vehicle_id"]), None)
+            vehicle = next((v for v in vehicles if v.get("id") == d.get("assigned_vehicle_id")), None)
             if vehicle and vehicle.get("status") in ["available", "assigned"]:
                 # Check Vehicle Health vs Distance
                 health = vehicle.get("vehicle_health_score", 100)
@@ -55,7 +55,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     
                     # Base Warehouse limits
                     if vehicle.get("base_warehouse_id"):
-                        wh = next((w for w in warehouses if w["id"] == vehicle["base_warehouse_id"]), None)
+                        wh = next((w for w in warehouses if w.get("id") == vehicle.get("base_warehouse_id")), None)
                         if wh:
                             base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
                             v_type = vehicle.get("type", "")
@@ -82,7 +82,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     # REVERSE LOGISTICS BOOST:
                     # If vehicle is away from its base warehouse, and shipment destination is NEAR its base warehouse
                     if vehicle.get("base_warehouse_id"):
-                        base_wh = next((w for w in warehouses if w["id"] == vehicle["base_warehouse_id"]), None)
+                        base_wh = next((w for w in warehouses if w.get("id") == vehicle.get("base_warehouse_id")), None)
                         if base_wh:
                             # Check if the shipment drop is near vehicle's home base
                             dist_drop_to_base = haversine(shipment["drop"]["lat"], shipment["drop"]["lng"], base_wh["lat"], base_wh["lng"])
