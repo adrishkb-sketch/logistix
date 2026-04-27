@@ -1978,6 +1978,22 @@ window.renderDriversTable = function() {
         const diffDays = Math.floor(Math.abs(new Date() - joinDate) / (1000 * 60 * 60 * 24));
         const baseWh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
         
+        let linkedVehInfo = `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`;
+        if (d.assigned_vehicle_id) {
+            const v = globalVehicles.find(vh => vh.id === d.assigned_vehicle_id);
+            if (v) {
+                const vHub = globalWarehouses.find(w => w.id === v.base_warehouse_id);
+                linkedVehInfo = `
+                    <div style="font-size:0.85rem; font-weight:bold; color:var(--success);">
+                        🚗 ${formatDisplayPlate(v.number_plate)}
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">
+                        📍 Hub: ${vHub ? vHub.name : 'N/A'}
+                    </div>
+                `;
+            }
+        }
+
         dtbody.innerHTML += `<tr>
             <td><b>${d.name}</b><br><small style="color:var(--accent); font-family:monospace;">${d.system_id || 'ID: ' + d.id.substring(0,8)}</small></td>
             <td><small style="font-family:monospace;">${d.login_id || 'N/A'}</small></td>
@@ -1986,9 +2002,9 @@ window.renderDriversTable = function() {
             <td><span style="color:${d.challan_count > 0 ? 'var(--danger)' : 'var(--success)'}">${d.challan_count}</span></td>
             <td><strong style="color:var(--accent)">${d.reward_points || 0}</strong></td>
             <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
+            <td>${linkedVehInfo}</td>
             <td>
-                <div style="display:flex; align-items:center; gap:12px;">
-                    ${d.assigned_vehicle_id ? `<span class="badge" style="background:var(--success)22; color:var(--success); margin:0;">Linked</span>` : `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
+                <div style="display:flex; align-items:center; gap:8px;">
                     <button class="btn-primary btn-accent" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="openEditModal('drivers', '${d.id}', '${d.name}', '${d.license_type}', '${d.base_warehouse_id}')" title="Edit">✏️</button>
                     <button class="btn-primary btn-danger" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="deleteItem('drivers', '${d.id}')" title="Delete">🗑️</button>
                 </div>
