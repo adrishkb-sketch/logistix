@@ -1500,6 +1500,13 @@ function updatePageTranslations() {
         const key = el.getAttribute('data-i18n-placeholder');
         el.placeholder = getTranslation(key);
     });
+
+    // Sync language selector value
+    const langSelectors = document.querySelectorAll('select[onchange="setLanguage(this.value)"]');
+    const currentLang = localStorage.getItem('app_lang') || 'en';
+    langSelectors.forEach(sel => {
+        sel.value = currentLang;
+    });
 }
 
 function setLanguage(lang) {
