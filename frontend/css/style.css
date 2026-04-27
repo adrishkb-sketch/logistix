@@ -1087,8 +1087,12 @@ body.light-mode .btn-outline:hover {
     
     .responsive-flex-column {
         flex-direction: column !important;
-        align-items: flex-start !important;
-        text-align: left !important;
+        align-items: stretch !important;
+        width: 100% !important;
+    }
+    .responsive-flex-column > * {
+        width: 100% !important;
+        margin-bottom: 5px;
     }
 
     .stats-grid {
