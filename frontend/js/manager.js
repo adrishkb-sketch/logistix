@@ -1994,7 +1994,9 @@ window.renderDriversTable = function() {
                 </div>
             </td>
         </tr>`;
-        if (dSelect) dSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
+        if (dSelect && !d.assigned_vehicle_id) {
+            dSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
+        }
     });
     if (window.updatePageTranslations) updatePageTranslations();
 };
@@ -2105,7 +2107,9 @@ window.renderVehiclesTable = function() {
                 </div>
             </td>
         </tr>`;
-        if (vSelect) vSelect.innerHTML += `<option value="${v.id}">${v.type} - ${v.number_plate} (${v.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
+        if (vSelect && !linkedDriver) {
+            vSelect.innerHTML += `<option value="${v.id}">${v.type} - ${formatDisplayPlate(v.number_plate)} (${v.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
+        }
     });
 };
 
