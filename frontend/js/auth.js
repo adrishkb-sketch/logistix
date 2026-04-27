@@ -130,3 +130,20 @@ document.addEventListener('submit', async (e) => {
         }
     }
 });
+
+async function validateSignupEmail(email) {
+    const warning = document.getElementById('email-warning');
+    if (!email || !email.includes('@')) {
+        if (warning) warning.style.display = 'none';
+        return;
+    }
+    try {
+        const res = await apiCall(`/auth/check-email?email=${encodeURIComponent(email)}`, 'GET');
+        if (warning) {
+            warning.style.display = res.exists ? 'block' : 'none';
+        }
+    } catch (e) {
+        console.error("Email check failed:", e);
+    }
+}
+window.validateSignupEmail = validateSignupEmail;

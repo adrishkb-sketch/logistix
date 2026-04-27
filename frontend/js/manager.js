@@ -1511,7 +1511,7 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             driving_score: 100.0, // New drivers start with a perfect score
             safety_rating: safetyRating.toFixed(1),
             on_time_rate: 100, // Initial perfect rate
-            phone_number: document.getElementById('d-phone') ? (document.getElementById('d-phone').value.length === 10 ? "+91" + document.getElementById('d-phone').value : document.getElementById('d-phone').value) : "N/A"
+            contact_number: document.getElementById('d-contact') ? (document.getElementById('d-contact').value.length === 10 ? "+91" + document.getElementById('d-contact').value : document.getElementById('d-contact').value) : "N/A"
         };
         await apiCall('/manager/drivers', 'POST', driverData);
         document.getElementById('add-driver-form').reset();
@@ -2046,6 +2046,8 @@ window.renderVehiclesTable = function() {
             }
         }
 
+        const linkedDriver = globalDrivers.find(d => d.assigned_vehicle_id === v.id);
+        
         vtbody.innerHTML += `<tr>
             <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || 'ID: ' + v.id.substring(0,8)}</small></td>
             <td>${v.number_plate || '<span style="color:var(--text-muted)">Not Set</span>'}</td>
@@ -2055,9 +2057,12 @@ window.renderVehiclesTable = function() {
             <td>${destInfo}</td>
             <td>${statusTag}</td>
             <td>
+                ${linkedDriver ? `<b>${linkedDriver.name}</b><br><small>${linkedDriver.system_id}</small>` : `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
+            </td>
+            <td>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    ${v.assigned_driver_id ? `<span class="badge" style="background:var(--success)22; color:var(--success); margin:0;">Linked</span>` : `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
                     <button class="btn-primary btn-accent" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}', '${v.base_warehouse_id}', '${v.fuel_efficiency}')" title="Edit">✏️</button>
+                    <button class="btn-primary btn-danger" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="deleteItem('vehicles', '${v.id}')" title="Delete">🗑️</button>
                 </div>
             </td>
         </tr>`;
@@ -3760,10 +3765,20 @@ async function previewDriverSheets() {
     } catch(err) { alert("Failed to fetch driver data."); }
 }
 function renderDriverBulkPreview(drivers) {
+    // Process numbers to +91 if they are 10 digits
+    drivers.forEach(d => {
+        let num = (d.phone_number || d.contact_number || '').toString().trim();
+        if (num.length === 10 && !num.startsWith('+')) {
+            num = '+91' + num;
+        }
+        d.contact_number = num;
+        // Keep phone_number for backend if needed, but the backend usually expects one of them
+        d.phone_number = num; 
+    });
     currentBulkDrivers = drivers;
     document.getElementById('driver-bulk-count').innerText = drivers.length;
     document.getElementById('driver-preview-section').style.display = 'block';
-    document.getElementById('driver-preview-body').innerHTML = drivers.map(d => `<tr><td>${d.name}</td><td>${d.license_type}</td><td>${d.base_warehouse_id}</td><td>${d.phone_number}</td></tr>`).join('');
+    document.getElementById('driver-preview-body').innerHTML = drivers.map(d => `<tr><td>${d.name}</td><td>${d.license_type}</td><td>${d.base_warehouse_id}</td><td>${d.contact_number}</td></tr>`).join('');
 }
 async function confirmDriverBulk() {
     try {
@@ -4170,3 +4185,19 @@ window.addEventListener('themeChanged', () => {
         L.tileLayer(standardUrl, { attribution: '&copy; CARTO' }).addTo(weatherMap);
     }
 });
+async function validateVehiclePlate(plate) {
+    const warning = document.getElementById('plate-warning');
+    if (!plate || plate.length < 4) {
+        if (warning) warning.style.display = 'none';
+        return;
+    }
+    try {
+        const res = await apiCall(`/manager/check-plate?plate=${encodeURIComponent(plate)}`, 'GET');
+        if (warning) {
+            warning.style.display = res.exists ? 'block' : 'none';
+        }
+    } catch (e) {
+        console.error("Plate check failed:", e);
+    }
+}
+window.validateVehiclePlate = validateVehiclePlate;

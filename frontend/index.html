@@ -522,7 +522,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 <h2 data-i18n="modal_register_title">🚀 Register Company</h2>
                 <div id="step-1">
                     <input id="signup-name" type="text" placeholder="Company Name" data-i18n-placeholder="placeholder_company_name" required>
-                    <input id="signup-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required>
+                    <input id="signup-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required oninput="validateSignupEmail(this.value)">
+                    <small id="email-warning" style="color:#ff4f4f; display:none; margin-top:-5px; font-size:0.75rem;">🚨 Email already registered!</small>
                     <input id="signup-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
                     <button type="button" class="btn btn-primary" onclick="requestOTP()" data-i18n="btn_request_otp">Request OTP</button>
                 </div>

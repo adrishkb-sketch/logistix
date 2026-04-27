@@ -24,6 +24,11 @@ class OTPVerify(BaseModel):
     otp: str
     company_data: CompanyCreate
 
+@router.get("/check-email")
+async def check_email(email: str):
+    existing = [c for c in companies_db.get_all() if c.get("email") == email]
+    return {"exists": len(existing) > 0}
+
 @router.post("/company/request-otp")
 def request_otp(data: OTPRequest):
     # Check if company already exists

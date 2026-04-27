@@ -56,12 +56,12 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
                 "name": str(vals[0]),
                 "login_id": str(vals[1]),
                 "password": str(vals[2]),
-                "license_type": str(vals[3]).lower(),
+                "license_type": str(vals[3]),
                 "base_warehouse_id": str(vals[4]),
                 "years_experience": float(vals[5]),
                 "past_accidents": int(vals[6]),
                 "traffic_violations": int(vals[7]),
-                "phone_number": phone,
+                "contact_number": phone,
                 "company_id": company_id
             }
             drivers.append(d)
@@ -104,7 +104,7 @@ async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File
             vals = row.values.tolist()
             if len(vals) < 5: continue
             v = {
-                "type": str(vals[0]).lower(),
+                "type": str(vals[0]),
                 "base_warehouse_id": str(vals[1]),
                 "number_plate": str(vals[2]).upper(),
                 "capacity": float(vals[3]),
@@ -204,8 +204,8 @@ def get_journey_review(shipment_id: str):
 def create_driver(driver: Driver):
     # Check for duplicate phone or login ID
     all_drivers = drivers_db.get_all()
-    if any(d.get("phone_number") == driver.phone_number for d in all_drivers):
-        raise HTTPException(status_code=400, detail="A driver with this phone number is already registered.")
+    if any(d.get("contact_number") == driver.contact_number for d in all_drivers):
+        raise HTTPException(status_code=400, detail="A driver with this contact number is already registered.")
     if any(d.get("login_id") == driver.login_id for d in all_drivers):
         raise HTTPException(status_code=400, detail="This Login ID is already taken.")
 
@@ -316,6 +316,12 @@ def suggest_warehouse_location(data: dict):
         "reason": reason,
         "strategic_improvement": True
     }
+
+@router.get("/check-plate")
+async def check_plate(plate: str):
+    # Global check across all companies
+    existing = [v for v in vehicles_db.get_all() if v.get("number_plate") == plate]
+    return {"exists": len(existing) > 0}
 
 @router.get("/dashboard/stats")
 def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Header(None)):

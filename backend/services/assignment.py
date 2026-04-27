@@ -60,27 +60,24 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                             base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
                             v_type = vehicle.get("type", "")
                             
-                            if v_type in ["bike", "scooty"] and base_dist > 15: continue
-                            if v_type == "3 wheeled (battery)" and base_dist > 30: continue
-                            if v_type == "3 wheeled (non EV)" and base_dist > 40: continue
-                            if v_type == "small van" and base_dist > 60: continue
-                            if v_type == "large van" and base_dist > 100: continue
+                            if v_type == "Bike/Scooty" and base_dist > 15: continue
+                            if v_type == "EV-Cargo" and base_dist > 40: continue
                             
                     # Check route distance constraints
                     v_type_short = vehicle.get("type", "")
-                    if dist > 50 and v_type_short in ["bike", "scooty", "3 wheeled (battery)", "3 wheeled (non EV)"]:
+                    if dist > 50 and v_type_short == "Bike/Scooty":
                         continue # Skip short range vehicles for long distance routes
                     
                     # WEATHER BLOCK: Safety constraint
-                    if weather["condition"] in ["Storm", "Rain"] and v_type_short in ["bike", "scooty"]:
+                    if weather["condition"] in ["Storm", "Rain"] and v_type_short == "Bike/Scooty":
                         if d.get("safety_rating", 5) < 4: continue # Unsafe bikes in rain
                     
                     score_modifier = 0
                     if weather["condition"] in ["Storm", "Rain"]:
-                        if v_type_short in ["truck", "large van"]: score_modifier += 20
-                        if v_type_short in ["bike", "scooty"]: score_modifier -= 30
-                    if dist < 30 and v_type_short in ["bike", "scooty"]: score_modifier += 10
-                    if dist > 50 and v_type_short == "truck": score_modifier += 10
+                        if v_type_short in ["Truck (Heavy)", "Delivery Van"]: score_modifier += 20
+                        if v_type_short == "Bike/Scooty": score_modifier -= 30
+                    if dist < 30 and v_type_short == "Bike/Scooty": score_modifier += 10
+                    if dist > 50 and v_type_short in ["Truck (Heavy)", "Truck (Small)"]: score_modifier += 10
                     
                     # REVERSE LOGISTICS BOOST:
                     # If vehicle is away from its base warehouse, and shipment destination is NEAR its base warehouse

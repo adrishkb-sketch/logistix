@@ -554,10 +554,11 @@
                             <div class="input-group">
                                 <label data-i18n="label_license_type">License Type</label>
                                 <select id="d-license" required>
-                                    <option value="LCV">LCV (Light Commercial)</option>
-                                    <option value="HGV">HGV (Heavy Goods)</option>
-                                    <option value="Two-Wheeler">Two-Wheeler / Bike</option>
-                                    <option value="EV-Cargo">EV Cargo Loader</option>
+                                    <option value="Truck (Small)">Truck (Small)</option>
+                                    <option value="Truck (Heavy)">Truck (Heavy)</option>
+                                    <option value="Delivery Van">Delivery Van</option>
+                                    <option value="Bike/Scooty">Bike/Scooty</option>
+                                    <option value="EV-Cargo">EV-Cargo</option>
                                 </select>
                             </div>
                             <div class="input-group">
@@ -571,8 +572,8 @@
                                 <input type="number" id="d-exp" placeholder="e.g. 5" step="0.5" required>
                             </div>
                             <div class="input-group">
-                                <label data-i18n="phone_number">Phone Number</label>
-                                <input type="text" id="d-phone" placeholder="e.g. 9876543210" required>
+                                <label data-i18n="phone_number">Contact Number</label>
+                                <input type="text" id="d-contact" placeholder="e.g. 9876543210" required>
                             </div>
                             <div class="input-group">
                                 <label data-i18n="label_accidents">Past Accidents</label>
@@ -595,6 +596,7 @@
                         </form>
                         <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
                             <input type="text" id="driver-search" placeholder="Search by name or ID..." oninput="renderDriversTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;" data-i18n-placeholder="search_driver_placeholder">
+                            <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderDriversTable()">🔍</button>
                         </div>
                         <div class="table-container">
                             <table>
@@ -628,7 +630,8 @@
                             </div>
                             <div class="input-group">
                                 <label data-i18n="label_number_plate">Number Plate</label>
-                                <input type="text" id="v-plate" placeholder="e.g. MH12AB1234" required data-i18n-placeholder="placeholder_plate">
+                                <input type="text" id="v-plate" placeholder="e.g. MH12AB1234" required data-i18n-placeholder="placeholder_plate" oninput="validateVehiclePlate(this.value)">
+                                <small id="plate-warning" style="color:var(--danger); display:none;">🚨 Plate already registered!</small>
                             </div>
                             <div class="input-group">
                                 <label data-i18n="capacity">Load Capacity (kg)</label>
@@ -644,10 +647,11 @@
                         </form>
                         <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
                             <input type="text" id="vehicle-search" placeholder="Search by plate or ID..." oninput="renderVehiclesTable()" style="flex:1; padding:0.6rem; background:rgba(255,255,255,0.1); border:1px solid var(--card-border); color:white; border-radius:8px;" data-i18n-placeholder="search_vehicle_placeholder">
+                            <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderVehiclesTable()">🔍</button>
                         </div>
                         <div class="table-container">
                             <table>
-                                <thead><tr><th data-i18n="th_type_id">Type / System ID</th><th data-i18n="label_number_plate">Plate</th><th data-i18n="th_health">Health</th><th data-i18n="capacity">Capacity</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_loc_heading">Current Location / Heading</th><th data-i18n="hub_status">Status</th><th data-i18n="th_linked_driver">Linked Driver</th></tr></thead>
+                                <thead><tr><th data-i18n="th_type_id">Type / System ID</th><th data-i18n="label_number_plate">Plate</th><th data-i18n="th_health">Health</th><th data-i18n="capacity">Capacity</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_loc_heading">Current Location / Heading</th><th data-i18n="hub_status">Status</th><th data-i18n="th_linked_driver">Linked Driver</th><th data-i18n="th_action">Action</th></tr></thead>
                                 <tbody id="vehicles-table-body"></tbody>
                             </table>
                         </div>
@@ -1874,8 +1878,9 @@
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:0.8rem; color:var(--text);">
                 <div>1. Full Name</div><div>2. Login ID</div><div>3. Password</div>
                 <div>4. License Type</div><div>5. Hub ID</div><div>6. Exp (Years)</div>
-                <div>7. Accidents</div><div>8. Challans</div><div>9. Phone</div>
+                <div>7. Accidents</div><div>8. Challans</div><div>9. Contact Number</div>
             </div>
+            <p style="margin-top:15px; font-size:0.75rem; color:var(--warning);">💡 Note: Contact numbers should be 10 digits. They will be automatically prefixed with <b>+91</b> for system compatibility.</p>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
             <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
@@ -1890,7 +1895,7 @@
         <div id="driver-preview-section" style="display:none;">
             <h4>Preview (<span id="driver-bulk-count">0</span>)</h4>
             <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
-                <table><thead><tr><th>Name</th><th>Type</th><th>Hub ID</th><th>Phone</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
+                <table><thead><tr><th>Name</th><th>Type</th><th>Hub ID</th><th>Contact</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
             </div>
             <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-driver-bulk-btn" onclick="confirmDriverBulk()">Confirm Upload</button></div>
         </div>

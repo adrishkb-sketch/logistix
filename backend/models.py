@@ -83,7 +83,7 @@ class Driver(BaseModel):
     past_accidents: int = 0
     traffic_violations: int = 0
     reward_points: float = 0.0
-    phone_number: Optional[str] = None
+    contact_number: Optional[str] = None
     wallet_balance: float = 0.0
     total_earnings: float = 0.0
     monthly_earnings: float = 0.0
