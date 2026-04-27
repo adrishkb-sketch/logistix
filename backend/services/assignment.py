@@ -57,7 +57,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     continue # Do not send unhealthy vehicles on long trips
                 
                 # Calculate current load
-                active_for_vehicle = [s for s in all_shipments if s.get("assigned_vehicle_id") == vehicle["id"] and s.get("status") in ["assigned", "in_transit"]]
+                v_id = vehicle.get("id")
+                active_for_vehicle = [s for s in all_shipments if s.get("assigned_vehicle_id") == v_id and s.get("status") in ["assigned", "in_transit"]]
                 current_weight = sum(s.get("weight", 0) for s in active_for_vehicle)
                 
                 if current_weight + shipment.get("weight", 0) <= vehicle.get("capacity", 0):
@@ -112,8 +113,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     ))[0]
     
     return {
-        "assigned_driver_id": best_pair["driver"]["id"],
-        "assigned_vehicle_id": best_pair["vehicle"]["id"],
+        "assigned_driver_id": best_pair["driver"].get("id"),
+        "assigned_vehicle_id": best_pair["vehicle"].get("id"),
         "status": "assigned",
         "stage": "Assigned to Driver"
     }

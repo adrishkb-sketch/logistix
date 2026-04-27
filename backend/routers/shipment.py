@@ -515,7 +515,11 @@ def auto_assign(shipment_id: str):
     if shipment.get("assigned_driver_id"):
         return {"message": "Already assigned", "shipment": shipment}
 
-    assigned_data = auto_assign_shipment(shipment)
+    try:
+        assigned_data = auto_assign_shipment(shipment)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Assignment Logic Error: {str(e)}")
+        
     if assigned_data:
         from backend.models import ShipmentEvent
         d = drivers_db.get_by_id(assigned_data["assigned_driver_id"])
