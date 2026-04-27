@@ -229,12 +229,11 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
             if vehicle:
                 expected_plate = vehicle.get("number_plate", "UNKNOWN")
         
-        # Save image locally for OCR
+        # Save image to /tmp for OCR (Vercel allows writing only to /tmp)
         ext = file.filename.split('.')[-1]
         filename = f"{uuid.uuid4()}.{ext}"
-        filepath = f"data/images/{filename}"
+        filepath = f"/tmp/{filename}"
         
-        os.makedirs("data/images", exist_ok=True)
         file_bytes = await file.read()
         with open(filepath, "wb") as buffer:
             buffer.write(file_bytes)
