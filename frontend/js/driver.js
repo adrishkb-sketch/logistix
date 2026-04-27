@@ -1516,19 +1516,23 @@ async function withdrawMoney() {
     alert("Withdrawal request initiated. Money will be credited to your linked UPI/Bank account within 30 minutes.");
 }
 
-async function requestFunds() {
+async function handleFundRequest() {
     const amt = document.getElementById('fund-req-amount').value;
     const type = document.getElementById('fund-req-type').value;
-    if (!amt || amt <= 0) return alert("Enter valid amount");
+    if (!amt || amt <= 0) {
+        alert(getTranslation ? getTranslation('enter_valid_amount') : "Please enter a valid amount");
+        return;
+    }
     
     try {
         await apiCall(`/driver/${localStorage.getItem('driver_id')}/request-funds`, 'POST', {
-            amount: parseFloat(amt), type: type
+            amount: parseFloat(amt), 
+            type: type
         });
-        alert(`Request for ₹${amt} sent to Manager!`);
+        alert(`Emergency fund request for ₹${amt} (${type}) sent to Manager!`);
         document.getElementById('fund-req-amount').value = '';
     } catch (e) {
-        alert("Failed to send request.");
+        alert("Failed to send request. " + e.message);
     }
 }
 

@@ -4276,7 +4276,10 @@ async function initFintechOracle() {
                         <td><b>${r.driver_name}</b></td>
                         <td style="color:var(--warning); font-weight:bold;">₹${r.amount.toLocaleString()}</td>
                         <td><span class="badge" style="background:rgba(255,165,0,0.15); color:var(--warning);">${r.fund_type}</span></td>
-                        <td><button class="btn-primary" style="padding:5px 10px; font-size:0.7rem; background:var(--success);" onclick="approveFundRequest('${r.alert_id}')">Approve Transfer</button></td>
+                        <td style="display:flex; gap:8px;">
+                            <button class="btn-primary" style="padding:5px 10px; font-size:0.7rem; background:var(--success);" onclick="approveFundRequest('${r.alert_id}')">Approve</button>
+                            <button class="btn-primary" style="padding:5px 10px; font-size:0.7rem; background:var(--danger);" onclick="rejectFundRequest('${r.alert_id}')">Reject</button>
+                        </td>
                     </tr>`;
                 });
             }
@@ -4309,6 +4312,15 @@ async function approveFundRequest(alertId) {
         alert(res.message);
         initFintechOracle();
     } catch (e) { alert("Failed to approve fund request: " + e.message); }
+}
+
+async function rejectFundRequest(alertId) {
+    if (!confirm("Are you sure you want to REJECT this fund request?")) return;
+    try {
+        const res = await apiCall(`/manager/finance/reject-fund-request/${alertId}`, 'POST');
+        alert(res.message);
+        initFintechOracle();
+    } catch (e) { alert("Failed to reject fund request: " + e.message); }
 }
 
 /* ── Smooth Draggable Floating Panels ─────────────────────────────────────

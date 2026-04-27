@@ -968,15 +968,14 @@ def get_fund_requests(company_id: str):
 
 @router.post("/finance/approve-fund-request/{alert_id}")
 def approve_fund_request(alert_id: str):
-    """Approve a driver fund request: credit wallet and resolve alert."""
     alerts_db = JSONDatabase("alerts")
     alert = alerts_db.get_by_id(alert_id)
     if not alert:
-        raise HTTPException(status_code=404, detail="Fund request not found")
-    
-    import re
+        raise HTTPException(status_code=404, detail="Alert not found")
+        
     desc = alert.get("description", "")
-    amount_match = re.search(r"₹([\d.]+)", desc)
+    import re
+    amount_match = re.search(r"₹(\d+\.?\d*)", desc)
     amount = float(amount_match.group(1)) if amount_match else 0
     
     driver_id = alert.get("driver_id")
@@ -989,12 +988,15 @@ def approve_fund_request(alert_id: str):
     
     # Credit driver's wallet
     new_balance = driver.get("wallet_balance", 0) + amount
-    drivers_db.update(driver_id, {"wallet_balance": new_balance})
+    drivers_db.update(driver_id, {
+        "wallet_balance": new_balance,
+        "total_earnings": driver.get("total_earnings", 0) + amount # Credit earnings too since it's an advance
+    })
     
     # Log as expense in ledger
     ledger_db.insert({
         "type": "EXPENSE",
-        "desc": f"Fund Transfer Approved: {driver['name']} ({desc.split('for')[-1].strip()})",
+        "desc": f"Emergency Fund Approved: {driver['name']} ({desc.split('for')[-1].strip()})",
         "amount": amount,
         "timestamp": datetime.utcnow().isoformat(),
         "company_id": alert.get("company_id")
@@ -1004,3 +1006,15 @@ def approve_fund_request(alert_id: str):
     alerts_db.update(alert_id, {"status": "resolved"})
     
     return {"message": f"₹{amount} transferred to {driver['name']}'s wallet successfully."}
+
+@router.post("/finance/reject-fund-request/{alert_id}")
+def reject_fund_request(alert_id: str):
+    alerts_db = JSONDatabase("alerts")
+    alert = alerts_db.get_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    # Just mark as resolved without doing anything else
+    alerts_db.update(alert_id, {"status": "resolved", "rejection_note": "Denied by Manager"})
+    
+    return {"message": "Fund request rejected."}

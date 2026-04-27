@@ -160,23 +160,22 @@
                 </div>
 
 
-                <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03);">
-                    <h4 style="margin:0 0 15px 0;" data-i18n="request_funds_title">Request Funds ⛽🍔</h4>
-                    <div style="display:flex; gap:10px;">
-                        <input type="number" id="fund-req-amount" data-i18n-placeholder="amount_placeholder" placeholder="Amount (₹)" class="glass-card" style="width:100%; padding:10px; border:1px solid rgba(255,255,255,0.1); color:white; background:transparent;">
-                        <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
-            <option value="en">English (EN)</option>
-            <option value="hi">हिंदी (HI)</option>
-            <option value="bn">বাংলা (BN)</option>
-            <option value="ta">தமிழ் (TA)</option>
-            <option value="te">తెలుగు (TE)</option>
-            <option value="mr">मराठी (MR)</option>
-            <option value="gu">ગુજરાતી (GU)</option>
-            <option value="kn">ಕನ್ನಡ (KN)</option>
-            <option value="ml">മലയാളം (ML)</option>
-            <option value="pa">ਪੰਜਾਬੀ (PA)</option>
-        </select>
-                        <button class="btn-primary" style="padding:10px 20px; white-space:nowrap;" onclick="requestFunds()"><span data-i18n="send">Send</span></button>
+                <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);">
+                    <h4 style="margin:0 0 15px 0; color:var(--warning);" data-i18n="request_funds_title">Request Emergency Funds ⛽🍔</h4>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px;">Requests are sent to the manager for instant approval.</p>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div style="display:flex; gap:10px;">
+                            <select id="fund-req-type" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; flex:1;">
+                                <option value="FUEL">Fuel / Gas ⛽</option>
+                                <option value="FOOD">Food / Subsistence 🍔</option>
+                                <option value="MAINTENANCE">Emergency Repair 🛠️</option>
+                                <option value="OTHER">Other / Misc 📦</option>
+                            </select>
+                            <input type="number" id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;">
+                        </div>
+                        <button class="btn-primary" style="width:100%; padding:14px; font-weight:700;" onclick="handleFundRequest()">
+                            <span data-i18n="send">Request Funds Now</span>
+                        </button>
                     </div>
                 </div>
 

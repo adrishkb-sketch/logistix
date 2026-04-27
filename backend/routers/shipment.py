@@ -487,6 +487,27 @@ def update_shipment(shipment_id: str, data: dict):
                     "wallet_balance": new_balance,
                     "total_earnings": driver.get("total_earnings", 0) + payout
                 })
+        
+        # RECORD FINANCIAL LEDGER ENTRY
+        finance = shipment.get("finance", {})
+        if finance:
+            ledger_db = JSONDatabase("ledger")
+            # 1. Record Revenue (What customer paid)
+            ledger_db.insert({
+                "type": "REVENUE",
+                "desc": f"Shipment Delivered: {shipment['id'][:8]}",
+                "amount": finance.get("suggested_price", 0),
+                "timestamp": datetime.utcnow().isoformat(),
+                "company_id": shipment.get("company_id")
+            })
+            # 2. Record Total Operational Cost (Expense)
+            ledger_db.insert({
+                "type": "EXPENSE",
+                "desc": f"Ops Cost (Fuel/Maint/Pay): {shipment['id'][:8]}",
+                "amount": finance.get("total_cost", 0),
+                "timestamp": datetime.utcnow().isoformat(),
+                "company_id": shipment.get("company_id")
+            })
 
     # Merge other updates
     shipment.update(data)
