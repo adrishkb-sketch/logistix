@@ -646,6 +646,20 @@ function logout() {
     window.location.href = '../index.html';
 }
 
+// Init Company ID display
+const compId = localStorage.getItem('manager_id');
+const compIdDisplay = document.getElementById('display-company-id');
+if (compIdDisplay && compId) {
+    compIdDisplay.innerText = compId;
+}
+
+function copyCompanyID() {
+    const id = document.getElementById('display-company-id').innerText;
+    navigator.clipboard.writeText(id).then(() => {
+        alert("Company ID copied to clipboard! 📋");
+    });
+}
+
 async function loadInsights() {
     try {
         const company_id = localStorage.getItem('manager_id');

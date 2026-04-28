@@ -1387,6 +1387,17 @@
                 <div class="glass-card section-card">
                     <h3>System Management</h3>
                     <p style="color:var(--text-muted); margin-bottom: 20px;">Use these tools to reset database tables or manage your company account.</p>
+
+                    <div class="glass-card" style="padding:15px; background:rgba(79, 140, 255, 0.1); border-left:4px solid var(--primary); margin-bottom:30px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h4 style="margin:0; color:var(--primary);">Your Company ID</h4>
+                            <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted);">Share this ID with your drivers so they can log in.</p>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <code id="display-company-id" style="background:rgba(0,0,0,0.3); padding:10px 15px; border-radius:8px; font-weight:bold; color:var(--primary); font-size:1.1rem; border:1px solid var(--primary);">LOADING...</code>
+                            <button class="btn-primary" style="width:auto; padding:8px 12px; font-size:0.8rem;" onclick="copyCompanyID()">📋 Copy</button>
+                        </div>
+                    </div>
                     
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:20px;">
                         <div class="glass-card" style="padding:20px; border:1px solid rgba(229,62,62,0.3); background:rgba(255,255,255,0.02);">
