@@ -5,8 +5,9 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 
 const dId = localStorage.getItem('driver_id');
 if (!dId) {
+    console.warn("Driver ID missing. Redirecting to login...");
     window.location.href = '../index.html';
-    throw new Error("Redirecting to login...");
+    throw new Error("AUTH_REQUIRED: Redirecting to login...");
 }
 const nameEl = document.getElementById('driver-name');
 if (nameEl) nameEl.innerText = localStorage.getItem('driver_name') || getTranslation('driver');
@@ -202,7 +203,7 @@ async function loadDashStats() {
         
         // Mini vehicle details
         const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
-        const me = drivers && Array.isArray(drivers) ? drivers.find(d => d.id === localStorage.getItem('driver_id')) : null;
+        const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(localStorage.getItem('driver_id'))) : null;
         
         if (me && me.assigned_vehicle_id) {
             document.getElementById('vehicle-mini-details').innerText = `Active Vehicle: ${me.assigned_vehicle_id}`;
@@ -323,7 +324,7 @@ async function loadMissions(autoStartNext = false) {
 
         // Fetch driver info to check verification status
         const drivers = await apiCall(`/manager/drivers?company_id=${companyId}`);
-        const me = drivers && Array.isArray(drivers) ? drivers.find(d => d.id === dId) : null;
+        const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(dId)) : null;
         
         const mainContent = document.getElementById('main-content');
         const vScreen = document.getElementById('verification-screen');
