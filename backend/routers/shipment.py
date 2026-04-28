@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from backend.models import ShipmentCreate, Shipment, Location, ShipmentEvent
+from backend.models import ShipmentCreate, Shipment, Location, ShipmentEvent, ManualAssignRequest
 from backend.database import JSONDatabase
 from backend.services.assignment import auto_assign_shipment
 from backend.services.route_engine import calculate_route_type, haversine
@@ -332,6 +332,7 @@ def get_shipments(company_id: str):
     return company_ships
 
 @router.get("/{shipment_id}")
+def get_shipment(shipment_id: str):
     all_ships = shipments_db.get_all()
     shipment = next((s for s in all_ships if s and s.get("id") == shipment_id), None)
     
