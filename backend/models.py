@@ -20,7 +20,7 @@ class DriverLogin(BaseModel):
     password: str
 
 class ManualAssignRequest(BaseModel):
-    driver_id: str
+    driver_id: Optional[str] = None
     vehicle_id: str
 
 class SmartContractTx(BaseModel):

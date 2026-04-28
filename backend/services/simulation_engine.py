@@ -65,7 +65,33 @@ class SimulationEngine:
                         dist = haversine(curr["lat"], curr["lng"], dest["lat"], dest["lng"])
                         
                         if dist < 0.1: # Arrived
-                            # Trigger delivery logic (simplified for sim)
+                            if s.get("route_type") == "drone-leg":
+                                # Drone delivery completed!
+                                from backend.models import ShipmentEvent
+                                wh_id = s.get("pickup_warehouse_id")
+                                log = ShipmentEvent(
+                                    status="delivered",
+                                    message="🏁 Drone landing successful. Shipment delivered to customer doorstep.",
+                                    reason="Autonomous flight path completed."
+                                )
+                                s["logs"] = s.get("logs", []) + [log.model_dump()]
+                                s["status"] = "delivered"
+                                s["stage"] = "Delivered"
+                                s["actual_delivery"] = datetime.utcnow().isoformat() + "Z"
+                                shipments_db.update(s["id"], s)
+                                
+                                # Log Maintenance Expense for Drone
+                                if s.get("finance"):
+                                    from backend.database import JSONDatabase
+                                    ledger_db = JSONDatabase("ledger")
+                                    maint = s["finance"].get("maintenance_cost", 50.0)
+                                    ledger_db.insert({
+                                        "type": "EXPENSE",
+                                        "desc": f"Drone Maintenance: Segment {s['id'][:8]}",
+                                        "amount": maint,
+                                        "timestamp": datetime.utcnow().isoformat(),
+                                        "company_id": s.get("company_id")
+                                    })
                             continue
                             
                         # Move ~100m per tick (72km/h)

@@ -1393,28 +1393,48 @@ async function openManualAssignModal(id) {
     document.getElementById('manual-assign-modal').style.display = 'block';
 
     try {
-        const [drivers, vehicles] = await Promise.all([
+        const shipment = await apiCall(`/shipments/${id}`, 'GET');
+        const [drivers, vehicles, warehouses] = await Promise.all([
             apiCall('/manager/drivers?company_id=' + localStorage.getItem('manager_id')),
-            apiCall('/manager/vehicles?company_id=' + localStorage.getItem('manager_id'))
+            apiCall('/manager/vehicles?company_id=' + localStorage.getItem('manager_id')),
+            apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'))
         ]);
         
-        const pairs = drivers.filter(d => d.assigned_vehicle_id);
-        
-        if (pairs.length === 0) {
-            select.innerHTML = '<option value="">No driver-vehicle pairs available</option>';
-            return;
-        }
-
         select.innerHTML = '<option value="">Select Driver & Vehicle</option>';
+        
+        // 1. Regular Driver + Vehicle pairs
+        const pairs = drivers.filter(d => d.assigned_vehicle_id);
         pairs.forEach(d => {
             const v = vehicles.find(v => v.id === d.assigned_vehicle_id);
             if (v) {
                 const opt = document.createElement('option');
                 opt.value = JSON.stringify({ driver_id: d.id, vehicle_id: v.id });
-                opt.textContent = `${d.name} (${v.type} - ${v.number_plate})`;
+                opt.textContent = `👤 ${d.name} (${v.type} - ${v.number_plate})`;
                 select.appendChild(opt);
             }
         });
+
+        // 2. Autonomous Drones (Last Mile only)
+        if (shipment.leg_type === 'last_mile' || !shipment.is_leg) {
+            const wh = warehouses.find(w => w.id === shipment.pickup_warehouse_id);
+            const drones = vehicles.filter(v => v.type.toLowerCase().includes('drone') && v.status === 'available');
+            
+            if (drones.length > 0) {
+                drones.forEach(v => {
+                    // Check if drone is at the right warehouse or if we just want to show all available
+                    const opt = document.createElement('option');
+                    opt.value = JSON.stringify({ driver_id: null, vehicle_id: v.id });
+                    opt.textContent = `🛰️ Autonomous Drone (${v.number_plate})`;
+                    opt.style.color = 'var(--accent)';
+                    select.appendChild(opt);
+                });
+            }
+        }
+        
+        if (select.options.length <= 1) {
+            select.innerHTML = '<option value="">No assets available for this segment</option>';
+        }
+
     } catch(e) {
         console.error("Manual Assign Fleet Load Error:", e);
         select.innerHTML = '<option value="">Error loading fleet assets</option>';
@@ -3010,6 +3030,8 @@ async function loadLeaderboard() {
             <option value="overall">General Ranking</option>
             <option value="vehicle_health_score">Health Score</option>
             <option value="fuel_efficiency">Fuel Efficiency</option>
+            <option value="distance">Distance Covered</option>
+            <option value="deliveries">Deliveries Made</option>
         `;
         sortSelect.dataset.isVehicle = "true";
     } else if (category === 'driver' && sortSelect.dataset.isVehicle) {
@@ -3018,6 +3040,7 @@ async function loadLeaderboard() {
             <option value="safety_index">Safety Index</option>
             <option value="punctuality_rate">Punctuality</option>
             <option value="rating">Customer Rating</option>
+            <option value="deliveries">Deliveries Completed</option>
         `;
         sortSelect.removeAttribute('data-is-vehicle');
     }
@@ -3046,7 +3069,7 @@ async function loadLeaderboard() {
                         <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name || item.number_plate}`}" style="width:30px; height:30px; border-radius:50%;">
                         <div>
                             <strong>${item.name || item.number_plate}</strong>
-                            ${category === 'driver' ? `<br><small style="color:var(--text-muted)">${getTranslation('stat_trips') || 'Trips'}: ${item.total_trips}</small>` : ''}
+                            ${category === 'driver' ? `<br><small style="color:var(--text-muted)">${getTranslation('stat_deliveries') || 'Deliveries'}: ${item.deliveries_completed || 0}</small>` : ''}
                         </div>
                     </div>
                 </td>
@@ -3081,17 +3104,17 @@ async function viewFullProfile(type, id) {
                 expMonths = Math.floor((new Date() - new Date(p.join_date)) / (1000 * 60 * 60 * 24 * 30));
             }
             document.getElementById('prof-stat-3').innerText = `${expMonths || 0} months`;
-            document.getElementById('prof-stat-4').innerText = `${p.total_trips || 0}`;
+            document.getElementById('prof-stat-4').innerText = `${p.deliveries_completed || 0}`;
             
             let avgRating = 5.0;
-            if (p.customer_ratings && p.customer_ratings.length > 0) {
-                avgRating = p.customer_ratings.reduce((a,b)=>a+b,0) / p.customer_ratings.length;
-            } else if (p.rating !== undefined) {
-                avgRating = p.rating;
+            if (p.rating_count && p.rating_count > 0) {
+                avgRating = p.total_rating_sum / p.rating_count;
+            } else if (p.safety_rating !== undefined) {
+                avgRating = p.safety_rating;
             }
             document.getElementById('prof-stat-5').innerText = `${avgRating.toFixed(1)}⭐`;
             document.getElementById('prof-stat-5').style.display = 'block';
-            document.getElementById('prof-stat-6').innerText = `₹${p.reward_points || 0}`;
+            document.getElementById('prof-stat-6').innerText = `₹${p.wallet_balance || 0} / ${p.reward_points || 0} pts`;
             
             document.getElementById('prof-meter-label').innerText = `Fatigue Level: ${(p.fatigue_score || 0).toFixed(0)}%`;
             const meter = document.getElementById('prof-meter-bar');
@@ -3124,8 +3147,8 @@ async function viewFullProfile(type, id) {
         } else {
             document.getElementById('prof-stat-1').innerText = `${(p.efficiency_score || 100).toFixed(1)}%`;
             document.getElementById('prof-stat-2').innerText = `${p.vehicle_health_score || 100}%`;
-            document.getElementById('prof-stat-3').innerText = `${(p.total_distance_km || 0).toFixed(0)} km`;
-            document.getElementById('prof-stat-4').innerText = 'Grade A';
+            document.getElementById('prof-stat-3').innerText = `${(p.kilometers_covered || 0).toFixed(0)} km`;
+            document.getElementById('prof-stat-4').innerText = `${p.deliveries_completed || 0}`;
             document.getElementById('prof-stat-5').innerText = ''; 
             document.getElementById('prof-stat-6').innerText = '';
             
@@ -4430,6 +4453,7 @@ async function settlePayout(driverId) {
         await apiCall(`/manager/finance/approve-payout/${driverId}`, 'POST');
         alert("Payout settled successfully. Driver wallet has been debited.");
         initFintechOracle();
+        loadInsights();
     } catch (e) { alert("Failed to settle payout."); }
 }
 
@@ -4438,6 +4462,7 @@ async function confirmCustomerPayment(shipmentId) {
         await apiCall(`/manager/finance/confirm-payment/${shipmentId}`, 'POST');
         alert("Payment confirmed. Shipping lifecycle now cleared for delivery.");
         initFintechOracle();
+        loadInsights();
     } catch (e) { alert("Failed to confirm payment."); }
 }
 
@@ -4447,6 +4472,7 @@ async function approveFundRequest(alertId) {
         const res = await apiCall(`/manager/finance/approve-fund-request/${alertId}`, 'POST');
         alert(res.message);
         initFintechOracle();
+        loadInsights();
     } catch (e) { alert("Failed to approve fund request: " + e.message); }
 }
 
@@ -4611,18 +4637,21 @@ window.showMergeSuggestions = async function() {
         
         container.innerHTML = data.suggestions.map((sug, index) => {
             const shipIds = sug.shipment_ids.map(id => id.substring(0,8)).join(', ');
+            const typeIcon = sug.type === 'hub_transit' ? '🏗️' : '📍';
             return `
-                <div class="glass-card" style="margin-bottom:15px; padding:20px; border-left:4px solid var(--accent);">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div>
-                            <h4 style="margin:0 0 5px 0;">Dest: ${sug.target_hub_name || sug.target_hub_id}</h4>
-                            <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">
-                                <b>Shipments (${sug.count}):</b> ${shipIds} <br>
-                                <b>Total Weight:</b> ${sug.total_weight} kg
+                <div class="glass-card" style="margin-bottom:15px; padding:20px; border-left:4px solid var(--accent); background:rgba(255,255,255,0.03);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex:1;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                <span style="font-size:1.2rem;">${typeIcon}</span>
+                                <h4 style="margin:0; font-weight:800; color:var(--text);">${sug.reason}</h4>
+                            </div>
+                            <p style="margin:0; font-size:0.85rem; color:var(--text-muted); line-height:1.6;">
+                                <b style="color:var(--text);">Shipments (${sug.count}):</b> <span style="font-family:monospace; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px;">${shipIds}</span> <br>
+                                <b style="color:var(--text);">Total Combined Weight:</b> <span style="color:var(--accent); font-weight:bold;">${sug.total_weight.toFixed(1)} kg</span>
                             </p>
-                            <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--warning);">Reason: ${sug.reason}</p>
                         </div>
-                        <button class="btn-primary btn-success" style="padding:6px 16px; font-size:0.8rem;" onclick="approveMerge(${index}, '${sug.target_hub_id}')" id="btn-merge-${index}">Approve Merge</button>
+                        <button class="btn-primary" style="padding:10px 20px; font-size:0.85rem; width:auto; background:var(--success); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);" onclick="approveMerge(${index})" id="btn-merge-${index}">Approve Merge</button>
                     </div>
                 </div>
             `;
@@ -4636,16 +4665,16 @@ window.showMergeSuggestions = async function() {
     }
 }
 
-window.approveMerge = async function(index, hubId) {
+window.approveMerge = async function(index) {
     const btn = document.getElementById(`btn-merge-${index}`);
     btn.disabled = true;
-    btn.innerText = 'Merging...';
+    btn.innerText = 'Consolidating...';
     
     const sug = window.currentMergeSuggestions[index];
     
     try {
         await apiCall('/manager/approve-merge', 'POST', {
-            target_hub_id: hubId,
+            company_id: localStorage.getItem('manager_id'),
             shipment_ids: sug.shipment_ids
         });
         

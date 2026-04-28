@@ -602,7 +602,8 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
             "overall": "overall_score",
             "safety_index": "safety_index",
             "punctuality_rate": "punctuality_rate",
-            "rating": "rating"
+            "rating": "safety_rating",
+            "deliveries": "deliveries_completed"
         }
         target_key = key_map.get(sort_by, "overall_score")
         return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
@@ -616,7 +617,9 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
         key_map = {
             "overall": "efficiency_score",
             "vehicle_health_score": "vehicle_health_score",
-            "fuel_efficiency": "fuel_efficiency"
+            "fuel_efficiency": "fuel_efficiency",
+            "distance": "kilometers_covered",
+            "deliveries": "deliveries_completed"
         }
         target_key = key_map.get(sort_by, "efficiency_score")
         return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
@@ -637,7 +640,10 @@ def get_driver_profile(driver_id: str):
     
     return {
         "profile": driver,
-        "recent_shipments": shipments[:10]
+        "recent_shipments": shipments[:10],
+        "wallet_balance": driver.get("wallet_balance", 0),
+        "deliveries_completed": driver.get("deliveries_completed", 0),
+        "total_earnings": driver.get("total_earnings", 0)
     }
 
 import random
@@ -903,10 +909,14 @@ def confirm_customer_payment(shipment_id: str, x_logistix_context: Optional[str]
     shipments_db.update(shipment_id, {"payment_status": "paid"})
     
     # Log to ledger
+    revenue_amt = shipment.get("finance", {}).get("suggested_price", 0)
+    if revenue_amt <= 0:
+        revenue_amt = 500.0 # Fallback for legacy/mock data
+        
     ledger_db.insert({
         "type": "REVENUE",
         "desc": f"Payment Recieved for Shipment {shipment_id[:8]}",
-        "amount": shipment.get("finance", {}).get("suggested_price", 0),
+        "amount": revenue_amt,
         "timestamp": datetime.utcnow().isoformat(),
         "company_id": shipment.get("company_id")
     })
@@ -1047,71 +1057,139 @@ def reject_fund_request(alert_id: str):
 @router.get("/merge-suggestions")
 def get_merge_suggestions(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
-    all_shipments = shipments_db.get_all()
-    # Find active shipments (assigned/pending)
-    active = [s for s in all_shipments if s.get("company_id") == company_id and s.get("status") in ["pending", "assigned"] and s.get("drop_warehouse_id")]
-    
-    # Group by drop_warehouse_id
+    from backend.services.route_engine import haversine
     from collections import defaultdict
-    groups = defaultdict(list)
-    for s in active:
-        groups[s["drop_warehouse_id"]].append(s)
-        
+    
+    all_shipments = shipments_db.get_all()
+    # Active = pending or assigned but not in_transit/delivered
+    active = [s for s in all_shipments if s.get("company_id") == company_id and s.get("status") in ["pending", "assigned"]]
+    
     suggestions = []
-    for wh_id, ships in groups.items():
+    processed_ids = set()
+
+    # 1. CLUSTER BY HUB (Middle Mile Efficiency)
+    # Group shipments going to the same warehouse hub
+    hub_groups = defaultdict(list)
+    for s in active:
+        if s.get("drop_warehouse_id"):
+            hub_groups[s["drop_warehouse_id"]].append(s)
+            
+    for wh_id, ships in hub_groups.items():
         if len(ships) > 1:
             total_weight = sum(s.get("weight", 0) for s in ships)
             wh = warehouses_db.get_by_id(wh_id)
-            wh_name = wh.get("name", "Unknown Hub") if wh else "Unknown Hub"
-            suggestions.append({
-                "hub_id": wh_id,
-                "hub_name": wh_name,
-                "shipment_ids": [s["id"] for s in ships],
-                "shipment_count": len(ships),
-                "total_weight": total_weight
-            })
-    return suggestions
+            wh_name = wh.get("name", "Strategic Hub") if wh else "Strategic Hub"
+            
+            # Sub-divide into weight clusters (max 5000kg per truck)
+            current_cluster = []
+            current_weight = 0
+            for s in ships:
+                if current_weight + s.get("weight", 0) > 5000:
+                    if len(current_cluster) > 1:
+                        suggestions.append({
+                            "type": "hub_transit",
+                            "reason": f"Shared Middle-Mile Hub: {wh_name}",
+                            "hub_id": wh_id,
+                            "shipment_ids": [sc["id"] for sc in current_cluster],
+                            "total_weight": current_weight,
+                            "count": len(current_cluster)
+                        })
+                    current_cluster = [s]
+                    current_weight = s.get("weight", 0)
+                else:
+                    current_cluster.append(s)
+                    current_weight += s.get("weight", 0)
+            
+            if len(current_cluster) > 1:
+                suggestions.append({
+                    "type": "hub_transit",
+                    "reason": f"Shared Middle-Mile Hub: {wh_name}",
+                    "hub_id": wh_id,
+                    "shipment_ids": [sc["id"] for sc in current_cluster],
+                    "total_weight": current_weight,
+                    "count": len(current_cluster)
+                })
+
+    # 2. CLUSTER BY PROXIMITY (Direct/First-Mile Efficiency)
+    # Find shipments with nearby pickups AND nearby drops
+    for i in range(len(active)):
+        s1 = active[i]
+        if s1["id"] in processed_ids: continue
+        
+        cluster = [s1]
+        for j in range(i + 1, len(active)):
+            s2 = active[j]
+            if s2["id"] in processed_ids: continue
+            
+            p_dist = haversine(s1["pickup"]["lat"], s1["pickup"]["lng"], s2["pickup"]["lat"], s2["pickup"]["lng"])
+            d_dist = haversine(s1["drop"]["lat"], s1["drop"]["lng"], s2["drop"]["lat"], s2["drop"]["lng"])
+            
+            if p_dist < 10 and d_dist < 15:
+                cluster.append(s2)
+        
+        if len(cluster) > 1:
+            total_weight = sum(sc.get("weight", 0) for sc in cluster)
+            if total_weight <= 5000:
+                suggestions.append({
+                    "type": "proximity",
+                    "reason": "Geospatial Alignment (Nearby Pickup & Drop)",
+                    "shipment_ids": [sc["id"] for sc in cluster],
+                    "total_weight": total_weight,
+                    "count": len(cluster)
+                })
+                for sc in cluster: processed_ids.add(sc["id"])
+
+    # Deduplicate and prioritize hub-based merges
+    return {"suggestions": suggestions}
 
 @router.post("/approve-merge")
 def approve_merge(data: dict, x_logistix_context: Optional[str] = Header(None)):
     company_id = data.get("company_id")
     verify_context(company_id, x_logistix_context)
-    hub_id = data.get("hub_id")
     shipment_ids = data.get("shipment_ids", [])
     
-    if not hub_id or not shipment_ids:
-        raise HTTPException(status_code=400, detail="Missing hub_id or shipment_ids")
+    if not shipment_ids:
+        raise HTTPException(status_code=400, detail="Missing shipment_ids")
         
-    # Find a truck that can handle the weight and is going to/from this hub
-    vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id and v.get("status") in ["available", "assigned"] and "Truck" in v.get("type", "")]
+    # Calculate total weight for vehicle selection
+    all_active_ships = [shipments_db.get_by_id(sid) for sid in shipment_ids]
+    all_active_ships = [s for s in all_active_ships if s]
+    total_weight = sum(s.get("weight", 0) for s in all_active_ships)
+
+    # Find a truck that can handle the total weight
+    # Large Truck > 1000kg, Small Truck for less
+    v_type_pref = "Truck (Heavy)" if total_weight > 500 else "Truck (Small)"
     
-    if not vehicles:
-        raise HTTPException(status_code=400, detail="No available trucks found to handle the merged shipment.")
+    vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id and v.get("status") in ["available", "assigned"]]
+    
+    # Prioritize the preferred type
+    best_vehicle = next((v for v in vehicles if v.get("type") == v_type_pref and v.get("assigned_driver_id")), None)
+    if not best_vehicle:
+        # Fallback to any truck
+        best_vehicle = next((v for v in vehicles if "Truck" in v.get("type", "") and v.get("assigned_driver_id")), None)
+    
+    if not best_vehicle:
+        raise HTTPException(status_code=400, detail="No suitable trucks with assigned drivers found to handle the merged load.")
         
-    # Assign the shipments to the first available truck
-    chosen_vehicle = vehicles[0]
-    driver_id = chosen_vehicle.get("assigned_driver_id")
-    if not driver_id:
-        raise HTTPException(status_code=400, detail="Chosen truck does not have an assigned driver.")
-        
-    vehicles_db.update(chosen_vehicle["id"], {"status": "in_transit"})
+    driver_id = best_vehicle.get("assigned_driver_id")
+    vehicles_db.update(best_vehicle["id"], {"status": "in_transit"})
     
     for sid in shipment_ids:
-        s = shipments_db.get_by_id(sid)
+        s = next((ship for ship in all_active_ships if ship["id"] == sid), None)
         if s:
             logs = s.get("logs", [])
             logs.append({
                 "status": "assigned",
-                "message": f"MERGED: Shipment grouped onto Heavy Truck {chosen_vehicle['number_plate']}.",
-                "reason": "Manager approved merge for efficiency.",
+                "message": f"MERGED: Consolidated onto {best_vehicle['type']} ({best_vehicle['number_plate']}) for efficiency.",
+                "reason": "AI-suggested cluster merge approved by Manager.",
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             })
             shipments_db.update(sid, {
                 "assigned_driver_id": driver_id,
-                "assigned_vehicle_id": chosen_vehicle["id"],
+                "assigned_vehicle_id": best_vehicle["id"],
                 "status": "assigned",
-                "stage": "Middle-Mile Hub Transit",
+                "stage": "Consolidated Transit",
                 "logs": logs
             })
             
-    return {"message": f"Successfully merged {len(shipment_ids)} shipments onto Truck {chosen_vehicle['number_plate']}"}
+    return {"message": f"Successfully merged {len(shipment_ids)} shipments onto {best_vehicle['number_plate']} ({best_vehicle['type']})"}

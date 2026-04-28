@@ -173,7 +173,7 @@ setInterval(async () => {
 
 function switchDriverTab(tab) {
     currentActiveTab = tab;
-    const tabs = ['dash', 'active', 'chat', 'completed', 'wallet', 'profile'];
+    const tabs = ['dash', 'active', 'chat', 'completed', 'contracts', 'wallet', 'profile'];
     tabs.forEach(t => {
         const el = document.getElementById(`${t}-tab`);
         const btn = document.getElementById(`btn-tab-${t}`);
@@ -184,6 +184,7 @@ function switchDriverTab(tab) {
         }
     });
     if (tab === 'wallet') loadWallet();
+    if (tab === 'contracts') loadContracts();
 
     if (tab === 'dash') loadDashStats();
     if (tab === 'profile') loadProfileData();
@@ -1504,36 +1505,113 @@ async function withdrawMoney() {
     alert("Withdrawal request initiated. Money will be credited to your linked UPI/Bank account within 30 minutes.");
 }
 
+window.calculateSuggestedFuel = async function() {
+    const btn = event.currentTarget;
+    const originalText = btn.innerText;
+    btn.innerText = '⌛';
+    btn.disabled = true;
+
+    try {
+        const lat = lastLat || 28.6139;
+        const lng = lastLng || 77.2090;
+        
+        const data = await apiCall(`/driver/${dId}/calculate-fuel?lat=${lat}&lng=${lng}`, 'GET');
+        document.getElementById('fund-req-amount').value = Math.round(data.suggested_amount);
+        document.getElementById('fund-req-type').value = 'FUEL';
+        showNotification(`Fuel Oracle: ₹${data.price_per_liter}/L in ${data.state}. Suggested: ₹${Math.round(data.suggested_amount)}`, 'success');
+    } catch (e) {
+        showNotification("Fuel Oracle unavailable. Please enter manually.", "error");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
+
+window.loadContracts = async function() {
+    const container = document.getElementById('contracts-list');
+    container.innerHTML = '<p style="text-align:center;">Analyzing escrow status...</p>';
+    
+    try {
+        const shipments = await apiCall(`/driver/${dId}/shipments`, 'GET');
+        const stats = await apiCall(`/driver/${dId}/dashboard/stats`, 'GET');
+        
+        const totalPointsEl = document.getElementById('contract-points-total');
+        if (totalPointsEl) totalPointsEl.innerText = `${stats.total_points || 0} pts`;
+        
+        if (!shipments || shipments.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">No active contracts found.</p>';
+            return;
+        }
+        
+        container.innerHTML = shipments.map(s => {
+            const isPaid = s.payment_status === 'paid';
+            const statusColor = isPaid ? 'var(--success)' : 'var(--warning)';
+            const pointsValue = s.is_perishable ? 75 : 50;
+            
+            return `
+                <div class="glass-card" style="padding:20px; border-left:4px solid ${statusColor};">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                        <div>
+                            <h4 style="margin:0;">Contract #${s.id.substring(0,8)}</h4>
+                            <small style="color:var(--text-muted)">Type: ${s.description || 'General Cargo'}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="badge" style="background:${statusColor}22; color:${statusColor}; font-size:0.7rem;">${isPaid ? 'ESCROW RELEASED' : 'ESCROW LOCKED'}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; font-size:0.85rem;">
+                        <div style="color:var(--text-muted);">
+                            💰 Payout: <span style="color:var(--text); font-weight:bold;">₹${s.finance?.driver_payout || 0}</span>
+                        </div>
+                        <div style="color:var(--accent); font-weight:bold;">
+                            🏆 +${pointsValue} Reward Points
+                        </div>
+                    </div>
+                    ${!isPaid ? `<p style="margin:10px 0 0 0; font-size:0.7rem; color:var(--warning);">⚠️ Manager must verify receiver payment before final delivery.</p>` : ''}
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        container.innerHTML = '<p style="text-align:center; color:var(--danger);">Failed to load contracts.</p>';
+    }
+}
+
 async function handleFundRequest() {
     const amt = document.getElementById('fund-req-amount').value;
     const type = document.getElementById('fund-req-type').value;
     if (!amt || amt <= 0) {
-        alert(getTranslation ? getTranslation('enter_valid_amount') : "Please enter a valid amount");
+        showNotification("Please enter a valid amount", "error");
         return;
     }
     
     try {
-        await apiCall(`/driver/${localStorage.getItem('driver_id')}/request-funds`, 'POST', {
+        await apiCall(`/driver/${dId}/request-funds`, 'POST', {
             amount: parseFloat(amt), 
             type: type
         });
-        alert(`Emergency fund request for ₹${amt} (${type}) sent to Manager!`);
+        showNotification(`Emergency fund request for ₹${amt} (${type}) sent to Manager!`, 'success');
         document.getElementById('fund-req-amount').value = '';
     } catch (e) {
-        alert("Failed to send request. " + e.message);
+        showNotification("Failed to send request.", "error");
     }
 }
 
 async function completeDelivery(shipmentId) {
     const otp = prompt("Enter the 4-digit Delivery OTP provided by the customer:");
     if (!otp) return;
+    
+    // We also need to upload a photo proof
+    const confirmPhoto = confirm("Please click an image of the product before completion. (Simulated photo upload)");
+    if (!confirmPhoto) return;
+    
     try {
-        const res = await apiCall(`/driver/${localStorage.getItem('driver_id')}/complete-delivery/${shipmentId}?otp=${otp}`, 'POST');
-        alert(res.message);
+        const dummyPhoto = `https://api.dicebear.com/7.x/identicon/svg?seed=${shipmentId}_proof`;
+        const res = await apiCall(`/driver/${dId}/complete-delivery/${shipmentId}?otp=${otp}&image_url=${encodeURIComponent(dummyPhoto)}`, 'POST');
+        showNotification(res.message, 'success');
         loadMissions();
         loadWallet();
     } catch(e) {
-        alert("Error: " + e.message + ". If payment is pending, the customer must pay first.");
+        showNotification("Error: " + (e.message || "Invalid OTP or Payment Pending"), "error");
     }
 }
 

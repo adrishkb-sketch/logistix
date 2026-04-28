@@ -709,11 +709,31 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     new_balance = driver.get("wallet_balance", 0) + total_credit
     new_total = driver.get("total_earnings", 0) + total_credit
     
+    # Update Points (Smart Contract Reward)
+    # +50 points for successful delivery
+    new_points = driver.get("reward_points", 0) + 50
+    
+    # Update Leaderboard Stats
+    from backend.services.route_engine import haversine
+    dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+    
     drivers_db.update(driver_id, {
         "wallet_balance": new_balance,
         "total_earnings": new_total,
-        "monthly_earnings": driver.get("monthly_earnings", 0) + total_credit
+        "monthly_earnings": driver.get("monthly_earnings", 0) + total_credit,
+        "reward_points": new_points,
+        "deliveries_completed": driver.get("deliveries_completed", 0) + 1
     })
+    
+    v_id = driver.get("assigned_vehicle_id")
+    if v_id:
+        v = vehicles_db.get_by_id(v_id)
+        if v:
+            vehicles_db.update(v_id, {
+                "kilometers_covered": v.get("kilometers_covered", 0) + dist,
+                "deliveries_completed": v.get("deliveries_completed", 0) + 1,
+                "utilization_hours": v.get("utilization_hours", 0) + (dist / 40) # Assume 40km/h avg
+            })
     
     return {"message": f"Delivery Complete! ₹{total_credit} credited to your wallet.", "new_balance": new_balance}
 
@@ -736,3 +756,36 @@ def request_funds(driver_id: str, data: dict):
     )
     alerts_db.insert(new_alert.model_dump())
     return {"message": "Request sent to manager."}
+
+@router.get("/{driver_id}/calculate-fuel")
+def calculate_fuel_need(driver_id: str, lat: float, lng: float):
+    # 1. Reverse geocode to get state (Simplified mock)
+    # In real life, use Nominatim or a state-boundary check
+    state = "Delhi"
+    if lat < 25: state = "Maharashtra"
+    if lat < 20: state = "Karnataka"
+    if lng > 85: state = "West Bengal"
+    
+    from backend.routers.fuel_oracle import FUEL_PRICES
+    price_info = FUEL_PRICES.get(state, FUEL_PRICES["Delhi"])
+    
+    driver = drivers_db.get_by_id(driver_id)
+    v_id = driver.get("assigned_vehicle_id")
+    mileage = 15.0 # default
+    v_type = "van"
+    if v_id:
+        v = vehicles_db.get_by_id(v_id)
+        if v:
+            mileage = v.get("fuel_efficiency", 15.0)
+            v_type = v.get("type", "van")
+            
+    # Calculate suggested amount for a 300km range
+    price = price_info["diesel"] if "Truck" in v_type or "Van" in v_type else price_info["petrol"]
+    suggested = (300 / mileage) * price
+    
+    return {
+        "state": state,
+        "price_per_liter": price,
+        "suggested_amount": round(suggested, 2),
+        "mileage": mileage
+    }

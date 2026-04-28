@@ -689,17 +689,37 @@ def manual_assign(shipment_id: str, data: ManualAssignRequest):
     plate = v.get("number_plate", "Unknown") if v else "Unknown"
     
     from backend.models import ShipmentEvent
-    log_event = ShipmentEvent(
-        status="assigned", 
-        message=f"👤 Manually assigned to driver {driver_name}. Vehicle: {plate}."
-    )
+    if not driver_id:
+        # Autonomous/Drone logic
+        log_event = ShipmentEvent(
+            status="in_transit", 
+            message=f"🛰️ Autonomous Dispatch: Assigned to Drone {plate}.",
+            reason="Manager manually triggered drone air delivery for this segment."
+        )
+        stage = "Drone Air Delivery"
+        status = "in_transit"
+        # Decrement drone count if it's a drone
+        if v and "drone" in v.get("type", "").lower():
+            wh_id = shipment.get("pickup_warehouse_id")
+            if wh_id:
+                wh = JSONDatabase("warehouses").get_by_id(wh_id)
+                if wh and wh.get("drone_count", 0) > 0:
+                    JSONDatabase("warehouses").update(wh_id, {"drone_count": wh["drone_count"] - 1})
+    else:
+        log_event = ShipmentEvent(
+            status="assigned", 
+            message=f"👤 Manually assigned to driver {driver_name}. Vehicle: {plate}."
+        )
+        stage = "Assigned to Driver"
+        status = "assigned"
+
     logs = shipment.get("logs", []) + [log_event.model_dump()]
     
     updated = shipments_db.update(shipment_id, {
         "assigned_driver_id": driver_id,
         "assigned_vehicle_id": vehicle_id,
-        "status": "assigned",
-        "stage": "Assigned to Driver",
+        "status": status,
+        "stage": stage,
         "logs": logs
     })
     try:
@@ -948,3 +968,77 @@ def extend_eway_bill(shipment_id: str):
         return {"message": "Extended by 24 hours", "new_expiry": new_expiry}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{shipment_id}/pay")
+def pay_shipment(shipment_id: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        all_ships = shipments_db.get_all()
+        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+    
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    shipments_db.update(shipment["id"], {"payment_status": "paid"})
+    
+    # Also update all legs
+    all_ships = shipments_db.get_all()
+    legs = [s for s in all_ships if s.get("parent_id") == shipment["id"]]
+    for leg in legs:
+        shipments_db.update(leg["id"], {"payment_status": "paid"})
+        
+    return {"message": "Payment successful"}
+
+@router.post("/{shipment_id}/rate")
+def rate_shipment(shipment_id: str, data: dict):
+    rating = data.get("rating")
+    if not rating: raise HTTPException(status_code=400, detail="Rating required")
+    
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        all_ships = shipments_db.get_all()
+        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+        
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    shipments_db.update(shipment["id"], {"customer_rating": rating})
+    
+    # Propagate rating to all drivers involved
+    drivers_db = JSONDatabase("drivers")
+    driver_ids = set()
+    if shipment.get("assigned_driver_id"):
+        driver_ids.add(shipment["assigned_driver_id"])
+        
+    # Check legs if it's a parent
+    all_ships = shipments_db.get_all()
+    legs = [s for s in all_ships if s.get("parent_id") == shipment["id"]]
+    for leg in legs:
+        if leg.get("assigned_driver_id"):
+            driver_ids.add(leg["assigned_driver_id"])
+            
+    # Also check if THIS IS a leg and find its parent's drivers
+    if shipment.get("is_leg") and shipment.get("parent_id"):
+        parent = shipments_db.get_by_id(shipment["parent_id"])
+        if parent:
+            if parent.get("assigned_driver_id"):
+                driver_ids.add(parent["assigned_driver_id"])
+            parent_legs = [s for s in all_ships if s.get("parent_id") == parent["id"]]
+            for pl in parent_legs:
+                if pl.get("assigned_driver_id"):
+                    driver_ids.add(pl["assigned_driver_id"])
+
+    for d_id in driver_ids:
+        driver = drivers_db.get_by_id(d_id)
+        if driver:
+            r_sum = driver.get("total_rating_sum", 0) + rating
+            r_count = driver.get("rating_count", 0) + 1
+            avg = round(r_sum / r_count, 1)
+            
+            # Update safety/driving score too
+            drivers_db.update(d_id, {
+                "total_rating_sum": r_sum,
+                "rating_count": r_count,
+                "safety_rating": avg # Sync with rating
+            })
+            
+    return {"message": f"Rating of {rating} applied to {len(driver_ids)} participants."}
