@@ -21,7 +21,10 @@ async function apiCall(endpoint, method = "GET", body = null) {
         context = companyId || driverId || trackingToken || "";
     }
     
-    if ((!context || context === "null") && !endpoint.includes('/auth/')) {
+    // Sanitize to prevent "null" or "undefined" strings in headers/params
+    if (context === "null" || context === "undefined") context = "";
+    
+    if ((!context || context === "") && !endpoint.includes('/auth/')) {
         console.warn("API Call attempted without security context:", endpoint);
         // If we are on a dashboard and lose context, redirect to login
         if (window.location.pathname.includes('/pages/')) {
@@ -29,9 +32,6 @@ async function apiCall(endpoint, method = "GET", body = null) {
         }
         throw new Error("AUTH_REQUIRED");
     }
-    
-    // Final sanitization to prevent "null" strings in headers/params
-    if (context === "null") context = "";
 
     const options = {
         method,

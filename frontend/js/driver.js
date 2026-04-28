@@ -202,51 +202,60 @@ async function loadDashStats() {
         
         // Mini vehicle details
         const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
-        const me = drivers.find(d => d.id === localStorage.getItem('driver_id'));
+        const me = drivers && Array.isArray(drivers) ? drivers.find(d => d.id === localStorage.getItem('driver_id')) : null;
+        
         if (me && me.assigned_vehicle_id) {
             document.getElementById('vehicle-mini-details').innerText = `Active Vehicle: ${me.assigned_vehicle_id}`;
             
             // Handle Breakdown/Maintenance UI
-            const v = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('company_id')}`).then(list => list.find(veh => veh.id === me.assigned_vehicle_id));
+            const vehicles = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('company_id')}`);
+            const v = vehicles && Array.isArray(vehicles) ? vehicles.find(veh => veh.id === me.assigned_vehicle_id) : null;
+            
             const statusBadge = document.getElementById('vehicle-status-badge');
             const actionsDiv = document.getElementById('vehicle-actions');
             const rescueInfo = document.getElementById('breakdown-rescue-info');
             
-            if (v.status === 'maintenance') {
-                statusBadge.innerText = getTranslation('under_maintenance');
-                statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
-                statusBadge.style.color = 'var(--danger)';
-                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success); font-size:0.85rem;" onclick="completeMaintenance()">🔧 ${getTranslation('mark_repaired')}</button>`;
-                rescueInfo.style.display = 'block';
-                document.getElementById('rescue-details').innerText = "Vehicle is locked in maintenance mode. Click 'Mark Repaired' to resume duties.";
+            if (v) {
+                if (v.status === 'maintenance') {
+                    statusBadge.innerText = getTranslation('under_maintenance');
+                    statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
+                    statusBadge.style.color = 'var(--danger)';
+                    actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success); font-size:0.85rem;" onclick="completeMaintenance()">🔧 ${getTranslation('mark_repaired')}</button>`;
+                    rescueInfo.style.display = 'block';
+                    document.getElementById('rescue-details').innerText = "Vehicle is locked in maintenance mode. Click 'Mark Repaired' to resume duties.";
+                } else {
+                    statusBadge.innerText = (getTranslation(v.status) || v.status).toUpperCase().replace('_', '-');
+                    statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+                    statusBadge.style.color = 'var(--success)';
+                    actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger); font-size:0.85rem;" onclick="reportBreakdown()">🚨 ${getTranslation('report_breakdown')}</button>`;
+                    rescueInfo.style.display = 'none';
+                }
+                
+                // Enrich details with health and efficiency
+                const health = stats.vehicle_health || 100;
+                const healthColor = health > 70 ? 'var(--success)' : (health > 30 ? 'var(--warning)' : 'var(--danger)');
+                document.getElementById('vehicle-mini-details').innerHTML = `
+                    <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                            <span>🛡️ ${getTranslation('vehicle_health')}</span>
+                            <span style="color:${healthColor}">${health.toFixed(1)}%</span>
+                        </div>
+                        <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                            <div style="width:${health}%; height:100%; background:${healthColor}; transition:width 0.5s ease;"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:0.8rem;">
+                            <span>⛽ ${getTranslation('label_fuel_efficiency')}</span>
+                            <span style="color:var(--accent)">${stats.fuel_efficiency || 0} km/L</span>
+                        </div>
+                    </div>
+                `;
             } else {
-                statusBadge.innerText = (getTranslation(v.status) || v.status).toUpperCase().replace('_', '-');
-                statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
-                statusBadge.style.color = 'var(--success)';
-                actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger); font-size:0.85rem;" onclick="reportBreakdown()">🚨 ${getTranslation('report_breakdown')}</button>`;
-                rescueInfo.style.display = 'none';
+                document.getElementById('vehicle-mini-details').innerText = "Assigned vehicle data not found.";
             }
-            
-            // Enrich details with health and efficiency
-            const health = stats.vehicle_health || 100;
-            const healthColor = health > 70 ? 'var(--success)' : (health > 30 ? 'var(--warning)' : 'var(--danger)');
-            document.getElementById('vehicle-mini-details').innerHTML = `
-                <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                        <span>🛡️ ${getTranslation('vehicle_health')}</span>
-                        <span style="color:${healthColor}">${health.toFixed(1)}%</span>
-                    </div>
-                    <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
-                        <div style="width:${health}%; height:100%; background:${healthColor}; transition:width 0.5s ease;"></div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:0.8rem;">
-                        <span>⛽ ${getTranslation('label_fuel_efficiency')}</span>
-                        <span style="color:var(--accent)">${stats.fuel_efficiency || 0} km/L</span>
-                    </div>
-                </div>
-            `;
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error("Error in loadDashStats:", e);
+    }
 }
 
 async function reportBreakdown() {
@@ -305,10 +314,16 @@ function renderDriverChart(history) {
 }
 
 async function loadMissions(autoStartNext = false) {
+    console.info(`[Bootstrap] Starting loadMissions for Driver: ${dId}`);
     try {
+        const companyId = localStorage.getItem('company_id');
+        if (!companyId || companyId === "undefined") {
+            console.warn("[Bootstrap] Missing company_id, attempting to fetch...");
+        }
+
         // Fetch driver info to check verification status
-        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
-        const me = drivers.find(d => d.id === dId);
+        const drivers = await apiCall(`/manager/drivers?company_id=${companyId}`);
+        const me = drivers && Array.isArray(drivers) ? drivers.find(d => d.id === dId) : null;
         
         const mainContent = document.getElementById('main-content');
         const vScreen = document.getElementById('verification-screen');
@@ -317,6 +332,18 @@ async function loadMissions(autoStartNext = false) {
         const vNoVehicleBox = document.getElementById('v-no-vehicle-box');
         const vScreenMsg = document.getElementById('v-screen-msg');
         const reportBtn = document.getElementById('report-issue-btn');
+
+        if (!me) {
+            console.error("[Bootstrap] Driver profile not found in company list");
+            if (mainContent) mainContent.style.display = 'none';
+            if (vScreen) {
+                vScreen.style.display = 'block';
+                vNoVehicleBox.style.display = 'block';
+                vUploadBox.style.display = 'none';
+                vPendingBox.style.display = 'none';
+            }
+            return;
+        }
 
         const vStatus = me ? (me.verification_status || "unverified") : "unverified";
         
