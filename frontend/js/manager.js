@@ -1510,7 +1510,7 @@ function goToSplitStep1() {
 
 async function goToSplitStep2() {
     const checkboxes = document.querySelectorAll('.wh-checkbox:checked');
-    if (checkboxes.length === 0) return alert("Please select at least one hub.");
+    // Allow 0 checkboxes for direct route manual assignment
 
     document.getElementById('split-step-1').style.display = 'none';
     document.getElementById('split-step-2').style.display = 'block';
@@ -1539,7 +1539,7 @@ async function goToSplitStep2() {
         segments.push({ from: currWh, to: { name: "Final Destination", id: null } });
 
         container.innerHTML = '';
-        for (let i = 0; i < segments.size || segments.length; i++) {
+        for (let i = 0; i < segments.length; i++) {
             const seg = segments[i];
             const div = document.createElement('div');
             div.className = 'glass-card';
@@ -1548,7 +1548,7 @@ async function goToSplitStep2() {
             div.style.borderLeft = '4px solid var(--accent)';
             
             div.innerHTML = `
-                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">LEG ${i+1}: ${seg.from.name} → ${seg.to.name}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">${segments.length > 1 ? `LEG ${i+1}:` : 'DIRECT ROUTE:'} ${seg.from.name} → ${seg.to.name}</div>
                 <select class="polished-glass-input leg-asset-select" data-from-wh="${seg.from.id}" data-to-wh="${seg.to.id}" style="width:100%; font-size:0.8rem; padding:8px;">
                     <option value="">AI Auto-Assign for this leg</option>
                 </select>

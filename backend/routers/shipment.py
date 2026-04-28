@@ -1107,7 +1107,7 @@ def rate_shipment(shipment_id: str, data: dict):
             
     return {"message": f"Rating of {rating} applied to {len(driver_ids)} participants."}
 @router.get("/assets/eligible/{shipment_id}")
-def get_eligible_assets(shipment_id: str, company_id: str):
+def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str] = None, to_wh: Optional[str] = None):
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
         # Try prefix matching
@@ -1120,8 +1120,9 @@ def get_eligible_assets(shipment_id: str, company_id: str):
     vehicles = [v for v in JSONDatabase("vehicles").get_all() if v.get("company_id") == company_id and v.get("status") == "available"]
     warehouses = JSONDatabase("warehouses").get_all()
     
-    p_wh_id = shipment.get("pickup_warehouse_id")
-    d_wh_id = shipment.get("drop_warehouse_id")
+    # Use overrides if provided (for planning phase)
+    p_wh_id = from_wh if from_wh and from_wh != "null" else shipment.get("pickup_warehouse_id")
+    d_wh_id = to_wh if to_wh and to_wh != "null" else shipment.get("drop_warehouse_id")
     
     # If not a leg, try to find nearest warehouse to pickup
     if not p_wh_id:
