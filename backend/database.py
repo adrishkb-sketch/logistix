@@ -32,9 +32,9 @@ class JSONDatabase:
         self._ensure_client()
         try:
             response = supabase.table(self.table_name).select("data").execute()
-            if not response.data:
-                return []
-            return [row["data"] for row in response.data if row.get("data")]
+            if response.data:
+                return [row["data"] for row in response.data if row.get("data")]
+            return []
         except Exception as e:
             print(f"Supabase GET_ALL Error on {self.table_name}: {e}")
             return []

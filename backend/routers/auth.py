@@ -73,9 +73,14 @@ def verify_signup(data: OTPVerify):
 @router.post("/company/login")
 def company_login(data: CompanyLogin):
     companies = companies_db.get_all()
-    for c in companies:
-        if c and c.get("email") == data.email and c.get("password") == data.password:
-            return {"message": "Login successful", "company_id": c["id"], "name": c["name"]}
+    if companies:
+        for c in companies:
+            if c and c.get("email") == data.email and c.get("password") == data.password:
+                return {
+                    "message": "Login successful", 
+                    "company_id": c.get("id"), 
+                    "name": c.get("name")
+                }
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @router.post("/driver/login")
