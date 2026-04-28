@@ -8,6 +8,7 @@ import uuid
 import random
 import re
 import math
+import json
 from backend.services.auth_utils import verify_context
 
 router = APIRouter()
@@ -18,6 +19,7 @@ warehouses_db = JSONDatabase("warehouses")
 ledger_db = JSONDatabase("ledger")
 reviews_db = JSONDatabase("journey_reviews")
 shipments_db = JSONDatabase("shipments")
+
 
 @router.post("/drivers/bulk-parse")
 async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
@@ -89,6 +91,42 @@ async def bulk_confirm_drivers(drivers: List[Driver]):
         d_dict["driving_score"] = calculate_driver_performance_score(d_dict)
         drivers_db.insert(d_dict)
     return {"message": f"Successfully created {len(drivers)} drivers."}
+    
+@router.post("/finance/recalculate-all")
+def recalculate_all_shipments(company_id: str):
+    from backend.services.finance_engine import recalculate_shipment_finance, estimate_delivery_cost
+    all_shipments = shipments_db.get_all()
+    company_shipments = [s for s in all_shipments if s and s.get("company_id") == company_id]
+    
+    updated_count = 0
+    # Process parents first
+    parents = [s for s in company_shipments if s.get("route_type") == "multi-leg" and not s.get("parent_id")]
+    
+    for p in parents:
+        legs = [s for s in company_shipments if s.get("parent_id") == p["id"]]
+        if legs:
+            res = recalculate_shipment_finance(p, legs, vehicles_db)
+            shipments_db.update(p["id"], res["shipment"])
+            for leg in res["legs"]:
+                shipments_db.update(leg["id"], leg)
+            updated_count += 1
+            
+    # Process single shipments
+    singles = [s for s in company_shipments if s.get("route_type") != "multi-leg" and not s.get("parent_id")]
+    for s in singles:
+        v_type = "van"
+        if s.get("assigned_vehicle_id"):
+            v = vehicles_db.get_by_id(s["assigned_vehicle_id"])
+            if v: v_type = v.get("type", "van")
+            
+        new_finance = estimate_delivery_cost(s, v_type)
+        s["finance"] = new_finance
+        shipments_db.update(s["id"], s)
+        updated_count += 1
+        
+    return {"message": f"Successfully recalculated finance for {updated_count} shipments."}
+
+
 
 @router.post("/vehicles/bulk-parse")
 async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
@@ -678,10 +716,68 @@ def get_vehicle_profile(vehicle_id: str):
     }
 
 # System Reset Features (ADMIN ONLY)
+@router.post("/system/reset-operations")
+def reset_all_operations(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    if not x_logistix_context: raise HTTPException(status_code=401, detail="Context missing")
+    
+    try:
+        ctx = json.loads(x_logistix_context)
+        cid = ctx.get("company_id") or ctx.get("id")
+    except:
+        cid = x_logistix_context
+
+    company = companies_db.get_by_id(cid)
+    if not company: raise HTTPException(status_code=404, detail="Company not found")
+    
+    provided_pw = str(data.get("manager_password", "")).strip()
+    if provided_pw != str(company.get("password", "")).strip():
+        raise HTTPException(status_code=401, detail="Invalid manager password")
+
+    # 1. Clear Operational Data (Shipments, Ledger, Reviews, Funds)
+    JSONDatabase("shipments").delete_many("data->>company_id", cid)
+    JSONDatabase("ledger").delete_many("data->>company_id", cid)
+    JSONDatabase("journey_reviews").delete_many("data->>company_id", cid)
+    JSONDatabase("fund_requests").delete_many("data->>company_id", cid)
+    JSONDatabase("smart_contracts").delete_many("data->>company_id", cid) # If exists
+    
+    # 2. Reset Driver Financials & Stats
+    d_db = JSONDatabase("drivers")
+    all_drivers = d_db.get_all()
+    for d in all_drivers:
+        if d.get("company_id") == cid:
+            d["wallet_balance"] = 0.0
+            d["reward_points"] = 0.0
+            d["total_trips"] = 0
+            d["total_earnings"] = 0.0
+            d["monthly_earnings"] = 0.0
+            d["status"] = "available"
+            d["assigned_vehicle_id"] = None
+            d_db.update(d["id"], d)
+
+    # 3. Reset Vehicle Stats
+    v_db = JSONDatabase("vehicles")
+    all_vehicles = v_db.get_all()
+    for v in all_vehicles:
+        if v.get("company_id") == cid:
+            v["total_distance_km"] = 0.0
+            v["status"] = "available"
+            v["assigned_driver_id"] = None
+            v_db.update(v["id"], v)
+
+    return {"message": "Full Operational Reset Successful. All shipments, wallets, and profit history have been cleared. Personnel and Hubs remain intact."}
+
 @router.post("/system/reset-shipments")
 def reset_shipments(data: dict, x_logistix_context: Optional[str] = Header(None)):
     if not x_logistix_context: raise HTTPException(status_code=401, detail="Context missing")
-    company = companies_db.get_by_id(x_logistix_context)
+    
+    # Robustly extract company_id from potentially JSON context
+    try:
+        ctx = json.loads(x_logistix_context)
+        cid = ctx.get("company_id") or ctx.get("id")
+    except:
+        cid = x_logistix_context
+
+    company = companies_db.get_by_id(cid)
     if not company: raise HTTPException(status_code=404, detail="Company not found")
     
     provided_pw = str(data.get("manager_password", "")).strip()
@@ -689,47 +785,67 @@ def reset_shipments(data: dict, x_logistix_context: Optional[str] = Header(None)
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
     s_db = JSONDatabase("shipments")
-    # Only clear shipments for THIS company
-    all_s = s_db.get_all()
-    to_delete = [s["id"] for s in all_s if s and s.get("company_id") == x_logistix_context]
-    for sid in to_delete:
-        s_db.delete(sid)
-    return {"message": f"All {len(to_delete)} shipment records for {company['name']} have been cleared."}
+    # Atomic bulk delete using indexed company_id
+    deleted_count = s_db.delete_many("data->>company_id", cid)
+    
+    return {"message": f"All {deleted_count} shipment records for {company['name']} have been cleared."}
 
 @router.post("/system/reset-drivers")
 def reset_drivers(data: dict, x_logistix_context: Optional[str] = Header(None)):
     if not x_logistix_context: raise HTTPException(status_code=401, detail="Context missing")
-    company = companies_db.get_by_id(x_logistix_context)
+    
+    try:
+        ctx = json.loads(x_logistix_context)
+        cid = ctx.get("company_id") or ctx.get("id")
+    except:
+        cid = x_logistix_context
+
+    company = companies_db.get_by_id(cid)
     if not company: raise HTTPException(status_code=404, detail="Company not found")
     
     provided_pw = str(data.get("manager_password", "")).strip()
     if provided_pw != str(company.get("password", "")).strip():
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
-    # Only clear drivers for THIS company
-    all_d = drivers_db.get_all()
-    to_delete = [d["id"] for d in all_d if d and d.get("company_id") == x_logistix_context]
-    for did in to_delete:
-        drivers_db.delete(did)
-    return {"message": f"All {len(to_delete)} driver records for {company['name']} have been cleared."}
+    # Atomic bulk delete
+    deleted_count = drivers_db.delete_many("data->>company_id", cid)
+    
+    # Also reset vehicle assignments for consistency
+    all_v = vehicles_db.get_all()
+    for v in all_v:
+        if v and v.get("company_id") == cid:
+            vehicles_db.update(v["id"], {"assigned_driver_id": None})
+
+    return {"message": f"All {deleted_count} driver records for {company['name']} have been cleared."}
 
 @router.post("/system/reset-vehicles")
 def reset_vehicles(data: dict, x_logistix_context: Optional[str] = Header(None)):
     if not x_logistix_context: raise HTTPException(status_code=401, detail="Context missing")
-    company = companies_db.get_by_id(x_logistix_context)
+    
+    try:
+        ctx = json.loads(x_logistix_context)
+        cid = ctx.get("company_id") or ctx.get("id")
+    except:
+        cid = x_logistix_context
+
+    company = companies_db.get_by_id(cid)
     if not company: raise HTTPException(status_code=404, detail="Company not found")
     
     provided_pw = str(data.get("manager_password", "")).strip()
     if provided_pw != str(company.get("password", "")).strip():
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
-    # Only clear vehicles for THIS company
+    # Atomic bulk delete
     v_db = JSONDatabase("vehicles")
-    all_v = v_db.get_all()
-    to_delete = [v["id"] for v in all_v if v and v.get("company_id") == x_logistix_context]
-    for vid in to_delete:
-        v_db.delete(vid)
-    return {"message": f"All {len(to_delete)} vehicle records for {company['name']} have been cleared."}
+    deleted_count = v_db.delete_many("data->>company_id", cid)
+    
+    # Also reset driver assignments
+    all_d = drivers_db.get_all()
+    for d in all_d:
+        if d and d.get("company_id") == cid:
+            drivers_db.update(d["id"], {"assigned_vehicle_id": None})
+
+    return {"message": f"All {deleted_count} vehicle records for {company['name']} have been cleared."}
 
 # Account Deletion with OTP
 @router.post("/system/delete-account-request")
@@ -830,14 +946,14 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     last_24h = now - timedelta(days=1)
     daily_revenue = sum(
         t["amount"] for t in comp_txs 
-        if t["type"] == "REVENUE" and datetime.fromisoformat(t["timestamp"]) >= last_24h
+        if t["type"] == "REVENUE" and datetime.fromisoformat(t["timestamp"]).replace(tzinfo=None) >= last_24h
     )
     
     # Get unpaid invoices / Digital Escrow in transit from Shipments
     all_ships = shipments_db.get_all()
     company_ships = [s for s in all_ships if s and s.get("company_id") == company_id]
     
-    unpaid_ships = [s for s in company_ships if s and s.get("payment_status") == "unpaid"]
+    unpaid_ships = [s for s in company_ships if s and s.get("payment_status") == "unpaid" and not s.get("is_leg")]
     unpaid_total = sum(float((s.get("finance") or {}).get("suggested_price", 0)) for s in unpaid_ships)
     
     unpaid_invoices = unpaid_total
@@ -845,17 +961,17 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     bonus_pool = daily_revenue * 0.05 
     
     # Drone Maintenance calculation
-    drone_maintenance = sum(s.get("finance", {}).get("drone_maintenance", 0) for s in comp_ships)
+    drone_maintenance = sum((s.get("finance") or {}).get("drone_maintenance", 0) for s in company_ships if s)
 
     # Recent settlements (top 5)
-    recent = sorted(comp_txs, key=lambda x: x["timestamp"], reverse=True)[:5]
+    recent = sorted(comp_txs, key=lambda x: x.get("timestamp", ""), reverse=True)[:5]
     settlements_list = []
     for t in recent:
         settlements_list.append({
-            "desc": t["desc"],
-            "amount": t["amount"],
-            "timestamp": t["timestamp"],
-            "type": t["type"]
+            "desc": t.get("desc", "Ledger Entry"),
+            "amount": t.get("amount", 0),
+            "timestamp": t.get("timestamp", ""),
+            "type": t.get("type", "MISC")
         })
         
     # Chart Data: Revenue per day for last 7 days
@@ -868,17 +984,18 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         
         day_rev = sum(
             float(t.get("amount", 0)) for t in comp_txs 
-            if t.get("type") == "REVENUE" and day_start <= datetime.fromisoformat(t.get("timestamp", "")) < day_end
+            if t.get("type") == "REVENUE" and day_start <= datetime.fromisoformat(t.get("timestamp", "")).replace(tzinfo=None) < day_end
         )
         labels.append(day_date.strftime("%d %b"))
         values.append(round(day_rev, 2))
         
     # Real Smart Contracts (Escrow) based on active shipments
     escrow_contracts = []
-    for s in comp_ships:
+    for s in company_ships:
         if s.get("status") in ["assigned", "in_transit", "at_warehouse"]:
             escrow_contracts.append({
                 "id": f"ESC-{s.get('id')[:6].upper()}",
+                "shipment_id": s.get("id"),
                 "counterparty": s.get("receiver_name") or "Retail Partner",
                 "value": s.get("finance", {}).get("suggested_price", 0),
                 "status": "⛓️ LOCKED",
@@ -887,25 +1004,82 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         elif s.get("status") == "delivered" and s.get("payment_status") == "unpaid":
              escrow_contracts.append({
                 "id": f"ESC-{s.get('id')[:6].upper()}",
+                "shipment_id": s.get("id"),
                 "counterparty": s.get("receiver_name") or "Retail Partner",
                 "value": s.get("finance", {}).get("suggested_price", 0),
                 "status": "⏳ AWAITING PMT",
                 "eta": "Immediate"
             })
 
+    # Financial Overhaul: Calculate Net Profit based on Ledger
+    total_revenue = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "REVENUE")
+    total_expenses = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "EXPENSE")
+    net_profit = total_revenue - total_expenses
+
     return {
         "daily_revenue": round(daily_revenue, 2),
+        "total_revenue": round(total_revenue, 2),
+        "total_expenses": round(total_expenses, 2),
+        "net_profit": round(net_profit, 2),
         "digital_escrow": round(unpaid_total, 2),
         "unpaid_invoices": round(unpaid_total, 2),
         "bonus_pool": round(bonus_pool, 2),
         "drone_maintenance": round(drone_maintenance, 2),
         "recent_settlements": settlements_list,
-        "escrow_contracts": escrow_contracts[:10], # Limit to top 10
+        "escrow_contracts": escrow_contracts[:10],
         "chart_data": {
             "labels": labels,
             "values": values
         }
     }
+
+@router.post("/finance/fully-complete/{shipment_id}")
+def finalize_shipment_completion(shipment_id: str, x_logistix_context: Optional[str] = Header(None)):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    verify_context(shipment.get("company_id"), x_logistix_context)
+    
+    if shipment.get("payment_status") != "paid":
+        raise HTTPException(status_code=400, detail="Cannot finalize: Payment must be confirmed first.")
+    
+    # Finalize the main shipment
+    shipments_db.update(shipment_id, {
+        "status": "finalized",
+        "stage": "Finalized",
+        "logs": shipment.get("logs", []) + [{
+            "status": "finalized",
+            "message": "📦 Lifecycle complete. Shipment archived and cleared for rating.",
+            "timestamp": datetime.utcnow().isoformat()
+        }]
+    })
+
+    # If it's multi-leg, finalize all legs too
+    all_shipments = shipments_db.get_all()
+    involved_drivers = set()
+    if shipment.get("assigned_driver_id"):
+        involved_drivers.add(shipment["assigned_driver_id"])
+
+    if shipment.get("route_type") == "multi-leg":
+        legs = [s for s in all_shipments if s and s.get("parent_id") == shipment_id]
+        for leg in legs:
+            shipments_db.update(leg["id"], {"status": "finalized", "stage": "Finalized"})
+            if leg.get("assigned_driver_id"):
+                involved_drivers.add(leg["assigned_driver_id"])
+
+    # Update involved drivers stats
+    for d_id in involved_drivers:
+        drv = drivers_db.get_by_id(d_id)
+        if drv:
+            # Increment total trips and add reward points
+            new_trips = drv.get("total_trips", 0) + 1
+            new_points = drv.get("reward_points", 0) + 100
+            drivers_db.update(d_id, {
+                "total_trips": new_trips,
+                "reward_points": new_points
+            })
+
+    return {"message": "Shipment fully finalized. All involved drivers updated with trip history and rewards."}
 
 @router.post("/finance/confirm-payment/{shipment_id}")
 def confirm_customer_payment(shipment_id: str, x_logistix_context: Optional[str] = Header(None)):
@@ -915,6 +1089,12 @@ def confirm_customer_payment(shipment_id: str, x_logistix_context: Optional[str]
     verify_context(shipment.get("company_id"), x_logistix_context)
     
     shipments_db.update(shipment_id, {"payment_status": "paid"})
+    
+    # Cascade payment status to all related legs
+    all_ships = shipments_db.get_all()
+    for s in all_ships:
+        if s and s.get("parent_id") == shipment_id:
+            shipments_db.update(s["id"], {"payment_status": "paid"})
     
     # Log to ledger
     revenue_amt = shipment.get("finance", {}).get("suggested_price", 0)
@@ -943,15 +1123,24 @@ def approve_driver_payout(driver_id: str, x_logistix_context: Optional[str] = He
     # Reset driver balance
     drivers_db.update(driver_id, {"wallet_balance": 0})
     
+    # Deduct from company profit
+    cid = driver.get("company_id")
+    company = companies_db.get_by_id(cid)
+    if company:
+        companies_db.update(cid, {"total_profit": company.get("total_profit", 0) - balance})
+
     # Log to ledger
     ledger_db.insert({
+        "id": str(uuid.uuid4()),
+        "company_id": cid,
         "type": "EXPENSE",
         "desc": f"Payout Settled: {driver['name']}",
         "amount": balance,
-        "timestamp": datetime.utcnow().isoformat(),
-        "company_id": driver.get("company_id")
+        "timestamp": datetime.utcnow().isoformat() + "Z"
     })
-    return {"message": f"Successfully settled ₹{balance} for {driver['name']}"}
+    
+    return {"message": "Payout approved and deducted from profit"}
+
 
 @router.get("/finance/p-and-l")
 def get_p_and_l(company_id: str):
@@ -999,12 +1188,14 @@ def get_fund_requests(company_id: str):
         amount_match = re.search(r"₹([\d.]+)", desc)
         type_match = re.search(r"for ([A-Z]+)", desc)
         driver_name_match = re.search(r"Driver (.+?) requested", desc)
+        dist_match = re.search(r"Leg Distance: ([\d.]+)", desc)
         results.append({
             "alert_id": a.get("id"),
             "driver_id": a.get("driver_id"),
             "driver_name": driver_name_match.group(1) if driver_name_match else "Unknown",
             "amount": float(amount_match.group(1)) if amount_match else 0,
             "fund_type": type_match.group(1) if type_match else "MISC",
+            "distance": float(dist_match.group(1)) if dist_match else 0,
             "timestamp": a.get("timestamp"),
         })
     return results
@@ -1029,17 +1220,21 @@ def approve_fund_request(alert_id: str):
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
     
-    # Credit driver's wallet
-    new_balance = driver.get("wallet_balance", 0) + amount
-    drivers_db.update(driver_id, {
-        "wallet_balance": new_balance,
-        "total_earnings": driver.get("total_earnings", 0) + amount # Credit earnings too since it's an advance
-    })
+    # Check fund type to decide if it goes to wallet or is direct operational expense
+    is_operational = any(x in desc.upper() for x in ["FUEL", "TOLL"])
     
-    # Log as expense in ledger
+    if not is_operational:
+        # Only non-operational funds (like advances or wages) go to wallet
+        new_balance = driver.get("wallet_balance", 0) + amount
+        drivers_db.update(driver_id, {
+            "wallet_balance": new_balance,
+            "total_earnings": driver.get("total_earnings", 0) + amount
+        })
+    
+    # Log as expense in ledger (always deduct from company profit)
     ledger_db.insert({
         "type": "EXPENSE",
-        "desc": f"Emergency Fund Approved: {driver['name']} ({desc.split('for')[-1].strip()})",
+        "desc": f"Fund Disbursement: {driver['name']} for {desc.split('for')[-1].strip().upper()}",
         "amount": amount,
         "timestamp": datetime.utcnow().isoformat(),
         "company_id": alert.get("company_id")

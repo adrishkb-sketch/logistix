@@ -169,7 +169,7 @@
                             </select>
                             <div style="position:relative;">
                                 <input type="number" id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;">
-                                <button onclick="calculateSuggestedFuel()" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:var(--primary); color:white; border:none; border-radius:4px; font-size:0.6rem; padding:4px 6px; cursor:pointer;" title="Auto-calculate fuel based on location">Oracle ✨</button>
+                                <button onclick="calculateSuggestedFuel(event)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:var(--primary); color:white; border:none; border-radius:4px; font-size:0.6rem; padding:4px 6px; cursor:pointer;" title="Auto-calculate fuel based on location">Oracle ✨</button>
                             </div>
                         </div>
                         <button class="btn-primary" style="width:100%; padding:14px; font-weight:700;" onclick="handleFundRequest()">
@@ -490,6 +490,25 @@
     </div>
 
     <!-- Verification Modal (QR + Photo) -->
+    <div id="verify-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:95%; max-width:500px; padding:24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); border:1px solid var(--primary);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 id="verify-modal-title" style="margin:0; font-weight:800;">Verification Required</h3>
+            <button onclick="closeVerifyModal()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
+        </div>
+        
+        <div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden; border:2px solid var(--primary); background:#000;"></div>
+        
+        <div id="qr-success-msg" style="display:none; margin-top:15px; padding:15px; background:rgba(72,187,120,0.1); border:1px solid var(--success); border-radius:10px; text-align:center;">
+            <p style="color:var(--success); font-weight:bold; margin:0;">✅ QR Code Verified Successfully!</p>
+        </div>
+
+        <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+            <button id="btn-submit-verify" class="btn-primary" style="width:100%; display:none;" onclick="closeVerifyModal()">Done</button>
+            <button id="btn-manual-verify" class="btn-primary" style="width:100%; display:none; background:var(--warning); color:#000;" onclick="manualVerify(currentVerifyId, 'pickup')">⚠️ Verify Manually (Audit Required)</button>
+        </div>
+        
+        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted); text-align:center;">Point your camera at the shipment's QR code to proceed.</p>
+    </div>
 
     <!-- Health Vitals Modal -->
     <div id="health-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">

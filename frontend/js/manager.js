@@ -10,6 +10,25 @@ const mName = localStorage.getItem('manager_name') || getTranslation('manager');
 const nameEl = document.getElementById('manager-name');
 if (nameEl) nameEl.innerText = mName;
 
+function showNotification(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.padding = '12px 24px';
+    toast.style.borderRadius = '30px';
+    toast.style.background = type === 'success' ? '#48bb78' : (type === 'error' ? '#e53e3e' : '#3182ce');
+    toast.style.color = 'white';
+    toast.style.zIndex = '100000';
+    toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+    toast.style.fontWeight = 'bold';
+    toast.style.fontSize = '0.9rem';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
 let map, fleetMap;
 let markers = [];
 let volumeChart, fleetChart;
@@ -630,7 +649,7 @@ function showSection(id) {
     if (id === 'safety') loadSafetyCenter();
     if (id === 'ledger') loadLedger();
     if (id === 'oracle') loadOracleInsights();
-    if (id === 'strategy-plan') loadStrategyPlan();
+    if (id === 'strategy-plan') loadActiveStrategy();
     if (id === 'network-resilience') loadNetworkResilience();
 }
 
@@ -1018,9 +1037,8 @@ async function liveTrackByDriver(driverId) {
 
 let qrInstance = null;
 async function openQRModal(shipmentId) {
-    const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`);
-    const s = shipments.find(item => item.id === shipmentId);
-    if (!s) return;
+    const data = await apiCall(`/shipments/${shipmentId}/qr-data`);
+    const qrText = data.qr_code_data;
 
     const modal = document.getElementById('qr-modal');
     const canvas = document.getElementById('qrcode-canvas');
@@ -1028,10 +1046,10 @@ async function openQRModal(shipmentId) {
     
     modal.style.display = 'block';
     canvas.innerHTML = '';
-    text.innerText = `Shipment Reference: ${s.id}`;
+    text.innerText = `Shipment ID: ${shipmentId}\nQR Code: ${qrText}`;
     
     qrInstance = new QRCode(canvas, {
-        text: s.qr_code_data,
+        text: qrText,
         width: 200,
         height: 200,
         colorDark : "#000000",
@@ -1292,8 +1310,21 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                             </button>
                         ` : ''}
                         
+                        ${(s.payment_status?.toLowerCase() === 'paid' && s.status !== 'finalized') ? `
+                            <button class="action-btn-pill" style="background:var(--success); border:1px solid rgba(255,255,255,0.3);" onclick="finalizeShipment('${s.id}')" title="Mark Fully Completed">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                <span data-i18n="btn_finalize" style="font-size:0.6rem; font-weight:800; margin-left:4px;">FINALIZE</span>
+                            </button>
+                        ` : ''}
+                        
                         <button class="action-btn-pill" style="background:rgba(0,0,0,0.2);" onclick="openManualAssignModal('${s.id}')" title="Change Assignment">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/></svg>
+                        </button>
+                        <button class="action-btn-pill" style="background:var(--warning); color:#000;" onclick="managerManualVerify('${s.id}')" title="Manual QR Verify (Override)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                        </button>
+                        <button class="action-btn-pill" style="background:var(--danger); color:#fff;" onclick="deassignShipment('${s.id}')" title="Deassign & Reset">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                         </button>
                         <button class="action-btn-pill" style="background:rgba(0,0,0,0.2);" onclick="openEditModal('shipments', '${s.id}', '${s.description}', '${s.status}')" title="Edit">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
@@ -1321,8 +1352,11 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
 
                     lTr.innerHTML = `
                         <td style="padding-left:30px; font-size:0.8rem; color:var(--text-muted);">↳ Leg ${leg.leg_order}: ${leg.description}</td>
-                        <td><div style="width:50px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;"><div style="width:${lVitality}%; height:100%; background:var(--success);"></div></div></td>
-                        <td><span style="font-size:0.65rem; padding:2px 6px; border-radius:10px; background:rgba(255,255,255,0.05);">${leg.status}</span></td>
+                        <td>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">${getTranslation('exp_label')}: ${formatDate(leg.expected_delivery)}</div>
+                            <div style="font-size:0.6rem; color:var(--warning);">Deadline: ${formatDate(leg.pickup_deadline)}</div>
+                        </td>
+                        <td><span style="font-size:0.65rem; padding:2px 6px; border-radius:10px; background:${leg.status === 'delivered' ? 'rgba(72, 187, 120, 0.2)' : 'rgba(255,255,255,0.05)'}; color:${leg.status === 'delivered' ? 'var(--success)' : 'inherit'};">${leg.status.toUpperCase()}</span></td>
                         <td>
                             <div style="font-size:0.75rem; color:var(--text-muted);">${getTranslation('eway_label')}: ${leg.eway_bill_no || getTranslation('na')}</div>
                         </td>
@@ -1350,6 +1384,9 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                                         <span style="font-size:0.55rem; font-weight:800; margin-left:2px;">AUTO</span>
                                     </button>
                                 ` : ''}
+                                <button class="action-btn-pill" style="padding:4px; background:var(--warning); color:#000;" onclick="managerManualVerify('${leg.id}')" title="Manual QR Verify (Override)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                                </button>
                                 <button class="action-btn-pill" style="padding:4px; background:rgba(255,255,255,0.1);" onclick="openManualAssignModal('${leg.id}')" title="Manual Assign">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/></svg>
                                 </button>
@@ -1386,6 +1423,52 @@ async function autoSplit(id) {
 }
 
 let currentAssignId = null;
+async function managerManualVerify(shipmentId) {
+    if (!confirm("⚠️ MANAGER OVERRIDE: Are you sure you want to verify this shipment's QR code manually? This will bypass driver scanning.")) return;
+    try {
+        // Find the assigned driver for this shipment to use their ID for context
+        const s = globalShipments.find(item => item.id === shipmentId);
+        if (!s || !s.assigned_driver_id) {
+            alert("No driver assigned. Verification cannot proceed.");
+            return;
+        }
+        
+        const res = await fetch(`${API_BASE}/driver/${s.assigned_driver_id}/verify-qr/${shipmentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-logistix-context': JSON.stringify({ 
+                    company_id: localStorage.getItem('manager_id'), 
+                    role: 'manager',
+                    bypass_auth: true // Signal to backend that manager is overriding
+                })
+            },
+            body: JSON.stringify({ qr_data: "MANUAL_OVERRIDE" })
+        });
+        
+        if (res.ok) {
+            alert("Manual Verification Successful!");
+            loadShipments();
+        } else {
+            const err = await res.json();
+            alert("Error: " + (err.detail || "Verification failed"));
+        }
+    } catch(e) {
+        alert("Verification failed: " + e.message);
+    }
+}
+
+async function deassignShipment(id) {
+    if (!confirm("🚨 Are you sure you want to DEASSIGN this shipment? All legs will be deleted and the shipment will return to 'Pending' status.")) return;
+    try {
+        const res = await apiCall(`/shipments/${id}/deassign`, 'POST');
+        alert(res.message);
+        loadShipments();
+    } catch(e) {
+        alert(e.detail || "Deassignment failed.");
+    }
+}
+
 async function openManualAssignModal(id) {
     currentAssignId = id;
     const select = document.getElementById('manual-assign-select');
@@ -1412,7 +1495,7 @@ async function openManualAssignModal(id) {
             assets.forEach(a => {
                 const opt = document.createElement('option');
                 opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
-                opt.textContent = `${icon} ${a.driver_name} (${a.vehicle_type} - ${a.vehicle_plate})`;
+                opt.textContent = `${icon} ${a.driver_name} (${a.vehicle_type} - ${a.vehicle_plate}) [${a.location_status || 'Unknown'}]`;
                 group.appendChild(opt);
             });
             return group;
@@ -1520,12 +1603,23 @@ async function goToSplitStep2() {
     container.innerHTML = '<p style="text-align:center;">Analyzing leg availability...</p>';
 
     try {
-        const whIds = Array.from(checkboxes).map(c => c.value);
-        const whNames = Array.from(checkboxes).map(c => c.getAttribute('data-wh-name'));
         const companyId = localStorage.getItem('manager_id');
-        
         const shipment = await apiCall(`/shipments/${currentSplitId}`, 'GET');
         const warehouses = await apiCall(`/manager/warehouses?company_id=${companyId}`, 'GET');
+
+        if (!shipment || !shipment.pickup) throw new Error("Invalid shipment data");
+
+        // Sort selected warehouses by proximity to pickup point to ensure logical leg order
+        const whIds = Array.from(checkboxes).map(c => c.value).sort((aId, bId) => {
+            const wA = warehouses.find(w => w.id === aId);
+            const wB = warehouses.find(w => w.id === bId);
+            if (!wA || !wB) return 0;
+            
+            // Simple Euclidean distance for sorting (sufficient for local hub sequencing)
+            const distA = Math.sqrt(Math.pow(wA.lat - shipment.pickup.lat, 2) + Math.pow(wA.lng - shipment.pickup.lng, 2));
+            const distB = Math.sqrt(Math.pow(wB.lat - shipment.pickup.lat, 2) + Math.pow(wB.lng - shipment.pickup.lng, 2));
+            return distA - distB;
+        });
         
         // Generate list of legs for preview
         const segments = [];
@@ -1564,7 +1658,7 @@ async function goToSplitStep2() {
                     eligible.local.forEach(a => {
                         const opt = document.createElement('option');
                         opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
-                        opt.textContent = `👤 ${a.driver_name} (${a.vehicle_plate})`;
+                        opt.textContent = `👤 ${a.driver_name} (${a.vehicle_plate}) [${a.location_status || 'Unknown'}]`;
                         localGroup.appendChild(opt);
                     });
                     if (eligible.local.length > 0) select.appendChild(localGroup);
@@ -1574,7 +1668,7 @@ async function goToSplitStep2() {
                     eligible.returning.forEach(a => {
                         const opt = document.createElement('option');
                         opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
-                        opt.textContent = `🔄 ${a.driver_name} (${a.vehicle_plate})`;
+                        opt.textContent = `🔄 ${a.driver_name} (${a.vehicle_plate}) [${a.location_status || 'Unknown'}]`;
                         returningGroup.appendChild(opt);
                     });
                     if (eligible.returning.length > 0) select.appendChild(returningGroup);
@@ -1584,10 +1678,20 @@ async function goToSplitStep2() {
                     eligible.drones.forEach(a => {
                         const opt = document.createElement('option');
                         opt.value = JSON.stringify({ driver_id: null, vehicle_id: a.vehicle_id });
-                        opt.textContent = `🛰️ Drone (${a.vehicle_plate})`;
+                        opt.textContent = `🛰️ Drone (${a.vehicle_plate}) [${a.location_status || 'At Warehouse'}]`;
                         droneGroup.appendChild(opt);
                     });
                     if (eligible.drones.length > 0) select.appendChild(droneGroup);
+
+                    const otherGroup = document.createElement('optgroup');
+                    otherGroup.label = "Other Available Fleet";
+                    eligible.others.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
+                        opt.textContent = `🌐 ${a.driver_name} (${a.vehicle_plate}) [${a.location_status || 'Away'}]`;
+                        otherGroup.appendChild(opt);
+                    });
+                    if (eligible.others.length > 0) select.appendChild(otherGroup);
                 });
         }
     } catch(e) {
@@ -3536,7 +3640,8 @@ async function systemReset(type) {
         loadShipments();
         loadMapData();
         loadInsights();
-        if (type === 'drivers' || type === 'vehicles') {
+        initFintechOracle();
+        if (type === 'drivers' || type === 'vehicles' || type === 'operations') {
             loadDriversAndVehicles();
             loadLeaderboard();
         }
@@ -3725,20 +3830,111 @@ async function runOracleSimulation() {
 async function applyOracleStrategy() {
     if (!lastOracleRes) return;
     try {
-        // Fetch current baseline stats before saving
         const stats = await apiCall('/manager/system/baseline-stats?company_id=' + localStorage.getItem('manager_id'));
-        
         const strategyData = { 
             ...lastOracleRes, 
             company_id: localStorage.getItem('manager_id'),
-            baselines: stats // Store what we had at the moment of activation
+            baselines: stats,
+            timestamp: new Date().toISOString()
         };
-        
         await apiCall('/simulation/strategy/save', 'POST', strategyData);
-        alert("Strategy Plan Activated! You can now track progress in the Operational Strategy section.");
+        showNotification("Strategy Plan Activated! Tracking initialized.", "success");
+        loadActiveStrategy();
         showSection('strategy-plan');
     } catch(e) {
-        alert("Failed to save strategy.");
+        showNotification("Failed to save strategy.", "error");
+    }
+}
+
+async function loadActiveStrategy() {
+    const mId = localStorage.getItem('manager_id');
+    const msg = document.getElementById('no-strategy-msg');
+    const content = document.getElementById('active-strategy-content');
+    if (!msg || !content) return;
+
+    try {
+        const plan = await apiCall(`/simulation/strategy/active?company_id=${mId}`);
+        if (!plan) {
+            msg.style.display = 'block';
+            content.style.display = 'none';
+            return;
+        }
+
+        msg.style.display = 'none';
+        content.style.display = 'block';
+
+        // 1. Render Forecast Summary
+        document.getElementById('sf-predicted').innerText = `₹${(plan.summary.net_profit / 100000).toFixed(1)}L`;
+        document.getElementById('sf-confidence').innerText = `${plan.summary.efficiency_score.toFixed(0)}% Efficiency Target`;
+        document.getElementById('sf-risk').innerText = `Horizon: ${plan.params.months} Months | Risk: ${plan.risk_level}`;
+
+        // 2. Fetch Current Stats to calculate Achievement
+        const current = await apiCall(`/manager/system/baseline-stats?company_id=${mId}`);
+        const base = plan.baselines;
+
+        const targets = [
+            { 
+                label: "Warehouse Expansion", 
+                current: current.warehouse_count - base.warehouse_count, 
+                target: plan.params.wh,
+                unit: "Hubs" 
+            },
+            { 
+                label: "Fleet Increase", 
+                current: current.vehicle_count - base.vehicle_count, 
+                target: Math.round(base.vehicle_count * (plan.params.fleet / 100)),
+                unit: "Vehicles" 
+            },
+            { 
+                label: "EV Conversion", 
+                current: current.ev_count, 
+                target: Math.round(current.vehicle_count * (plan.params.green / 100)),
+                unit: "EVs" 
+            }
+        ];
+
+        // 3. Render Progress Bars
+        const container = document.getElementById('progress-bars-container');
+        container.innerHTML = targets.map(t => {
+            const progress = t.target > 0 ? Math.min(100, Math.max(0, (t.current / t.target) * 100)) : (t.current >= 0 ? 100 : 0);
+            return `
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <span style="font-weight:700;">${t.label}</span>
+                        <span style="color:var(--text-muted); font-size:0.85rem;">${t.current} / ${t.target} ${t.unit}</span>
+                    </div>
+                    <div style="height:12px; background:rgba(255,255,255,0.05); border-radius:6px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
+                        <div style="width:${progress}%; height:100%; background:linear-gradient(90deg, var(--primary), var(--accent)); transition: width 1s ease-in-out;"></div>
+                    </div>
+                    <div style="text-align:right; font-size:0.7rem; color:var(--accent); font-weight:bold; margin-top:4px;">${progress.toFixed(1)}% ACHIEVED</div>
+                </div>
+            `;
+        }).join('');
+
+        // 4. Recommendation & Risk
+        document.getElementById('benchmark-data').innerHTML = `
+            <div style="padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                <div style="color:var(--accent); font-weight:bold; font-size:0.8rem; margin-bottom:5px;">AI GUIDANCE</div>
+                <p style="margin:0; font-size:0.9rem; line-height:1.4;">${plan.ai_recommendation}</p>
+                <div style="margin-top:15px; font-size:0.75rem; color:var(--text-muted);">
+                    Activated: ${new Date(plan.timestamp).toLocaleDateString()}
+                </div>
+            </div>
+        `;
+
+    } catch (e) {
+        console.error("Strategy load error:", e);
+    }
+}
+
+async function clearActiveStrategy() {
+    if (!confirm("Are you sure you want to terminate this strategy? Active tracking will be lost.")) return;
+    try {
+        await apiCall(`/simulation/strategy/active?company_id=${localStorage.getItem('manager_id')}`, 'DELETE');
+        showNotification("Strategy cleared.", "success");
+        loadActiveStrategy();
+    } catch (e) {
+        showNotification("Failed to clear strategy.", "error");
     }
 }
 
@@ -3775,124 +3971,6 @@ async function clearActiveStrategy() {
     }
 }
 
-async function loadStrategyPlan() {
-    console.log("Loading Strategy Plan...");
-    const noMsg = document.getElementById('no-strategy-msg');
-    const content = document.getElementById('active-strategy-content');
-    
-    if (!noMsg || !content) return;
-
-    try {
-        const plan = await apiCall('/simulation/strategy/active?company_id=' + localStorage.getItem('manager_id'));
-        if (!plan || !plan.params) {
-            noMsg.style.display = 'block';
-            content.style.display = 'none';
-            return;
-        }
-
-        noMsg.style.display = 'none';
-        content.style.display = 'block';
-
-        const params = plan.params;
-        const summary = plan.summary;
-        const baselines = plan.baselines || { warehouse_count: 0, vehicle_count: 0, ev_count: 0 };
-
-        // Fetch current live stats to compare
-        const currentStats = await apiCall('/manager/system/baseline-stats?company_id=' + localStorage.getItem('manager_id'));
-
-        // Fetch Forecast
-        try {
-            const forecast = await apiCall('/manager/strategy/forecast?company_id=' + localStorage.getItem('manager_id'));
-            document.getElementById('sf-predicted').innerText = `₹ ${forecast.predicted_revenue.toLocaleString()}`;
-            document.getElementById('sf-confidence').innerText = `${forecast.confidence_score * 100}% Confidence`;
-            document.getElementById('sf-risk').innerText = `Risks: ${forecast.risk_factors.join(', ')}`;
-        } catch(e) {}
-
-        document.getElementById('target-list').innerHTML = `
-            ${params.fleet > 0 ? `<p style="margin-bottom:12px; font-size:1rem;">• Fleet Expansion: <b style="color:var(--primary)">+${params.fleet}%</b></p>` : ''}
-            ${params.wh > 0 ? `<p style="margin-bottom:12px; font-size:1rem;">• Hub Expansion: <b style="color:var(--primary)">${params.wh} (${params.whLoc === 'tier1' ? 'Metro' : 'Regional'})</b></p>` : ''}
-            ${params.green > 0 ? `<p style="margin-bottom:12px; font-size:1rem;">• EV Transition: <b style="color:var(--primary)">${params.green}%</b></p>` : ''}
-            ${params.auto > 0 ? `<p style="margin-bottom:12px; font-size:1rem;">• Warehouse AI: <b style="color:var(--primary)">Level ${params.auto}</b></p>` : ''}
-            ${params.incentive > 0 ? `<p style="margin-bottom:12px; font-size:1rem;">• Driver Focus: <b style="color:var(--primary)">+${params.incentive}% Incentives</b></p>` : ''}
-        `;
-
-        document.getElementById('benchmark-data').innerHTML = `
-            <div style="background:rgba(72,187,120,0.1); padding:15px; border-radius:8px; border:1px solid rgba(72,187,120,0.2);">
-                <small style="color:var(--text-muted)">Projected Profit (Horizon)</small>
-                <h2 style="color:var(--success); margin:5px 0;">₹${(summary.net_profit/100000).toFixed(1)}L</h2>
-            </div>
-            <div style="margin-top:15px;">
-                <p style="margin-bottom:8px;">🎯 Efficiency Target: <b>${summary.efficiency_score.toFixed(1)}%</b></p>
-                <p style="margin-bottom:8px;">🌱 CO2 Reduction: <b>${summary.carbon_reduction.toFixed(1)}%</b></p>
-                <p style="margin-bottom:8px;">📈 Projected ROI: <b>${summary.roi_percentage}%</b></p>
-            </div>
-        `;
-
-        // Calculate REAL progress
-        const wh_added = currentStats.warehouse_count - baselines.warehouse_count;
-        const vh_added_pct = baselines.vehicle_count > 0 ? ((currentStats.vehicle_count - baselines.vehicle_count) / baselines.vehicle_count) * 100 : (currentStats.vehicle_count > 0 ? 100 : 0);
-        
-        const progressData = [
-            { 
-                label: "Fleet Scale-up", 
-                current: vh_added_pct, 
-                target: params.fleet, 
-                action: 'drivers', 
-                btn: "Add Fleet" 
-            },
-            { 
-                label: "Hub Network Expansion", 
-                current: (wh_added / (params.wh || 1)) * 100, 
-                target: 100, 
-                action: 'overview', 
-                btn: "Deploy Hubs" 
-            },
-            { 
-                label: "EV Fleet Conversion", 
-                current: currentStats.vehicle_count > 0 ? (currentStats.ev_count / currentStats.vehicle_count) * 100 : 0, 
-                target: params.green, 
-                action: 'drivers', 
-                btn: "Convert to EV" 
-            },
-            { 
-                label: "AI Automation Deployment", 
-                current: Math.min(params.auto, 15), // Mock progress for AI
-                target: params.auto, 
-                action: 'oracle', 
-                btn: "Refine AI" 
-            },
-            { 
-                label: "Driver Incentive Program", 
-                current: params.incentive > 0 ? 45 : 0, // Mock based on boost
-                target: params.incentive, 
-                action: 'ledger', 
-                btn: "Boost Points" 
-            }
-        ];
-
-        document.getElementById('progress-bars-container').innerHTML = progressData
-            .filter(p => p.target > 0)
-            .map(p => {
-                const percent = Math.min(100, (p.current / p.target) * 100);
-                return `
-                <div class="strategy-progress-row" style="margin-bottom: 25px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
-                        <div class="progress-label" style="flex:1;">
-                            <span style="font-weight:600;">${p.label}</span>
-                            <span style="display:block; font-size:0.8rem; color:var(--text-muted);">${p.current.toFixed(1)}% achieved / <span class="target-marker">${p.target.toFixed(0)}% Goal</span></span>
-                        </div>
-                        <button class="btn-primary" style="width:auto; padding:5px 12px; font-size:0.75rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2);" onclick="showSection('${p.action}')">Take Action →</button>
-                    </div>
-                    <div class="progress-track" style="height:10px; background:rgba(255,255,255,0.05); border-radius:5px; overflow:hidden;">
-                        <div class="progress-fill" style="width: ${percent}%; height:100%; background:linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease;"></div>
-                    </div>
-                </div>
-            `;}).join('');
-
-    } catch(e) {
-        console.error("Strategy load failed:", e);
-    }
-}
 
 // Handle Info Icon Clicks for mobile/desktop preference
 document.addEventListener('click', (e) => {
@@ -4380,8 +4458,45 @@ function initFuelTrendChart() {
     });
 }
 
+async function finalizeShipment(shipmentId) {
+    if (!confirm("Are you sure you want to mark this shipment as FULLY COMPLETED? This will archive the lifecycle and enable receiver ratings.")) return;
+    
+    try {
+        const res = await apiCall(`/manager/finance/fully-complete/${shipmentId}`, 'POST');
+        showNotification(res.message, "success");
+        loadShipments();
+    } catch (e) {
+        showNotification(e.detail || "Finalization failed", "error");
+    }
+}
+
+async function recalculateAllFinances() {
+    if (!confirm("💰 FINANCE SYNC: This will recalculate revenue, fuel budgets, and driver wages for ALL shipments in your history based on distances and current fuel prices. This cannot be undone. Proceed?")) return;
+    
+    try {
+        const mId = localStorage.getItem('manager_id');
+        const res = await apiCall(`/manager/finance/recalculate-all?company_id=${mId}`, 'POST');
+        showNotification(res.message, "success");
+        loadShipments();
+    } catch (e) {
+        showNotification("Failed to sync finances.", "error");
+    }
+}
+
 // PAISA-FAST FINTECH ORACLE
 let fintechChart = null;
+async function confirmShipmentPayment(shipmentId) {
+    if (!confirm("💳 Confirm that the receiver has paid the full amount? This will unlock the shipment for final OTP delivery.")) return;
+    try {
+        const res = await apiCall(`/manager/finance/confirm-payment/${shipmentId}`, 'POST');
+        showNotification(res.message, "success");
+        loadShipments();
+        initFintechOracle();
+    } catch (e) {
+        showNotification(e.detail || "Payment confirmation failed", "error");
+    }
+}
+
 async function initFintechOracle() {
     try {
         const mId = localStorage.getItem('manager_id');
@@ -4395,10 +4510,10 @@ async function initFintechOracle() {
         };
 
         updateVal('fintech-daily-revenue', stats.daily_revenue);
+        updateVal('fintech-total-revenue', stats.total_revenue);
+        updateVal('fintech-total-expenses', stats.total_expenses);
         updateVal('fintech-cod', stats.digital_escrow);
-        updateVal('fintech-unpaid', stats.unpaid_invoices);
-        updateVal('fintech-drone-maint', stats.drone_maintenance);
-        updateVal('fintech-profit', pl.net_profit);
+        updateVal('fintech-profit', stats.net_profit);
 
         // Render Settlements (Timeline of past 5 transactions)
         const sList = document.getElementById('fintech-settlement-list');
@@ -4454,7 +4569,8 @@ async function initFintechOracle() {
         const paTable = document.getElementById('fintech-payment-audit-table');
         if (paTable) {
             const allShips = await apiCall(`/shipments?company_id=${mId}`);
-            const recentShips = allShips.slice(-15).reverse();
+            // Only show parent shipments (not internal legs) in Customer Payment Audit
+            const recentShips = allShips.filter(s => !s.is_leg).slice(-20).reverse();
             paTable.innerHTML = recentShips.length ? recentShips.map(s => `
                 <tr>
                     <td>
@@ -4492,7 +4608,13 @@ async function initFintechOracle() {
                             <span style="font-size:0.75rem; font-weight:bold; color:var(--text);">${c.status}</span>
                         </div>
                     </td>
-                    <td style="font-size:0.85rem; color:var(--text-muted);">${c.eta}</td>
+                    <td style="font-size:0.85rem; color:var(--text-muted);">
+                        ${c.status.includes('AWAITING') ? `
+                            <button class="btn-primary" style="padding:4px 10px; font-size:0.7rem; background:var(--warning); color:#000; border-radius:6px; font-weight:800;" onclick="confirmShipmentPayment('${c.shipment_id}')">
+                                Confirm Payment 💰
+                            </button>
+                        ` : c.eta}
+                    </td>
                 </tr>
             `).join('') : '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">No active smart contracts in escrow</td></tr>';
         }
@@ -4505,13 +4627,12 @@ async function initFintechOracle() {
                 <tr>
                     <td>
                         <div style="font-weight:700;">${r.driver_name}</div>
-                        <small style="color:var(--text-muted);">Urgent Request</small>
+                        <small style="color:var(--text-muted);">ID: ${r.driver_id.substring(0,5)}</small>
                     </td>
                     <td style="color:var(--warning); font-weight:800; font-size:1.1rem;">₹${r.amount.toLocaleString()}</td>
                     <td>
-                        <span class="badge" style="background:rgba(255,165,0,0.1); color:#f59e0b; border:1px solid rgba(255,165,0,0.2);">
-                            ${r.fund_type.toUpperCase()}
-                        </span>
+                        <div style="font-weight:700;">${r.fund_type.toUpperCase()}</div>
+                        <small style="color:var(--accent); font-weight:bold;">${r.distance} KM (Leg)</small>
                     </td>
                     <td>
                         <div style="display:flex; gap:8px;">
@@ -4807,3 +4928,56 @@ window.approveMerge = async function(index) {
         alert('Merge failed.');
     }
 }
+
+async function loadFundRequests() {
+    const cid = localStorage.getItem('manager_id');
+    try {
+        // Use the new finance/fund-requests endpoint which parses alerts
+        const reqs = await apiCall(`/manager/finance/fund-requests?company_id=${cid}`);
+        const tbody = document.getElementById('fund-requests-body');
+        if (!tbody) return;
+        
+        if (reqs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No pending requests.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = reqs.map(r => {
+            return `
+                <tr>
+                    <td>
+                        <b>${r.driver_name}</b><br>
+                        <small style="color:var(--text-muted);">ID: ${r.driver_id.slice(0,8)}</small>
+                    </td>
+                    <td><span class="badge" style="background:${r.fund_type === 'REFUEL' ? 'var(--warning)' : 'var(--primary)'}">${r.fund_type}</span></td>
+                    <td><b style="color:var(--success);">₹ ${r.amount.toLocaleString()}</b></td>
+                    <td>${r.distance.toFixed(1)} km</td>
+                    <td style="text-align:center;">
+                        <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:var(--success); border-radius:8px;" onclick="releaseFund('${r.alert_id}')">Approve & Release</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch(e) {
+        console.error("Fund load failed:", e);
+    }
+}
+
+async function releaseFund(alertId) {
+    if (!confirm('Approve and release these funds to the driver?')) return;
+    try {
+        await apiCall(`/manager/finance/approve-fund-request/${alertId}`, 'POST');
+        showNotification('Funds released successfully.', 'success');
+        loadFundRequests();
+        initFintechOracle(); // Refresh P&L
+    } catch (e) {
+        showNotification(e.detail || 'Failed to release funds.', 'error');
+    }
+}
+
+// Ensure it loads when showing ledger section
+const originalShowSection = window.showSection;
+window.showSection = function(id) {
+    if (id === 'ledger') loadFundRequests();
+    if (originalShowSection) originalShowSection(id);
+};

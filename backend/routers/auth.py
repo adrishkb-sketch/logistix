@@ -147,8 +147,13 @@ def customer_request_otp(data: CustomerOTPRequest):
 def customer_verify_otp(data: CustomerOTPVerify):
     email = data.email.strip().lower()
     stored = customer_otp_store.get(email)
-    if not stored or stored != data.otp.strip():
-        raise HTTPException(status_code=401, detail="Invalid or expired OTP")
+    print(f"[DEBUG] OTP Verify: Email={email}, Stored={stored}, Received={data.otp.strip()}")
+    
+    if not stored:
+        raise HTTPException(status_code=401, detail="No active OTP found for this email. Please request a new one.")
+        
+    if stored != data.otp.strip():
+        raise HTTPException(status_code=401, detail="Incorrect verification code. Please check your email and try again.")
     
     del customer_otp_store[email]
     all_shipments = shipments_db.get_all()

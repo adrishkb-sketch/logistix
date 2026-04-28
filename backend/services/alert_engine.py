@@ -37,7 +37,7 @@ def check_heatwave_safety(shipment: dict, vehicle: dict):
             # Check if alert already exists
             existing = [
                 a for a in alerts_db.get_all()
-                if a.get("shipment_id") == shipment["id"]
+                if a and a.get("shipment_id") == shipment["id"]
                 and a.get("type") == "heatwave_safety"
                 and a.get("status") == "active"
             ]
@@ -113,7 +113,7 @@ def check_weather_alerts(shipment: dict, lat: float, lng: float):
                 
         if intersects and not cell.get("is_simulation"):
             # Intersection! Check if alert already exists
-            existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "weather" and a.get("status") == "active"]
+            existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "weather" and a.get("status") == "active"]
             if not existing:
                 cond = cell.get('condition') or cell.get('type') or 'Weather Anomaly'
                 new_alert = Alert(
@@ -167,7 +167,7 @@ def check_street_intel_alerts(shipment: dict):
                 
             if v_rank > max_rank:
                 # Alert!
-                existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "street_intel" and a.get("status") == "active"]
+                existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "street_intel" and a.get("status") == "active"]
                 if not existing:
                     new_alert = Alert(
                         company_id=shipment.get("company_id"),
@@ -204,7 +204,7 @@ def check_compliance_alerts(shipment: dict):
     
     # If ETA is within 2 hours of expiry, or already exceeded
     if eta_dt > expiry_dt - timedelta(hours=2):
-        existing = [a for a in alerts_db.get_all() if a.get("shipment_id") == shipment["id"] and a.get("type") == "compliance" and a.get("status") == "active"]
+        existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "compliance" and a.get("status") == "active"]
         if not existing:
             new_alert = Alert(
                 company_id=shipment.get("company_id"),

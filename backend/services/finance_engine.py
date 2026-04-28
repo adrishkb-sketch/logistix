@@ -3,76 +3,163 @@ from backend.services.route_engine import haversine
 from backend.routers.fuel_oracle import get_fuel_prices
 
 def estimate_delivery_cost(shipment: dict, vehicle_type: str = "van") -> dict:
-    # 1. Distance & Route Complexity
-    dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+    # 1. Distance Calculation
+    p_lat = shipment.get("pickup", {}).get("lat", 0)
+    p_lng = shipment.get("pickup", {}).get("lng", 0)
+    d_lat = shipment.get("drop", {}).get("lat", 0)
+    d_lng = shipment.get("drop", {}).get("lng", 0)
+    dist = haversine(p_lat, p_lng, d_lat, d_lng)
     
-    # 2. Fuel Cost (State-aware)
+    # 2. Fuel Budget (State-aware from Oracle)
     prices = get_fuel_prices()
+    fuel_price = 95.0 # Global average fallback
     
-    def get_state_price(state_name, fallback):
-        state_data = prices.get(state_name)
-        if state_data:
-            return state_data.get("diesel", fallback)
-        return fallback
-
-    fuel_price = 95.0
-    if shipment["pickup"]["lat"] > 25: 
-        fuel_price = get_state_price("Delhi", 96)
-    elif shipment["pickup"]["lat"] < 15: 
-        fuel_price = get_state_price("Tamil Nadu", 102)
-    elif shipment["pickup"]["lng"] > 85: 
-        fuel_price = get_state_price("West Bengal", 106)
+    # Simple state detection based on lat/lng
+    state = "Delhi"
+    if p_lat < 25: state = "Maharashtra"
+    if p_lat < 20: state = "Karnataka"
+    if p_lng > 85: state = "West Bengal"
     
-    # Real-world Efficiency (km/l)
-    efficiency = 18.0 
-    v_type_lower = (vehicle_type or "van").lower()
-    if "truck" in v_type_lower: efficiency = 5.0
-    elif "bike" in v_type_lower or "scooty" in v_type_lower: efficiency = 45.0
-    elif "van" in v_type_lower: efficiency = 12.0
-    elif "drone" in v_type_lower: efficiency = 0 # Electric
+    state_prices = prices.get(state, prices.get("Delhi", {}))
     
-    fuel_cost = (dist / efficiency) * fuel_price if efficiency > 0 else 0
-    if "drone" in v_type_lower:
-        fuel_cost = 2.0 # Battery charge cost for short flight
+    # Vehicle Efficiency Mapping
+    v_type = (vehicle_type or "van").lower()
+    efficiency = 15.0 # km/L
+    fuel_type = "diesel"
     
-    # 3. Driver Cost (Base + Distance-based)
-    base_driver_pay = 0
-    food_allowance = 0
+    if "truck" in v_type:
+        efficiency = 6.0
+        fuel_type = "diesel"
+    elif "van" in v_type:
+        efficiency = 12.0
+        fuel_type = "diesel"
+    elif "bike" in v_type or "scooty" in v_type:
+        efficiency = 45.0
+        fuel_type = "petrol"
+    elif "drone" in v_type:
+        efficiency = 0 # Electric
     
-    if "drone" not in v_type_lower:
-        base_driver_pay = 50 # Base per pickup
-        dist_pay = dist * 2.5 # 2.5 INR per KM for driver effort
-        base_driver_pay += dist_pay
-        
-        # Food for long hauls
-        if dist > 150: food_allowance = 200
-        if dist > 400: food_allowance = 450
+    current_fuel_price = state_prices.get(fuel_type, 95.0)
+    fuel_budget = (dist / (efficiency or 1)) * current_fuel_price if efficiency > 0 else 5.0 # 5 INR for drone battery
     
-    # 4. Maintenance & Asset Deprecation
-    maint_cost = dist * 0.8 # 0.8 INR per km for general fleet
-    if "drone" in v_type_lower:
-        maint_cost = dist * 5.0 # Drone sensor wear
-        drone_fixed_fee = 50 # Fixed calibration fee
-    else:
-        drone_fixed_fee = 0
+    # 3. Toll Budget (Estimation: ~₹2 per km for heavy, ₹0.5 for light)
+    toll_rate = 2.0 if "truck" in v_type else 0.5
+    toll_budget = dist * toll_rate if "bike" not in v_type and "drone" not in v_type else 0
     
-    total_cost = fuel_cost + base_driver_pay + food_allowance + maint_cost + drone_fixed_fee
+    # 4. Driver Wage (Direct Income)
+    # Calculated at ₹3.5 per km + ₹100 base per assignment
+    driver_wage = 100 + (dist * 3.5) if "drone" not in v_type else 0
     
-    # 5. Dynamic Pricing (Margin)
-    # 15% - 25% margin based on load and priority
-    margin_pct = 0.20 
-    if shipment.get("is_perishable"): margin_pct += 0.05
-    if "drone" in v_type_lower: margin_pct += 0.10 
+    # 5. Total Operational Cost
+    total_cost = fuel_budget + toll_budget + driver_wage
+    
+    # 6. Customer Pricing (Margin-based)
+    # Target 30% margin on top of costs
+    margin_pct = 0.30
+    if shipment.get("is_perishable"): margin_pct += 0.10
     
     suggested_price = total_cost * (1 + margin_pct)
     
+    # 7. Projected Profit
+    projected_profit = suggested_price - total_cost
+
     return {
-        "total_cost": round(total_cost, 2),
-        "fuel_cost": round(fuel_cost, 2),
-        "driver_payout": round(base_driver_pay, 2),
-        "food_allowance": round(food_allowance, 2),
-        "maintenance_cost": round(maint_cost + drone_fixed_fee, 2),
         "suggested_price": round(suggested_price, 2),
-        "margin": round(suggested_price - total_cost, 2),
-        "vehicle_used": vehicle_type
+        "total_cost": round(total_cost, 2),
+        "fuel_budget": round(fuel_budget, 2),
+        "toll_budget": round(toll_budget, 2),
+        "driver_wage": round(driver_wage, 2),
+        "projected_profit": round(projected_profit, 2),
+        "margin_pct": round(margin_pct * 100, 1),
+        "vehicle_type": vehicle_type,
+        "distance_km": round(dist, 2),
+        "fuel_price_used": current_fuel_price
     }
+
+def recalculate_shipment_finance(shipment: dict, legs: list, vehicles_db) -> dict:
+    """
+    Recalculates finance for a shipment and its legs based on distance.
+    Distributes total revenue among legs and calculates individual costs.
+    """
+    # Calculate Total Distance and Total Operational Cost (Bottom-Up)
+    total_dist = 0
+    total_ops_cost = 0
+    leg_data = []
+    
+    for leg in legs:
+        p = leg.get("pickup", {})
+        d = leg.get("drop", {})
+        dist = haversine(p.get("lat",0), p.get("lng",0), d.get("lat",0), d.get("lng",0))
+        total_dist += dist
+        
+        # Get vehicle efficiency for cost estimation pass
+        v_type = "van"
+        v_id = leg.get("assigned_vehicle_id")
+        if v_id:
+            v = vehicles_db.get_by_id(v_id)
+            if v: v_type = v.get("type", "van")
+        
+        cost_info = estimate_delivery_cost(leg, v_type)
+        total_ops_cost += cost_info.get("total_cost", 0)
+        leg_data.append({"id": leg["id"], "dist": dist, "leg": leg, "v_type": v_type})
+        
+    if total_dist <= 0:
+        total_dist = 1.0 # Avoid division by zero
+
+    # Recalculate Parent Total Revenue (Revenue = Cost + Margin)
+    margin_pct = 0.30
+    if shipment.get("is_perishable"): margin_pct += 0.10
+    total_amount = total_ops_cost * (1 + margin_pct)
+        
+    parent_total_cost = 0
+    
+    # Process Each Leg
+    updated_legs = []
+    for item in leg_data:
+        leg = item["leg"]
+        dist = item["dist"]
+        v_type = item["v_type"]
+        
+        # Proportional Revenue
+        leg_revenue = (dist / total_dist) * total_amount
+            
+        cost_info = estimate_delivery_cost(leg, v_type)
+        # Override distance in cost_info to match our leg distance
+        cost_info["distance_km"] = round(dist, 2)
+        # Recalculate costs based on this distance
+        efficiency = 12.0 if "van" in v_type.lower() else (6.0 if "truck" in v_type.lower() else 45.0)
+        fuel_price = cost_info.get("fuel_price_used", 95.0)
+        
+        leg_fuel = (dist / (efficiency or 1)) * fuel_price
+        leg_tolls = dist * (2.0 if "truck" in v_type.lower() else 0.5)
+        if "bike" in v_type.lower() or "drone" in v_type.lower(): leg_tolls = 0
+        
+        leg_driver_wage = 100 + (dist * 3.5)
+        leg_total_cost = leg_fuel + leg_tolls + leg_driver_wage
+        leg_profit = leg_revenue - leg_total_cost
+        
+        leg_finance = {
+            "suggested_price": round(leg_revenue, 2),
+            "total_cost": round(leg_total_cost, 2),
+            "fuel_budget": round(leg_fuel, 2),
+            "toll_budget": round(leg_tolls, 2),
+            "driver_wage": round(leg_driver_wage, 2),
+            "projected_profit": round(leg_profit, 2),
+            "margin_pct": round((leg_profit / (leg_revenue or 1)) * 100, 1),
+            "distance_km": round(dist, 2)
+        }
+        
+        leg["finance"] = leg_finance
+        updated_legs.append(leg)
+        parent_total_cost += leg_total_cost
+
+    # Update Parent
+    shipment["finance"] = {
+        "suggested_price": round(total_amount, 2),
+        "total_cost": round(parent_total_cost, 2),
+        "projected_profit": round(total_amount - parent_total_cost, 2),
+        "margin": round(total_amount - parent_total_cost, 2),
+        "distance_km": round(total_dist, 2)
+    }
+    
+    return {"shipment": shipment, "legs": updated_legs}

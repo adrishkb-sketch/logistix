@@ -311,6 +311,9 @@ def save_strategy(data: dict):
     if not company_id:
         return {"error": "Missing company_id"}
         
+    # Ensure an ID exists for Supabase mapping (one plan per company)
+    data["id"] = company_id
+    
     all_plans = strategy_db.get_all()
     # Replace existing plan for this company if it exists, otherwise add new
     new_plans = [p for p in all_plans if p and p.get("company_id") != company_id]

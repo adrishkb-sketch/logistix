@@ -185,6 +185,26 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             if current_weight + shipment.get("weight", 0) <= vehicle.get("capacity", 0):
                 score_modifier = verification_score + mm_truck_score
                 
+                # GEOSPATIAL PROXIMITY (Rigorously prioritize local fleet)
+                curr_loc = vehicle.get("current_location")
+                if curr_loc:
+                    dist_to_pickup = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), p_lat, p_lng)
+                    if dist_to_pickup < 2: # Within 2km (Already at Hub or very near)
+                        score_modifier += 5000 
+                    elif dist_to_pickup < 15: # Local city area
+                        score_modifier += 2000
+                    elif dist_to_pickup > 100: # Cross-city (e.g. Kolkata to Bhubaneswar)
+                        score_modifier -= 10000 # HEAVY PENALTY
+                    else:
+                        score_modifier -= (dist_to_pickup * 50) # Linear penalty for travel distance
+                else:
+                    # No location data? Assume base warehouse distance
+                    if v_base:
+                        wh = next((w for w in warehouses if w.get("id") == v_base), None)
+                        if wh:
+                            base_dist = haversine(wh["lat"], wh["lng"], p_lat, p_lng)
+                            score_modifier -= (base_dist * 30)
+
                 # BACKHAUL/OUTBOUND BOOSTS
                 if is_middle_mile:
                     if v_base == d_wh_id: score_modifier += 800 # BACKHAUL
@@ -222,7 +242,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     "vehicle": vehicle, 
                     "score_modifier": score_modifier,
                     "wait_time_mins": wait_time_mins,
-                    "finance_data": finance_data
+                    "finance_data": finance_data,
+                    "dist_to_pickup": dist_to_pickup if curr_loc else 999
                 })
                 
     if not available_pairs:
@@ -239,12 +260,25 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     from datetime import datetime, timedelta
     from backend.services.time_utils import snap_eta_to_business_hours
     
+    # Calculate Dynamic Pickup Deadline
+    v = best_pair["vehicle"]
+    curr_loc = v.get("current_location")
+    pickup_loc = shipment.get("pickup")
+    p_deadline = datetime.utcnow() + timedelta(hours=1)
+    
+    if curr_loc and pickup_loc:
+        dist_to_pickup = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), pickup_loc.get("lat", 0), pickup_loc.get("lng", 0))
+        # Avg speed 30km/h for pickup approach (city/traffic)
+        eta_mins = (dist_to_pickup / 30.0) * 60 + 15
+        p_deadline = datetime.utcnow() + timedelta(minutes=round(eta_mins))
+
     res = {
         "assigned_driver_id": best_pair["driver"].get("id"),
         "assigned_vehicle_id": best_pair["vehicle"].get("id"),
         "status": "assigned",
         "stage": "Assigned to Driver",
-        "finance": best_pair.get("finance_data")
+        "finance": best_pair.get("finance_data"),
+        "pickup_deadline": p_deadline.isoformat() + "Z"
     }
 
     if best_pair["wait_time_mins"] > 0:

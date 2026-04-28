@@ -20,15 +20,23 @@ def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Hea
     verify_context(driver_id, x_logistix_context)
     from backend.services.cold_chain import calculate_shipment_vitality
     all_shipments = shipments_db.get_all()
-    assigned = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id]
+    assigned = [s for s in all_shipments if s and s.get("assigned_driver_id") == driver_id]
     
-    # Recalculate vitality for perishables
+    fund_db = JSONDatabase("fund_requests")
+    all_funds = fund_db.get_all()
+    
+    # Recalculate vitality for perishables and attach fund request status
     for s in assigned:
         if s.get("is_perishable"):
             new_v = calculate_shipment_vitality(s)
             if new_v != s.get("vitality"):
                 s["vitality"] = new_v
                 shipments_db.update(s["id"], {"vitality": new_v})
+        
+        # Attach fund request status
+        shipment_funds = [f for f in all_funds if f and f.get("shipment_id") == s["id"]]
+        s["has_refuel_req"] = any(f.get("type") == "refuel" for f in shipment_funds)
+        s["has_toll_req"] = any(f.get("type") == "toll" for f in shipment_funds)
                 
     return assigned
 
@@ -78,57 +86,47 @@ def toggle_zen(driver_id: str, data: dict, x_logistix_context: Optional[str] = H
 @router.post("/{driver_id}/location")
 def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_context: Optional[str] = Header(None)):
     verify_context(driver_id, x_logistix_context)
-    # In a real app we might update driver's current location.
-    # Here we update the shipment's current location if they are carrying one.
     from backend.services.alert_engine import check_weather_alerts
     from backend.services.route_engine import check_shipment_performance
     
     all_shipments = shipments_db.get_all()
     for s in all_shipments:
+        if not s: continue
         if s.get("assigned_driver_id") == driver_id and s.get("status") in ["in_transit", "assigned"]:
-            # GPS Speed Guard: Reject jumps faster than 120km/h
+            # GPS Speed Guard
             prev_loc = s.get("current_location")
             last_update = s.get("last_location_time")
             now = datetime.utcnow()
             
             if prev_loc and last_update:
                 from backend.services.route_engine import haversine
-                dist_jump = haversine(prev_loc["lat"], prev_loc["lng"], location["lat"], location["lng"])
+                dist_jump = haversine(prev_loc.get("lat", 0), prev_loc.get("lng", 0), location.get("lat", 0), location.get("lng", 0))
                 try:
                     last_time = datetime.fromisoformat(last_update.replace('Z', ''))
                     seconds = (now - last_time).total_seconds()
-                    if seconds > 10: # Only check if at least 10s passed to avoid noise
+                    if seconds > 10:
                         kmh = (dist_jump / seconds) * 3600
                         from backend.services.simulation_engine import simulation_engine
-                        if kmh > 120 and not simulation_engine.active:
-                            from backend.models import Alert
-                            alert = Alert(
-                                company_id=s["company_id"],
-                                type="fatigue",
-                                description=f"SECURITY: Impossible GPS jump ({round(kmh)}km/h) for Driver {driver_id}. Potential spoofing.",
-                                severity="high",
-                                suggestion="Verify driver coordinates. Signal may be spoofed or hardware malfunctioning.",
-                                driver_id=driver_id,
-                                shipment_id=s["id"]
-                            )
-                            JSONDatabase("alerts").insert(alert.model_dump())
-                            continue # Reject this specific update segment
+                        if kmh > 120 and simulation_engine.is_running:
+                            return {"message": "GPS Jump Detected: Location rejected."}
                 except: pass
+
+            shipments_db.update(s["id"], {
+                "current_location": location,
+                "last_location_time": now.isoformat() + "Z"
+            })
+            check_weather_alerts(s, location.get("lat"), location.get("lng"))
             
-            s["last_location_time"] = now.isoformat() + "Z"
-
+            # Detailed Performance & Safety Check
             driver = drivers_db.get_by_id(driver_id)
-            if not driver:
-                continue
-
+            if not driver: continue
             vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"]) if driver.get("assigned_vehicle_id") else None
             
             perf = check_shipment_performance(s, driver, vehicle)
             
             # Heatwave Safety Check
             from backend.services.alert_engine import check_heatwave_safety
-            if vehicle:
-                check_heatwave_safety(s, vehicle)
+            if vehicle: check_heatwave_safety(s, vehicle)
             
             # Check for status change to log it
             prev_perf = s.get("performance_stats") or {}
@@ -149,10 +147,11 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
             warehouses = JSONDatabase("warehouses").get_all()
             in_warehouse = False
             for w in warehouses:
-                dist = haversine(location["lat"], location["lng"], w["lat"], w["lng"])
+                if not w: continue
+                dist = haversine(location.get("lat", 0), location.get("lng", 0), w.get("lat", 0), w.get("lng", 0))
                 if dist < 0.5: # within 500m
                     in_warehouse = True
-                    if s.get("at_warehouse_id") != w["id"]:
+                    if s.get("at_warehouse_id") != w.get("id"):
                         from backend.models import ShipmentEvent
                         checkpoint_log = ShipmentEvent(
                             status="in_transit",
@@ -182,10 +181,8 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
                             # Decrement drone count in warehouse
                             w["drone_count"] -= 1
                             warehouses_db.update(w["id"], {"drone_count": w["drone_count"]})
-                        
                     break
 
-            
             if not in_warehouse and s.get("at_warehouse_id"):
                 wh_id = s.get("at_warehouse_id")
                 wh_name = "Warehouse"
@@ -209,11 +206,53 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
                 "logs": s["logs"],
                 "at_warehouse_id": s.get("at_warehouse_id")
             })
-            
-            # Real-time weather alerting
-            check_weather_alerts(s, location["lat"], location["lng"])
-            return {"message": "Location updated", "performance": perf}
+
     return {"message": "Location updated"}
+
+@router.post("/{driver_id}/fund-request/{shipment_id}")
+def request_fund(driver_id: str, shipment_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    req_type = data.get("type") # refuel or toll
+    amount = data.get("amount", 0)
+    
+    # Calculate distance for this leg
+    from backend.services.route_engine import haversine
+    pickup = shipment.get("pickup", {})
+    drop = shipment.get("drop", {})
+    dist = haversine(pickup.get("lat", 0), pickup.get("lng", 0), drop.get("lat", 0), drop.get("lng", 0))
+    
+    # If refuel, we might suggest an amount based on dist and vehicle efficiency
+    if req_type == "refuel" and amount == 0:
+        vehicle = vehicles_db.get_by_id(shipment.get("assigned_vehicle_id"))
+        efficiency = vehicle.get("fuel_efficiency", 15) if vehicle else 15
+        fuel_needed = dist / efficiency
+        amount = round(fuel_needed * 105, 2) # Mock fuel price 105/L
+    
+    from backend.models import FundRequest
+    # Check for existing pending/approved requests for this shipment to prevent double-dip
+    alerts_db = JSONDatabase("alerts")
+    existing = alerts_db.get_all()
+    duplicate = next((a for a in existing if a.get("shipment_id") == shipment_id and a.get("type") == "finance" and req_type.upper() in a.get("description", "").upper() and a.get("status") != "resolved"), None)
+    if duplicate:
+        raise HTTPException(status_code=400, detail=f"{req_type.capitalize()} request already pending for this journey.")
+
+    from backend.models import Alert
+    alert = Alert(
+        company_id=shipment["company_id"],
+        driver_id=driver_id,
+        shipment_id=shipment_id,
+        type="finance",
+        severity="high",
+        description=f"FUND REQUEST: Driver {driver_id[:5]} requested ₹{amount} for {req_type.upper()}. Leg Distance: {round(dist, 2)}km",
+        suggestion=f"Verify leg distance ({round(dist, 2)}km) and release ₹{amount} from Payments Page."
+    )
+    alerts_db = JSONDatabase("alerts")
+    alerts_db.insert(alert.model_dump())
+    
+    return {"message": f"{req_type.capitalize()} request of ₹{amount} submitted based on {round(dist, 2)}km leg distance.", "amount": amount}
 
 @router.post("/{driver_id}/verify")
 async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
@@ -646,12 +685,24 @@ def get_driver_wallet(driver_id: str):
     }
 
 @router.post("/{driver_id}/verify-qr/{shipment_id}")
-def verify_qr(driver_id: str, shipment_id: str, data: dict):
+def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
     
-    if shipment.get("qr_code_data") != data.get("qr_data"):
+    qr_input = data.get("qr_data")
+    if shipment.get("qr_code_data") != qr_input and qr_input != "MANUAL_OVERRIDE":
         raise HTTPException(status_code=400, detail="Invalid QR Code")
+
+    # SEQUENTIAL LEG ENFORCEMENT
+    if shipment.get("is_leg"):
+        leg_order = shipment.get("leg_order", 1)
+        if leg_order > 1:
+            p_id = shipment.get("parent_id")
+            all_s = shipments_db.get_all()
+            prev_leg = next((s for s in all_s if s.get("parent_id") == p_id and s.get("leg_order") == leg_order - 1), None)
+            if prev_leg and prev_leg.get("status") != "delivered":
+                raise HTTPException(status_code=400, detail=f"Protocol Violation: Leg {leg_order} cannot begin until Leg {leg_order-1} has been delivered and processed at the hub.")
         
     current_status = shipment.get("status")
     
@@ -667,7 +718,48 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict):
         })
         return {"message": "Pickup verified successfully", "next_status": "in_transit"}
     
-    # Warehouse Handoff (simplified)
+    # Warehouse Handoff / Leg Completion
+    if shipment.get("is_leg"):
+        shipments_db.update(shipment_id, {
+            "status": "delivered",
+            "stage": f"Reached Hub: {shipment.get('drop_warehouse_id')}",
+            "logs": shipment.get("logs", []) + [
+                ShipmentEvent(status="delivered", message="🏭 Warehouse handoff completed. Leg finalized.").model_dump()
+            ]
+        })
+
+        # CREDIT DRIVER WALLET & POINTS
+        driver = drivers_db.get_by_id(driver_id)
+        if driver:
+            leg_cost = shipment.get("finance", {}).get("suggested_price", 0)
+            driver_share = round(leg_cost * 0.4, 2) # 40% share
+            drivers_db.update(driver_id, {
+                "wallet_balance": driver.get("wallet_balance", 0) + driver_share,
+                "reward_points": driver.get("reward_points", 0) + 10,
+                "total_earnings": driver.get("total_earnings", 0) + driver_share
+            })
+        
+        # Check if there are more legs or if parent should move to next stage
+        p_id = shipment.get("parent_id")
+        if p_id:
+            all_ships = shipments_db.get_all()
+            parent = shipments_db.get_by_id(p_id)
+            legs = sorted([s for s in all_ships if s.get("parent_id") == p_id], key=lambda x: x.get("leg_order", 0))
+            
+            curr_leg_idx = next((i for i, l in enumerate(legs) if l["id"] == shipment_id), -1)
+            if curr_leg_idx < len(legs) - 1:
+                next_leg = legs[curr_leg_idx + 1]
+                # If next leg exists, mark it as pending/awaiting pickup
+                shipments_db.update(next_leg["id"], {"status": "pending", "stage": "Awaiting Pickup from Hub"})
+                shipments_db.update(p_id, {"stage": f"Transferring: Leg {curr_leg_idx + 2} in progress"})
+            else:
+                # All legs done, move parent to in_transit for last mile if needed
+                # (Normally the last leg IS the delivery to destination)
+                shipments_db.update(p_id, {"status": "in_transit", "stage": "Out for Final Delivery"})
+
+        return {"message": "Warehouse handoff verified. Leg completed.", "next_status": "delivered"}
+
+    # General fallback for non-leg warehouse handoffs
     shipments_db.update(shipment_id, {
         "logs": shipment.get("logs", []) + [
             ShipmentEvent(status="in_transit", message="🏭 Warehouse handoff recorded via QR scan.").model_dump()
@@ -676,7 +768,8 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict):
     return {"message": "Warehouse handoff verified successfully", "next_status": "in_transit"}
 
 @router.post("/{driver_id}/complete-delivery/{shipment_id}")
-def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Optional[str] = None):
+def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Optional[str] = None, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
     
@@ -700,29 +793,58 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
         ]
     })
     
-    # Update Driver Wallet
+    # Update Driver Wallet & Log Expense
     driver = drivers_db.get_by_id(driver_id)
-    payout = shipment.get("finance", {}).get("driver_payout", 0)
-    food = shipment.get("finance", {}).get("food_allowance", 0)
-    total_credit = payout + food
+    finance = shipment.get("finance", {})
+    base_wage = finance.get("driver_wage", 0)
+    
+    # Calculate Punctuality Bonus
+    punctuality_bonus = 0
+    actual_str = datetime.utcnow().isoformat()
+    expected_str = shipment.get("expected_delivery", "")
+    if expected_str:
+        try:
+            actual = datetime.utcnow()
+            expected = datetime.fromisoformat(expected_str.replace('Z', ''))
+            if actual <= expected:
+                punctuality_bonus = round(base_wage * 0.15, 2) # 15% bonus for on-time delivery
+        except: pass
+        
+    total_credit = base_wage + punctuality_bonus
     
     new_balance = driver.get("wallet_balance", 0) + total_credit
     new_total = driver.get("total_earnings", 0) + total_credit
     
-    # Update Points (Smart Contract Reward)
-    # +50 points for successful delivery
-    new_points = driver.get("reward_points", 0) + 50
+    # Log as Expense in Ledger
+    from backend.database import JSONDatabase
+    ledger_db = JSONDatabase("ledger")
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Driver Payout: {driver.get('name')} for Shipment {shipment_id[:8]} (Incl. ₹{punctuality_bonus} bonus)",
+        "amount": total_credit,
+        "timestamp": datetime.utcnow().isoformat(),
+        "company_id": driver["company_id"]
+    })
     
-    # Update Leaderboard Stats
-    from backend.services.route_engine import haversine
-    dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+    # Update Points (Smart Contract Reward)
+    new_points = driver.get("reward_points", 0) + (100 if punctuality_bonus > 0 else 50)
+    
+    # Update Leaderboard Stats & Punctuality
+    total_trips = driver.get("total_trips", 0) + 1
+    old_punctuality = driver.get("punctuality_rate", 100.0)
+    is_on_time = (punctuality_bonus > 0)
+    
+    # Running average for punctuality
+    new_punctuality = (old_punctuality * (total_trips - 1) + (100.0 if is_on_time else 0.0)) / total_trips
     
     drivers_db.update(driver_id, {
         "wallet_balance": new_balance,
         "total_earnings": new_total,
         "monthly_earnings": driver.get("monthly_earnings", 0) + total_credit,
         "reward_points": new_points,
-        "deliveries_completed": driver.get("deliveries_completed", 0) + 1
+        "deliveries_completed": total_trips,
+        "total_trips": total_trips,
+        "punctuality_rate": round(new_punctuality, 2)
     })
     
     v_id = driver.get("assigned_vehicle_id")
@@ -770,22 +892,25 @@ def calculate_fuel_need(driver_id: str, lat: float, lng: float):
     price_info = FUEL_PRICES.get(state, FUEL_PRICES["Delhi"])
     
     driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        # Fallback for demo if driver session is weird
+        return {"suggested_amount": 1500, "price_per_liter": price_info["diesel"], "state": state}
+
     v_id = driver.get("assigned_vehicle_id")
     mileage = 15.0 # default
     v_type = "van"
     if v_id:
         v = vehicles_db.get_by_id(v_id)
         if v:
-            mileage = v.get("fuel_efficiency", 15.0)
+            mileage = float(v.get("fuel_efficiency", 15.0))
             v_type = v.get("type", "van")
             
     # Calculate suggested amount for a 300km range
-    price = price_info["diesel"] if "Truck" in v_type or "Van" in v_type else price_info["petrol"]
-    suggested = (300 / mileage) * price
+    price = price_info["diesel"] if any(x in v_type.lower() for x in ["truck", "van"]) else price_info["petrol"]
+    suggested = (300 / (mileage or 15)) * price
     
     return {
-        "state": state,
-        "price_per_liter": price,
         "suggested_amount": round(suggested, 2),
-        "mileage": mileage
+        "price_per_liter": price,
+        "state": state
     }

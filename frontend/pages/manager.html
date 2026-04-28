@@ -453,7 +453,8 @@
                                 <input type="text" id="shipment-search" placeholder="Search ID or Desc..." oninput="applyShipmentFilters()" class="polished-glass-input" data-i18n-placeholder="search_shipment_placeholder">
                                 <div class="shipments-board-buttons">
                                     <button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem;" data-i18n="btn_auto_bulk_assign">⚡ Auto Bulk Assign</button>
-                                    <button class="btn-primary" onclick="showMergeSuggestions()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem; background:var(--warning);">🔗 Merge Suggestions</button>
+                                    <button class="btn-primary" onclick="showMergeSuggestions()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem; background:var(--warning);" data-i18n="btn_merge_suggestions">🔗 Merge Suggestions</button>
+                                    <button class="btn-primary" onclick="recalculateAllFinances()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem; background:var(--success);" data-i18n="btn_recalculate_finance">💰 Recalculate Finances</button>
                                     <div id="sim-mode-toggle-container" class="glass-card" style="padding:6px 12px; background:rgba(0,0,0,0.4); border:1px solid var(--border); display:flex; align-items:center; gap:10px; border-radius:12px; transition: all 0.3s ease;">
                                         <span style="font-size:0.7rem; color:var(--text-muted); font-weight:800; letter-spacing: 0.5px;" data-i18n="label_sim_mode">SIMULATION MODE</span>
                                         <label class="switch">
@@ -899,6 +900,28 @@
             </section>
             <!-- Smart Contract Ledger Section -->
             <section id="ledger" class="section-content" style="display:none;">
+                <div class="glass-card section-card" style="margin-bottom: 25px; border-left: 4px solid var(--warning); background:rgba(245, 158, 11, 0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3 style="margin:0; color:var(--warning);">⛽ Pending Fund Requests (Refuel/Toll)</h3>
+                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--warning);" onclick="loadFundRequests()">Refresh Requests</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Driver / Shipment</th>
+                                    <th>Expense Type</th>
+                                    <th>Amt Requested</th>
+                                    <th>Est. Distance</th>
+                                    <th style="text-align:center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fund-requests-body">
+                                <!-- Requests injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 <div class="glass-card section-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <h3 style="margin:0;" data-i18n="driver_wallet_summary">Driver Wallet Summary 💰</h3>
@@ -987,7 +1010,10 @@
                                     <span data-i18n="hub_loc">Hub Location</span>
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Tier 1 cities have 25% higher demand but come with a significant rent premium per shipment.">ⓘ</span>
                                 </label>
-                                
+                                <select id="param-loc" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+                                    <option value="tier1">Tier 1 (High Demand, High Rent)</option>
+                                    <option value="tier2" selected>Tier 2 (Standard Growth)</option>
+                                </select>
                             </div>
 
                             <div class="input-group" style="margin-top:32px;">
@@ -1207,21 +1233,21 @@
                     </div>
 
                     <div class="responsive-grid-4" data-layout-id="paisa-stats-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:32px; margin-bottom:48px;">
-                        <div class="glass-card" data-layout-id="stat-escrow" style="padding:20px; border-bottom: 3px solid var(--primary);">
-                            <small style="color:var(--text-muted)" data-i18n="pending_escrow">Pending Digital Escrow</small>
+                        <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--success);">
+                            <small style="color:var(--text-muted)">Total Revenue (Gross)</small>
+                            <h3 id="fintech-total-revenue" style="margin:10px 0 0 0;">₹ 0.00</h3>
+                        </div>
+                        <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--danger);">
+                            <small style="color:var(--text-muted)">Operational Costs</small>
+                            <h3 id="fintech-total-expenses" style="margin:10px 0 0 0;">₹ 0.00</h3>
+                        </div>
+                        <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--accent);">
+                            <small style="color:var(--text-muted)">Unpaid / In Escrow</small>
                             <h3 id="fintech-cod" style="margin:10px 0 0 0;">₹ 0.00</h3>
                         </div>
-                        <div class="glass-card" data-layout-id="stat-unpaid" style="padding:20px; border-bottom: 3px solid var(--warning);">
-                            <small style="color:var(--text-muted)" data-i18n="unpaid_inv">Unpaid Invoices</small>
-                            <h3 id="fintech-unpaid" style="margin:10px 0 0 0;">₹ 0.00</h3>
-                        </div>
-                        <div class="glass-card" data-layout-id="stat-drone-maint" style="padding:20px; border-bottom: 3px solid var(--accent);">
-                            <small style="color:var(--text-muted)">Drone Maintenance</small>
-                            <h3 id="fintech-drone-maint" style="margin:10px 0 0 0;">₹ 0.00</h3>
-                        </div>
-                        <div class="glass-card" data-layout-id="stat-net-profit" style="padding:20px; border-bottom: 3px solid var(--success);">
-                            <small style="color:var(--text-muted)" data-i18n="net_profit">Net Profit (P&L)</small>
-                            <h3 id="fintech-profit" style="margin:10px 0 0 0;">₹ 0.00</h3>
+                        <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--primary); background:linear-gradient(135deg, rgba(49,130,206,0.1) 0%, transparent 100%);">
+                            <small style="color:var(--text-muted); font-weight:bold;">Net Profit (P&L)</small>
+                            <h3 id="fintech-profit" style="margin:10px 0 0 0; font-size:1.8rem; color:#10b981;">₹ 0.00</h3>
                         </div>
                     </div>
 
@@ -1416,6 +1442,17 @@
                             <h4 style="color:var(--danger)">Reset Vehicles</h4>
                             <p style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);">Permanently delete all vehicle records and unlink drivers.</p>
                             <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="systemReset('vehicles')">Clear All Vehicles</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="padding:25px; border:2px solid var(--danger); background:rgba(229,62,62,0.05); margin-top:30px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
+                            <div>
+                                <h4 style="color:var(--danger); margin:0; font-size:1.2rem;">Full Operational Reset</h4>
+                                <p style="font-size:0.9rem; margin:10px 0 0 0; color:var(--text);">Set all wallets, profit, and shipments to zero. <br>
+                                <span style="color:var(--text-muted); font-size:0.8rem;">Warehouses, Drivers, and Vehicles will remain unchanged, but all their history and balances will be wiped.</span></p>
+                            </div>
+                            <button class="btn-primary" style="background:var(--danger); width:auto; padding:12px 24px; font-weight:bold; box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);" onclick="systemReset('operations')">RESET ALL FUNCTIONS ⚠️</button>
                         </div>
                     </div>
 

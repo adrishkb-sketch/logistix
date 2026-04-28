@@ -14,6 +14,7 @@ import requests
 import re
 
 from backend.services.time_utils import snap_eta_to_business_hours
+from backend.services.finance_engine import estimate_delivery_cost
 
 import random
 import pandas as pd
@@ -293,7 +294,7 @@ def create_shipment(shipment_data: ShipmentCreate):
         delivery_otp=otp,
         logs=[initial_log],
         vitality=100.0,
-        qr_code_data=str(uuid.uuid4()),
+        qr_code_data=f"LX-{uuid.uuid4().hex[:8].upper()}",
         finance=finance,
         payment_status="unpaid"
     )
@@ -301,6 +302,19 @@ def create_shipment(shipment_data: ShipmentCreate):
     shipments_db.insert(new_shipment.model_dump())
             
     return new_shipment
+
+@router.get("/{shipment_id}/qr-data")
+def get_shipment_qr_data(shipment_id: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    qr_data = shipment.get("qr_code_data")
+    if not qr_data:
+        qr_data = f"LX-{uuid.uuid4().hex[:8].upper()}"
+        shipments_db.update(shipment_id, {"qr_code_data": qr_data})
+        
+    return {"qr_code_data": qr_data, "shipment_id": shipment_id}
 
 @router.get("/")
 def get_shipments(company_id: str):
@@ -649,9 +663,9 @@ def auto_assign(shipment_id: str):
                         print(f"Leg Assignment Error: {str(le)}")
                 
                 return {
-                    "message": f"Shipment automatically segmented into {len(all_new_legs)} legs and assigned to base warehouse drivers.",
+                    "message": f"Shipment automatically segmented into {len(new_leg_ids)} legs and assigned to base warehouse drivers.",
                     "action": "split",
-                    "legs_count": len(all_new_legs),
+                    "legs_count": len(new_leg_ids),
                     "assigned_count": assigned_count
                 }
 
@@ -742,15 +756,34 @@ def _perform_assignment(shipment_id: str, driver_id: Optional[str], vehicle_id: 
         JSONDatabase("drivers").update(driver_id, {"status": "on_duty"})
         JSONDatabase("vehicles").update(vehicle_id, {"status": "on_duty"})
 
+    from backend.services.route_engine import haversine
+    from datetime import datetime, timedelta
+    
+    # Calculate Dynamic Pickup ETA
+    curr_loc = v.get("current_location")
+    pickup_loc = shipment.get("pickup")
+    p_deadline = datetime.utcnow() + timedelta(hours=1) # Default
+    
+    if curr_loc and pickup_loc:
+        dist_to_pickup = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), pickup_loc.get("lat", 0), pickup_loc.get("lng", 0))
+        # Avg speed 30km/h for pickup approach (city/traffic)
+        eta_mins = (dist_to_pickup / 30.0) * 60 + 15 # +15 mins buffer for load/prep
+        p_deadline = datetime.utcnow() + timedelta(minutes=round(eta_mins))
+        
+        log_event.message += f" Estimated arrival at pickup: {p_deadline.strftime('%I:%M %p')} ({round(dist_to_pickup, 1)}km away)."
+
     logs = (shipment.get("logs") or []) + [log_event.model_dump()]
     
-    updated = shipments_db.update(shipment_id, {
+    updated_fields = {
         "assigned_driver_id": driver_id,
         "assigned_vehicle_id": vehicle_id,
         "status": status,
         "stage": stage,
-        "logs": logs
-    })
+        "logs": logs,
+        "pickup_deadline": p_deadline.isoformat() + "Z"
+    }
+    
+    updated = shipments_db.update(shipment_id, updated_fields)
     
     try:
         from backend.services.assignment import reoptimize_driver_route
@@ -765,6 +798,43 @@ def manual_assign(shipment_id: str, data: ManualAssignRequest):
     if not updated:
         raise HTTPException(status_code=404, detail="Shipment not found")
     return {"message": "Assigned manually", "shipment": updated}
+
+@router.post("/{shipment_id}/deassign")
+def deassign_shipment(shipment_id: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    from datetime import datetime
+    all_ships = shipments_db.get_all()
+    legs = [s for s in all_ships if s.get("parent_id") == shipment_id]
+    
+    # Safety Check: Cannot deassign if work has started
+    if shipment.get("status") in ["in_transit", "delivered"]:
+        raise HTTPException(status_code=400, detail="Cannot deassign: Shipment already in transit or delivered.")
+        
+    for leg in legs:
+        if leg.get("status") in ["in_transit", "delivered"]:
+             raise HTTPException(status_code=400, detail="Cannot deassign: One or more legs have already started.")
+             
+    # Reset Parent Shipment
+    shipments_db.update(shipment_id, {
+        "status": "pending",
+        "stage": "Awaiting AI/Manual Assignment",
+        "assigned_driver_id": None,
+        "assigned_vehicle_id": None,
+        "logs": shipment.get("logs", []) + [{
+            "status": "pending", 
+            "message": "⚠️ Manager deassigned this shipment. All previous assignments and legs have been cleared.", 
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }]
+    })
+    
+    # Clear associated legs
+    for leg in legs:
+        shipments_db.delete(leg["id"])
+        
+    return {"message": "Shipment deassigned and reset to pending successfully"}
 
 @router.post("/bulk-assign")
 def bulk_assign(company_id: str):
@@ -966,43 +1036,80 @@ def _generate_legs(parent_shipment, leg_data):
     
     shipments_db.update(p_dict["id"], p_dict)
     
-    current_time = datetime.utcnow()
+    # Financial Proportional Distribution Hardening
+    p_finance = p_dict.get("finance") or estimate_delivery_cost(p_dict)
+    p_total_price = p_finance.get("suggested_price", 0)
+    p_total_margin = p_finance.get("margin", 0)
+    
+    # Pre-calculate total distance of all legs for proportional distribution
+    total_legs_dist = 0
+    for leg in leg_data:
+        lp = leg.get("pickup") or {"lat": 0, "lng": 0}
+        ld = leg.get("drop") or {"lat": 0, "lng": 0}
+        total_legs_dist += haversine(lp.get("lat", 0), lp.get("lng", 0), ld.get("lat", 0), ld.get("lng", 0))
+    
+    if total_legs_dist == 0: total_legs_dist = 1
+    
+    remaining_price = p_total_price
+    remaining_margin = p_total_margin
+    
+    # Sequential Protocol Hardening: Next Pickup = Previous Drop + 5 Minutes Buffer
+    next_pivot_time = snap_eta_to_business_hours(datetime.utcnow())
     new_ids = []
     
     for i, leg in enumerate(leg_data):
-        dist = haversine(leg["pickup"]["lat"], leg["pickup"]["lng"], leg["drop"]["lat"], leg["drop"]["lng"])
+        # 1. Pickup Deadline for THIS leg
+        p_deadline = next_pivot_time
         
-        l_type = leg.get("leg_type")
+        l_pickup = leg.get("pickup") or {"lat": 0, "lng": 0, "address": "Unknown"}
+        l_drop = leg.get("drop") or {"lat": 0, "lng": 0, "address": "Unknown"}
+        dist = haversine(l_pickup.get("lat", 0), l_pickup.get("lng", 0), l_drop.get("lat", 0), l_drop.get("lng", 0))
+        
+        l_type = leg.get("leg_type") or "standard_leg"
         is_middle_mile = l_type == "middle_mile"
         
-        # Priority-based speed estimation
-        speed = 65.0 if is_middle_mile else 30.0 # Trucks faster on highways, small vehicles slower in city
-        travel_time_hours = dist / speed
-        
-        # Hub processing time
+        # 2. Travel & Processing Duration
+        speed = 65.0 if is_middle_mile else 30.0 
+        travel_time_hours = dist / (speed or 1)
         wait_time_hours = 1.5 if is_middle_mile else 0.5 
         
-        raw_eta = current_time + timedelta(hours=travel_time_hours + wait_time_hours)
+        # 3. Expected Drop Time for THIS leg
+        raw_eta = p_deadline + timedelta(hours=travel_time_hours + wait_time_hours)
         expected_time = snap_eta_to_business_hours(raw_eta)
+        
+        # 4. Set Pivot for NEXT leg: Prev Drop + 5 mins
+        next_pivot_time = snap_eta_to_business_hours(expected_time + timedelta(minutes=5))
         
         leg_log = ShipmentEvent(
             status="pending",
             message=f"Created as {l_type.replace('_', ' ').capitalize()} (Leg {i+1}). Optimized for { 'Trunk (Truck)' if is_middle_mile else 'Hub Handoff' } delivery.",
-            location=leg["pickup"]
+            location=l_pickup
         )
-        
-        # Update current_time for next leg sequentially
-        current_time = expected_time
         
         v_pref = "truck" if is_middle_mile else "scooty"
         finance = estimate_delivery_cost(leg, v_pref)
+        
+        # Override with proportional values to ensure Sum(Legs) == Parent
+        if i == len(leg_data) - 1:
+            leg_price = remaining_price
+            leg_margin = remaining_margin
+        else:
+            ratio = dist / total_legs_dist
+            leg_price = round(p_total_price * ratio, 2)
+            leg_margin = round(p_total_margin * ratio, 2)
+            remaining_price -= leg_price
+            remaining_margin -= leg_margin
+            
+        finance["suggested_price"] = round(leg_price, 2)
+        finance["expected_profit"] = round(leg_margin, 2) # Profit is the margin
+        # The other budgets (fuel_budget, driver_wage, toll_budget) are already set by estimate_delivery_cost
 
         l_id = str(uuid.uuid4())
         leg_shipment = Shipment(
             id=l_id,
             company_id=p_dict.get("company_id"),
-            pickup=Location(**leg["pickup"]),
-            drop=Location(**leg["drop"]),
+            pickup=Location(**l_pickup),
+            drop=Location(**l_drop),
             weight=p_dict.get("weight", 0),
             description=f"{p_dict.get('description', 'Shipment')} (Leg {i+1})",
             parent_id=p_dict.get("id"),
@@ -1011,13 +1118,14 @@ def _generate_legs(parent_shipment, leg_data):
             leg_type=l_type,
             route_type="direct",
             expected_delivery=expected_time.isoformat() + "Z",
+            pickup_deadline=p_deadline.isoformat() + "Z",
             delivery_otp=p_dict.get("delivery_otp"),
             logs=[leg_log],
             is_perishable=p_dict.get("is_perishable", False),
             vitality=p_dict.get("vitality", 100),
             pickup_warehouse_id=leg.get("pickup_warehouse_id"),
             drop_warehouse_id=leg.get("drop_warehouse_id"),
-            qr_code_data=str(uuid.uuid4()),
+            qr_code_data=f"LX-{uuid.uuid4().hex[:8].upper()}",
             finance=finance,
             payment_status=p_dict.get("payment_status", "unpaid")
         )
@@ -1069,6 +1177,25 @@ def pay_shipment(shipment_id: str):
         raise HTTPException(status_code=404, detail="Shipment not found")
         
     shipments_db.update(shipment["id"], {"payment_status": "paid"})
+    
+    # Update Company Profit (Receiver paid the amount)
+    companies_db = JSONDatabase("companies")
+    comp = companies_db.get_by_id(shipment.get("company_id"))
+    if comp:
+        amount = shipment.get("finance", {}).get("suggested_price", 0)
+        companies_db.update(comp["id"], {"total_profit": comp.get("total_profit", 0) + amount})
+        
+        # Log to ledger
+        from backend.database import JSONDatabase
+        ledger_db = JSONDatabase("ledger")
+        ledger_db.insert({
+            "id": str(uuid.uuid4()),
+            "company_id": comp["id"],
+            "type": "REVENUE",
+            "amount": amount,
+            "shipment_id": shipment["id"],
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        })
     
     # Also update all legs
     all_ships = shipments_db.get_all()
@@ -1141,8 +1268,8 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
-    drivers = [d for d in JSONDatabase("drivers").get_all() if d.get("company_id") == company_id and d.get("status") == "available"]
-    vehicles = [v for v in JSONDatabase("vehicles").get_all() if v.get("company_id") == company_id and v.get("status") == "available"]
+    drivers = [d for d in JSONDatabase("drivers").get_all() if d and d.get("company_id") == company_id and d.get("status") in ["available", "on_duty"]]
+    vehicles = [v for v in JSONDatabase("vehicles").get_all() if v and v.get("company_id") == company_id and v.get("status") in ["available", "on_duty"]]
     warehouses = JSONDatabase("warehouses").get_all()
     
     # Use overrides if provided (for planning phase)
@@ -1168,22 +1295,62 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
         "others": []
     }
     
+    from backend.services.route_engine import haversine
+    all_shipments = shipments_db.get_all()
+    
     for d in drivers:
         v_id = d.get("assigned_vehicle_id")
         if not v_id: continue
         v = next((veh for veh in vehicles if veh["id"] == v_id), None)
         if not v: continue
         
+        # Determine status/location
+        p_wh = next((w for w in warehouses if w["id"] == p_wh_id), None) if p_wh_id else None
+        loc_status = "Unknown"
+        is_local = False
+        is_enroute = False
+        
+        curr_loc = v.get("current_location")
+        if curr_loc and p_wh:
+            dist = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), p_wh.get("lat", 0), p_wh.get("lng", 0))
+            if dist < 0.5:
+                loc_status = f"At {p_wh.get('name', 'Warehouse')}"
+                is_local = True
+            else:
+                # Check if en route to this warehouse
+                active_s = next((s for s in all_shipments if s and s.get("assigned_vehicle_id") == v["id"] and s.get("status") == "in_transit"), None)
+                if active_s and active_s.get("drop_warehouse_id") == p_wh_id:
+                    loc_status = f"On the way to {p_wh.get('name', 'Warehouse')}"
+                    is_enroute = True
+                else:
+                    # Find nearest warehouse for general display
+                    nearest_w = None
+                    min_w_dist = float('inf')
+                    for w in warehouses:
+                        w_dist = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), w.get("lat", 0), w.get("lng", 0))
+                        if w_dist < min_w_dist:
+                            min_w_dist = w_dist
+                            nearest_w = w
+                    if nearest_w and min_w_dist < 1.0:
+                        loc_status = f"Near {nearest_w.get('name')}"
+                    else:
+                        loc_status = "In Transit / Outdoor"
+        elif v.get("base_warehouse_id") == p_wh_id:
+            loc_status = "Stationary at Base"
+            is_local = True
+
         asset = {
             "driver_id": d["id"],
             "driver_name": d["name"],
             "vehicle_id": v["id"],
             "vehicle_plate": v["number_plate"],
             "vehicle_type": v["type"],
-            "base_warehouse_id": v.get("base_warehouse_id")
+            "base_warehouse_id": v.get("base_warehouse_id"),
+            "location_status": loc_status,
+            "is_enroute": is_enroute
         }
         
-        if v.get("base_warehouse_id") == p_wh_id:
+        if is_local or is_enroute:
             eligible["local"].append(asset)
         elif d_wh_id and v.get("base_warehouse_id") == d_wh_id:
             eligible["returning"].append(asset)
@@ -1201,7 +1368,9 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
                     "driver_name": "Autonomous System",
                     "vehicle_id": dv["id"],
                     "vehicle_plate": dv["number_plate"],
-                    "vehicle_type": dv["type"]
+                    "vehicle_type": dv["type"],
+                    "location_status": f"At {wh.get('name', 'Warehouse')}",
+                    "is_enroute": False
                 })
                 
     return eligible

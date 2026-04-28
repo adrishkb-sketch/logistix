@@ -104,6 +104,17 @@ class JSONDatabase:
         except Exception as e:
             print(f"Supabase WRITE Error on {self.table_name}: {e}")
 
+    def delete_many(self, filter_column: str, filter_value: Any) -> int:
+        """Deletes all records matching the filter and returns the count."""
+        self._ensure_client()
+        try:
+            response = supabase.table(self.table_name).delete().eq(filter_column, filter_value).execute()
+            # Newer supabase-py returns data in response.data (the deleted rows)
+            return len(response.data) if response.data else 0
+        except Exception as e:
+            print(f"Supabase DELETE_MANY Error on {self.table_name}: {e}")
+            return 0
+
     def clear_all(self):
         self.write([])
 

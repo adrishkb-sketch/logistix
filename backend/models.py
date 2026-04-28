@@ -27,7 +27,9 @@ class SmartContractTx(BaseModel):
     tx_hash: str = Field(default_factory=lambda: f"0x{uuid.uuid4().hex}")
     from_address: str = "Logistix_Escrow"
     to_address: str
-    points_awarded: float
+    points_awarded: float = 0.0
+    amount: float = 0.0
+    company_id: str
     breakdown: Optional[dict] = None
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     shipment_id: str
@@ -225,3 +227,15 @@ class JourneyReview(BaseModel):
     total_score: float
     feedback_message: str
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+
+class FundRequest(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
+    driver_id: str
+    shipment_id: str
+    type: str # refuel, toll
+    amount_requested: float
+    distance_km: float
+    status: str = "pending" # pending, approved, released
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    resolved_at: Optional[str] = None

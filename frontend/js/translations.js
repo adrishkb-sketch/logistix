@@ -530,7 +530,10 @@ const translations = {
         "th_actions": "Actions",
         "th_counterparty": "Counterparty",
         "th_value": "Value",
-        "th_settlement_eta": "Settlement ETA"
+        "th_settlement_eta": "Settlement ETA",
+        "btn_recalculate_finance": "💰 Recalculate Finances",
+        "btn_merge_suggestions": "🔗 Merge Suggestions",
+        "btn_finalize": "FINALIZE"
     },
     "hi": {
         "nav_dashboard": "डैशबोर्ड",
@@ -1126,6 +1129,8 @@ const translations = {
         "th_counterparty": "काउंटरपार्टी",
         "th_value": "मूल्य",
         "th_settlement_eta": "सेटलेमेंट ईटीए",
+        "btn_recalculate_finance": "💰 वित्त की गणना करें",
+        "btn_merge_suggestions": "🔗 विलय के सुझाव",
         "v_verify_desc": "सुरक्षा और अनुपालन सुनिश्चित करने के लिए, कृपया वाहन के नंबर प्लेट को सत्यापित करें।",
         "scan_qr_pickup": "पिकअप के लिए क्यूआर स्कैन करें",
         "scan_qr_warehouse": "वेयरहाउस हैंडऑफ के लिए क्यूआर स्कैन करें",
@@ -1628,6 +1633,8 @@ const translations = {
         "th_counterparty": "কাউন্টারপার্টি",
         "th_value": "মূল্য",
         "th_settlement_eta": "সেটেলমেন্ট ইটিএ",
+        "btn_recalculate_finance": "💰 অর্থ পুনঃগণনা করুন",
+        "btn_merge_suggestions": "🔗 মার্জ সাজেশন দেখুন",
         "nav_driver_app": "ড্রাইভার অ্যাপ",
         "tab_contracts": "📜 চুক্তি",
         "tab_wallet": "ওয়ালেট 💰",

@@ -4,6 +4,21 @@ async function requestCustomerOTP() {
     let email = document.getElementById('cust-email').value.trim();
     if (!email) return alert("Please enter your email address.");
     
+    // Handle OTP PIN Box Auto-focus and deletion
+    const pinBoxes = document.querySelectorAll('.pin-box');
+    pinBoxes.forEach((box, idx) => {
+        box.addEventListener('input', (e) => {
+            if (e.target.value && idx < pinBoxes.length - 1) {
+                pinBoxes[idx + 1].focus();
+            }
+        });
+        box.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+                pinBoxes[idx - 1].focus();
+            }
+        });
+    });
+
     try {
         const res = await apiCall('/auth/customer/request-otp', 'POST', { email });
         alert(res.message);
@@ -49,7 +64,7 @@ async function verifyCustomerOTP() {
     const email = document.getElementById('cust-email').value.trim();
     const otp = Array.from(document.querySelectorAll('.pin-box')).map(i => i.value).join('');
     
-    if (otp.length < 4) return alert("Please enter the full OTP.");
+    if (otp.length < 6) return alert("Please enter the full 6-digit OTP.");
     
     try {
         const data = await apiCall('/auth/customer/verify-otp', 'POST', { email, otp });

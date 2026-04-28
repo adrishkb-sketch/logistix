@@ -3,6 +3,39 @@
 
 const dId = localStorage.getItem('driver_id');
 
+function showStatusOverlay(message, duration = 4000) {
+    const overlay = document.createElement('div');
+    overlay.className = 'glass-card';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 30%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 200000;
+        padding: 40px;
+        min-width: 300px;
+        text-align: center;
+        background: rgba(10, 15, 28, 0.95);
+        border: 2px solid var(--accent);
+        box-shadow: 0 0 50px rgba(0, 242, 254, 0.4);
+        border-radius: 24px;
+        backdrop-filter: blur(20px);
+        animation: slideInDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+    overlay.innerHTML = `
+        <div style="font-size:4rem; margin-bottom:20px;">⚡</div>
+        <h2 style="color:var(--accent); margin-bottom:12px; font-size:2rem; font-weight:800; letter-spacing:-0.5px;">${message}</h2>
+        <p style="color:var(--text-muted); font-size:1rem; line-height:1.5;">Status broadcasted to headquarters.<br>Awaiting automated ledger clearance.</p>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+        overlay.style.transition = 'all 0.5s ease';
+        overlay.style.opacity = '0';
+        overlay.style.transform = 'translate(-50%, -60%)';
+        setTimeout(() => overlay.remove(), 500);
+    }, duration);
+}
+
 function showNotification(message, type = 'info') {
     const toast = document.createElement('div');
     toast.style.position = 'fixed';
@@ -29,6 +62,39 @@ if (!dId || dId === "null" || dId === "undefined") {
 }
 const nameEl = document.getElementById('driver-name');
 if (nameEl) nameEl.innerText = localStorage.getItem('driver_name') || getTranslation('driver');
+
+let isSimulationMode = false;
+
+function attachSimulationDrag(m) {
+    if (!m) return;
+    m.on('dragend', async (e) => {
+        if (!isSimulationMode) return;
+        const { lat, lng } = e.target.getLatLng();
+        await apiCall(`/driver/${localStorage.getItem('driver_id')}/location`, 'POST', { lat, lng });
+        showNotification("📍 Manual movement synced (SIMULATION)", "success");
+    });
+}
+
+async function checkSimulationStatus() {
+    try {
+        const res = await apiCall('/simulation/status');
+        const prev = isSimulationMode;
+        isSimulationMode = res.active;
+        
+        // If simulation state changed, update marker draggability
+        if (prev !== isSimulationMode && marker) {
+            if (isSimulationMode) {
+                marker.dragging.enable();
+                attachSimulationDrag(marker);
+            } else {
+                marker.dragging.disable();
+                marker.off('dragend');
+            }
+        }
+    } catch(e) {}
+}
+setInterval(checkSimulationStatus, 10000);
+checkSimulationStatus();
 
 let map;
 let marker;
@@ -60,7 +126,6 @@ function showError(msg) {
 }
 let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count_driver') || '-1');
 let currentActiveTab = 'dash';
-let isSimulationMode = false;
 let isHalted = false;
 let lastBearing = 0;
 
@@ -428,8 +493,8 @@ async function loadMissions(autoStartNext = false) {
         const shipments = await apiCall(`/driver/${dId}/shipments`);
         const container = document.getElementById('mission-container');
         
-        const activeShipments = shipments.filter(s => s.status !== 'delivered');
-        const completedShipments = shipments.filter(s => s.status === 'delivered');
+        const activeShipments = shipments.filter(s => s.status !== 'delivered' && s.status !== 'finalized');
+        const completedShipments = shipments.filter(s => s.status === 'delivered' || s.status === 'finalized');
         
         // Render Completed Orders
         const completedContainer = document.getElementById('completed-container');
@@ -525,6 +590,8 @@ async function loadMissions(autoStartNext = false) {
                 const s = stop.shipment;
                 
                 let actionBtn = '';
+                const isLocked = idx > 0;
+                
                 if (isCurrent) {
                     const isWarehouseDelivery = s.is_leg || (s.at_warehouse_id && s.status === 'in_transit');
                     const isLastMile = !s.is_leg && s.status === 'in_transit';
@@ -543,14 +610,20 @@ async function loadMissions(autoStartNext = false) {
                             <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--warning);" onclick="handleScan('${s.id}', 'warehouse')">🏢 ${getTranslation('scan_qr_warehouse') || 'Scan QR for Warehouse Handoff'}</button>
                         `;
                     }
+                } else if (isLocked) {
+                    actionBtn = `
+                        <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.3); border:1px dashed rgba(255,255,255,0.1); cursor:not-allowed;">🔒 Locked: Pending previous leg</button>
+                    `;
                 }
                 
                 html += `
-                    <div class="timeline-node">
-                        <div class="timeline-dot" style="background:${dotColor};"></div>
-                        <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.7;'}">
-                            <h4 style="margin-bottom:5px; color:${dotColor}">${actionText}</h4>
+                    <div class="timeline-node" style="${isLocked ? 'filter: grayscale(1) blur(2px); pointer-events: none;' : ''}">
+                        <div class="timeline-dot" style="background:${dotColor}; opacity:${isLocked ? 0.3 : 1}"></div>
+                        <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.4; filter: blur(3px);'}">
+                            <h4 style="margin-bottom:5px; color:${dotColor}; opacity:${isLocked ? 0.5 : 1}">${actionText} ${isLocked ? '(Queued)' : ''}</h4>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Shipment:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
+                            
+                            ${actionBtn}
                             
                             ${s.is_perishable ? `
                                 <div style="background:rgba(0,242,254,0.1); padding:10px; border-radius:8px; border:1px solid var(--primary); margin:10px 0;">
@@ -565,8 +638,7 @@ async function loadMissions(autoStartNext = false) {
                                 </div>
                             ` : ''}
 
-
-                            <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ Deadline:</b> ${new Date(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery).toLocaleString()}</p>
+                            <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ Deadline:</b> ${formatDate(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery)}</p>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Location:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
                             
                             ${s.is_leg ? `
@@ -574,6 +646,22 @@ async function loadMissions(autoStartNext = false) {
                                     <p style="margin:0; font-size:0.75rem; color:var(--warning); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">🤝 Rendezvous Protocol</p>
                                     <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">Meet at ${stop.type === 'pickup' ? 'Outbound Hub' : 'Receiving Hub'}</p>
                                     <p style="margin:2px 0 0 0; font-size:0.9rem; color:var(--text-muted);">Coordinate with depot manager for handoff.</p>
+                                    
+                                    ${isCurrent && stop.type === 'pickup' ? `
+                                        <div style="display:flex; gap:10px; margin-top:12px;">
+                                            ${s.has_refuel_req ? `
+                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ Refuel Requested</button>
+                                            ` : `
+                                                <button class="btn-primary" style="flex:1; background:rgba(245, 158, 11, 0.2); color:var(--warning); border:1px solid var(--warning); font-size:0.75rem;" id="refuel-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'refuel')">⛽ Refuel</button>
+                                            `}
+                                            
+                                            ${s.has_toll_req ? `
+                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ Toll Requested</button>
+                                            ` : `
+                                                <button class="btn-primary" style="flex:1; background:rgba(79, 140, 255, 0.2); color:var(--primary); border:1px solid var(--primary); font-size:0.75rem;" id="toll-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'toll')">🛣️ Toll</button>
+                                            `}
+                                        </div>
+                                    ` : ''}
                                 </div>
                             ` : ''}
 
@@ -702,7 +790,8 @@ async function updateLocation(position) {
     const lng = position.coords.longitude;
     
     if (!marker) {
-        marker = L.marker([lat, lng], {icon: getVehicleIcon(0)}).addTo(map);
+        marker = L.marker([lat, lng], {icon: getVehicleIcon(0), draggable: isSimulationMode}).addTo(map);
+        attachSimulationDrag(marker);
     } else {
         marker.setLatLng([lat, lng]);
     }
@@ -752,7 +841,8 @@ function handleError() {
         const lng = e.latlng.lng;
         
         if (!marker) {
-            marker = L.marker([lat, lng], {icon: getVehicleIcon(0)}).addTo(map);
+            marker = L.marker([lat, lng], {icon: getVehicleIcon(0), draggable: isSimulationMode}).addTo(map);
+            attachSimulationDrag(marker);
         } else {
             const prev = marker.getLatLng();
             const bearing = Math.atan2(lng - prev.lng, lat - prev.lat) * 180 / Math.PI;
@@ -1335,12 +1425,30 @@ setInterval(async () => {
 let html5QrScanner = null;
 let currentVerifyId = null;
 let qrVerified = false;
+let qrFailCount = 0;
+
+async function manualVerify(shipmentId, type) {
+    if (!confirm("⚠️ MANUAL OVERRIDE: Are you sure you want to verify this shipment manually? This will be logged for audit.")) return;
+    try {
+        await apiCall(`/driver/${dId}/verify-qr/${shipmentId}`, 'POST', { qr_data: "MANUAL_OVERRIDE" });
+        closeVerifyModal();
+        showNotification("Manual Verification Successful!", "success");
+        qrFailCount = 0;
+        loadMissions();
+        if (type === 'delivery') proceedToLastMile(shipmentId);
+    } catch(e) {
+        alert("Manual verification failed: " + e.message);
+    }
+}
 
 async function openVerifyModal(shipmentId, type = 'pickup') {
     currentVerifyId = shipmentId;
     qrVerified = false;
+    qrFailCount = 0;
     document.getElementById('verify-modal').style.display = 'block';
+    document.getElementById('qr-reader').style.display = 'block';
     document.getElementById('qr-success-msg').style.display = 'none';
+    document.getElementById('btn-manual-verify').style.display = 'none';
     
     // Hide standard submit, we will handle it via callback
     document.getElementById('btn-submit-verify').style.display = 'none';
@@ -1355,7 +1463,10 @@ async function openVerifyModal(shipmentId, type = 'pickup') {
     }
     
     html5QrScanner.render(async (decodedText) => {
-        if (decodedText === s.qr_code_data) {
+        const expected = String(s.qr_code_data || s.id).trim().toLowerCase();
+        const actual = String(decodedText).trim().toLowerCase();
+        
+        if (actual === expected || actual === String(s.id).trim().toLowerCase()) {
             qrVerified = true;
             document.getElementById('qr-success-msg').style.display = 'block';
             html5QrScanner.clear();
@@ -1376,7 +1487,22 @@ async function openVerifyModal(shipmentId, type = 'pickup') {
                 proceedToLastMile(shipmentId);
             }
         } else {
-            showNotification("QR Code Mismatch! Please scan the correct package.", "error");
+            qrFailCount++;
+            showNotification(`QR Code Mismatch! (${qrFailCount}/3 attempts)`, "error");
+            
+            if (qrFailCount >= 3) {
+                html5QrScanner.clear();
+                document.getElementById('qr-reader').style.display = 'none';
+                const msg = document.getElementById('qr-success-msg');
+                msg.style.display = 'block';
+                msg.style.background = 'rgba(236,201,75,0.1)';
+                msg.style.borderColor = 'var(--warning)';
+                msg.innerHTML = `
+                    <p style="color:var(--warning); font-weight:bold; margin:0;">🚨 QR Verification Failed 3 Times</p>
+                    <p style="color:var(--text); font-size:0.8rem; margin-top:5px;">Please contact your Manager to verify this shipment manually from their dashboard.</p>
+                `;
+            }
+            
             // Highlight mismatch in modal
             const reader = document.getElementById('qr-reader');
             reader.style.borderColor = 'var(--danger)';
@@ -1437,6 +1563,8 @@ async function proceedToLastMile(shipmentId) {
 function closeVerifyModal() {
     if (html5QrScanner) html5QrScanner.clear();
     document.getElementById('verify-modal').style.display = 'none';
+    document.getElementById('btn-manual-verify').style.display = 'none';
+    qrFailCount = 0;
 }
 
 
@@ -1505,8 +1633,11 @@ async function withdrawMoney() {
     alert("Withdrawal request initiated. Money will be credited to your linked UPI/Bank account within 30 minutes.");
 }
 
-window.calculateSuggestedFuel = async function() {
-    const btn = event.currentTarget;
+window.calculateSuggestedFuel = async function(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const btn = e ? (e.currentTarget || e.target || e) : null;
+    if (!btn || !btn.innerText) return;
+    
     const originalText = btn.innerText;
     btn.innerText = '⌛';
     btn.disabled = true;
@@ -1630,3 +1761,44 @@ window.addEventListener('themeChanged', (e) => {
     L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
 });
 
+
+async function triggerFundRequest(shipmentId, type) {
+    const driverId = localStorage.getItem('driver_id');
+    let amount = 0;
+    
+    if (type === 'toll') {
+        const val = prompt("Enter Toll Amount (₹):");
+        if (!val || isNaN(val)) return;
+        amount = parseFloat(val);
+    }
+
+    try {
+        const btn = document.getElementById(`${type}-btn-${shipmentId}`);
+        
+        // Show high-visibility overlay
+        const actionLabel = type === 'refuel' ? 'Refuelling In Progress' : 'Toll Payment Processing';
+        showStatusOverlay(actionLabel);
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "Requested...";
+        }
+        
+        const res = await apiCall(`/driver/${driverId}/fund-request/${shipmentId}`, 'POST', { type, amount });
+        alert(res.message);
+        
+        // Disable button visually
+        if (btn) {
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+            btn.innerText = type === 'refuel' ? "✅ Refuel Req Sent" : "✅ Toll Req Sent";
+        }
+    } catch (e) {
+        alert("Failed to submit request: " + (e.message || "Error"));
+        const btn = document.getElementById(`${type}-btn-${shipmentId}`);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = type === 'refuel' ? "⛽ Refuel" : "🛣️ Toll";
+        }
+    }
+}

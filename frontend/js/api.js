@@ -18,7 +18,7 @@ async function apiCall(endpoint, method = "GET", body = null) {
     } else if (endpoint.includes('/tracking/')) {
         context = trackingToken || driverId || companyId || "";
     } else {
-        context = companyId || driverId || trackingToken || "";
+        context = trackingToken || companyId || driverId || "";
     }
     
     // Sanitize to prevent "null" or "undefined" strings in headers/params
@@ -262,3 +262,24 @@ document.addEventListener('DOMContentLoaded', () => {
         runReveal();
     }
 });
+
+/**
+ * Standardized Date Formatter for the entire platform.
+ * Enforces a consistent 12h format (e.g., 28 APR 2:52 PM).
+ */
+function formatDate(isoStr) {
+    if (!isoStr) return "N/A";
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return "Invalid Date";
+        return d.toLocaleString('en-IN', { 
+            day: '2-digit', 
+            month: 'short', 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+        }).toUpperCase();
+    } catch(e) {
+        return "Format Error";
+    }
+}
