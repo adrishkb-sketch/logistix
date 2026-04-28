@@ -67,13 +67,12 @@
         <!-- Auth View -->
         <div id="auth-panel" class="auth-card glass-card" style="margin-top:60px;">
             <h1 style="text-align:center; margin-bottom:8px;" data-i18n="track_orders">Track Orders 📦</h1>
-            <p style="text-align:center; color:var(--muted); margin-bottom:32px;" data-i18n="secure_tracking">Secure tracking via phone verification.</p>
+            <p style="text-align:center; color:var(--muted); margin-bottom:32px;" data-i18n="secure_tracking">Secure tracking via email verification.</p>
 
             <div id="step-phone">
-                <label style="font-size:0.85rem; color:var(--muted); display:block; margin-bottom:8px;" data-i18n="phone_number">Phone Number</label>
+                <label style="font-size:0.85rem; color:var(--muted); display:block; margin-bottom:8px;" data-i18n="email_address">Email Address</label>
                 <div style="display:flex; gap:8px; margin-bottom:20px;">
-                    <span style="background:rgba(255,255,255,0.05); padding:12px; border-radius:12px; border:1px solid var(--border); color:var(--muted); font-weight:800;">+91</span>
-                    <input type="tel" id="cust-phone" placeholder="9876543210" maxlength="10" pattern="[0-9]{10}" required style="flex:1; margin-bottom:0;">
+                    <input type="email" id="cust-email" placeholder="customer@example.com" required style="flex:1; margin-bottom:0; background:rgba(255,255,255,0.05); border:1px solid var(--border); padding:12px; border-radius:12px; color:white;">
                 </div>
                 <button class="btn-primary" style="width:100%;" onclick="requestCustomerOTP()" data-i18n="send_otp">Send OTP</button>
                 <p id="phone-error" style="color:var(--danger); font-size:0.85rem; margin-top:12px; display:none; text-align:center;"></p>
@@ -91,7 +90,7 @@
                 <p id="resend-timer-container" style="text-align:center; margin-top:20px; font-size:0.85rem; color:var(--text-muted);">
                     Didn't receive code? <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val">10</span>s)</span>
                 </p>
-                <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;" data-i18n="change_phone">Change Phone Number</a></p>
+                <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;" data-i18n="change_email">Change Email Address</a></p>
             </div>
         </div>
 

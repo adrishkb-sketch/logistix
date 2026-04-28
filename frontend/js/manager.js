@@ -1115,6 +1115,7 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
         is_perishable: document.getElementById('is-perishable').checked,
         receiver_name: document.getElementById('receiver-name').value,
         receiver_phone: document.getElementById('receiver-phone').value.length === 10 ? "+91" + document.getElementById('receiver-phone').value : document.getElementById('receiver-phone').value,
+        receiver_email: document.getElementById('receiver-email').value,
         eway_bill_no: document.getElementById('eway-no').value,
         eway_bill_expiry: document.getElementById('eway-expiry').value,
         labels: [] // Ensure labels is present as expected by ShipmentCreate

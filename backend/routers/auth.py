@@ -104,52 +104,50 @@ def driver_login(data: DriverLogin):
 # ──────────────────────────────────────────────────────────────
 
 class CustomerOTPRequest(BaseModel):
-    phone: str
+    email: str
 
 class CustomerOTPVerify(BaseModel):
-    phone: str
+    email: str
     otp: str
 
 @router.post("/customer/request-otp")
 def customer_request_otp(data: CustomerOTPRequest):
-    phone = data.phone.strip()
-    if not phone:
-        raise HTTPException(status_code=400, detail="Phone number is required")
+    email = data.email.strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email address is required")
     
-    # Auto-prepend +91 if only 10 digits are provided
-    if len(phone) == 10 and phone.isdigit():
-        phone = "+91" + phone
-
     all_shipments = shipments_db.get_all()
-    matched = [s for s in all_shipments if s.get("receiver_phone") == phone]
+    matched = [s for s in all_shipments if s.get("receiver_email") == email]
     if not matched:
-        raise HTTPException(status_code=404, detail="No orders found for this phone number")
+        # Fallback to phone search for legacy shipments if needed, 
+        # but user wants email-only for now.
+        raise HTTPException(status_code=404, detail="No orders found for this email address")
     
     otp = str(random.randint(100000, 999999))
-    customer_otp_store[phone] = otp
+    customer_otp_store[email] = otp
     
-    from backend.services.whatsapp_service import WhatsAppService
-    success = WhatsAppService.send_otp(phone, otp)
+    from backend.services.email_service import EmailService
+    success = EmailService.send_otp_email(email, otp)
     
     if not success:
-        print(f"\n--- [FALLBACK MOCK CUSTOMER OTP SMS] ---")
-        print(f"To: {phone}")
+        print(f"\n--- [FALLBACK MOCK CUSTOMER OTP EMAIL] ---")
+        print(f"To: {email}")
         print(f"Code: {otp}")
-        print(f"----------------------------------------\n")
-        return {"message": "WhatsApp delivery failed. Check server console for code.", "phone": phone}
+        print(f"------------------------------------------\n")
+        return {"message": "Email delivery failed. Check server console for code.", "email": email}
         
-    return {"message": "OTP sent to your WhatsApp number.", "phone": phone}
+    return {"message": "OTP sent to your email address.", "email": email}
 
 @router.post("/customer/verify-otp")
 def customer_verify_otp(data: CustomerOTPVerify):
-    phone = data.phone.strip()
-    stored = customer_otp_store.get(phone)
+    email = data.email.strip().lower()
+    stored = customer_otp_store.get(email)
     if not stored or stored != data.otp.strip():
         raise HTTPException(status_code=401, detail="Invalid or expired OTP")
     
-    del customer_otp_store[phone]
+    del customer_otp_store[email]
     all_shipments = shipments_db.get_all()
-    orders = [s for s in all_shipments if s.get("receiver_phone") == phone]
+    orders = [s for s in all_shipments if s.get("receiver_email") == email]
     orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)
     
     slim = []
@@ -163,20 +161,20 @@ def customer_verify_otp(data: CustomerOTPVerify):
             "created_at": s.get("created_at"),
             "receiver_name": s.get("receiver_name"),
         })
-
+ 
     token = str(uuid.uuid4())
-    customer_sessions[token] = phone
+    customer_sessions[token] = email
     
-    return {"phone": phone, "orders": slim, "session_token": token}
+    return {"email": email, "orders": slim, "session_token": token}
 
 @router.get("/customer/shipments")
 def get_customer_shipments(x_logistix_context: Optional[str] = Header(None)):
     """Lookup all shipments by session token (secured via header)."""
-    phone = customer_sessions.get(x_logistix_context)
-    if not phone:
+    email = customer_sessions.get(x_logistix_context)
+    if not email:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
         
     all_shipments = shipments_db.get_all()
-    orders = [s for s in all_shipments if s.get("receiver_phone") == phone]
+    orders = [s for s in all_shipments if s.get("receiver_email") == email]
     orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)
     return orders

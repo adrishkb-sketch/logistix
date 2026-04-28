@@ -1,20 +1,15 @@
 let currentShipmentId = null;
 
 async function requestCustomerOTP() {
-    let phone = document.getElementById('cust-phone').value.trim();
-    if (!phone) return alert("Please enter your phone number.");
-    
-    // Auto-prepend +91 if only 10 digits provided
-    if (phone.length === 10 && !isNaN(phone)) {
-        phone = "+91" + phone;
-    }
+    let email = document.getElementById('cust-email').value.trim();
+    if (!email) return alert("Please enter your email address.");
     
     try {
-        const res = await apiCall('/auth/customer/request-otp', 'POST', { phone });
+        const res = await apiCall('/auth/customer/request-otp', 'POST', { email });
         alert(res.message);
         document.getElementById('step-phone').style.display = 'none';
         document.getElementById('step-otp').style.display = 'block';
-        document.getElementById('otp-phone-label').innerText = phone;
+        document.getElementById('otp-phone-label').innerText = email;
         startOTPTimer('resend-link', 'timer-val', requestCustomerOTP);
     } catch (e) {
         // Error already handled by apiCall
@@ -51,15 +46,15 @@ function startOTPTimer(linkId, valId, retryFn) {
 }
 
 async function verifyCustomerOTP() {
-    const phone = document.getElementById('cust-phone').value.trim();
+    const email = document.getElementById('cust-email').value.trim();
     const otp = Array.from(document.querySelectorAll('.pin-box')).map(i => i.value).join('');
     
     if (otp.length < 4) return alert("Please enter the full OTP.");
     
     try {
-        const data = await apiCall('/auth/customer/verify-otp', 'POST', { phone, otp });
+        const data = await apiCall('/auth/customer/verify-otp', 'POST', { email, otp });
         localStorage.setItem('tracking_token', data.session_token);
-        localStorage.setItem('tracking_phone', phone);
+        localStorage.setItem('tracking_email', email);
         
         showPanel('list');
         renderOrderList(data.orders);

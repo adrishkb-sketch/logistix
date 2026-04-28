@@ -27,54 +27,67 @@ class WhatsAppService:
         if not clean_phone.startswith("91") and len(clean_phone) == 10:
             clean_phone = "91" + clean_phone
             
-        url = f"https://graph.facebook.com/v17.0/{phone_id}/messages"
+        # Use Meta API v18.0 (more stable than v17.0)
+        url = f"https://graph.facebook.com/v18.0/{phone_id}/messages"
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
         
-        # Meta requires using a pre-approved template for the first message.
-        # We'll try to use a template named 'verification_code' if you have one, 
-        # or fallback to a standard text message (only works if user messaged first).
-        
+        # Meta requires using a pre-approved template.
+        # We use a template structure that supports the OTP parameter.
         data = {
             "messaging_product": "whatsapp",
             "to": clean_phone,
             "type": "template",
             "template": {
-                "name": "hello_world", # Default template provided by Meta for testing
-                "language": { "code": "en_US" }
+                "name": "verification_code", # Optimized for standard OTP templates
+                "language": { "code": "en_US" },
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [
+                            {"type": "text", "text": otp}
+                        ]
+                    },
+                    {
+                        "type": "button",
+                        "sub_type": "url",
+                        "index": "0",
+                        "parameters": [
+                            {"type": "text", "text": otp}
+                        ]
+                    }
+                ]
             }
         }
-        
-        # In a real production app, you would use a template like this:
-        # data = {
-        #     "messaging_product": "whatsapp",
-        #     "to": clean_phone,
-        #     "type": "template",
-        #     "template": {
-        #         "name": "verification_code",
-        #         "language": { "code": "en_US" },
-        #         "components": [
-        #             {
-        #                 "type": "body",
-        #                 "parameters": [{"type": "text", "text": otp}]
-        #             }
-        #         ]
-        #     }
-        # }
 
         try:
-            print(f"DEBUG: Sending WhatsApp OTP to {clean_phone}...")
+            print(f"DEBUG: Attempting WhatsApp OTP Delivery to {clean_phone}...")
             response = requests.post(url, headers=headers, json=data)
             res_json = response.json()
             
+            # Diagnostic check for Token Expiration (Error 190)
+            if response.status_code == 401 or (res_json.get('error') and res_json['error'].get('code') == 190):
+                print("🚨 CRITICAL: WhatsApp Access Token has EXPIRED. Please refresh WHATSAPP_TOKEN in .env")
+                return False
+
             if response.status_code == 200:
-                print(f"WhatsApp OTP sent successfully to {clean_phone}")
+                print(f"✅ WhatsApp OTP sent successfully to {clean_phone}")
                 return True
             else:
-                print(f"FAILED to send WhatsApp OTP: {res_json}")
+                # If 'verification_code' fails, try the generic 'hello_world' as a last resort
+                print(f"⚠️ Template 'verification_code' failed. Trying 'hello_world' fallback...")
+                data["template"]["name"] = "hello_world"
+                del data["template"]["components"]
+                
+                retry_res = requests.post(url, headers=headers, json=data)
+                if retry_res.status_code == 200:
+                    print(f"✅ Fallback 'hello_world' sent to {clean_phone}")
+                    return True
+                
+                print(f"❌ WhatsApp API Error: {res_json}")
                 return False
         except Exception as e:
-            print(f"CRITICAL ERROR sending WhatsApp: {e}")
+            print(f"🔥 Critical Error in WhatsApp Service: {e}")
             return False

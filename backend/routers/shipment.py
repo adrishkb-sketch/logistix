@@ -56,8 +56,8 @@ async def bulk_parse(company_id: str, file: Optional[UploadFile] = File(None), u
     if df is None or df.empty:
         raise HTTPException(status_code=400, detail="No data found in file or spreadsheet")
 
-    # Standardizing to 11 columns:
-    # Pickup Lat | Pickup Lng | Drop Lat | Drop Lng | Weight | Description | Name | Phone | Perishable | E-Way No | E-Way Expiry
+    # Standardizing to 12 columns:
+    # Pickup Lat | Pickup Lng | Drop Lat | Drop Lng | Weight | Description | Name | Phone | Email | Perishable | E-Way No | E-Way Expiry
     
     shipments = []
     for _, row in df.iterrows():
@@ -77,9 +77,10 @@ async def bulk_parse(company_id: str, file: Optional[UploadFile] = File(None), u
                 "description": str(vals[5]),
                 "receiver_name": str(vals[6]),
                 "receiver_phone": phone,
-                "is_perishable": str(vals[8]).lower() in ['yes', 'y', 'true', '1'],
-                "eway_bill_no": str(vals[9]) if len(vals) > 9 else None,
-                "eway_bill_expiry": str(vals[10]) if len(vals) > 10 else None,
+                "receiver_email": str(vals[8]).strip().lower() if len(vals) > 8 else None,
+                "is_perishable": str(vals[9]).lower() in ['yes', 'y', 'true', '1'] if len(vals) > 9 else False,
+                "eway_bill_no": str(vals[10]) if len(vals) > 10 else None,
+                "eway_bill_expiry": str(vals[11]) if len(vals) > 11 else None,
                 "company_id": company_id
             }
             shipments.append(s)

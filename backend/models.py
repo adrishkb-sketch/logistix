@@ -166,6 +166,7 @@ class Shipment(BaseModel):
     qr_code_data: Optional[str] = None
     receiver_name: Optional[str] = None
     receiver_phone: Optional[str] = None
+    receiver_email: Optional[str] = None
     finance: Optional[dict] = None
     payment_status: str = "unpaid" # unpaid, paid, payout_requested, payout_settled
     
@@ -185,6 +186,7 @@ class ShipmentCreate(BaseModel):
     is_perishable: bool = False
     receiver_name: str
     receiver_phone: str
+    receiver_email: Optional[str] = None
     eway_bill_no: Optional[str] = None
     eway_bill_expiry: Optional[str] = None
 
