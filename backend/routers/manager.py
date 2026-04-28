@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from backend.models import Driver, Vehicle, Warehouse
+from fastapi import APIRouter, HTTPException, UploadFile, File, Header
+from backend.models import Driver, Vehicle, Warehouse, Shipment, ShipmentEvent, Location
 from backend.database import JSONDatabase
 from datetime import datetime
 from typing import List, Optional
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import uuid
 import random
 import re
-from fastapi import Header
+import math
 from backend.services.auth_utils import verify_context
 
 router = APIRouter()
@@ -357,9 +357,9 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     v_db = JSONDatabase("vehicles")
     d_db = JSONDatabase("drivers")
     
-    shipments = [s for s in s_db.get_all() if s.get("company_id") == company_id]
-    vehicles = [v for v in v_db.get_all() if v.get("company_id") == company_id]
-    drivers = [d for d in d_db.get_all() if d.get("company_id") == company_id]
+    shipments = [s for s in s_db.get_all() if s and s.get("company_id") == company_id]
+    vehicles = [v for v in v_db.get_all() if v and v.get("company_id") == company_id]
+    drivers = [d for d in d_db.get_all() if d and d.get("company_id") == company_id]
     
     # 1. Timely Delivery %
     delivered = [s for s in shipments if s.get("status") == "delivered"]
@@ -393,12 +393,12 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     }
     
     # 4. Warehouse Count
-    warehouses = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
+    warehouses = [w for w in warehouses_db.get_all() if w and w.get("company_id") == company_id]
     
     # 5. Financial Overview (Real data from Ledger)
-    comp_txs = [t for t in ledger_db.get_all() if t.get("company_id") == company_id]
-    revenue = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "REVENUE")
-    expenses = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "EXPENSE")
+    comp_txs = [t for t in ledger_db.get_all() if t and t.get("company_id") == company_id]
+    revenue = sum(float(t.get("amount") or 0) for t in comp_txs if t.get("type") == "REVENUE")
+    expenses = sum(float(t.get("amount") or 0) for t in comp_txs if t.get("type") == "EXPENSE")
     net_profit = revenue - expenses
 
     return {
@@ -416,9 +416,10 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     }
 
 @router.get("/analytics/cascade")
-def get_cascading_impact(company_id: str):
+def get_cascading_impact(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
     all_shipments = shipments_db.get_all()
-    my_ships = [s for s in all_shipments if s.get("company_id") == company_id]
+    my_ships = [s for s in all_shipments if s and s.get("company_id") == company_id]
     
     delayed_ships = [s for s in my_ships if (s.get("performance_stats") or {}).get("status") == "delayed" and s.get("status") == "in_transit"]
     
@@ -434,7 +435,7 @@ def get_cascading_impact(company_id: str):
         impact_hubs = []
         if s.get("is_leg"):
             # Find subsequent legs
-            subs = [ls for ls in my_ships if ls.get("parent_id") == s.get("parent_id") and ls.get("leg_order", 0) > s.get("leg_order", 0)]
+            subs = [ls for ls in my_ships if ls and ls.get("parent_id") == s.get("parent_id") and (ls.get("leg_order") or 0) > (s.get("leg_order") or 0)]
             for sub in subs:
                 sub_drop = sub.get("drop") or {}
                 impact_hubs.append({
@@ -782,13 +783,11 @@ def confirm_account_deletion(company_id: str, otp: str):
 def rescue_shipment(shipment_id: str, driver_id: str, vehicle_id: str, x_logistix_context: Optional[str] = Header(None)):
     # Verify manager context for rescue operations
     shipment = shipments_db.get_by_id(shipment_id)
-    if shipment:
-        verify_context(shipment.get("company_id"), x_logistix_context)
-    shipments_db = JSONDatabase("shipments")
-    shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
         
+    verify_context(shipment.get("company_id"), x_logistix_context)
+    
     old_driver_id = shipment.get("assigned_driver_id")
     old_vehicle_id = shipment.get("assigned_vehicle_id")
     
