@@ -54,18 +54,45 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     # Identify Target Hub and Leg Type
     p_wh_id = shipment.get("pickup_warehouse_id")
     d_wh_id = shipment.get("drop_warehouse_id")
-    is_first_mile = d_wh_id and not p_wh_id
-    is_last_mile = p_wh_id and not d_wh_id
-    is_middle_mile = p_wh_id and d_wh_id
+    leg_type = shipment.get("leg_type") # first_mile, middle_mile, last_mile
+    
+    is_first_mile = leg_type == "first_mile" or (d_wh_id and not p_wh_id)
+    is_last_mile = leg_type == "last_mile" or (p_wh_id and not d_wh_id)
+    is_middle_mile = leg_type == "middle_mile" or (p_wh_id and d_wh_id)
 
-    # DRONE PRIORITY: Last Mile Handoff
+    # PRIORITY MAPPING
+    FM_LM_PRIORITY = {
+        "Bike/Scooty": 1000,
+        "Bike": 1000,
+        "Scooty": 1000,
+        "EV-Cargo": 800,
+        "Delivery Van": 600,
+        "Small Truck": 400,
+        "Truck (Heavy)": 200
+    }
+
+    MM_PRIORITY = {
+        "Truck (Heavy)": 1000,
+        "Small Truck": 800,
+        "Delivery Van": 600,
+        "EV-Cargo": 400,
+        "Bike/Scooty": 200,
+        "Bike": 200,
+        "Scooty": 200
+    }
+
+    # DRONE PRIORITY: Last Mile (Highest Priority)
     if is_last_mile:
         p_wh = next((w for w in warehouses if w["id"] == p_wh_id), None)
         if p_wh and p_wh.get("drone_count", 0) > 0:
             from backend.services.route_engine import check_drone_viability
             drone_intel = check_drone_viability(p_wh["lat"], p_wh["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"], shipment.get("weight", 0))
             if drone_intel["viable"]:
+                # Check if drone is already in use (mock check: random 20% busy or database check)
+                # In this system, we consume drone count, so it acts as availability
+                
                 # Automated Drone Assignment
+                from backend.services.finance_engine import estimate_delivery_cost
                 finance_data = estimate_delivery_cost(shipment, "drone")
                 
                 # Consume drone
@@ -73,8 +100,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 warehouses_db.update(p_wh["id"], {"drone_count": p_wh["drone_count"]})
                 
                 return {
-                    "assigned_driver_id": "DRONE-SYSTEM", # Autonomous
-                    "assigned_vehicle_id": f"DRONE-{p_wh['id'][:4]}",
+                    "assigned_driver_id": "DRONE-SYSTEM",
+                    "assigned_vehicle_id": f"DRONE-{p_wh['id'][:4]}-{uuid.uuid4().hex[:4]}",
                     "status": "in_transit",
                     "stage": "Drone Air Delivery",
                     "route_type": "drone-leg",
@@ -159,8 +186,14 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     # 5. Operational Cost Penalty (Profit Optimization)
                     finance_data = estimate_delivery_cost(shipment, v_type.lower())
                     total_op_cost = finance_data.get("total_cost", 0)
-                    score_modifier -= (total_op_cost / 5) # Penalize high cost routes
+                    score_modifier -= (total_op_cost / 10) # Penalize high cost routes
                     
+                    # 6. Segment-Based Priority Boost
+                    if is_first_mile or is_last_mile:
+                        score_modifier += FM_LM_PRIORITY.get(v_type, 0)
+                    elif is_middle_mile:
+                        score_modifier += MM_PRIORITY.get(v_type, 0)
+
                     available_pairs.append({
                         "driver": d, 
                         "vehicle": vehicle, 

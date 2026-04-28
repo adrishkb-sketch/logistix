@@ -204,7 +204,7 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
 
             shipments_db.update(s["id"], {
                 "current_location": location, 
-                "status": "in_transit",
+                "status": s.get("status", "assigned"),
                 "performance_stats": perf,
                 "logs": s["logs"],
                 "at_warehouse_id": s.get("at_warehouse_id")
@@ -637,7 +637,6 @@ def get_driver_wallet(driver_id: str):
     txs = [
         {"desc": "Last Trip Earnings", "amount": driver.get("wallet_balance", 0), "timestamp": datetime.now().isoformat(), "type": "Trip"},
     ]
-    
     return {
         "balance": driver.get("wallet_balance", 0),
         "today_earning": driver.get("monthly_earnings", 0) / 30, # Approximation
@@ -646,8 +645,38 @@ def get_driver_wallet(driver_id: str):
         "transactions": txs
     }
 
+@router.post("/{driver_id}/verify-qr/{shipment_id}")
+def verify_qr(driver_id: str, shipment_id: str, data: dict):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    if shipment.get("qr_code_data") != data.get("qr_data"):
+        raise HTTPException(status_code=400, detail="Invalid QR Code")
+        
+    current_status = shipment.get("status")
+    
+    from backend.models import ShipmentEvent
+    if current_status == "assigned":
+        # Pickup logic
+        shipments_db.update(shipment_id, {
+            "status": "in_transit",
+            "stage": "Picked Up",
+            "logs": shipment.get("logs", []) + [
+                ShipmentEvent(status="in_transit", message="📦 Shipment picked up by driver after QR verification.").model_dump()
+            ]
+        })
+        return {"message": "Pickup verified successfully", "next_status": "in_transit"}
+    
+    # Warehouse Handoff (simplified)
+    shipments_db.update(shipment_id, {
+        "logs": shipment.get("logs", []) + [
+            ShipmentEvent(status="in_transit", message="🏭 Warehouse handoff recorded via QR scan.").model_dump()
+        ]
+    })
+    return {"message": "Warehouse handoff verified successfully", "next_status": "in_transit"}
+
 @router.post("/{driver_id}/complete-delivery/{shipment_id}")
-def complete_delivery(driver_id: str, shipment_id: str, otp: str):
+def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Optional[str] = None):
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
     
@@ -655,13 +684,20 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str):
         raise HTTPException(status_code=400, detail="Invalid Delivery OTP")
         
     if shipment.get("payment_status") != "paid":
-        raise HTTPException(status_code=400, detail="Payment Pending: Manager must confirm payment before delivery release.")
-        
+        raise HTTPException(status_code=400, detail="Payment Pending: Receiver must complete payment before delivery.")
+    
+    if not image_url:
+        raise HTTPException(status_code=400, detail="Proof of delivery image is required.")
+
     # Update Shipment
+    from backend.models import ShipmentEvent
     shipments_db.update(shipment_id, {
         "status": "delivered",
         "stage": "Delivered",
-        "actual_delivery": datetime.utcnow().isoformat() + "Z"
+        "actual_delivery": datetime.utcnow().isoformat() + "Z",
+        "logs": shipment.get("logs", []) + [
+            ShipmentEvent(status="delivered", message="🏁 Delivery completed! Product photo uploaded.", photo_url=image_url).model_dump()
+        ]
     })
     
     # Update Driver Wallet

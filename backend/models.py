@@ -146,6 +146,7 @@ class Shipment(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     status: str = "pending" # pending, assigned, in_transit, delivered
     route_type: Optional[str] = None # direct, warehouse
+    leg_type: Optional[str] = None # first_mile, middle_mile, last_mile
     stage: str = "Awaiting Assignment"
     expected_delivery: Optional[str] = None
     pickup_deadline: Optional[str] = None

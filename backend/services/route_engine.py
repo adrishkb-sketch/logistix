@@ -1,5 +1,7 @@
-import math
-from backend.models import Location
+from backend.models import Location, Shipment, ShipmentEvent
+from backend.database import JSONDatabase
+import uuid
+from datetime import datetime, timedelta
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # Radius of earth in kilometers. Use 3956 for miles
@@ -24,9 +26,76 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def calculate_route_type(pickup: Location, drop: Location) -> str:
     distance = haversine(pickup.lat, pickup.lng, drop.lat, drop.lng)
-    if distance > 100:
+    if distance > 50: # Reduced threshold for multi-leg
         return "warehouse_hop"
     return "direct"
+
+def find_nearest_warehouse(lat: float, lng: float, company_id: str) -> dict:
+    warehouses_db = JSONDatabase("warehouses")
+    all_wh = warehouses_db.get_all()
+    company_wh = [w for w in all_wh if w.get("company_id") == company_id]
+    
+    if not company_wh:
+        return None
+        
+    nearest = min(company_wh, key=lambda w: haversine(lat, lng, w["lat"], w["lng"]))
+    return nearest
+
+def decompose_shipment(shipment: dict) -> list:
+    """
+    Splits a shipment into legs:
+    Leg 1: Pickup -> Nearest Warehouse A (First Mile)
+    Leg 2: Warehouse A -> Warehouse B (Middle Mile)
+    Leg 3: Warehouse B -> Drop (Last Mile)
+    """
+    p_lat, p_lng = shipment["pickup"]["lat"], shipment["pickup"]["lng"]
+    d_lat, d_lng = shipment["drop"]["lat"], shipment["drop"]["lng"]
+    company_id = shipment["company_id"]
+    
+    wh_a = find_nearest_warehouse(p_lat, p_lng, company_id)
+    wh_b = find_nearest_warehouse(d_lat, d_lng, company_id)
+    
+    if not wh_a or not wh_b:
+        return [] # Cannot decompose without warehouses
+        
+    dist_total = haversine(p_lat, p_lng, d_lat, d_lng)
+    dist_p_to_a = haversine(p_lat, p_lng, wh_a["lat"], wh_a["lng"])
+    dist_b_to_drop = haversine(wh_b["lat"], wh_b["lng"], d_lat, d_lng)
+    
+    legs = []
+    
+    # Leg 1: First Mile
+    if dist_p_to_a > 0.5: # Only if pickup is not already AT a warehouse
+        legs.append({
+            "pickup": shipment["pickup"],
+            "drop": {"lat": wh_a["lat"], "lng": wh_a["lng"], "address": wh_a["name"]},
+            "drop_warehouse_id": wh_a["id"],
+            "leg_type": "first_mile",
+            "leg_order": 1
+        })
+    
+    # Leg 2: Middle Mile (Warehouse to Warehouse)
+    if wh_a["id"] != wh_b["id"]:
+        legs.append({
+            "pickup": {"lat": wh_a["lat"], "lng": wh_a["lng"], "address": wh_a["name"]},
+            "drop": {"lat": wh_b["lat"], "lng": wh_b["lng"], "address": wh_b["name"]},
+            "pickup_warehouse_id": wh_a["id"],
+            "drop_warehouse_id": wh_b["id"],
+            "leg_type": "middle_mile",
+            "leg_order": 2 if len(legs) > 0 else 1
+        })
+        
+    # Leg 3: Last Mile
+    if dist_b_to_drop > 0.5:
+        legs.append({
+            "pickup": {"lat": wh_b["lat"], "lng": wh_b["lng"], "address": wh_b["name"]},
+            "drop": shipment["drop"],
+            "pickup_warehouse_id": wh_b["id"],
+            "leg_type": "last_mile",
+            "leg_order": len(legs) + 1
+        })
+        
+    return legs
 
 def simulate_traffic(lat: float, lng: float) -> dict:
     """

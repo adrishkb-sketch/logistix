@@ -431,55 +431,19 @@
         </div>
     </div>
 
-    <!-- Loading Optimizer Modal -->
-    <div id="loader-modal" class="zen-overlay" style="padding:20px; display:none; background:rgba(10,25,41,0.98);">
-        <div style="width:100%; max-width:500px; text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="color:var(--primary); margin:0;" data-i18n="cargo_optimizer_title">🏗️ AR Cargo Optimizer</h2>
-                <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('loader-modal').style.display='none'">✖</button>
-            </div>
-            
-            <div id="loader-step-1" class="glass-card" style="margin-bottom:20px; border:1px dashed var(--primary);">
-                <h3 data-i18n="cargo_step_1">Step 1: Scan Cargo Hold</h3>
-                <p style="font-size:0.9rem; color:var(--text-muted);" data-i18n="cargo_step_1_desc">Photograph your vehicle's empty cargo area for automated volume analysis.</p>
-                <input type="file" id="vehicle-photo" accept="image/*" style="margin-top:15px; color:white;">
-                <button class="btn-primary" style="margin-top:15px;" onclick="analyzeLoading()" data-i18n="btn_analyze_cargo">Analyze & Generate Blueprint</button>
-            </div>
-
-            <div id="loader-result" style="display:none;">
-                <div class="glass-card" style="background:rgba(0,242,254,0.05); border:1px solid var(--primary); padding:15px; margin-bottom:20px; text-align:center;">
-                    <div style="font-size:0.8rem; color:var(--primary); font-weight:bold; margin-bottom:5px;" data-i18n="space_utilization_boost">🚀 SPACE UTILIZATION BOOST</div>
-                    <div style="font-size:2rem; font-weight:bold; color:var(--primary);">+22% Efficiency</div>
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;" data-i18n="cargo_optimized_msg">Automated has packed 14 items into 3 optimized layers.</p>
-                </div>
-
-                <h4 style="color:var(--primary); margin-bottom:10px;" data-i18n="cargo_blueprint_title">3D STACKING BLUEPRINT</h4>
-                <div id="stacking-blueprint" style="margin-bottom:20px; border-left:2px solid var(--primary); padding-left:15px;">
-                    <!-- Blueprint nodes injected -->
-                </div>
-
-                <button class="btn-primary" onclick="document.getElementById('loader-modal').style.display='none'" data-i18n="btn_confirm_loading">Confirm & Start Loading</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Verification Modal (QR + Photo) -->
     <div id="verify-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:350px; text-align:center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
         <h3 style="margin-top:0;" data-i18n="shipment_verification_title">🛡️ Shipment Verification</h3>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="shipment_verification_desc">Scan package QR and upload proof.</p>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="shipment_verification_desc">Scan package QR code to verify.</p>
         
         <div id="qr-reader" style="width:100%; border-radius:8px; overflow:hidden; border:1px solid var(--primary); margin-bottom:15px;"></div>
         
         <div id="qr-success-msg" style="display:none; color:var(--success); font-weight:bold; margin-bottom:15px;" data-i18n="qr_matched">✅ QR Code Matched!</div>
         
-        <div class="input-group" style="margin-top:10px;">
-            <label data-i18n="pickup_evidence_label">Pickup Evidence (Photo)</label>
-            <input type="file" id="v-photo" accept="image/*" style="width:100%; margin-top:5px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); padding:5px; border-radius:4px;">
-        </div>
-        
-        <div style="margin-top:20px; display:flex; gap:10px;">
-            <button class="btn-primary" id="btn-submit-verify" disabled onclick="submitVerification()" data-i18n="btn_complete_pickup">Complete Pickup</button>
-            <button class="btn-primary" style="background:transparent; border:1px solid white;" onclick="closeVerifyModal()">Cancel</button>
+        <div style="margin-top:20px;">
+            <button class="btn-primary" id="btn-submit-verify" style="display:none;"></button>
+            <button class="btn-primary" style="width:100%; background:transparent; border:1px solid white;" onclick="closeVerifyModal()">Cancel</button>
         </div>
     </div>
 

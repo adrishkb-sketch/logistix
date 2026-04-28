@@ -2,6 +2,25 @@
 // API_BASE is globally defined in api.js
 
 const dId = localStorage.getItem('driver_id');
+
+function showNotification(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.padding = '12px 24px';
+    toast.style.borderRadius = '30px';
+    toast.style.background = type === 'success' ? '#48bb78' : (type === 'error' ? '#e53e3e' : '#3182ce');
+    toast.style.color = 'white';
+    toast.style.zIndex = '100000';
+    toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+    toast.style.fontWeight = 'bold';
+    toast.style.fontSize = '0.9rem';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
 if (!dId || dId === "null" || dId === "undefined") {
     console.warn("Driver ID missing or invalid. Redirecting to login...");
     window.location.href = '../index.html';
@@ -390,6 +409,7 @@ async function loadMissions(autoStartNext = false) {
                 // Driver is verified!
                 mainContent.style.display = 'block';
                 if (vScreen) vScreen.style.display = 'none';
+                if (reportBtn) reportBtn.style.display = 'block';
                 
                 if (!me.assigned_vehicle_id) {
                     // Show a warning in the dashboard rather than hiding it
@@ -505,15 +525,24 @@ async function loadMissions(autoStartNext = false) {
                 
                 let actionBtn = '';
                 if (isCurrent) {
-                          actionBtn = `
-                            <input type="file" id="scan-file-${s.id}" style="display:none;" accept="image/*" onchange="scanCargo('${s.id}')">
-                            <button id="scan-btn-${s.id}" class="btn-primary" style="margin-top:10px; width:auto; padding: 5px 15px;" onclick="document.getElementById('scan-file-${s.id}').click()">📷 ${getTranslation('scan_cargo')} (${getTranslation('required')})</button>
-                            <button id="pickup-btn-${s.id}" class="btn-primary btn-success" style="margin-top:10px; width:auto; padding: 5px 15px; display:none;" onclick="confirmPickup('${s.id}')">${getTranslation('confirm_pickup')}</button>
-                            <div id="scan-result-${s.id}" style="margin-top:5px; font-size:0.8rem; font-weight:bold;"></div>
-                         `;
+                    const isWarehouseDelivery = s.is_leg || (s.at_warehouse_id && s.status === 'in_transit');
+                    const isLastMile = !s.is_leg && s.status === 'in_transit';
+
+                    if (stop.type === 'pickup') {
+                        actionBtn = `
+                            <button class="btn-primary" style="margin-top:10px; width:100%;" onclick="handleScan('${s.id}', 'pickup')">📸 ${getTranslation('scan_qr_pickup') || 'Scan QR to Pickup'}</button>
+                        `;
+                    } else if (isLastMile) {
+                        actionBtn = `
+                            <button class="btn-primary btn-success" style="margin-top:10px; width:100%;" onclick="completeDeliveryFlow('${s.id}')">🏁 ${getTranslation('deliver_to_customer') || 'Deliver to Customer'}</button>
+                        `;
                     } else {
-                         actionBtn = `<button class="btn-primary btn-success" style="margin-top:10px; width:auto; padding: 5px 15px;" onclick="confirmDelivery('${s.id}', '${s.delivery_otp}')">${getTranslation('confirm_delivery')} (OTP)</button>`;
+                        // Warehouse handoff
+                        actionBtn = `
+                            <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--warning);" onclick="handleScan('${s.id}', 'warehouse')">🏢 ${getTranslation('scan_qr_warehouse') || 'Scan QR for Warehouse Handoff'}</button>
+                        `;
                     }
+                }
                 
                 html += `
                     <div class="timeline-node">
@@ -535,10 +564,6 @@ async function loadMissions(autoStartNext = false) {
                                 </div>
                             ` : ''}
 
-                            <div style="display:flex; gap:10px; margin: 10px 0;">
-                                <button class="btn-primary" style="flex:1; padding:8px; font-size:0.8rem;" onclick="openLoadingOptimizer('${s.id}')">🏗️ Optimize Loading (AR)</button>
-                                <button class="btn-primary btn-outline" style="flex:1; padding:8px; font-size:0.8rem;" onclick="openScanner('${s.id}')">📷 Scan Cargo</button>
-                            </div>
 
                             <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ Deadline:</b> ${new Date(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery).toLocaleString()}</p>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Location:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
@@ -800,9 +825,6 @@ async function drawMultiStopRoute(stops) {
     } catch(err) {}
 }
 
-async function confirmPickup(shipmentId) {
-    openVerifyModal(shipmentId);
-}
 
 function showDynamicAlert(type, msg) {
     const banner = document.getElementById('instruction-banner');
@@ -813,9 +835,6 @@ function showDynamicAlert(type, msg) {
     if (type === 'traffic') banner.style.background = 'linear-gradient(90deg, #f6ad55, #ed8936)';
 }
 
-async function confirmDelivery(shipmentId, correctOtp) {
-    completeDelivery(shipmentId);
-}
 
 function showPopupAlert(msg) {
     const container = document.getElementById('alert-container');
@@ -1163,45 +1182,6 @@ function logout() {
 
 window.onload = loadMissions;
 
-async function scanCargo(shipmentId) {
-    const fileInput = document.getElementById(`scan-file-${shipmentId}`);
-    if (!fileInput) return;
-    const file = fileInput.files[0];
-    if (!file) return;
-
-    const resDiv = document.getElementById(`scan-result-${shipmentId}`);
-    const scanBtn = document.getElementById(`scan-btn-${shipmentId}`);
-    const pickupBtn = document.getElementById(`pickup-btn-${shipmentId}`);
-    
-    resDiv.innerText = "Analyzing cargo image...";
-    resDiv.style.color = "var(--text-muted)";
-    scanBtn.style.display = "none";
-    
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-        const response = await fetch(`${API_BASE}/driver/${localStorage.getItem('driver_id')}/scan-cargo/${shipmentId}`, {
-            method: 'POST',
-            body: formData
-        });
-        const data = await response.json();
-        
-        if (data.status === 'pass') {
-            resDiv.innerText = "✅ Quality Verified. Safe to pickup.";
-            resDiv.style.color = "var(--success)";
-            pickupBtn.style.display = "inline-block";
-        } else {
-            resDiv.innerText = "❌ Damage Detected: " + data.message;
-            resDiv.style.color = "var(--danger)";
-            setTimeout(loadMissions, 2000);
-        }
-    } catch(err) {
-        resDiv.innerText = "Error scanning image.";
-        resDiv.style.color = "var(--danger)";
-        scanBtn.style.display = "inline-block";
-    }
-}
 
 function openIncidentModal() {
     document.getElementById('incident-modal').style.display = 'block';
@@ -1349,77 +1329,23 @@ setInterval(async () => {
     }
 }, 10000);
 
-function openScanner(shipmentId) {
-    document.getElementById(`scan-file-${shipmentId}`).click();
-}
 
-async function openLoadingOptimizer(shipmentId) {
-    document.getElementById('loader-modal').style.display = 'flex';
-    document.getElementById('loader-step-1').style.display = 'block';
-    document.getElementById('loader-result').style.display = 'none';
-}
-
-async function analyzeLoading() {
-    const fileInput = document.getElementById('vehicle-photo');
-    if (!fileInput.files[0]) {
-        alert("Please take a photo of the vehicle cargo area first.");
-        return;
-    }
-
-    const btn = event?.target || document.activeElement;
-    const originalText = btn.innerText;
-    btn.innerText = "🌀 AI Calculating Space...";
-    btn.disabled = true;
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-
-    try {
-        const res = await fetch(`${API_BASE}/driver/${localStorage.getItem('driver_id')}/optimize-loading`, {
-            method: 'POST',
-            body: formData
-        });
-        const data = await res.json();
-        
-        btn.innerText = originalText;
-        btn.disabled = false;
-
-        if (data.status === 'success') {
-            document.getElementById('loader-step-1').style.display = 'none';
-            document.getElementById('loader-result').style.display = 'block';
-            
-            const blueprintContainer = document.getElementById('stacking-blueprint');
-            blueprintContainer.innerHTML = data.blueprint.map(b => `
-                <div style="margin-bottom:15px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border-left:3px solid var(--primary);">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:0.7rem; color:var(--accent); font-weight:bold;">LAYER ${b.layer}</span>
-                        <span style="font-size:0.7rem; color:var(--text-muted);">${b.position}</span>
-                    </div>
-                    <div style="margin:5px 0; font-size:0.9rem; font-weight:bold;">${b.items.join(", ")}</div>
-                    <p style="font-size:0.75rem; color:var(--text-muted); margin:0;">${b.instruction}</p>
-                </div>
-            `).join('');
-        }
-    } catch(e) {
-        alert("Spatial analysis failed. Please try again.");
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-}
 
 let html5QrScanner = null;
 let currentVerifyId = null;
 let qrVerified = false;
 
-async function openVerifyModal(shipmentId) {
+async function openVerifyModal(shipmentId, type = 'pickup') {
     currentVerifyId = shipmentId;
     qrVerified = false;
     document.getElementById('verify-modal').style.display = 'block';
     document.getElementById('qr-success-msg').style.display = 'none';
-    document.getElementById('btn-submit-verify').disabled = true;
+    
+    // Hide standard submit, we will handle it via callback
+    document.getElementById('btn-submit-verify').style.display = 'none';
     
     // Fetch shipment to get qr_code_data
-    const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('company_id') || ''}`); // Driver context
+    const shipments = await apiCall(`/driver/${dId}/shipments`); 
     const s = shipments.find(item => item.id === shipmentId);
     if (!s) return;
 
@@ -1427,18 +1353,84 @@ async function openVerifyModal(shipmentId) {
         html5QrScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
     }
     
-    html5QrScanner.render((decodedText) => {
+    html5QrScanner.render(async (decodedText) => {
         if (decodedText === s.qr_code_data) {
             qrVerified = true;
             document.getElementById('qr-success-msg').style.display = 'block';
-            document.getElementById('btn-submit-verify').disabled = false;
             html5QrScanner.clear();
+            
+            // Auto-submit for Pickup/Warehouse
+            if (type === 'pickup' || type === 'warehouse') {
+                try {
+                    await apiCall(`/driver/${dId}/verify-qr/${shipmentId}`, 'POST', { qr_data: decodedText });
+                    closeVerifyModal();
+                    showNotification(type === 'pickup' ? "Pickup Successful!" : "Warehouse Handoff Recorded!", "success");
+                    loadMissions();
+                } catch(e) {
+                    alert("Verification failed: " + e.message);
+                }
+            } else if (type === 'delivery') {
+                // Return to delivery flow
+                closeVerifyModal();
+                proceedToLastMile(shipmentId);
+            }
         } else {
-            alert("QR Code Mismatch! Please scan the correct package.");
+            showNotification("QR Code Mismatch! Please scan the correct package.", "error");
+            // Highlight mismatch in modal
+            const reader = document.getElementById('qr-reader');
+            reader.style.borderColor = 'var(--danger)';
+            setTimeout(() => { reader.style.borderColor = 'var(--primary)'; }, 2000);
         }
-    }, (err) => {
-        // console.error(err);
-    });
+    }, (err) => {});
+}
+
+async function handleScan(shipmentId, type) {
+    openVerifyModal(shipmentId, type);
+}
+
+async function completeDeliveryFlow(shipmentId) {
+    // Step 1: Scan QR
+    handleScan(shipmentId, 'delivery');
+}
+
+async function proceedToLastMile(shipmentId) {
+    // Step 2: OTP
+    const otp = prompt("Step 2: Enter the Delivery OTP provided by the customer:");
+    if (!otp) return;
+
+    // Step 3: Photo
+    alert("Step 3: Capture a photo of the product at the delivery location.");
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        showNotification("Completing delivery... Please wait.", "info");
+        
+        try {
+            // Upload photo first
+            const formData = new FormData();
+            formData.append('file', file);
+            const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadRes.json();
+            const photoUrl = uploadData.image_url || uploadData.url;
+
+            // Complete delivery
+            await apiCall(`/driver/${dId}/complete-delivery/${shipmentId}?otp=${otp}&image_url=${encodeURIComponent(photoUrl)}`, 'POST');
+            showNotification("Delivery Successful! Points added to wallet.", "success");
+            loadMissions();
+            loadWallet();
+        } catch(e) {
+            alert("Error: " + e.message + ". Check payment status and OTP.");
+        }
+    };
+    input.click();
 }
 
 function closeVerifyModal() {
@@ -1446,55 +1438,6 @@ function closeVerifyModal() {
     document.getElementById('verify-modal').style.display = 'none';
 }
 
-async function submitVerification() {
-    if (!qrVerified) return alert("QR verification required");
-    
-    const fileInput = document.getElementById('v-photo');
-    if (!fileInput.files || !fileInput.files[0]) return alert("Please upload a photo of the shipment");
-    
-    const btn = document.getElementById('btn-submit-verify');
-    const originalText = btn.innerText;
-    btn.innerText = "Uploading Evidence...";
-    btn.disabled = true;
-    
-    try {
-        const dId = localStorage.getItem('driver_id');
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        // Upload to cloud storage via backend proxy
-        const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
-            method: 'POST',
-            headers: { 'X-Logistix-Context': dId },
-            body: formData
-        });
-        
-        if (!uploadRes.ok) throw new Error("Upload failed");
-        const uploadData = await uploadRes.json();
-        const photoUrl = uploadData.image_url || uploadData.url;
-
-        // We update status and add log with photo
-        await apiCall(`/shipments/${currentVerifyId}`, 'PUT', {
-            status: 'in_transit', 
-            stage: 'Picked Up',
-            log_entry: {
-                status: 'in_transit',
-                message: `📦 PICKUP VERIFIED: QR scanned and photo uploaded by driver.`,
-                photo_url: photoUrl
-            }
-        });
-        
-        closeVerifyModal();
-        showPopupAlert("Verification Successful! Package Picked Up.");
-        loadMissions();
-    } catch(e) {
-        console.error("Verification Error:", e);
-        alert("Failed to complete pickup. Check connection.");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-}
 
 async function uploadFile(file) {
     return new Promise((resolve) => {
