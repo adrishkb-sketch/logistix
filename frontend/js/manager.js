@@ -1243,7 +1243,7 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                 </td>
                 <td>
                     <span class="status-pill status-${s.status}" style="font-size:0.7rem;">${getTranslation(s.status + '_label') || s.status}</span>
-                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${getTranslation(s.stage.toLowerCase().replace(/ /g, '_')) || s.stage}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.stage ? (getTranslation(s.stage.toLowerCase().replace(/ /g, '_')) || s.stage) : '---'}</div>
                     ${performanceMsg}
                 </td>
                 <td>
@@ -1527,10 +1527,16 @@ async function submitManualSplit() {
 
 async function autoAssign(id) {
     try {
-        await apiCall(`/shipments/${id}/auto-assign`, 'POST');
-        alert("Assigned Successfully");
+        const res = await apiCall(`/shipments/${id}/auto-assign`, 'POST');
+        if (res.action === 'split') {
+            showNotification(`Shipment segmented into ${res.legs_count} legs. ${res.assigned_count} drivers linked.`, 'success');
+        } else {
+            showNotification("AI successfully assigned driver and vehicle.", "success");
+        }
         loadShipments();
-    } catch(e) {}
+    } catch(e) {
+        showNotification("Auto-assignment failed. No suitable drivers or vehicles found in proximity.", "error");
+    }
 }
 
 

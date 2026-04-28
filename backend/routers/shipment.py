@@ -615,12 +615,38 @@ def auto_assign(shipment_id: str):
                 # AUTO-ASSIGN ALL LEGS IMMEDIATELY
                 all_new_legs = [s for s in shipments_db.get_all() if s.get("parent_id") == shipment_id and s.get("is_leg")]
                 assigned_count = 0
+                from backend.services.assignment import auto_assign_shipment
                 for leg in all_new_legs:
                     try:
-                        res = auto_assign(leg["id"])
-                        if res.get("shipment", {}).get("assigned_driver_id"):
+                        assigned_data = auto_assign_shipment(leg)
+                        if assigned_data:
+                            # Add logs to leg
+                            from backend.models import ShipmentEvent
+                            d_db = JSONDatabase("drivers")
+                            v_db = JSONDatabase("vehicles")
+                            d_id = assigned_data.get("assigned_driver_id")
+                            v_id = assigned_data.get("assigned_vehicle_id")
+                            
+                            if d_id == "DRONE-SYSTEM":
+                                log_event = ShipmentEvent(status="in_transit", message=f"🛰️ AI deployed autonomous drone {v_id} for the last-mile segment.")
+                            else:
+                                d = d_db.get_by_id(d_id)
+                                v = v_db.get_by_id(v_id)
+                                driver_name = d.get("name", "Unknown") if d else "Unknown"
+                                plate = v.get("number_plate", "Unknown") if v else "Unknown"
+                                log_event = ShipmentEvent(status="assigned", message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}.")
+                            
+                            assigned_data["logs"] = (leg.get("logs") or []) + [log_event.model_dump()]
+                            shipments_db.update(leg["id"], assigned_data)
+                            
+                            # SIDE EFFECTS: Link driver and vehicle, set status
+                            if d_id != "DRONE-SYSTEM":
+                                d_db.update(d_id, {"status": "assigned", "assigned_vehicle_id": v_id})
+                                v_db.update(v_id, {"status": "assigned", "assigned_driver_id": d_id})
+                            
                             assigned_count += 1
-                    except: pass
+                    except Exception as le:
+                        print(f"Leg Assignment Error: {str(le)}")
                 
                 return {
                     "message": f"Shipment automatically segmented into {len(all_new_legs)} legs and assigned to base warehouse drivers.",
@@ -657,6 +683,11 @@ def auto_assign(shipment_id: str):
             
             assigned_data["logs"] = (shipment.get("logs") or []) + [log_event.model_dump()]
             
+            # SIDE EFFECTS: Link driver and vehicle, set status
+            if d_id != "DRONE-SYSTEM":
+                d_db.update(d_id, {"status": "assigned", "assigned_vehicle_id": v_id})
+                v_db.update(v_id, {"status": "assigned", "assigned_driver_id": d_id})
+                
             updated = shipments_db.update(shipment_id, assigned_data)
             try:
                 if d_id != "DRONE-SYSTEM":
@@ -875,6 +906,7 @@ def _generate_legs(parent_shipment, leg_data):
     # Update parent shipment
     parent_shipment["route_type"] = "multi-leg"
     parent_shipment["status"] = "split"
+    parent_shipment["stage"] = "Route Optimized"
     
     log_event = ShipmentEvent(status="split", message=f"🔗 Multi-leg journey planned via {len(leg_data)} warehouse hubs.")
     parent_shipment["logs"] = parent_shipment.get("logs", []) + [log_event.model_dump()]

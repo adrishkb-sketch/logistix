@@ -114,94 +114,115 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         d["fatigue_score"] = calculate_fatigue(d)
         d["driving_score"] = calculate_driver_performance_score(d)
         
-        # STRICT BLOCK: Driver fatigue too high
-        if d.get("fatigue_score", 0) > 80:
+        # SOFTEN VERIFICATION: Prefer verified, but accept unverified if no other choice
+        # 1. Driver must be available
+        if d.get("status") != "available":
             continue
             
-        if d.get("assigned_vehicle_id") and d.get("verification_status") == "verified":
-            vehicle = next((v for v in vehicles if v.get("id") == d.get("assigned_vehicle_id")), None)
-            if vehicle and vehicle.get("status") in ["available", "assigned"]:
-                v_type = vehicle.get("type", "")
-                v_base = vehicle.get("base_warehouse_id")
+        # 2. Check for Vehicle (Linked or Auto-Linkable)
+        vehicle = None
+        v_id = d.get("assigned_vehicle_id")
+        
+        if v_id:
+            vehicle = next((v for v in vehicles if v.get("id") == v_id), None)
+        
+        # AUTO-LINK LOGIC: If driver has no vehicle, find one at their base hub
+        if not vehicle and d.get("base_warehouse_id"):
+            base_wh = d.get("base_warehouse_id")
+            # Find an unassigned vehicle of the "right" type for this leg at this hub
+            v_type_pref = "Truck" if is_middle_mile else ("Bike" if dist < 20 else "Van")
+            
+            compatible_v = [
+                v for v in vehicles 
+                if v.get("base_warehouse_id") == base_wh 
+                and v.get("status") == "available" 
+                and not v.get("assigned_driver_id")
+            ]
+            
+            if compatible_v:
+                # Prefer the type we want
+                pref_v = next((v for v in compatible_v if v_type_pref in v.get("type", "")), compatible_v[0])
+                vehicle = pref_v
+                # We'll link them in the final assignment step
+        
+        if vehicle and vehicle.get("status") in ["available", "assigned"]:
+            v_type = vehicle.get("type", "")
+            v_base = vehicle.get("base_warehouse_id")
+            
+            # 3. VERIFICATION WEIGHTING
+            v_status = d.get("verification_status", "unverified")
+            verification_score = 1000 if v_status == "verified" else (500 if v_status == "pending_manual" else 0)
+            
+            # 4. STRICT HUB FILTERING (Relaxed slightly: only for legs, not for direct)
+            if is_first_mile:
+                if v_base and v_base != d_wh_id:
+                    continue # MUST be based at the collection hub for hub-handoff
+            elif is_last_mile:
+                if v_base and v_base != p_wh_id:
+                    continue # MUST be based at the delivery hub for dispatch
+            elif is_middle_mile:
+                if v_base and v_base != p_wh_id and v_base != d_wh_id:
+                    continue # MUST be based at one of the leg's hubs
+            
+            # 5. MIDDLE MILE TRUCK PREFERENCE (Softened to score rather than block)
+            mm_truck_score = 1000 if (is_middle_mile and "Truck" in v_type) else 0
+            
+            # 6. WEATHER/HEATWAVE BLOCK (Strict for safety)
+            if (weather["condition"] in ["Storm", "Rain"] or is_heatwave) and any(x in v_type for x in ["Bike", "Scooty"]):
+                continue 
+            
+            # 7. Check Vehicle Health vs Distance
+            health = vehicle.get("vehicle_health_score", 100)
+            if dist > 50 and health < 40: # Relaxed from 60
+                continue 
+            
+            # 8. Capacity Check
+            curr_v_id = vehicle.get("id")
+            active_for_vehicle = [s for s in all_shipments if s.get("assigned_vehicle_id") == curr_v_id and s.get("status") in ["assigned", "in_transit"]]
+            current_weight = sum(s.get("weight", 0) for s in active_for_vehicle)
+            
+            if current_weight + shipment.get("weight", 0) <= vehicle.get("capacity", 0):
+                score_modifier = verification_score + mm_truck_score
                 
-                # STRICT HUB FILTERING (User Requirement)
-                if is_first_mile:
-                    if v_base != d_wh_id:
-                        continue # MUST be based at the collection hub
-                elif is_last_mile:
-                    if v_base != p_wh_id:
-                        continue # MUST be based at the delivery hub
+                # BACKHAUL/OUTBOUND BOOSTS
+                if is_middle_mile:
+                    if v_base == d_wh_id: score_modifier += 800 # BACKHAUL
+                    elif v_base == p_wh_id: score_modifier += 500 # OUTBOUND
+                
+                # SOFT BASE LIMITS
+                if v_base:
+                    wh = next((w for w in warehouses if w.get("id") == v_base), None)
+                    if wh:
+                        base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
+                        # Soft penalty instead of block
+                        if any(x in v_type for x in ["Bike", "Scooty"]) and base_dist > 30: score_modifier -= 500
+                        if "EV" in v_type and base_dist > 60: score_modifier -= 500
+                
+                # Distance Preference
+                if dist < 30 and any(x in v_type for x in ["Bike", "Scooty"]):
+                    score_modifier += 800
+                if dist > 80 and "Truck" in v_type:
+                    score_modifier += 500
+                
+                wait_time_mins = 0
+                # 5. Operational Cost Penalty (Profit Optimization)
+                finance_data = estimate_delivery_cost(shipment, v_type.lower())
+                total_op_cost = finance_data.get("total_cost", 0)
+                score_modifier -= (total_op_cost / 10) # Penalize high cost routes
+                
+                # 6. Segment-Based Priority Boost
+                if is_first_mile or is_last_mile:
+                    score_modifier += FM_LM_PRIORITY.get(v_type, 0)
                 elif is_middle_mile:
-                    if v_base != p_wh_id and v_base != d_wh_id:
-                        continue # MUST be based at one of the leg's hubs (Outbound or Backhaul)
+                    score_modifier += MM_PRIORITY.get(v_type, 0)
 
-                # MIDDLE MILE TRUCK ENFORCEMENT
-                if is_middle_mile and "Truck" not in v_type:
-                    continue
-                
-                # WEATHER/HEATWAVE BLOCK
-                if (weather["condition"] in ["Storm", "Rain"] or is_heatwave) and v_type in ["Bike/Scooty", "Bike", "Scooty"]:
-                    continue 
-                
-                # Check Vehicle Health vs Distance
-                health = vehicle.get("vehicle_health_score", 100)
-                if dist > 50 and health < 60:
-                    continue 
-                
-                # Calculate current load
-                v_id = vehicle.get("id")
-                active_for_vehicle = [s for s in all_shipments if s.get("assigned_vehicle_id") == v_id and s.get("status") in ["assigned", "in_transit"]]
-                current_weight = sum(s.get("weight", 0) for s in active_for_vehicle)
-                
-                new_total_weight = current_weight + shipment.get("weight", 0)
-                if new_total_weight <= vehicle.get("capacity", 0):
-                    
-                    score_modifier = 0
-                    
-                    # BACKHAUL/OUTBOUND BOOSTS for Middle Mile
-                    if is_middle_mile:
-                        if v_base == d_wh_id:
-                            score_modifier += 800 # BACKHAUL
-                        elif v_base == p_wh_id:
-                            score_modifier += 500 # OUTBOUND
-                    
-                    # Base Warehouse limits (Bikes etc)
-                    if v_base:
-                        wh = next((w for w in warehouses if w.get("id") == v_base), None)
-                        if wh:
-                            base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
-                            if v_type == "Bike/Scooty" and base_dist > 15: continue
-                            if v_type == "EV-Cargo" and base_dist > 40: continue
-                    
-                    wait_time_mins = 0
-                    if weather["condition"] in ["Storm", "Rain"]:
-                        if v_type in ["Truck (Heavy)", "Delivery Van"]: score_modifier += 20
-                    
-                    if dist < 30 and v_type in ["Bike/Scooty", "Bike", "Scooty"]:
-                        score_modifier += 500 # Strong preference for small vehicles in urban legs
-                        if is_first_mile or is_last_mile:
-                            score_modifier += 500 # Extra boost for hub-based first/last mile
-                    
-                    if dist > 50 and "Truck" in v_type: score_modifier += 10
-                    
-                    # 5. Operational Cost Penalty (Profit Optimization)
-                    finance_data = estimate_delivery_cost(shipment, v_type.lower())
-                    total_op_cost = finance_data.get("total_cost", 0)
-                    score_modifier -= (total_op_cost / 10) # Penalize high cost routes
-                    
-                    # 6. Segment-Based Priority Boost
-                    if is_first_mile or is_last_mile:
-                        score_modifier += FM_LM_PRIORITY.get(v_type, 0)
-                    elif is_middle_mile:
-                        score_modifier += MM_PRIORITY.get(v_type, 0)
-
-                    available_pairs.append({
-                        "driver": d, 
-                        "vehicle": vehicle, 
-                        "score_modifier": score_modifier,
-                        "wait_time_mins": wait_time_mins,
-                        "finance_data": finance_data
-                    })
+                available_pairs.append({
+                    "driver": d, 
+                    "vehicle": vehicle, 
+                    "score_modifier": score_modifier,
+                    "wait_time_mins": wait_time_mins,
+                    "finance_data": finance_data
+                })
                 
     if not available_pairs:
         return None
