@@ -1905,21 +1905,23 @@
 
         <!-- Format Guide -->
         <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:32px;">
-            <h4 style="margin:0 0 12px 0; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem;">Required Spreadsheet Format</h4>
-            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:15px;">Please ensure your file has the following columns in order (No header required):</p>
+            <h4 style="margin:0 0 12px 0; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem;">Smart Spreadsheet Format</h4>
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:15px;">You can use any column order if you include headers. If no headers are found, we use this standard order:</p>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:0.8rem; color:var(--text);">
-                <div><b>1.</b> Pickup Lat</div>
-                <div><b>2.</b> Pickup Lng</div>
-                <div><b>3.</b> Drop Lat</div>
-                <div><b>4.</b> Drop Lng</div>
-                <div><b>5.</b> Weight (kg)</div>
-                <div><b>6.</b> Description</div>
+                <div><b>1.</b> Pickup Lat (p_lat)</div>
+                <div><b>2.</b> Pickup Lng (p_lng)</div>
+                <div><b>3.</b> Drop Lat (d_lat)</div>
+                <div><b>4.</b> Drop Lng (d_lng)</div>
+                <div><b>5.</b> Weight kg</div>
+                <div><b>6.</b> Item Description</div>
                 <div><b>7.</b> Receiver Name</div>
                 <div><b>8.</b> Receiver Phone</div>
-                <div><b>9.</b> Perishable (Yes/No)</div>
-                <div><b>10.</b> E-Way Bill No</div>
-                <div><b>11.</b> E-Way Bill Expiry (YYYY-MM-DD HH:MM)</div>
+                <div><b>9.</b> Receiver Email</div>
+                <div><b>10.</b> Perishable (Y/N)</div>
+                <div><b>11.</b> E-Way Bill No</div>
+                <div><b>12.</b> E-Way Expiry</div>
             </div>
+            <p style="margin-top:15px; font-size:0.75rem; color:var(--primary);">💡 Pro Tip: Use coordinates from Google Maps for highest accuracy.</p>
         </div>
 
         <!-- Upload Options -->
@@ -1940,6 +1942,7 @@
         <!-- Preview Area -->
         <div id="bulk-preview-section" style="display:none;">
             <h4 style="margin:0 0 15px 0; border-top:1px solid var(--border); padding-top:20px;">Review Shipments (<span id="bulk-count">0</span>)</h4>
+            <div id="bulk-errors" style="display:none; margin-bottom: 20px;"></div>
             <div class="table-container" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
                 <table style="width:100%; border-collapse:collapse;">
                     <thead style="position:sticky; top:0; background:var(--bg); z-index:1;">
@@ -1970,13 +1973,13 @@
             <button class="close-modal-btn" onclick="closeDriverBulkModal()">✖</button>
         </div>
         <div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
-            <h4 style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;">📋 Required Format</h4>
+            <h4 style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;">📋 Smart Driver Format</h4>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; font-size:0.85rem; color:var(--text); font-weight:500;">
                 <div>1. Full Name</div><div>2. Login ID</div><div>3. Password</div>
-                <div>4. License Type</div><div>5. Hub ID / Name</div><div>6. Exp (Years)</div>
+                <div>4. License Type</div><div>5. Hub Name/ID</div><div>6. Exp Years</div>
                 <div>7. Accidents</div><div>8. Challans</div><div>9. Contact Number</div>
             </div>
-            <p style="margin-top:15px; font-size:0.75rem; color:var(--warning);">💡 Note: Contact numbers should be 10 digits. They will be automatically prefixed with <b>+91</b> for system compatibility.</p>
+            <p style="margin-top:15px; font-size:0.75rem; color:var(--warning);">💡 Note: Headers like "Driver Name", "Username", or "Contact" are automatically recognized. Phone numbers are auto-prefixed with <b>+91</b>.</p>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
             <div style="padding:24px; border:2px dashed rgba(var(--accent-rgb), 0.3); border-radius:20px; text-align:center; transition: all 0.3s ease; background: rgba(var(--accent-rgb), 0.02);">
@@ -1990,6 +1993,7 @@
         </div>
         <div id="driver-preview-section" style="display:none;">
             <h4>Preview (<span id="driver-bulk-count">0</span>)</h4>
+            <div id="driver-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
             <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
                 <table><thead><tr><th>Name</th><th>Type</th><th>Hub ID</th><th>Contact</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
             </div>
@@ -2004,11 +2008,12 @@
             <button class="close-modal-btn" onclick="closeVehicleBulkModal()">✖</button>
         </div>
         <div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
-            <h4 style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;">📋 Required Format</h4>
+            <h4 style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;">📋 Smart Vehicle Format</h4>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; font-size:0.85rem; color:var(--text); font-weight:500;">
-                <div>1. Type</div><div>2. Hub ID / Name</div><div>3. Plate No</div>
-                <div>4. Capacity (kg)</div><div>5. Fuel Eff (km/l)</div>
+                <div>1. Vehicle Type</div><div>2. Hub Name/ID</div><div>3. Plate Number</div>
+                <div>4. Capacity (kg)</div><div>5. Efficiency (km/l)</div>
             </div>
+            <p style="margin-top:10px; font-size:0.75rem; color:var(--muted);">Headers like "Category", "Warehouse", and "Registration" are also accepted.</p>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
             <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
@@ -2022,6 +2027,7 @@
         </div>
         <div id="vehicle-preview-section" style="display:none;">
             <h4>Preview (<span id="vehicle-bulk-count">0</span>)</h4>
+            <div id="vehicle-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
             <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
                 <table><thead><tr><th>Type</th><th>Hub ID</th><th>Plate</th><th>Cap</th></tr></thead><tbody id="vehicle-preview-body"></tbody></table>
             </div>

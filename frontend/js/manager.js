@@ -4153,7 +4153,7 @@ async function handleBulkFileSelect(event) {
             body: formData
         });
         const data = await res.json();
-        if (res.ok) renderBulkPreview(data.shipments);
+        if (res.ok) renderBulkPreview(data);
         else alert(data.detail || "Failed to parse file");
     } catch (e) {
         alert("Upload failed.");
@@ -4166,17 +4166,35 @@ async function previewGoogleSheets() {
     
     try {
         const res = await apiCall(`/shipments/bulk-parse?company_id=${localStorage.getItem('manager_id')}&url_req=${encodeURIComponent(url)}`, 'POST');
-        renderBulkPreview(res.shipments);
+        renderBulkPreview(res);
     } catch (e) {
         alert("Failed to fetch Google Sheet data.");
     }
 }
 
-function renderBulkPreview(shipments) {
+function renderBulkPreview(data) {
+    const shipments = data.shipments;
     currentBulkData = shipments;
     document.getElementById('bulk-count').innerText = shipments.length;
     document.getElementById('bulk-preview-section').style.display = 'block';
     
+    // Display errors if any
+    const errorDiv = document.getElementById('bulk-errors');
+    if (errorDiv) {
+        if (data.errors && data.errors.length > 0) {
+            errorDiv.innerHTML = `<div class="glass-card" style="border-color:var(--danger); background:rgba(239,68,68,0.05); padding:10px; margin-bottom:15px;">
+                <h4 style="color:var(--danger); margin-top:0;">⚠️ Parsing Errors (${data.errors.length} rows skipped)</h4>
+                <ul style="font-size:0.8rem; color:var(--text-muted); margin:0; padding-left:20px;">
+                    ${data.errors.slice(0, 5).map(e => `<li>${e}</li>`).join('')}
+                    ${data.errors.length > 5 ? `<li>...and ${data.errors.length - 5} more</li>` : ''}
+                </ul>
+            </div>`;
+            errorDiv.style.display = 'block';
+        } else {
+            errorDiv.style.display = 'none';
+        }
+    }
+
     const tbody = document.getElementById('bulk-preview-body');
     tbody.innerHTML = shipments.map(s => `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -4231,30 +4249,38 @@ async function handleDriverBulkFile(e) {
     const fd = new FormData(); fd.append('file', file);
     try {
         const res = await fetch(`${API_BASE}/manager/drivers/bulk-parse?company_id=${localStorage.getItem('manager_id')}`, { method:'POST', body:fd });
-        const data = await res.json(); renderDriverBulkPreview(data.drivers);
+        const data = await res.json(); renderDriverBulkPreview(data);
     } catch(err) { alert("Failed to parse drivers."); }
 }
 async function previewDriverSheets() {
     const url = document.getElementById('driver-sheets-url').value;
     try {
         const res = await apiCall(`/manager/drivers/bulk-parse?company_id=${localStorage.getItem('manager_id')}&url_req=${encodeURIComponent(url)}`, 'POST');
-        renderDriverBulkPreview(res.drivers);
+        renderDriverBulkPreview(res);
     } catch(err) { alert("Failed to fetch driver data."); }
 }
-function renderDriverBulkPreview(drivers) {
-    // Process numbers to +91 if they are 10 digits
-    drivers.forEach(d => {
-        let num = (d.phone_number || d.contact_number || '').toString().trim();
-        if (num.length === 10 && !num.startsWith('+')) {
-            num = '+91' + num;
-        }
-        d.contact_number = num;
-        // Keep phone_number for backend if needed, but the backend usually expects one of them
-        d.phone_number = num; 
-    });
+function renderDriverBulkPreview(data) {
+    const drivers = data.drivers;
     currentBulkDrivers = drivers;
     document.getElementById('driver-bulk-count').innerText = drivers.length;
     document.getElementById('driver-preview-section').style.display = 'block';
+    
+    // Error handling
+    const errorDiv = document.getElementById('driver-bulk-errors');
+    if (errorDiv) {
+        if (data.errors && data.errors.length > 0) {
+            errorDiv.innerHTML = `<div class="glass-card" style="border-color:var(--danger); background:rgba(239,68,68,0.05); padding:10px; margin-bottom:15px;">
+                <h4 style="color:var(--danger); margin-top:0;">⚠️ Parsing Errors (${data.errors.length} rows skipped)</h4>
+                <ul style="font-size:0.8rem; color:var(--text-muted); margin:0; padding-left:20px;">
+                    ${data.errors.slice(0, 5).map(e => `<li>${e}</li>`).join('')}
+                </ul>
+            </div>`;
+            errorDiv.style.display = 'block';
+        } else {
+            errorDiv.style.display = 'none';
+        }
+    }
+
     document.getElementById('driver-preview-body').innerHTML = drivers.map(d => {
         const wh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
         const hubName = wh ? wh.name : d.base_warehouse_id;
@@ -4263,8 +4289,14 @@ function renderDriverBulkPreview(drivers) {
 }
 async function confirmDriverBulk() {
     try {
-        await apiCall('/manager/drivers/bulk-confirm', 'POST', currentBulkDrivers);
-        alert("Drivers uploaded successfully!"); closeDriverBulkModal(); loadDriversAndVehicles();
+        const res = await apiCall('/manager/drivers/bulk-confirm', 'POST', currentBulkDrivers);
+        let msg = res.message;
+        if (res.errors && res.errors.length > 0) {
+            msg += "\n\nIssues:\n" + res.errors.join('\n');
+        }
+        alert(msg); 
+        closeDriverBulkModal(); 
+        loadDriversAndVehicles();
     } catch(err) { alert("Bulk upload failed."); }
 }
 
@@ -4281,20 +4313,38 @@ async function handleVehicleBulkFile(e) {
     const fd = new FormData(); fd.append('file', file);
     try {
         const res = await fetch(`${API_BASE}/manager/vehicles/bulk-parse?company_id=${localStorage.getItem('manager_id')}`, { method:'POST', body:fd });
-        const data = await res.json(); renderVehicleBulkPreview(data.vehicles);
+        const data = await res.json(); renderVehicleBulkPreview(data);
     } catch(err) { alert("Failed to parse vehicles."); }
 }
 async function previewVehicleSheets() {
     const url = document.getElementById('vehicle-sheets-url').value;
     try {
         const res = await apiCall(`/manager/vehicles/bulk-parse?company_id=${localStorage.getItem('manager_id')}&url_req=${encodeURIComponent(url)}`, 'POST');
-        renderVehicleBulkPreview(res.vehicles);
+        renderVehicleBulkPreview(res);
     } catch(err) { alert("Failed to fetch vehicle data."); }
 }
-function renderVehicleBulkPreview(vehicles) {
+function renderVehicleBulkPreview(data) {
+    const vehicles = data.vehicles;
     currentBulkVehicles = vehicles;
     document.getElementById('vehicle-bulk-count').innerText = vehicles.length;
     document.getElementById('vehicle-preview-section').style.display = 'block';
+    
+    // Error handling
+    const errorDiv = document.getElementById('vehicle-bulk-errors');
+    if (errorDiv) {
+        if (data.errors && data.errors.length > 0) {
+            errorDiv.innerHTML = `<div class="glass-card" style="border-color:var(--danger); background:rgba(239,68,68,0.05); padding:10px; margin-bottom:15px;">
+                <h4 style="color:var(--danger); margin-top:0;">⚠️ Parsing Errors (${data.errors.length} rows skipped)</h4>
+                <ul style="font-size:0.8rem; color:var(--text-muted); margin:0; padding-left:20px;">
+                    ${data.errors.slice(0, 5).map(e => `<li>${e}</li>`).join('')}
+                </ul>
+            </div>`;
+            errorDiv.style.display = 'block';
+        } else {
+            errorDiv.style.display = 'none';
+        }
+    }
+
     document.getElementById('vehicle-preview-body').innerHTML = vehicles.map(v => {
         const wh = globalWarehouses.find(w => w.id === v.base_warehouse_id);
         const hubName = wh ? wh.name : v.base_warehouse_id;
@@ -4303,8 +4353,14 @@ function renderVehicleBulkPreview(vehicles) {
 }
 async function confirmVehicleBulk() {
     try {
-        await apiCall('/manager/vehicles/bulk-confirm', 'POST', currentBulkVehicles);
-        alert("Vehicles uploaded successfully!"); closeVehicleBulkModal(); loadDriversAndVehicles();
+        const res = await apiCall('/manager/vehicles/bulk-confirm', 'POST', currentBulkVehicles);
+        let msg = res.message;
+        if (res.errors && res.errors.length > 0) {
+            msg += "\n\nIssues:\n" + res.errors.join('\n');
+        }
+        alert(msg); 
+        closeVehicleBulkModal(); 
+        loadDriversAndVehicles();
     } catch(err) { alert("Bulk upload failed."); }
 }
 

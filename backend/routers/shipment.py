@@ -36,59 +36,95 @@ class BulkParseRequest(BaseModel):
 @router.post("/bulk-parse")
 async def bulk_parse(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
     df = None
-    if file:
-        content = await file.read()
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(content))
-        else:
-            df = pd.read_excel(io.BytesIO(content))
-    elif url_req:
-        # Extract Google Sheets ID
-        match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
-        if not match:
-            raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
-        sheet_id = match.group(1)
-        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-        resp = requests.get(csv_url)
-        if resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet. Ensure it is public.")
-        df = pd.read_csv(io.StringIO(resp.text))
+    try:
+        if file:
+            content = await file.read()
+            if file.filename.endswith('.csv'):
+                df = pd.read_csv(io.BytesIO(content))
+            else:
+                df = pd.read_excel(io.BytesIO(content))
+        elif url_req:
+            match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
+            if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
+            sheet_id = match.group(1)
+            csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+            resp = requests.get(csv_url)
+            if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
+            df = pd.read_csv(io.StringIO(resp.text))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"File parsing error: {str(e)}")
     
-    if df is None or df.empty:
-        raise HTTPException(status_code=400, detail="No data found in file or spreadsheet")
+    if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
 
-    # Standardizing to 12 columns:
-    # Pickup Lat | Pickup Lng | Drop Lat | Drop Lng | Weight | Description | Name | Phone | Email | Perishable | E-Way No | E-Way Expiry
+    # Normalize column names
+    df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
     
     shipments = []
-    for _, row in df.iterrows():
+    errors = []
+    
+    col_map = {
+        "p_lat": ["p_lat", "pickup_lat", "origin_lat", "from_lat"],
+        "p_lng": ["p_lng", "pickup_lng", "origin_lng", "from_lng"],
+        "d_lat": ["d_lat", "drop_lat", "dest_lat", "to_lat"],
+        "d_lng": ["d_lng", "drop_lng", "dest_lng", "to_lng"],
+        "weight": ["weight", "kg", "mass"],
+        "desc": ["desc", "description", "item"],
+        "name": ["name", "receiver_name", "to_name", "recipient"],
+        "phone": ["phone", "receiver_phone", "mobile", "contact"],
+        "email": ["email", "receiver_email"],
+        "perishable": ["perishable", "is_perishable", "cold_chain"],
+        "eway": ["eway", "eway_bill", "eway_bill_no"],
+        "expiry": ["expiry", "eway_expiry", "expiry_date"]
+    }
+
+    def get_col(row, keys):
+        for k in keys:
+            if k in row: return row[k]
+        return None
+
+    for idx, row in df.iterrows():
         try:
-            # Handle possible header or no-header by checking numeric values
             vals = row.values.tolist()
-            if len(vals) < 9: continue
             
-            phone = str(vals[7]).strip()
+            p_lat = get_col(row, col_map["p_lat"]) or (vals[0] if len(vals) > 0 else None)
+            p_lng = get_col(row, col_map["p_lng"]) or (vals[1] if len(vals) > 1 else None)
+            d_lat = get_col(row, col_map["d_lat"]) or (vals[2] if len(vals) > 2 else None)
+            d_lng = get_col(row, col_map["d_lng"]) or (vals[3] if len(vals) > 3 else None)
+            weight = get_col(row, col_map["weight"]) or (vals[4] if len(vals) > 4 else 0)
+            desc = get_col(row, col_map["desc"]) or (vals[5] if len(vals) > 5 else "Shipment")
+            name = get_col(row, col_map["name"]) or (vals[6] if len(vals) > 6 else "Recipient")
+            phone = str(get_col(row, col_map["phone"]) or (vals[7] if len(vals) > 7 else "")).strip()
+            email = get_col(row, col_map["email"]) or (vals[8] if len(vals) > 8 else None)
+            perish = get_col(row, col_map["perishable"]) or (vals[9] if len(vals) > 9 else False)
+            eway = get_col(row, col_map["eway"]) or (vals[10] if len(vals) > 10 else None)
+            expiry = get_col(row, col_map["expiry"]) or (vals[11] if len(vals) > 11 else None)
+
+            if p_lat is None or p_lng is None or d_lat is None or d_lng is None:
+                errors.append(f"Row {idx+1}: Missing Coordinates")
+                continue
+
             if len(phone) == 10 and phone.isdigit():
                 phone = "+91" + phone
             
             s = {
-                "pickup": {"lat": float(vals[0]), "lng": float(vals[1])},
-                "drop": {"lat": float(vals[2]), "lng": float(vals[3])},
-                "weight": float(vals[4]),
-                "description": str(vals[5]),
-                "receiver_name": str(vals[6]),
+                "pickup": {"lat": float(p_lat), "lng": float(p_lng)},
+                "drop": {"lat": float(d_lat), "lng": float(d_lng)},
+                "weight": float(weight),
+                "description": str(desc),
+                "receiver_name": str(name),
                 "receiver_phone": phone,
-                "receiver_email": str(vals[8]).strip().lower() if len(vals) > 8 else None,
-                "is_perishable": str(vals[9]).lower() in ['yes', 'y', 'true', '1'] if len(vals) > 9 else False,
-                "eway_bill_no": str(vals[10]) if len(vals) > 10 else None,
-                "eway_bill_expiry": str(vals[11]) if len(vals) > 11 else None,
+                "receiver_email": str(email).strip().lower() if email and not pd.isna(email) else None,
+                "is_perishable": str(perish).lower() in ['yes', 'y', 'true', '1'] if perish is not None else False,
+                "eway_bill_no": str(eway) if eway and not pd.isna(eway) else None,
+                "eway_bill_expiry": str(expiry) if expiry and not pd.isna(expiry) else None,
                 "company_id": company_id
             }
             shipments.append(s)
         except Exception as e:
+            errors.append(f"Row {idx+1}: {str(e)}")
             continue
             
-    return {"shipments": shipments, "count": len(shipments)}
+    return {"shipments": shipments, "count": len(shipments), "errors": errors}
 
 @router.post("/bulk-confirm")
 async def bulk_confirm(shipments: List[ShipmentCreate]):

@@ -27,70 +27,127 @@ async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(
     import io
     import requests
     df = None
-    if file:
-        content = await file.read()
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(content))
-        else:
-            df = pd.read_excel(io.BytesIO(content))
-    elif url_req:
-        match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
-        if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
-        sheet_id = match.group(1)
-        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-        resp = requests.get(csv_url)
-        if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
-        df = pd.read_csv(io.StringIO(resp.text))
+    try:
+        if file:
+            content = await file.read()
+            if file.filename.endswith('.csv'):
+                df = pd.read_csv(io.BytesIO(content))
+            else:
+                df = pd.read_excel(io.BytesIO(content))
+        elif url_req:
+            match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
+            if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
+            sheet_id = match.group(1)
+            csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+            resp = requests.get(csv_url)
+            if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
+            df = pd.read_csv(io.StringIO(resp.text))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"File parsing error: {str(e)}")
     
     if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
+    
+    # Normalize column names
+    df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
     
     # Fetch warehouses for name-to-id mapping
     whs = warehouses_db.get_all()
     wh_map = {w.get("name").lower(): w.get("id") for w in whs if w.get("company_id") == company_id}
     wh_ids = {w.get("id"): w.get("id") for w in whs if w.get("company_id") == company_id}
-    # Add support for 8-char short IDs (as shown in the infrastructure table)
     wh_short_ids = {w.get("id")[:8]: w.get("id") for w in whs if w.get("company_id") == company_id}
 
     drivers = []
-    for _, row in df.iterrows():
+    errors = []
+    
+    col_map = {
+        "name": ["name", "driver_name", "full_name"],
+        "login_id": ["login_id", "username", "id"],
+        "password": ["password", "pass", "pwd"],
+        "license_type": ["license_type", "type", "license", "vehicle_type"],
+        "hub": ["hub", "warehouse", "base_warehouse_id", "base_hub", "hub_id"],
+        "exp": ["exp", "experience", "years_experience", "years"],
+        "accidents": ["accidents", "past_accidents", "accidents_count"],
+        "violations": ["violations", "traffic_violations", "challans", "challan_count"],
+        "phone": ["phone", "contact", "contact_number", "mobile"]
+    }
+
+    def get_col(row, keys):
+        for k in keys:
+            if k in row: return row[k]
+        return None
+
+    for idx, row in df.iterrows():
         try:
             vals = row.values.tolist()
-            if len(vals) < 9: continue
-            phone = str(vals[8]).strip()
+            
+            name = get_col(row, col_map["name"]) or (vals[0] if len(vals) > 0 else None)
+            login_id = get_col(row, col_map["login_id"]) or (vals[1] if len(vals) > 1 else None)
+            password = get_col(row, col_map["password"]) or (vals[2] if len(vals) > 2 else None)
+            license_type = get_col(row, col_map["license_type"]) or (vals[3] if len(vals) > 3 else "van")
+            hub_val = str(get_col(row, col_map["hub"]) or (vals[4] if len(vals) > 4 else "")).strip()
+            exp = get_col(row, col_map["exp"]) or (vals[5] if len(vals) > 5 else 0)
+            accidents = get_col(row, col_map["accidents"]) or (vals[6] if len(vals) > 6 else 0)
+            violations = get_col(row, col_map["violations"]) or (vals[7] if len(vals) > 7 else 0)
+            phone = str(get_col(row, col_map["phone"]) or (vals[8] if len(vals) > 8 else "")).strip()
+
+            if not name or not login_id or not password:
+                errors.append(f"Row {idx+1}: Missing required fields (Name, Login ID, or Password)")
+                continue
+
             if len(phone) == 10 and phone.isdigit():
                 phone = "+91" + phone
                 
-            hub_val = str(vals[4]).strip()
-            # Try to match by Full ID first, then Short ID (8 chars), then by Name
             hub_id = wh_ids.get(hub_val) or wh_short_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
             
-            challans = int(vals[7])
-
             d = {
-                "name": str(vals[0]),
-                "login_id": str(vals[1]),
-                "password": str(vals[2]),
-                "license_type": str(vals[3]),
+                "name": str(name),
+                "login_id": str(login_id),
+                "password": str(password),
+                "license_type": str(license_type).lower(),
                 "base_warehouse_id": hub_id,
-                "years_experience": float(vals[5]),
-                "past_accidents": int(vals[6]),
-                "traffic_violations": challans,
-                "challan_count": challans,
+                "years_experience": float(exp) if exp is not None and not pd.isna(exp) else 0.0,
+                "past_accidents": int(accidents) if accidents is not None and not pd.isna(accidents) else 0,
+                "traffic_violations": int(violations) if violations is not None and not pd.isna(violations) else 0,
+                "challan_count": int(violations) if violations is not None and not pd.isna(violations) else 0,
                 "contact_number": phone,
                 "company_id": company_id
             }
             drivers.append(d)
-        except: continue
-    return {"drivers": drivers, "count": len(drivers)}
+        except Exception as e:
+            errors.append(f"Row {idx+1}: {str(e)}")
+            continue
+            
+    return {"drivers": drivers, "count": len(drivers), "errors": errors}
 
 @router.post("/drivers/bulk-confirm")
 async def bulk_confirm_drivers(drivers: List[Driver]):
+    all_existing = drivers_db.get_all()
+    existing_logins = {d.get("login_id") for d in all_existing}
+    existing_phones = {d.get("contact_number") for d in all_existing}
+    
+    success_count = 0
+    errors = []
+    
+    from backend.services.driver_intel import calculate_driver_performance_score
+    
     for d in drivers:
-        from backend.services.driver_intel import calculate_driver_performance_score
+        if d.login_id in existing_logins:
+            errors.append(f"Driver '{d.name}' skipped: Login ID '{d.login_id}' already exists.")
+            continue
+        if d.contact_number in existing_phones:
+            errors.append(f"Driver '{d.name}' skipped: Phone '{d.contact_number}' already exists.")
+            continue
+            
         d_dict = d.model_dump()
         d_dict["driving_score"] = calculate_driver_performance_score(d_dict)
         drivers_db.insert(d_dict)
-    return {"message": f"Successfully created {len(drivers)} drivers."}
+        
+        # Update local sets
+        existing_logins.add(d.login_id)
+        existing_phones.add(d.contact_number)
+        success_count += 1
+        
+    return {"message": f"Successfully created {success_count} drivers.", "errors": errors}
     
 @router.post("/finance/recalculate-all")
 def recalculate_all_shipments(company_id: str):
@@ -134,22 +191,28 @@ async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File
     import io
     import requests
     df = None
-    if file:
-        content = await file.read()
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(io.BytesIO(content))
-        else:
-            df = pd.read_excel(io.BytesIO(content))
-    elif url_req:
-        match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
-        if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
-        sheet_id = match.group(1)
-        csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-        resp = requests.get(csv_url)
-        if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
-        df = pd.read_csv(io.StringIO(resp.text))
+    try:
+        if file:
+            content = await file.read()
+            if file.filename.endswith('.csv'):
+                df = pd.read_csv(io.BytesIO(content))
+            else:
+                df = pd.read_excel(io.BytesIO(content))
+        elif url_req:
+            match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
+            if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
+            sheet_id = match.group(1)
+            csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+            resp = requests.get(csv_url)
+            if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
+            df = pd.read_csv(io.StringIO(resp.text))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"File parsing error: {str(e)}")
     
     if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
+    
+    # Normalize column names
+    df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
     
     # Fetch warehouses for name-to-id mapping
     whs = warehouses_db.get_all()
@@ -158,34 +221,72 @@ async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File
     wh_short_ids = {w.get("id")[:8]: w.get("id") for w in whs if w.get("company_id") == company_id}
 
     vehicles = []
-    for _, row in df.iterrows():
+    errors = []
+    
+    col_map = {
+        "type": ["type", "vehicle_type", "category"],
+        "hub": ["hub", "warehouse", "base_warehouse_id", "base_hub", "hub_id"],
+        "plate": ["plate", "number_plate", "vehicle_number", "registration"],
+        "capacity": ["capacity", "payload", "weight_limit"],
+        "efficiency": ["efficiency", "fuel_efficiency", "mileage"]
+    }
+
+    def get_col(row, keys):
+        for k in keys:
+            if k in row: return row[k]
+        return None
+
+    for idx, row in df.iterrows():
         try:
             vals = row.values.tolist()
-            if len(vals) < 5: continue
             
-            hub_val = str(vals[1]).strip()
-            # Try to match by Full ID first, then Short ID (8 chars), then by Name
+            v_type = get_col(row, col_map["type"]) or (vals[0] if len(vals) > 0 else "van")
+            hub_val = str(get_col(row, col_map["hub"]) or (vals[1] if len(vals) > 1 else "")).strip()
+            plate = get_col(row, col_map["plate"]) or (vals[2] if len(vals) > 2 else None)
+            capacity = get_col(row, col_map["capacity"]) or (vals[3] if len(vals) > 3 else 1000)
+            efficiency = get_col(row, col_map["efficiency"]) or (vals[4] if len(vals) > 4 else 15)
+
+            if not plate:
+                errors.append(f"Row {idx+1}: Missing Number Plate")
+                continue
+
             hub_id = wh_ids.get(hub_val) or wh_short_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
 
             v = {
-                "type": str(vals[0]),
+                "type": str(v_type).lower(),
                 "base_warehouse_id": hub_id,
-                "number_plate": str(vals[2]).upper(),
-                "capacity": float(vals[3]),
-                "fuel_efficiency": float(vals[4]),
+                "number_plate": str(plate).upper(),
+                "capacity": float(capacity) if capacity is not None and not pd.isna(capacity) else 1000.0,
+                "fuel_efficiency": float(efficiency) if efficiency is not None and not pd.isna(efficiency) else 15.0,
                 "company_id": company_id,
                 "status": "available",
-                "speed": 40.0 # Default speed for legacy code
+                "speed": 40.0
             }
             vehicles.append(v)
-        except: continue
-    return {"vehicles": vehicles, "count": len(vehicles)}
+        except Exception as e:
+            errors.append(f"Row {idx+1}: {str(e)}")
+            continue
+            
+    return {"vehicles": vehicles, "count": len(vehicles), "errors": errors}
 
 @router.post("/vehicles/bulk-confirm")
 async def bulk_confirm_vehicles(vehicles: List[Vehicle]):
+    all_existing = vehicles_db.get_all()
+    existing_plates = {v.get("number_plate") for v in all_existing}
+    
+    success_count = 0
+    errors = []
+    
     for v in vehicles:
+        if v.number_plate in existing_plates:
+            errors.append(f"Vehicle '{v.number_plate}' skipped: Number plate already exists.")
+            continue
+            
         vehicles_db.insert(v.model_dump())
-    return {"message": f"Successfully created {len(vehicles)} vehicles."}
+        existing_plates.add(v.number_plate)
+        success_count += 1
+        
+    return {"message": f"Successfully created {success_count} vehicles.", "errors": errors}
 
 @router.get("/ledger")
 def get_ledger(company_id: str, x_logistix_context: Optional[str] = Header(None)):
