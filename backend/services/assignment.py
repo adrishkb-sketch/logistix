@@ -1,5 +1,6 @@
 from backend.database import JSONDatabase
 from typing import Dict, Any, Optional
+import uuid
 
 drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")

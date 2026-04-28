@@ -45,7 +45,8 @@ def track_shipment(shipment_id: str):
     from backend.services.time_utils import snap_eta_to_business_hours
     if shipment.get("expected_delivery"):
         try:
-            original_eta = datetime.fromisoformat(shipment["expected_delivery"])
+            eta_str = shipment["expected_delivery"].replace('Z', '+00:00')
+            original_eta = datetime.fromisoformat(eta_str)
             adjusted_eta = original_eta + timedelta(minutes=dynamic_eta["delay_mins"])
             snapped_eta = snap_eta_to_business_hours(adjusted_eta)
             dynamic_eta["estimated_arrival"] = snapped_eta.isoformat()
