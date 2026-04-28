@@ -5,8 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="11472a96-f390-43dd-8cbb-cf9433a633f1" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/frontend/js/api.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/api.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/routers/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/routers/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/js/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/auth.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/js/driver.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/driver.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/js/translations.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/translations.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

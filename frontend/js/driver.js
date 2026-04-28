@@ -17,8 +17,29 @@ let marker;
 let driverPerfChart;
 let watchId;
 let routeCoords = [];
-let simIndex = 0;
 let hasSetInitialView = false;
+
+function showError(msg) {
+    const container = document.getElementById('mission-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="glass-card" style="border-left: 4px solid var(--danger); padding: 24px; text-align: center;">
+                <h3 style="color: var(--danger);">⚠️ ${getTranslation('error') || 'Error'}</h3>
+                <p style="color: var(--muted);">${msg}</p>
+                <button class="btn-primary" style="margin-top: 15px; width: auto; padding: 10px 20px;" onclick="location.reload()">
+                    ${getTranslation('retry') || 'Retry'} 🔄
+                </button>
+            </div>
+        `;
+    }
+    // Also show main content if it was hidden
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) mainContent.style.display = 'block';
+    
+    // Hide loading spinners
+    const spinners = document.querySelectorAll('.spinner');
+    spinners.forEach(s => s.style.display = 'none');
+}
 let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count_driver') || '-1');
 let currentActiveTab = 'dash';
 let isSimulationMode = false;
@@ -356,28 +377,32 @@ async function loadMissions(autoStartNext = false) {
             vPendingBox.style.display = 'none';
             vNoVehicleBox.style.display = 'none';
             vScreenMsg.innerText = getTranslation('v_verify_desc');
-        } else if (me && me.assigned_vehicle_id) {
-            vNoVehicleBox.style.display = 'none';
+        } else if (me) {
+            // Verified driver logic
             if (me.verification_status === "pending_manual") {
                 mainContent.style.display = 'none';
-                if (reportBtn) reportBtn.style.display = 'none';
-                vScreen.style.display = 'block';
-                vUploadBox.style.display = 'none';
-                vPendingBox.style.display = 'block';
+                if (vScreen) {
+                    vScreen.style.display = 'block';
+                    vUploadBox.style.display = 'none';
+                    vPendingBox.style.display = 'block';
+                    vNoVehicleBox.style.display = 'none';
+                }
             } else {
+                // Driver is verified!
                 mainContent.style.display = 'block';
-                if (reportBtn) reportBtn.style.display = 'block';
-                vScreen.style.display = 'none';
+                if (vScreen) vScreen.style.display = 'none';
+                
+                if (!me.assigned_vehicle_id) {
+                    // Show a warning in the dashboard rather than hiding it
+                    const vehicleCard = document.getElementById('vehicle-status-card');
+                    if (vehicleCard) {
+                        vehicleCard.style.borderLeftColor = 'var(--warning)';
+                        document.getElementById('vehicle-status-badge').innerText = "PENDING ASSIGNMENT";
+                        document.getElementById('vehicle-mini-details').innerText = "Waiting for manager to assign a vehicle...";
+                    }
+                }
                 loadDashStats();
             }
-        } else {
-            // No vehicle assigned AND verified? (Shouldn't happen but fallback)
-            mainContent.style.display = 'none';
-            if (reportBtn) reportBtn.style.display = 'none';
-            vScreen.style.display = 'block';
-            vUploadBox.style.display = 'none';
-            vPendingBox.style.display = 'none';
-            vNoVehicleBox.style.display = 'block';
         }
 
         const shipments = await apiCall(`/driver/${dId}/shipments`);
@@ -593,21 +618,14 @@ async function loadMissions(autoStartNext = false) {
         } else {
             container.innerHTML = `<div class="glass-card"><p>No valid stops to route currently.</p></div>`;
             document.getElementById('route-map').style.display = 'none';
-            document.getElementById('fullscreen-btn').style.display = 'none';
         }
+        
         // Fetch and show dynamic alerts/messages
         loadAlertsAndMessages();
         
     } catch(e) {
-        console.error("Error in loadMissions:", e);
-        alert("Startup Error: " + e.message);
-        // Ensure main content is shown even on error
-        const mainContent = document.getElementById('main-content');
-        if (mainContent) mainContent.style.display = 'block';
-        const missionContainer = document.getElementById('mission-container');
-        if (missionContainer) {
-            missionContainer.innerHTML = `<div class="glass-card"><p style="color:red">Error loading route: ${e.message}</p></div>`;
-        }
+        console.error("[Bootstrap] loadMissions Failed:", e);
+        showError(`Failed to load dashboard: ${e.message}`);
     }
 }
 

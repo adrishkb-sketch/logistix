@@ -80,20 +80,24 @@ def company_login(data: CompanyLogin):
 
 @router.post("/driver/login")
 def driver_login(data: DriverLogin):
-    try:
-        drivers = drivers_db.get_all()
-        for d in drivers:
-            if d.get("login_id") == data.login_id and d.get("password") == data.password:
-                return {
-                    "message": "Login successful", 
-                    "driver_id": d.get("id"), 
-                    "name": d.get("name", "Driver"), 
-                    "company_id": d.get("company_id")
-                }
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    except Exception as e:
-        print(f"Driver Login Critical Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # 1. Check if Company exists
+    company = companies_db.get_by_id(data.company_id)
+    if not company:
+        raise HTTPException(status_code=401, detail="Invalid Company ID")
+        
+    # 2. Check Driver credentials under that company
+    drivers = drivers_db.get_all()
+    company_drivers = [d for d in drivers if d.get("company_id") == data.company_id]
+    
+    driver = next((d for d in company_drivers if d.get("login_id") == data.login_id and d.get("password") == data.password), None)
+    if not driver:
+        raise HTTPException(status_code=401, detail="Invalid Driver ID or Password for this company")
+        
+    return {
+        "driver_id": driver["id"],
+        "name": driver["name"],
+        "company_id": driver["company_id"]
+    }
 
 # ──────────────────────────────────────────────────────────────
 # Customer Tracking: Phone → OTP → Orders

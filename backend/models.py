@@ -15,6 +15,7 @@ class CompanyLogin(BaseModel):
     password: str
 
 class DriverLogin(BaseModel):
+    company_id: str
     login_id: str
     password: str
 

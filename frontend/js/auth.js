@@ -88,12 +88,13 @@ document.addEventListener('submit', async (e) => {
 
         // Driver Login
         if (isDriverForm) {
+            const company_id = document.getElementById('driver-company-id')?.value;
             const login_id = document.getElementById('driver-id')?.value;
             const password = document.getElementById('driver-password')?.value;
             
-            if (!login_id || !password) throw new Error(getTranslation('auth_error_missing_driver'));
+            if (!company_id || !login_id || !password) throw new Error(getTranslation('auth_error_missing_driver'));
 
-            const res = await apiCall('/auth/driver/login', 'POST', { login_id, password });
+            const res = await apiCall('/auth/driver/login', 'POST', { company_id, login_id, password });
             localStorage.setItem('driver_id', res.driver_id);
             localStorage.setItem('driver_name', res.name);
             localStorage.setItem('company_id', res.company_id);
