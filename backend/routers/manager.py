@@ -6,10 +6,6 @@ from typing import List, Optional
 from pydantic import BaseModel
 import uuid
 import random
-import requests
-import math
-import pandas as pd
-import io
 import re
 from fastapi import Header
 from backend.services.auth_utils import verify_context
@@ -25,6 +21,9 @@ shipments_db = JSONDatabase("shipments")
 
 @router.post("/drivers/bulk-parse")
 async def bulk_parse_drivers(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
+    import pandas as pd
+    import io
+    import requests
     df = None
     if file:
         content = await file.read()
@@ -93,6 +92,9 @@ async def bulk_confirm_drivers(drivers: List[Driver]):
 
 @router.post("/vehicles/bulk-parse")
 async def bulk_parse_vehicles(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
+    import pandas as pd
+    import io
+    import requests
     df = None
     if file:
         content = await file.read()
@@ -259,7 +261,8 @@ def create_vehicle(vehicle: Vehicle):
 def get_vehicles(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
     vehicles = vehicles_db.get_all()
-    return [v for v in vehicles if v.get("company_id") == company_id]
+    # Safe comparison with string casting
+    return [v for v in vehicles if str(v.get("company_id")) == str(company_id)]
 
 @router.delete("/vehicles/{vehicle_id}")
 def delete_vehicle(vehicle_id: str):
@@ -276,7 +279,7 @@ def create_warehouse(warehouse: Warehouse):
 def get_warehouses(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
     warehouses = warehouses_db.get_all()
-    return [w for w in warehouses if w.get("company_id") == company_id]
+    return [w for w in warehouses if str(w.get("company_id")) == str(company_id)]
 
 @router.delete("/warehouses/{warehouse_id}")
 def delete_warehouse(warehouse_id: str):
@@ -360,7 +363,13 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     
     # 1. Timely Delivery %
     delivered = [s for s in shipments if s.get("status") == "delivered"]
-    timely = [s for s in delivered if s.get("actual_delivery", "") <= s.get("expected_delivery", "9999")]
+    def is_timely(s):
+        actual = s.get("actual_delivery")
+        expected = s.get("expected_delivery")
+        if not actual or not expected: return True # Assume timely if data missing
+        return str(actual) <= str(expected)
+        
+    timely = [s for s in delivered if is_timely(s)]
     timely_percent = (len(timely) / len(delivered) * 100) if delivered else 100
     
     # 2. Avg Delay
@@ -379,7 +388,7 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     # 3. Fleet Distribution
     fleet_dist = {
         "in_transit": len([v for v in vehicles if v.get("status") == "in_transit"]),
-        "available": len([v for v in vehicles if v.get("status") == "available"]),
+        "available": len([v for v in vehicles if v.get("status") in ["available", "idle", "ready"]]),
         "maintenance": len([v for v in vehicles if v.get("status") == "maintenance"])
     }
     
