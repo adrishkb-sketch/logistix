@@ -27,10 +27,10 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     weather = predict_weather_impact(p_lat, p_lng)
     
     company_id = shipment.get("company_id")
-    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
-    vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id]
+    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
+    vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id]
     warehouses_db = JSONDatabase("warehouses")
-    warehouses = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
+    warehouses = [w for w in warehouses_db.get_all() if w and w.get("company_id") == company_id]
     
     # We need to calculate current load for multi-shipment logic
     shipments_db = JSONDatabase("shipments")
@@ -46,6 +46,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     cells = weather_cells_db.get_all()
     is_heatwave = False
     for cell in cells:
+        if not cell: continue
         cond = (cell.get("condition") or cell.get("type") or "").lower()
         if "heat" in cond or "heatwave" in cond:
             if haversine(p_lat, p_lng, cell.get("lat", 0), cell.get("lng", 0)) <= cell.get("radius", 50):
@@ -134,7 +135,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             
             compatible_v = [
                 v for v in vehicles 
-                if v.get("base_warehouse_id") == base_wh 
+                if v and v.get("base_warehouse_id") == base_wh 
                 and v.get("status") == "available" 
                 and not v.get("assigned_driver_id")
             ]
@@ -178,7 +179,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             
             # 8. Capacity Check
             curr_v_id = vehicle.get("id")
-            active_for_vehicle = [s for s in all_shipments if s.get("assigned_vehicle_id") == curr_v_id and s.get("status") in ["assigned", "in_transit"]]
+            active_for_vehicle = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == curr_v_id and s.get("status") in ["assigned", "in_transit"]]
             current_weight = sum(s.get("weight", 0) for s in active_for_vehicle)
             
             if current_weight + shipment.get("weight", 0) <= vehicle.get("capacity", 0):
@@ -265,7 +266,7 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
     drivers_db = JSONDatabase("drivers")
     
     all_shipments = shipments_db.get_all()
-    broken_shipments = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]]
+    broken_shipments = [s for s in all_shipments if s and s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]]
     
     if not broken_shipments: return None
     
@@ -273,7 +274,7 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
     company_id = driver.get("company_id")
     total_weight = sum(s.get("weight", 0) for s in broken_shipments)
     
-    potential_rescuers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id and d.get("id") != driver_id]
+    potential_rescuers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id and d.get("id") != driver_id]
     rescue_pair = None
     for d in potential_rescuers:
         if d.get("assigned_vehicle_id") and d.get("verification_status") == "verified":
@@ -313,7 +314,7 @@ def reoptimize_driver_route(driver_id: str):
     vehicles_db = JSONDatabase("vehicles")
 
     # Get all non-delivered tasks for this driver
-    active_tasks = [s for s in shipments_db.get_all() if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]]
+    active_tasks = [s for s in shipments_db.get_all() if s and s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]]
     if len(active_tasks) < 1: return
 
     driver = drivers_db.get_by_id(driver_id)

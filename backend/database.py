@@ -43,8 +43,9 @@ class JSONDatabase:
         self._ensure_client()
         try:
             response = supabase.table(self.table_name).select("data").eq("id", item_id).execute()
-            if response.data:
-                return response.data[0]["data"]
+            if response.data and len(response.data) > 0:
+                data = response.data[0].get("data")
+                return data if isinstance(data, dict) else None
             return None
         except Exception as e:
             print(f"Supabase GET_BY_ID Error on {self.table_name}: {e}")

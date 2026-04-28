@@ -58,7 +58,7 @@ def simulate_disaster(data: dict):
     from backend.services.route_engine import haversine
     from backend.models import ShipmentEvent
     
-    active_shipments = [s for s in shipments_db.get_all() if s.get("status") in ["assigned", "in_transit"]]
+    active_shipments = [s for s in shipments_db.get_all() if s and s.get("status") in ["assigned", "in_transit"]]
     affected_count = 0
     
     for s in active_shipments:
@@ -100,7 +100,7 @@ def custom_disaster(data: dict):
     weather_db.write(cells)
     
     # Check intersections
-    active_shipments = [s for s in shipments_db.get_all() if s.get("status") in ["assigned", "in_transit"]]
+    active_shipments = [s for s in shipments_db.get_all() if s and s.get("status") in ["assigned", "in_transit"]]
     affected_count = 0
     affected_list = []
     
@@ -193,8 +193,9 @@ def clear_disasters():
     # Revert all shipments
     all_shipments = shipments_db.get_all()
     for s in all_shipments:
+        if not s: continue
         original_len = len(s.get("logs", []))
-        s["logs"] = [l for l in s.get("logs", []) if l.get("status") != "simulated_delay"]
+        s["logs"] = [l for l in s.get("logs", []) if l and l.get("status") != "simulated_delay"]
         if len(s["logs"]) != original_len:
             shipments_db.update(s["id"], s)
     return {"message": "All active disaster simulations cleared."}
@@ -210,8 +211,9 @@ def stop_simulation(sim_id: str):
     # In a real app we might tag logs with the sim_id.
     all_shipments = shipments_db.get_all()
     for s in all_shipments:
+        if not s: continue
         original_len = len(s.get("logs", []))
-        s["logs"] = [l for l in s.get("logs", []) if l.get("status") != "simulated_delay"]
+        s["logs"] = [l for l in s.get("logs", []) if l and l.get("status") != "simulated_delay"]
         if len(s["logs"]) != original_len:
             shipments_db.update(s["id"], s)
             
@@ -311,7 +313,7 @@ def save_strategy(data: dict):
         
     all_plans = strategy_db.get_all()
     # Replace existing plan for this company if it exists, otherwise add new
-    new_plans = [p for p in all_plans if p.get("company_id") != company_id]
+    new_plans = [p for p in all_plans if p and p.get("company_id") != company_id]
     new_plans.append(data)
     strategy_db.write(new_plans)
     return {"message": "Strategy plan activated!"}
@@ -321,13 +323,13 @@ def get_active_strategy(company_id: str):
     strategy_db = JSONDatabase("strategy_plans")
     plans = strategy_db.get_all()
     # Find the active plan for this specific company
-    company_plan = next((p for p in plans if p.get("company_id") == company_id), None)
+    company_plan = next((p for p in plans if p and p.get("company_id") == company_id), None)
     return company_plan
 
 @router.delete("/strategy/active")
 def delete_strategy(company_id: str):
     strategy_db = JSONDatabase("strategy_plans")
     all_plans = strategy_db.get_all()
-    remaining = [p for p in all_plans if p.get("company_id") != company_id]
+    remaining = [p for p in all_plans if p and p.get("company_id") != company_id]
     strategy_db.write(remaining)
     return {"message": "Strategy plan cleared."}

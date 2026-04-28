@@ -10,7 +10,7 @@ def track_shipment(shipment_id: str):
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
         all_ships = shipments_db.get_all()
-        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+        shipment = next((s for s in all_ships if s and s.get("id", "").startswith(shipment_id)), None)
         
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
@@ -55,7 +55,7 @@ def track_shipment(shipment_id: str):
     
     # Fetch alerts
     all_alerts = alerts_db.get_all()
-    active_alerts = [a for a in all_alerts if a.get("shipment_id") == shipment_id and a.get("status") == "active"]
+    active_alerts = [a for a in all_alerts if a and a.get("shipment_id") == shipment_id and a.get("status") == "active"]
     
     return {
         "shipment": shipment,
@@ -73,14 +73,14 @@ def get_fleet_weather(company_id: str):
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
     
-    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
-    shipments = [s for s in shipments_db.get_all() if s.get("company_id") == company_id]
+    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
+    shipments = [s for s in shipments_db.get_all() if s and s.get("company_id") == company_id]
     
     fleet = []
     for d in drivers:
         if d.get("assigned_vehicle_id"):
             # Find current shipment for this driver
-            current = next((s for s in shipments if s.get("assigned_driver_id") == d["id"] and s["status"] == "in_transit"), None)
+            current = next((s for s in shipments if s and s.get("assigned_driver_id") == d.get("id") and s.get("status") == "in_transit"), None)
             loc = current.get("current_location") if current else None
             if loc and loc.get("lat"):
                 weather = predict_weather_impact(loc["lat"], loc["lng"])
@@ -95,7 +95,7 @@ def get_fleet_weather(company_id: str):
     weather_db = JSONDatabase("weather_cells")
     cells = weather_db.get_all()
     # For local dev, filter weather cells by company_id if we want multi-tenancy for simulations too
-    cells = [c for c in cells if c.get("company_id") == company_id or c.get("company_id") is None]
+    cells = [c for c in cells if c and (c.get("company_id") == company_id or c.get("company_id") is None)]
 
     if not cells:
         cells = [
@@ -120,7 +120,7 @@ def get_messages(user_id: str, company_id: str):
     messages_db = JSONDatabase("messages")
     all_msgs = messages_db.get_all()
     # Filter by company_id AND then sender/receiver
-    user_msgs = [m for m in all_msgs if m.get("company_id") == company_id and (m.get("sender_id") == user_id or m.get("receiver_id") == user_id)]
+    user_msgs = [m for m in all_msgs if m and m.get("company_id") == company_id and (m.get("sender_id") == user_id or m.get("receiver_id") == user_id)]
     return sorted(user_msgs, key=lambda x: x["created_at"])
 
 @router.post("/messages")
@@ -133,7 +133,7 @@ def send_message(msg: dict):
 @router.get("/alerts/active")
 def get_active_alerts(company_id: str):
     alerts_db = JSONDatabase("alerts")
-    return [a for a in alerts_db.get_all() if a.get("company_id") == company_id and a.get("status") == "active"]
+    return [a for a in alerts_db.get_all() if a and a.get("company_id") == company_id and a.get("status") == "active"]
 
 @router.post("/broadcast")
 def broadcast_message(data: dict):
@@ -149,7 +149,7 @@ def broadcast_message(data: dict):
     drivers_db = JSONDatabase("drivers")
     messages_db = JSONDatabase("messages")
     
-    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
+    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
     
     for d in drivers:
         m = {

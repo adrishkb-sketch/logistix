@@ -31,7 +31,8 @@ def calculate_shipment_vitality(shipment: dict) -> float:
     curr_loc = shipment.get("current_location") or shipment.get("pickup")
     
     for cell in cells:
-        dist = haversine(curr_loc["lat"], curr_loc["lng"], cell["lat"], cell["lng"])
+        if not cell: continue
+        dist = haversine(curr_loc["lat"], curr_loc["lng"], cell.get("lat", 0), cell.get("lng", 0))
         if dist <= cell.get("radius", 0):
             # If in a high-temperature zone (Storm/Heat)
             severity_mult = 1.0

@@ -244,7 +244,7 @@ def create_driver(driver: Driver):
 def get_drivers(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
     drivers = drivers_db.get_all()
-    return [d for d in drivers if d.get("company_id") == company_id]
+    return [d for d in drivers if d and d.get("company_id") == company_id]
 
 @router.delete("/drivers/{driver_id}")
 def delete_driver(driver_id: str):
@@ -279,7 +279,7 @@ def create_warehouse(warehouse: Warehouse):
 def get_warehouses(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
     warehouses = warehouses_db.get_all()
-    return [w for w in warehouses if str(w.get("company_id")) == str(company_id)]
+    return [w for w in warehouses if w and str(w.get("company_id")) == str(company_id)]
 
 @router.delete("/warehouses/{warehouse_id}")
 def delete_warehouse(warehouse_id: str):
@@ -300,7 +300,7 @@ def suggest_warehouse_location(data: dict):
     
     # 1. Get company shipments to find density
     all_shipments = shipments_db.get_all()
-    my_ships = [s for s in all_shipments if s.get("company_id") == company_id]
+    my_ships = [s for s in all_shipments if s and s.get("company_id") == company_id]
     
     if not my_ships:
         # Use a deterministic but variable offset based on coordinates to avoid 2.35km
@@ -312,7 +312,7 @@ def suggest_warehouse_location(data: dict):
         reason = "strategy_ai_reason"
     else:
         # 2. Find centroid of nearby shipments
-        nearby = [s for s in my_ships if abs(s["drop"]["lat"] - lat) < 1.0 and abs(s["drop"]["lng"] - lng) < 1.0]
+        nearby = [s for s in my_ships if s and abs(s["drop"]["lat"] - lat) < 1.0 and abs(s["drop"]["lng"] - lng) < 1.0]
         if nearby:
             s_lat = sum(s["drop"]["lat"] for s in nearby) / len(nearby)
             s_lng = sum(s["drop"]["lng"] for s in nearby) / len(nearby)
@@ -347,7 +347,7 @@ def suggest_warehouse_location(data: dict):
 @router.get("/check-plate")
 async def check_plate(plate: str):
     # Global check across all companies
-    existing = [v for v in vehicles_db.get_all() if v.get("number_plate") == plate]
+    existing = [v for v in vehicles_db.get_all() if v and v.get("number_plate") == plate]
     return {"exists": len(existing) > 0}
 
 @router.get("/dashboard/stats")
@@ -421,7 +421,7 @@ def get_cascading_impact(company_id: str, x_logistix_context: Optional[str] = He
     all_shipments = shipments_db.get_all()
     my_ships = [s for s in all_shipments if s and s.get("company_id") == company_id]
     
-    delayed_ships = [s for s in my_ships if (s.get("performance_stats") or {}).get("status") == "delayed" and s.get("status") == "in_transit"]
+    delayed_ships = [s for s in my_ships if s and (s.get("performance_stats") or {}).get("status") == "delayed" and s.get("status") == "in_transit"]
     
     risks = []
     total_impact_hours = 0
@@ -522,9 +522,9 @@ def link_driver_to_vehicle(driver_id: str, vehicle_id: str):
 @router.post("/auto-assign-fleet")
 def auto_assign_fleet(company_id: str):
     # Find all unassigned drivers for this company
-    drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
+    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
     # Find all available and unassigned vehicles for this company
-    vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id and v.get("status") == "available" and not v.get("assigned_driver_id")]
+    vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id and v.get("status") == "available" and not v.get("assigned_driver_id")]
     
     assigned_count = 0
     for d in drivers:
@@ -568,7 +568,7 @@ def manual_verify_driver(driver_id: str, status: str, vehicle_id: Optional[str] 
     if status == "verified" and vehicle_id:
         # Check if vehicle is already assigned
         all_drivers = drivers_db.get_all()
-        if any(d.get("assigned_vehicle_id") == vehicle_id and d.get("id") != driver_id for d in all_drivers):
+        if any(d and d.get("assigned_vehicle_id") == vehicle_id and d.get("id") != driver_id for d in all_drivers):
             raise HTTPException(status_code=400, detail="This vehicle is already assigned to another driver.")
         update_data["assigned_vehicle_id"] = vehicle_id
         
@@ -584,7 +584,7 @@ def unverify_driver(driver_id: str, company_id: str):
     # Check for active shipments assigned to this driver
     shipments_db = JSONDatabase("shipments")
     all_shipments = shipments_db.get_all()
-    active = [s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit", "picked_up"]]
+    active = [s for s in all_shipments if s and s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit", "picked_up"]]
     
     if active:
         raise HTTPException(status_code=400, detail="Cannot unverify driver while they have an active shipment.")
@@ -597,7 +597,7 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
     from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue, calculate_vehicle_efficiency_score
     
     if category == "driver":
-        drivers = [d for d in drivers_db.get_all() if d.get("company_id") == company_id]
+        drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
         processed = []
         for d in drivers:
             d["fatigue_score"] = calculate_fatigue(d)
@@ -618,7 +618,7 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
         target_key = key_map.get(sort_by, "overall_score")
         return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
     else:
-        vehicles = [v for v in vehicles_db.get_all() if v.get("company_id") == company_id]
+        vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id]
         processed = []
         for v in vehicles:
             v["efficiency_score"] = calculate_vehicle_efficiency_score(v)
@@ -646,7 +646,7 @@ def get_driver_profile(driver_id: str):
     
     # Fetch recent shipments for this driver
     shipments_db = JSONDatabase("shipments")
-    shipments = [s for s in shipments_db.get_all() if s.get("assigned_driver_id") == driver_id]
+    shipments = [s for s in shipments_db.get_all() if s and s.get("assigned_driver_id") == driver_id]
     
     return {
         "profile": driver,
@@ -670,7 +670,7 @@ def get_vehicle_profile(vehicle_id: str):
         
     # Fetch maintenance history or recent trips
     shipments_db = JSONDatabase("shipments")
-    shipments = [s for s in shipments_db.get_all() if s.get("assigned_vehicle_id") == vehicle_id]
+    shipments = [s for s in shipments_db.get_all() if s and s.get("assigned_vehicle_id") == vehicle_id]
     
     return {
         "profile": vehicle,
@@ -691,7 +691,7 @@ def reset_shipments(data: dict, x_logistix_context: Optional[str] = Header(None)
     s_db = JSONDatabase("shipments")
     # Only clear shipments for THIS company
     all_s = s_db.get_all()
-    to_delete = [s["id"] for s in all_s if s.get("company_id") == x_logistix_context]
+    to_delete = [s["id"] for s in all_s if s and s.get("company_id") == x_logistix_context]
     for sid in to_delete:
         s_db.delete(sid)
     return {"message": f"All {len(to_delete)} shipment records for {company['name']} have been cleared."}
@@ -708,7 +708,7 @@ def reset_drivers(data: dict, x_logistix_context: Optional[str] = Header(None)):
 
     # Only clear drivers for THIS company
     all_d = drivers_db.get_all()
-    to_delete = [d["id"] for d in all_d if d.get("company_id") == x_logistix_context]
+    to_delete = [d["id"] for d in all_d if d and d.get("company_id") == x_logistix_context]
     for did in to_delete:
         drivers_db.delete(did)
     return {"message": f"All {len(to_delete)} driver records for {company['name']} have been cleared."}
@@ -726,7 +726,7 @@ def reset_vehicles(data: dict, x_logistix_context: Optional[str] = Header(None))
     # Only clear vehicles for THIS company
     v_db = JSONDatabase("vehicles")
     all_v = v_db.get_all()
-    to_delete = [v["id"] for v in all_v if v.get("company_id") == x_logistix_context]
+    to_delete = [v["id"] for v in all_v if v and v.get("company_id") == x_logistix_context]
     for vid in to_delete:
         v_db.delete(vid)
     return {"message": f"All {len(to_delete)} vehicle records for {company['name']} have been cleared."}
@@ -766,7 +766,7 @@ def confirm_account_deletion(company_id: str, otp: str):
     def wipe_by_company(table_name):
         db = JSONDatabase(table_name)
         all_items = db.get_all()
-        remaining = [item for item in all_items if item.get("company_id") != company_id]
+        remaining = [item for item in all_items if item and item.get("company_id") != company_id]
         db.write(remaining)
 
     tables_to_wipe = ["drivers", "vehicles", "warehouses", "shipments", "alerts", "ledger", "messages", "strategy_plans"]
@@ -823,7 +823,7 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     
     # Get actual ledger transactions
     all_txs = ledger_db.get_all()
-    comp_txs = [t for t in all_txs if t.get("company_id") == company_id]
+    comp_txs = [t for t in all_txs if t and t.get("company_id") == company_id]
     
     # Calculate Daily Revenue (last 24 hours)
     now = datetime.utcnow()
@@ -835,9 +835,9 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     
     # Get unpaid invoices / Digital Escrow in transit from Shipments
     all_ships = shipments_db.get_all()
-    comp_ships = [s for s in all_ships if s.get("company_id") == company_id]
+    company_ships = [s for s in all_ships if s and s.get("company_id") == company_id]
     
-    unpaid_ships = [s for s in comp_ships if s.get("payment_status") == "unpaid"]
+    unpaid_ships = [s for s in company_ships if s and s.get("payment_status") == "unpaid"]
     unpaid_total = sum(float((s.get("finance") or {}).get("suggested_price", 0)) for s in unpaid_ships)
     
     unpaid_invoices = unpaid_total

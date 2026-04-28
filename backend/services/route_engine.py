@@ -34,7 +34,7 @@ def calculate_route_type(pickup: Location, drop: Location) -> str:
 def find_nearest_warehouse(lat: float, lng: float, company_id: str) -> dict:
     warehouses_db = JSONDatabase("warehouses")
     all_wh = warehouses_db.get_all()
-    company_wh = [w for w in all_wh if w.get("company_id") == company_id]
+    company_wh = [w for w in all_wh if w and w.get("company_id") == company_id]
     
     if not company_wh:
         return None

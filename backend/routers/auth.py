@@ -26,13 +26,13 @@ class OTPVerify(BaseModel):
 
 @router.get("/check-email")
 async def check_email(email: str):
-    existing = [c for c in companies_db.get_all() if c.get("email") == email]
+    existing = [c for c in companies_db.get_all() if c and c.get("email") == email]
     return {"exists": len(existing) > 0}
 
 @router.post("/company/request-otp")
 def request_otp(data: OTPRequest):
     # Check if company already exists
-    existing = [c for c in companies_db.get_all() if c.get("email") == data.email]
+    existing = [c for c in companies_db.get_all() if c and c.get("email") == data.email]
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This email is already registered. Please login instead.")
 
@@ -59,7 +59,7 @@ def verify_signup(data: OTPVerify):
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
     
     # Check if company already exists
-    existing = [c for c in companies_db.get_all() if c["email"] == data.company_data.email]
+    existing = [c for c in companies_db.get_all() if c and c.get("email") == data.company_data.email]
     if existing:
         raise HTTPException(status_code=400, detail="Company email already registered")
 
@@ -74,7 +74,7 @@ def verify_signup(data: OTPVerify):
 def company_login(data: CompanyLogin):
     companies = companies_db.get_all()
     for c in companies:
-        if c["email"] == data.email and c["password"] == data.password:
+        if c and c.get("email") == data.email and c.get("password") == data.password:
             return {"message": "Login successful", "company_id": c["id"], "name": c["name"]}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -87,9 +87,9 @@ def driver_login(data: DriverLogin):
         
     # 2. Check Driver credentials under that company
     drivers = drivers_db.get_all()
-    company_drivers = [d for d in drivers if d.get("company_id") == data.company_id]
+    company_drivers = [d for d in drivers if d and d.get("company_id") == data.company_id]
     
-    driver = next((d for d in company_drivers if d.get("login_id") == data.login_id and d.get("password") == data.password), None)
+    driver = next((d for d in company_drivers if d and d.get("login_id") == data.login_id and d.get("password") == data.password), None)
     if not driver:
         raise HTTPException(status_code=401, detail="Invalid Driver ID or Password for this company")
         
@@ -117,7 +117,7 @@ def customer_request_otp(data: CustomerOTPRequest):
         raise HTTPException(status_code=400, detail="Email address is required")
     
     all_shipments = shipments_db.get_all()
-    matched = [s for s in all_shipments if s.get("receiver_email") == email]
+    matched = [s for s in all_shipments if s and s.get("receiver_email") == email]
     if not matched:
         # Fallback to phone search for legacy shipments if needed, 
         # but user wants email-only for now.
@@ -147,7 +147,7 @@ def customer_verify_otp(data: CustomerOTPVerify):
     
     del customer_otp_store[email]
     all_shipments = shipments_db.get_all()
-    orders = [s for s in all_shipments if s.get("receiver_email") == email]
+    orders = [s for s in all_shipments if s and s.get("receiver_email") == email]
     orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)
     
     slim = []
@@ -175,6 +175,6 @@ def get_customer_shipments(x_logistix_context: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail="Invalid or expired session")
         
     all_shipments = shipments_db.get_all()
-    orders = [s for s in all_shipments if s.get("receiver_email") == email]
+    orders = [s for s in all_shipments if s and s.get("receiver_email") == email]
     orders.sort(key=lambda s: s.get("created_at", ""), reverse=True)
     return orders

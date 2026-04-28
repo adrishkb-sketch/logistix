@@ -223,7 +223,7 @@ def create_shipment(shipment_data: ShipmentCreate):
         vehicles_db = JSONDatabase("vehicles")
         warehouses_db = JSONDatabase("warehouses")
         
-        available_drivers = [d for d in drivers_db.get_all() if d.get("company_id") == shipment_data.company_id and d.get("status") == "available" and d.get("assigned_vehicle_id")]
+        available_drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == shipment_data.company_id and d.get("status") == "available" and d.get("assigned_vehicle_id")]
         
         if not available_drivers:
             raise HTTPException(
@@ -306,7 +306,7 @@ def create_shipment(shipment_data: ShipmentCreate):
 def get_shipments(company_id: str):
     from backend.services.cold_chain import calculate_shipment_vitality
     all_ships = shipments_db.get_all()
-    company_ships = [s for s in all_ships if s.get("company_id") == company_id]
+    company_ships = [s for s in all_ships if s and s.get("company_id") == company_id]
     
     # Recalculate vitality and check compliance/street intel
     from backend.services.alert_engine import check_compliance_alerts, check_street_intel_alerts, check_heatwave_safety
@@ -332,13 +332,12 @@ def get_shipments(company_id: str):
     return company_ships
 
 @router.get("/{shipment_id}")
-def get_shipment(shipment_id: str):
     all_ships = shipments_db.get_all()
-    shipment = next((s for s in all_ships if s["id"] == shipment_id), None)
+    shipment = next((s for s in all_ships if s and s.get("id") == shipment_id), None)
     
     if not shipment:
         # Try prefix matching for short IDs
-        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+        shipment = next((s for s in all_ships if s and s.get("id", "").startswith(shipment_id)), None)
         
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
@@ -769,7 +768,7 @@ def manual_assign(shipment_id: str, data: ManualAssignRequest):
 @router.post("/bulk-assign")
 def bulk_assign(company_id: str):
     # Only consider shipments that aren't yet picked up or delivered
-    pending = [s for s in shipments_db.get_all() if s.get("status") == "pending" and s.get("company_id") == company_id]
+    pending = [s for s in shipments_db.get_all() if s and s.get("status") == "pending" and s.get("company_id") == company_id]
     assigned_count = 0
     failed_count = 0
     
