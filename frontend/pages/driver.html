@@ -84,8 +84,11 @@
         </div>
 
         <!-- Secondary Controls (Optional/Collapsible) -->
-        <div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px;">
-            <button id="voice-trigger" class="glass-card" onclick="window.logistixVoice.toggle()" style="padding:8px 12px; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text); white-space:nowrap;" data-i18n="btn_voice_control">🎙️ Automated Control</button>
+        <div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+                <button id="voice-trigger" class="glass-card" onclick="window.logistixVoice.toggle()" style="padding:8px 12px; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text); white-space:nowrap;" data-i18n="btn_voice_control">🎙️ Automated Control</button>
+                <button onclick="window.logistixVoice.showInstructions()" title="Voice Help" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; font-size:0.7rem;">?</button>
+            </div>
             <button id="modify-dash-btn" class="btn-primary btn-outline" style="padding:8px 12px; font-size:0.75rem; white-space:nowrap;" onclick="window.logistixLayout.toggleEditMode()" data-i18n="modify_dashboard">📐 Modify Dashboard</button>
         </div>
 
@@ -153,29 +156,6 @@
                     </div>
                 </div>
 
-                <div id="simulation-ctrl" class="glass-card" style="display:none; padding:12px; border:1px solid var(--primary); background:rgba(59, 130, 246, 0.1); margin-bottom:15px; border-radius:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:0.8rem; color:var(--primary); font-weight:800;">🛰️ SIMULATION SANDBOX ACTIVE</span>
-                        <button id="sim-halt-btn" class="btn-primary" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--danger);" onclick="toggleSimHalt()" data-i18n="btn_emergency_halt">Emergency Halt 🛑</button>
-                    </div>
-                </div>
-
-
-                <div id="contracts-tab" style="display:none;">
-                    <div class="glass-card" style="padding:24px; border-top:4px solid var(--accent); margin-bottom:20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="margin:0;">📜 Active Smart Contracts</h3>
-                            <div style="text-align:right;">
-                                <small style="color:var(--text-muted)">Unclaimed Rewards</small>
-                                <div id="contract-points-total" style="font-size:1.5rem; font-weight:800; color:var(--accent);">0 pts</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="contracts-list" style="display:flex; flex-direction:column; gap:15px;">
-                        <!-- Injected via JS -->
-                    </div>
-                </div>
-
                 <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);">
                     <h4 style="margin:0 0 15px 0; color:var(--warning);" data-i18n="request_funds_title">Request Emergency Funds ⛽🍔</h4>
                     <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px;">Requests are sent to the manager for instant approval.</p>
@@ -204,6 +184,21 @@
                         <!-- Injected via JS -->
                         <p style="text-align:center; color:var(--text-muted); font-size:0.8rem;"><span data-i18n="fetching_ledger">Fetching ledger...</span></p>
                     </div>
+                </div>
+            </div>
+
+            <div id="contracts-tab" style="display:none;">
+                <div class="glass-card" style="padding:24px; border-top:4px solid var(--accent); margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;" data-i18n="active_smart_contracts">📜 Active Smart Contracts</h3>
+                        <div style="text-align:right;">
+                            <small style="color:var(--text-muted)" data-i18n="unclaimed_rewards">Unclaimed Rewards</small>
+                            <div id="contract-points-total" style="font-size:1.5rem; font-weight:800; color:var(--accent);">0 pts</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="contracts-list" style="display:flex; flex-direction:column; gap:15px;">
+                    <!-- Injected via JS -->
                 </div>
             </div>
 
@@ -451,20 +446,50 @@
     </div>
 
 
-    <!-- Verification Modal (QR + Photo) -->
-    <div id="verify-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:350px; text-align:center; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
-        <h3 style="margin-top:0;" data-i18n="shipment_verification_title">🛡️ Shipment Verification</h3>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="shipment_verification_desc">Scan package QR code to verify.</p>
-        
-        <div id="qr-reader" style="width:100%; border-radius:8px; overflow:hidden; border:1px solid var(--primary); margin-bottom:15px;"></div>
-        
-        <div id="qr-success-msg" style="display:none; color:var(--success); font-weight:bold; margin-bottom:15px;" data-i18n="qr_matched">✅ QR Code Matched!</div>
-        
-        <div style="margin-top:20px;">
-            <button class="btn-primary" id="btn-submit-verify" style="display:none;"></button>
-            <button class="btn-primary" style="width:100%; background:transparent; border:1px solid white;" onclick="closeVerifyModal()">Cancel</button>
+    <!-- Automated Control Guide Modal -->
+    <div id="voice-help-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10010; width:90%; max-width:450px; padding:24px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); border:1px solid var(--primary);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; color:var(--primary);" data-i18n="voice_help_title">Voice Command Guide</h3>
+            <button style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('voice-help-modal').style.display='none'">✖</button>
         </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="voice_help_desc">Use these hands-free commands to control your dashboard while driving.</p>
+        
+        <div style="max-height:60vh; overflow-y:auto; padding-right:10px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead style="border-bottom:1px solid var(--border);">
+                    <tr style="text-align:left;">
+                        <th style="padding:10px;" data-i18n="voice_command_header">Command</th>
+                        <th style="padding:10px;" data-i18n="voice_action_header">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent);">"Go to Active"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_map">View live route</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent);">"Go to Wallet"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_wallet">Check earnings</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent);">"Report Incident"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_report">Alert breakdown</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent);">"Switch Language"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_lang">Cycle languages</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent);">"Emergency Halt"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_stop_sim">Stop simulation movement</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <button class="btn-primary" style="margin-top:20px; width:100%;" onclick="document.getElementById('voice-help-modal').style.display='none'" data-i18n="btn_close">Close Guide</button>
     </div>
+
+    <!-- Verification Modal (QR + Photo) -->
 
     <!-- Health Vitals Modal -->
     <div id="health-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
