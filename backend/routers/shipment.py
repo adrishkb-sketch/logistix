@@ -703,25 +703,21 @@ def auto_assign(shipment_id: str):
         print(f"AUTO_ASSIGN_ERROR: {err_msg}")
         raise HTTPException(status_code=500, detail=f"Critical Assignment Error:\n{err_msg}")
 
-from backend.models import ManualAssignRequest
-
-@router.post("/{shipment_id}/assign")
-def manual_assign(shipment_id: str, data: ManualAssignRequest):
-    driver_id = data.driver_id
-    vehicle_id = data.vehicle_id
+def _perform_assignment(shipment_id: str, driver_id: Optional[str], vehicle_id: str):
+    from backend.database import JSONDatabase
+    from backend.models import ShipmentEvent
+    
+    shipments_db = JSONDatabase("shipments")
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
-        raise HTTPException(status_code=404, detail="Shipment not found")
-    
-    from backend.database import JSONDatabase
-    d = JSONDatabase("drivers").get_by_id(driver_id)
+        return None
+        
+    d = JSONDatabase("drivers").get_by_id(driver_id) if driver_id else None
     v = JSONDatabase("vehicles").get_by_id(vehicle_id)
     driver_name = d.get("name", "Unknown") if d else "Unknown"
     plate = v.get("number_plate", "Unknown") if v else "Unknown"
     
-    from backend.models import ShipmentEvent
     if not driver_id:
-        # Autonomous/Drone logic
         log_event = ShipmentEvent(
             status="in_transit", 
             message=f"🛰️ Autonomous Dispatch: Assigned to Drone {plate}.",
@@ -729,7 +725,6 @@ def manual_assign(shipment_id: str, data: ManualAssignRequest):
         )
         stage = "Drone Air Delivery"
         status = "in_transit"
-        # Decrement drone count if it's a drone
         if v and "drone" in v.get("type", "").lower():
             wh_id = shipment.get("pickup_warehouse_id")
             if wh_id:
@@ -743,8 +738,11 @@ def manual_assign(shipment_id: str, data: ManualAssignRequest):
         )
         stage = "Assigned to Driver"
         status = "assigned"
+        # Update Driver/Vehicle status
+        JSONDatabase("drivers").update(driver_id, {"status": "on_duty"})
+        JSONDatabase("vehicles").update(vehicle_id, {"status": "on_duty"})
 
-    logs = shipment.get("logs", []) + [log_event.model_dump()]
+    logs = (shipment.get("logs") or []) + [log_event.model_dump()]
     
     updated = shipments_db.update(shipment_id, {
         "assigned_driver_id": driver_id,
@@ -753,10 +751,19 @@ def manual_assign(shipment_id: str, data: ManualAssignRequest):
         "stage": stage,
         "logs": logs
     })
+    
     try:
         from backend.services.assignment import reoptimize_driver_route
         reoptimize_driver_route(driver_id)
     except: pass
+    
+    return updated
+
+@router.post("/{shipment_id}/assign")
+def manual_assign(shipment_id: str, data: ManualAssignRequest):
+    updated = _perform_assignment(shipment_id, data.driver_id, data.vehicle_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Shipment not found")
     return {"message": "Assigned manually", "shipment": updated}
 
 @router.post("/bulk-assign")
@@ -903,12 +910,15 @@ def manual_split(shipment_id: str, req: ManualSplitRequest):
                     d_id = getattr(assign_data, 'driver_id', None)
                     v_id = getattr(assign_data, 'vehicle_id', None)
                 
-                from backend.models import ManualAssignRequest
-                manual_assign(leg_id, ManualAssignRequest(driver_id=d_id, vehicle_id=v_id))
+                _perform_assignment(leg_id, d_id, v_id)
             else:
                 # Fallback to auto-assign for this leg
                 try:
-                    auto_assign(leg_id)
+                    from backend.services.assignment import auto_assign_shipment
+                    leg = shipments_db.get_by_id(leg_id)
+                    assigned_data = auto_assign_shipment(leg)
+                    if assigned_data:
+                        shipments_db.update(leg_id, assigned_data)
                 except: pass
     
     return {"message": f"Manually split into {len(legs)} legs with planned assignments."}
