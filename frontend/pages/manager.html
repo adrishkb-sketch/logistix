@@ -1583,22 +1583,34 @@
     </div>
 
     <!-- Split Modal -->
-    <div id="split-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:450px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 25px;">
-        <h3 style="margin-top:0;">Manual Route Split</h3>
-        <p style="font-size:0.85rem; margin-bottom:15px; color:var(--text-muted);">Select intermediate warehouses to route this shipment through:</p>
+    <div id="split-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:550px; max-width:95vw; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 25px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0;" id="split-modal-title">Manual Route Split</h3>
+            <button style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;" onclick="document.getElementById('split-modal').style.display='none'">✖</button>
+        </div>
         
-        <div class="input-group" style="margin-bottom:15px;">
-            <input type="text" id="split-wh-search" placeholder="🔍 Search warehouses..." 
-                style="width:100%; padding:10px 15px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text);"
-                onkeyup="filterSplitWarehouses()">
+        <div id="split-step-1">
+            <p style="font-size:0.85rem; margin-bottom:15px; color:var(--text-muted);">Select intermediate warehouses to route this shipment through:</p>
+            <div class="input-group" style="margin-bottom:15px;">
+                <input type="text" id="split-wh-search" placeholder="🔍 Search warehouses..." 
+                    style="width:100%; padding:10px 15px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text);"
+                    onkeyup="filterSplitWarehouses()">
+            </div>
+            <div id="split-wh-container" style="margin-bottom:20px; max-height:250px; overflow-y:auto; padding-right:5px;">
+                <!-- Checkboxes injected via JS -->
+            </div>
+            <button class="btn-primary" onclick="goToSplitStep2()" style="width:100%;">NEXT: PLAN LEGS</button>
         </div>
 
-        <div id="split-wh-container" style="margin-bottom:20px; max-height:250px; overflow-y:auto; padding-right:5px;">
-            <!-- Checkboxes injected via JS -->
-        </div>
-        <div class="input-group">
-            <button class="btn-primary" onclick="submitManualSplit()">Create Legs</button>
-            <button type="button" class="btn-primary" style="background:var(--danger); margin-top:10px;" onclick="document.getElementById('split-modal').style.display='none'">Cancel</button>
+        <div id="split-step-2" style="display:none;">
+            <p style="font-size:0.85rem; margin-bottom:15px; color:var(--text-muted);">Assign drivers/vehicles for each planned segment:</p>
+            <div id="split-legs-preview" style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px; max-height:350px; overflow-y:auto;">
+                <!-- Leg rows injected via JS -->
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-primary" style="background:rgba(255,255,255,0.1); border:1px solid white;" onclick="goToSplitStep1()">BACK</button>
+                <button class="btn-primary" onclick="submitManualSplit()" style="flex:2;">FINALIZE & CREATE LEGS</button>
+            </div>
         </div>
     </div>
 

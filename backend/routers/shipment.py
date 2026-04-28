@@ -610,14 +610,14 @@ def auto_assign(shipment_id: str):
             from backend.services.route_engine import decompose_shipment
             legs_data = decompose_shipment(shipment)
             if len(legs_data) > 1:
-                split_res = _generate_legs(shipment, legs_data)
+                new_leg_ids = _generate_legs(shipment, legs_data)
                 
                 # AUTO-ASSIGN ALL LEGS IMMEDIATELY
-                all_new_legs = [s for s in shipments_db.get_all() if s.get("parent_id") == shipment_id and s.get("is_leg")]
                 assigned_count = 0
                 from backend.services.assignment import auto_assign_shipment
-                for leg in all_new_legs:
+                for leg_id in new_leg_ids:
                     try:
+                        leg = shipments_db.get_by_id(leg_id)
                         assigned_data = auto_assign_shipment(leg)
                         if assigned_data:
                             # Add logs to leg
@@ -846,8 +846,14 @@ def consolidate_shipments(company_id: str):
                     
     return {"message": f"Consolidated {consolidated_count} shipments into shared vehicles."}
 
+class LegAssignment(BaseModel):
+    driver_id: Optional[str] = None
+    vehicle_id: str
+
 class ManualSplitRequest(BaseModel):
     warehouse_ids: List[str]
+    assignments: Optional[List[LegAssignment]] = None
+    company_id: str
 
 @router.post("/{shipment_id}/split/manual")
 def manual_split(shipment_id: str, req: ManualSplitRequest):
@@ -866,14 +872,37 @@ def manual_split(shipment_id: str, req: ManualSplitRequest):
     
     # Create segments between warehouses
     for w in selected_whs:
-        legs.append({"pickup": current_loc, "drop": {"lat": w["lat"], "lng": w["lng"], "address": w["name"]}})
+        legs.append({
+            "pickup": current_loc, 
+            "drop": {"lat": w["lat"], "lng": w["lng"], "address": w["name"]},
+            "pickup_warehouse_id": legs[-1]["drop_warehouse_id"] if legs else None,
+            "drop_warehouse_id": w["id"]
+        })
         current_loc = {"lat": w["lat"], "lng": w["lng"], "address": w["name"]}
         
     # Final leg to dropoff
-    legs.append({"pickup": current_loc, "drop": shipment["drop"]})
+    legs.append({
+        "pickup": current_loc, 
+        "drop": shipment["drop"],
+        "pickup_warehouse_id": legs[-1]["drop_warehouse_id"] if legs else None,
+        "drop_warehouse_id": None
+    })
     
-    _generate_legs(shipment, legs)
-    return {"message": f"Manually split into {len(legs)} legs"}
+    new_leg_ids = _generate_legs(shipment, legs)
+    
+    # Apply Assignments if provided
+    if req.assignments and len(req.assignments) == len(new_leg_ids):
+        for i, leg_id in enumerate(new_leg_ids):
+            assign_data = req.assignments[i]
+            if assign_data:
+                manual_assign(leg_id, LegAssignment(driver_id=assign_data.driver_id, vehicle_id=assign_data.vehicle_id))
+            else:
+                # Fallback to auto-assign for this leg if not manually specified
+                try:
+                    auto_assign(leg_id)
+                except: pass
+    
+    return {"message": f"Manually split into {len(legs)} legs with planned assignments."}
 
 def auto_split(shipment_id: str):
     """
@@ -889,13 +918,12 @@ def auto_split(shipment_id: str):
     if not legs_data:
         raise HTTPException(status_code=400, detail="No warehouses available for splitting or route too short.")
     
-    _generate_legs(shipment, legs_data)
+    new_leg_ids = _generate_legs(shipment, legs_data)
     
     # AUTO-ASSIGN ALL LEGS IMMEDIATELY
-    all_new_legs = [s for s in shipments_db.get_all() if s.get("parent_id") == shipment_id and s.get("is_leg")]
-    for leg in all_new_legs:
+    for leg_id in new_leg_ids:
         try:
-            auto_assign(leg["id"])
+            auto_assign(leg_id)
         except: pass
         
     return {"message": f"Successfully planned optimized {len(legs_data)}-leg journey via Hub Network and auto-assigned fleet."}
@@ -914,6 +942,7 @@ def _generate_legs(parent_shipment, leg_data):
     shipments_db.update(parent_shipment["id"], parent_shipment)
     
     current_time = datetime.utcnow()
+    new_ids = []
     
     for i, leg in enumerate(leg_data):
         dist = haversine(leg["pickup"]["lat"], leg["pickup"]["lng"], leg["drop"]["lat"], leg["drop"]["lng"])
@@ -943,7 +972,9 @@ def _generate_legs(parent_shipment, leg_data):
         v_pref = "truck" if is_middle_mile else "scooty"
         finance = estimate_delivery_cost(leg, v_pref)
 
+        l_id = str(uuid.uuid4())
         leg_shipment = Shipment(
+            id=l_id,
             company_id=parent_shipment.get("company_id"),
             pickup=Location(**leg["pickup"]),
             drop=Location(**leg["drop"]),
@@ -967,8 +998,9 @@ def _generate_legs(parent_shipment, leg_data):
         )
         
         shipments_db.insert(leg_shipment.model_dump())
+        new_ids.append(l_id)
     
-    return {"status": "ok", "legs_count": len(leg_data)}
+    return new_ids
 
 @router.delete("/{shipment_id}")
 def delete_shipment(shipment_id: str):
@@ -1074,3 +1106,76 @@ def rate_shipment(shipment_id: str, data: dict):
             })
             
     return {"message": f"Rating of {rating} applied to {len(driver_ids)} participants."}
+@router.get("/assets/eligible/{shipment_id}")
+def get_eligible_assets(shipment_id: str, company_id: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        # Try prefix matching
+        shipment = next((s for s in shipments_db.get_all() if s["id"].startswith(shipment_id)), None)
+    
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    drivers = [d for d in JSONDatabase("drivers").get_all() if d.get("company_id") == company_id and d.get("status") == "available"]
+    vehicles = [v for v in JSONDatabase("vehicles").get_all() if v.get("company_id") == company_id and v.get("status") == "available"]
+    warehouses = JSONDatabase("warehouses").get_all()
+    
+    p_wh_id = shipment.get("pickup_warehouse_id")
+    d_wh_id = shipment.get("drop_warehouse_id")
+    
+    # If not a leg, try to find nearest warehouse to pickup
+    if not p_wh_id:
+        from backend.services.route_engine import haversine
+        nearest = None
+        min_dist = float('inf')
+        for w in warehouses:
+            dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], w["lat"], w["lng"])
+            if dist < min_dist:
+                min_dist = dist
+                nearest = w["id"]
+        p_wh_id = nearest
+
+    eligible = {
+        "local": [],
+        "returning": [],
+        "drones": [],
+        "others": []
+    }
+    
+    for d in drivers:
+        v_id = d.get("assigned_vehicle_id")
+        if not v_id: continue
+        v = next((veh for veh in vehicles if veh["id"] == v_id), None)
+        if not v: continue
+        
+        asset = {
+            "driver_id": d["id"],
+            "driver_name": d["name"],
+            "vehicle_id": v["id"],
+            "vehicle_plate": v["number_plate"],
+            "vehicle_type": v["type"],
+            "base_warehouse_id": v.get("base_warehouse_id")
+        }
+        
+        if v.get("base_warehouse_id") == p_wh_id:
+            eligible["local"].append(asset)
+        elif d_wh_id and v.get("base_warehouse_id") == d_wh_id:
+            eligible["returning"].append(asset)
+        else:
+            eligible["others"].append(asset)
+            
+    # Check for Drones at pickup warehouse
+    if p_wh_id:
+        wh = next((w for w in warehouses if w["id"] == p_wh_id), None)
+        if wh and wh.get("drone_count", 0) > 0:
+            drone_vehicles = [v for v in vehicles if "drone" in v["type"].lower() and v.get("base_warehouse_id") == p_wh_id]
+            for dv in drone_vehicles:
+                eligible["drones"].append({
+                    "driver_id": None,
+                    "driver_name": "Autonomous System",
+                    "vehicle_id": dv["id"],
+                    "vehicle_plate": dv["number_plate"],
+                    "vehicle_type": dv["type"]
+                })
+                
+    return eligible

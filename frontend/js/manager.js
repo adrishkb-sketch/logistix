@@ -1389,55 +1389,58 @@ let currentAssignId = null;
 async function openManualAssignModal(id) {
     currentAssignId = id;
     const select = document.getElementById('manual-assign-select');
-    select.innerHTML = '<option value="">Loading fleet...</option>';
+    select.innerHTML = '<option value="">Loading eligible fleet...</option>';
     document.getElementById('manual-assign-modal').style.display = 'block';
 
     try {
-        const shipment = await apiCall(`/shipments/${id}`, 'GET');
-        const [drivers, vehicles, warehouses] = await Promise.all([
-            apiCall('/manager/drivers?company_id=' + localStorage.getItem('manager_id')),
-            apiCall('/manager/vehicles?company_id=' + localStorage.getItem('manager_id')),
-            apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'))
+        const companyId = localStorage.getItem('manager_id');
+        const [shipment, eligible, warehouses] = await Promise.all([
+            apiCall(`/shipments/${id}`, 'GET'),
+            apiCall(`/shipments/assets/eligible/${id}?company_id=${companyId}`, 'GET'),
+            apiCall(`/manager/warehouses?company_id=${companyId}`, 'GET')
         ]);
         
-        select.innerHTML = '<option value="">Select Driver & Vehicle</option>';
+        select.innerHTML = '<option value="">Select Asset</option>';
         
-        // 1. Regular Driver + Vehicle pairs
-        const pairs = drivers.filter(d => d.assigned_vehicle_id);
-        pairs.forEach(d => {
-            const v = vehicles.find(v => v.id === d.assigned_vehicle_id);
-            if (v) {
-                const opt = document.createElement('option');
-                opt.value = JSON.stringify({ driver_id: d.id, vehicle_id: v.id });
-                opt.textContent = `👤 ${d.name} (${v.type} - ${v.number_plate})`;
-                select.appendChild(opt);
-            }
-        });
+        const pWh = warehouses.find(w => w.id === shipment.pickup_warehouse_id) || {name: "Current Hub"};
+        const dWh = warehouses.find(w => w.id === shipment.drop_warehouse_id) || {name: "Destination Hub"};
 
-        // 2. Autonomous Drones (Last Mile only)
-        if (shipment.leg_type === 'last_mile' || !shipment.is_leg) {
-            const wh = warehouses.find(w => w.id === shipment.pickup_warehouse_id);
-            const drones = vehicles.filter(v => v.type.toLowerCase().includes('drone') && v.status === 'available');
-            
-            if (drones.length > 0) {
-                drones.forEach(v => {
-                    // Check if drone is at the right warehouse or if we just want to show all available
-                    const opt = document.createElement('option');
-                    opt.value = JSON.stringify({ driver_id: null, vehicle_id: v.id });
-                    opt.textContent = `🛰️ Autonomous Drone (${v.number_plate})`;
-                    opt.style.color = 'var(--accent)';
-                    select.appendChild(opt);
-                });
-            }
-        }
+        const renderGroup = (label, assets, icon) => {
+            if (assets.length === 0) return '';
+            const group = document.createElement('optgroup');
+            group.label = label;
+            assets.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
+                opt.textContent = `${icon} ${a.driver_name} (${a.vehicle_type} - ${a.vehicle_plate})`;
+                group.appendChild(opt);
+            });
+            return group;
+        };
+
+        // 1. Local Assets
+        const localGroup = renderGroup(`📍 Local at ${pWh.name}`, eligible.local, '👤');
+        if (localGroup) select.appendChild(localGroup);
+
+        // 2. Returning Assets (Backhaul)
+        const returningGroup = renderGroup(`🔄 Returning to ${dWh.name} (Backhaul)`, eligible.returning, '🚛');
+        if (returningGroup) select.appendChild(returningGroup);
+
+        // 3. Drones
+        const droneGroup = renderGroup(`🛰️ Drone Air Fleet (at ${pWh.name})`, eligible.drones, '🚁');
+        if (droneGroup) select.appendChild(droneGroup);
+
+        // 4. Other available assets
+        const otherGroup = renderGroup(`🌐 Other Available Fleet`, eligible.others, '👤');
+        if (otherGroup) select.appendChild(otherGroup);
         
         if (select.options.length <= 1) {
-            select.innerHTML = '<option value="">No assets available for this segment</option>';
+            select.innerHTML = '<option value="">No eligible assets found in network</option>';
         }
 
     } catch(e) {
         console.error("Manual Assign Fleet Load Error:", e);
-        select.innerHTML = '<option value="">Error loading fleet assets</option>';
+        select.innerHTML = '<option value="">Error loading network intel</option>';
     }
 }
 
@@ -1460,6 +1463,7 @@ async function submitManualAssign() {
 
 async function openManualSplit(id) {
     currentSplitId = id;
+    goToSplitStep1();
     try {
         const warehouses = await apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`);
         const container = document.getElementById('split-wh-container');
@@ -1481,11 +1485,10 @@ async function openManualSplit(id) {
             item.style.cursor = 'pointer';
             
             item.innerHTML = `
-                <input type="checkbox" value="${w.id}" class="wh-checkbox" id="wh-split-${w.id}" style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
+                <input type="checkbox" value="${w.id}" data-wh-name="${w.name}" class="wh-checkbox" id="wh-split-${w.id}" style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
                 <label for="wh-split-${w.id}" style="flex:1; cursor:pointer; font-weight:600; font-size:0.9rem; color:var(--text);">${w.name}</label>
             `;
             
-            // Toggle checkbox when clicking the row
             item.addEventListener('click', (e) => {
                 if (e.target.tagName !== 'INPUT') {
                     const cb = item.querySelector('input');
@@ -1497,6 +1500,99 @@ async function openManualSplit(id) {
         });
         document.getElementById('split-modal').style.display = 'block';
     } catch(e) {}
+}
+
+function goToSplitStep1() {
+    document.getElementById('split-step-1').style.display = 'block';
+    document.getElementById('split-step-2').style.display = 'none';
+    document.getElementById('split-modal-title').innerText = "Manual Route Split";
+}
+
+async function goToSplitStep2() {
+    const checkboxes = document.querySelectorAll('.wh-checkbox:checked');
+    if (checkboxes.length === 0) return alert("Please select at least one hub.");
+
+    document.getElementById('split-step-1').style.display = 'none';
+    document.getElementById('split-step-2').style.display = 'block';
+    document.getElementById('split-modal-title').innerText = "Plan Journey Legs";
+    
+    const container = document.getElementById('split-legs-preview');
+    container.innerHTML = '<p style="text-align:center;">Analyzing leg availability...</p>';
+
+    try {
+        const whIds = Array.from(checkboxes).map(c => c.value);
+        const whNames = Array.from(checkboxes).map(c => c.getAttribute('data-wh-name'));
+        const companyId = localStorage.getItem('manager_id');
+        
+        const shipment = await apiCall(`/shipments/${currentSplitId}`, 'GET');
+        const warehouses = await apiCall(`/manager/warehouses?company_id=${companyId}`, 'GET');
+        
+        // Generate list of legs for preview
+        const segments = [];
+        let currWh = warehouses.find(w => w.id === shipment.pickup_warehouse_id) || { name: "Pickup Point", id: null };
+        
+        for (let i = 0; i < whIds.length; i++) {
+            const nextWh = warehouses.find(w => w.id === whIds[i]);
+            segments.push({ from: currWh, to: nextWh });
+            currWh = nextWh;
+        }
+        segments.push({ from: currWh, to: { name: "Final Destination", id: null } });
+
+        container.innerHTML = '';
+        for (let i = 0; i < segments.size || segments.length; i++) {
+            const seg = segments[i];
+            const div = document.createElement('div');
+            div.className = 'glass-card';
+            div.style.padding = '12px';
+            div.style.marginBottom = '10px';
+            div.style.borderLeft = '4px solid var(--accent)';
+            
+            div.innerHTML = `
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">LEG ${i+1}: ${seg.from.name} → ${seg.to.name}</div>
+                <select class="polished-glass-input leg-asset-select" data-from-wh="${seg.from.id}" data-to-wh="${seg.to.id}" style="width:100%; font-size:0.8rem; padding:8px;">
+                    <option value="">AI Auto-Assign for this leg</option>
+                </select>
+            `;
+            container.appendChild(div);
+            
+            // Fetch eligible assets for this segment asynchronously
+            const select = div.querySelector('select');
+            apiCall(`/shipments/assets/eligible/${currentSplitId}?company_id=${companyId}&from_wh=${seg.from.id}&to_wh=${seg.to.id}`, 'GET')
+                .then(eligible => {
+                    const localGroup = document.createElement('optgroup');
+                    localGroup.label = "Local Assets";
+                    eligible.local.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
+                        opt.textContent = `👤 ${a.driver_name} (${a.vehicle_plate})`;
+                        localGroup.appendChild(opt);
+                    });
+                    if (eligible.local.length > 0) select.appendChild(localGroup);
+                    
+                    const returningGroup = document.createElement('optgroup');
+                    returningGroup.label = "Returning Assets (Backhaul)";
+                    eligible.returning.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
+                        opt.textContent = `🔄 ${a.driver_name} (${a.vehicle_plate})`;
+                        returningGroup.appendChild(opt);
+                    });
+                    if (eligible.returning.length > 0) select.appendChild(returningGroup);
+
+                    const droneGroup = document.createElement('optgroup');
+                    droneGroup.label = "Drones";
+                    eligible.drones.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({ driver_id: null, vehicle_id: a.vehicle_id });
+                        opt.textContent = `🛰️ Drone (${a.vehicle_plate})`;
+                        droneGroup.appendChild(opt);
+                    });
+                    if (eligible.drones.length > 0) select.appendChild(droneGroup);
+                });
+        }
+    } catch(e) {
+        container.innerHTML = '<p style="color:var(--danger);">Failed to load leg planning intel.</p>';
+    }
 }
 
 function filterSplitWarehouses() {
@@ -1512,17 +1608,24 @@ async function submitManualSplit() {
     const checkboxes = document.querySelectorAll('.wh-checkbox:checked');
     const warehouse_ids = Array.from(checkboxes).map(c => c.value);
     
-    if (warehouse_ids.length === 0) {
-        alert("Please select at least one warehouse.");
-        return;
-    }
-    
+    const assetSelects = document.querySelectorAll('.leg-asset-select');
+    const assignments = Array.from(assetSelects).map(s => {
+        if (!s.value) return null;
+        return JSON.parse(s.value);
+    });
+
     try {
-        const res = await apiCall(`/shipments/${currentSplitId}/split/manual`, 'POST', { warehouse_ids, company_id: localStorage.getItem('manager_id') });
+        const res = await apiCall(`/shipments/${currentSplitId}/split/manual`, 'POST', { 
+            warehouse_ids, 
+            assignments,
+            company_id: localStorage.getItem('manager_id') 
+        });
         alert(res.message);
         document.getElementById('split-modal').style.display = 'none';
         loadShipments();
-    } catch(e) {}
+    } catch(e) {
+        alert("Failed to split shipment. Ensure hubs are selected in logical sequence.");
+    }
 }
 
 async function autoAssign(id) {
