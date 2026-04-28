@@ -1,12 +1,11 @@
 // Driver Dashboard Logic
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? (window.location.port === '8000' ? "/api" : "http://localhost:8000/api")
-    : "/api";
+// API_BASE is globally defined in api.js
 
 const dId = localStorage.getItem('driver_id');
-if (!dId) {
-    console.warn("Driver ID missing. Redirecting to login...");
+if (!dId || dId === "null" || dId === "undefined") {
+    console.warn("Driver ID missing or invalid. Redirecting to login...");
     window.location.href = '../index.html';
+    // Use return or a non-fatal error if possible, but throw is okay for halting script
     throw new Error("AUTH_REQUIRED: Redirecting to login...");
 }
 const nameEl = document.getElementById('driver-name');
