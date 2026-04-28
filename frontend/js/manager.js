@@ -1624,7 +1624,9 @@ async function submitManualSplit() {
         document.getElementById('split-modal').style.display = 'none';
         loadShipments();
     } catch(e) {
-        alert("Failed to split shipment. Ensure hubs are selected in logical sequence.");
+        console.error("Split Error:", e);
+        const msg = (typeof e === 'object') ? JSON.stringify(e) : e;
+        alert("API Error [" + `/shipments/${currentSplitId}/split/manual` + "]: " + msg);
     }
 }
 

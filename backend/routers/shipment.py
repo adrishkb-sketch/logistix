@@ -852,7 +852,7 @@ class LegAssignment(BaseModel):
 
 class ManualSplitRequest(BaseModel):
     warehouse_ids: List[str]
-    assignments: Optional[List[LegAssignment]] = None
+    assignments: Optional[List[Optional[LegAssignment]]] = None
     company_id: str
 
 @router.post("/{shipment_id}/split/manual")
@@ -895,9 +895,18 @@ def manual_split(shipment_id: str, req: ManualSplitRequest):
         for i, leg_id in enumerate(new_leg_ids):
             assign_data = req.assignments[i]
             if assign_data:
-                manual_assign(leg_id, LegAssignment(driver_id=assign_data.driver_id, vehicle_id=assign_data.vehicle_id))
+                # Robust access for both model objects and dictionaries
+                if isinstance(assign_data, dict):
+                    d_id = assign_data.get('driver_id')
+                    v_id = assign_data.get('vehicle_id')
+                else:
+                    d_id = getattr(assign_data, 'driver_id', None)
+                    v_id = getattr(assign_data, 'vehicle_id', None)
+                
+                from backend.models import ManualAssignRequest
+                manual_assign(leg_id, ManualAssignRequest(driver_id=d_id, vehicle_id=v_id))
             else:
-                # Fallback to auto-assign for this leg if not manually specified
+                # Fallback to auto-assign for this leg
                 try:
                     auto_assign(leg_id)
                 except: pass
@@ -931,15 +940,21 @@ def auto_split(shipment_id: str):
 def _generate_legs(parent_shipment, leg_data):
     from backend.models import ShipmentEvent
     
+    # Ensure parent_shipment is a dict for consistency
+    if hasattr(parent_shipment, 'model_dump'):
+        p_dict = parent_shipment.model_dump()
+    else:
+        p_dict = parent_shipment
+
     # Update parent shipment
-    parent_shipment["route_type"] = "multi-leg"
-    parent_shipment["status"] = "split"
-    parent_shipment["stage"] = "Route Optimized"
+    p_dict["route_type"] = "multi-leg"
+    p_dict["status"] = "split"
+    p_dict["stage"] = "Route Optimized"
     
     log_event = ShipmentEvent(status="split", message=f"🔗 Multi-leg journey planned via {len(leg_data)} warehouse hubs.")
-    parent_shipment["logs"] = parent_shipment.get("logs", []) + [log_event.model_dump()]
+    p_dict["logs"] = (p_dict.get("logs") or []) + [log_event.model_dump()]
     
-    shipments_db.update(parent_shipment["id"], parent_shipment)
+    shipments_db.update(p_dict["id"], p_dict)
     
     current_time = datetime.utcnow()
     new_ids = []
@@ -975,26 +990,26 @@ def _generate_legs(parent_shipment, leg_data):
         l_id = str(uuid.uuid4())
         leg_shipment = Shipment(
             id=l_id,
-            company_id=parent_shipment.get("company_id"),
+            company_id=p_dict.get("company_id"),
             pickup=Location(**leg["pickup"]),
             drop=Location(**leg["drop"]),
-            weight=parent_shipment.get("weight", 0),
-            description=f"{parent_shipment.get('description', 'Shipment')} (Leg {i+1})",
-            parent_id=parent_shipment.get("id"),
+            weight=p_dict.get("weight", 0),
+            description=f"{p_dict.get('description', 'Shipment')} (Leg {i+1})",
+            parent_id=p_dict.get("id"),
             is_leg=True,
             leg_order=i+1,
             leg_type=l_type,
             route_type="direct",
             expected_delivery=expected_time.isoformat() + "Z",
-            delivery_otp=parent_shipment.get("delivery_otp"),
-            logs=[leg_log.model_dump()],
-            is_perishable=parent_shipment.get("is_perishable", False),
-            vitality=parent_shipment.get("vitality", 100),
+            delivery_otp=p_dict.get("delivery_otp"),
+            logs=[leg_log],
+            is_perishable=p_dict.get("is_perishable", False),
+            vitality=p_dict.get("vitality", 100),
             pickup_warehouse_id=leg.get("pickup_warehouse_id"),
             drop_warehouse_id=leg.get("drop_warehouse_id"),
             qr_code_data=str(uuid.uuid4()),
             finance=finance,
-            payment_status=parent_shipment.get("payment_status", "unpaid")
+            payment_status=p_dict.get("payment_status", "unpaid")
         )
         
         shipments_db.insert(leg_shipment.model_dump())
