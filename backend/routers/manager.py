@@ -388,8 +388,8 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     
     # 5. Financial Overview (Real data from Ledger)
     comp_txs = [t for t in ledger_db.get_all() if t.get("company_id") == company_id]
-    revenue = sum(t["amount"] for t in comp_txs if t["type"] == "REVENUE")
-    expenses = sum(t["amount"] for t in comp_txs if t["type"] == "EXPENSE")
+    revenue = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "REVENUE")
+    expenses = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "EXPENSE")
     net_profit = revenue - expenses
 
     return {
@@ -830,7 +830,7 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     comp_ships = [s for s in all_ships if s.get("company_id") == company_id]
     
     unpaid_ships = [s for s in comp_ships if s.get("payment_status") == "unpaid"]
-    unpaid_total = sum(s.get("finance", {}).get("suggested_price", 0) for s in unpaid_ships)
+    unpaid_total = sum(float((s.get("finance") or {}).get("suggested_price", 0)) for s in unpaid_ships)
     
     unpaid_invoices = unpaid_total
     
@@ -859,8 +859,8 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         day_end = day_start + timedelta(days=1)
         
         day_rev = sum(
-            t["amount"] for t in comp_txs 
-            if t["type"] == "REVENUE" and day_start <= datetime.fromisoformat(t["timestamp"]) < day_end
+            float(t.get("amount", 0)) for t in comp_txs 
+            if t.get("type") == "REVENUE" and day_start <= datetime.fromisoformat(t.get("timestamp", "")) < day_end
         )
         labels.append(day_date.strftime("%d %b"))
         values.append(round(day_rev, 2))
@@ -950,8 +950,8 @@ def get_p_and_l(company_id: str):
     all_txs = ledger_db.get_all()
     comp_txs = [t for t in all_txs if t.get("company_id") == company_id]
     
-    revenue = sum(t["amount"] for t in comp_txs if t["type"] == "REVENUE")
-    expenses = sum(t["amount"] for t in comp_txs if t["type"] == "EXPENSE")
+    revenue = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "REVENUE")
+    expenses = sum(float(t.get("amount", 0)) for t in comp_txs if t.get("type") == "EXPENSE")
     
     return {
         "total_revenue": round(revenue, 2),
