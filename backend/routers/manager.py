@@ -134,9 +134,6 @@ async def bulk_confirm_drivers(drivers: List[Driver]):
         if d.login_id in existing_logins:
             errors.append(f"Driver '{d.name}' skipped: Login ID '{d.login_id}' already exists.")
             continue
-        if d.contact_number in existing_phones:
-            errors.append(f"Driver '{d.name}' skipped: Phone '{d.contact_number}' already exists.")
-            continue
             
         d_dict = d.model_dump()
         d_dict["driving_score"] = calculate_driver_performance_score(d_dict)
@@ -367,10 +364,8 @@ def get_journey_review(shipment_id: str):
 # Drivers CRUD
 @router.post("/drivers")
 def create_driver(driver: Driver):
-    # Check for duplicate phone or login ID
+    # Check for duplicate login ID
     all_drivers = drivers_db.get_all()
-    if any(d.get("contact_number") == driver.contact_number for d in all_drivers):
-        raise HTTPException(status_code=400, detail="A driver with this contact number is already registered.")
     if any(d.get("login_id") == driver.login_id for d in all_drivers):
         raise HTTPException(status_code=400, detail="This Login ID is already taken.")
 

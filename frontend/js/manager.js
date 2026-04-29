@@ -31,6 +31,9 @@ function showNotification(message, type = 'info') {
 
 let map, fleetMap;
 let markers = [];
+let globalHubs = [];
+let globalDrivers = [];
+let globalVehicles = [];
 let volumeChart, fleetChart;
 let weatherMap;
 let weatherMarkers = [];
@@ -51,7 +54,6 @@ const ICON_DROP = L.divIcon({
 let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count') || '-1');
 let currentActiveSection = 'analytics';
 let selectedDriverChatId = null;
-let globalDrivers = []; // For searching
 let isSimulationMode = false;
 
 async function checkSimulationStatus() {
@@ -353,6 +355,7 @@ async function loadMapData() {
 
     try {
         const warehouses = await apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`);
+        globalHubs = warehouses;
         warehouses.forEach(w => {
             const m = L.marker([w.lat, w.lng], {title: w.name}).addTo(map)
                 .bindPopup(`<b>Warehouse:</b> ${w.name}<br><small>Manager: ${w.manager_name}</small>`);
@@ -1115,42 +1118,635 @@ document.getElementById('create-shipment-form').addEventListener('submit', async
     const dropVal = document.getElementById('drop-loc').value.trim();
     
     if (!pickupVal.includes(',') || !dropVal.includes(',')) {
-        return alert("Please enter coordinates in 'Lat, Lng' format.");
+        return showNotification("Please enter coordinates in 'Lat, Lng' format.", "danger");
     }
 
     const [plat, plng] = pickupVal.split(',').map(n => parseFloat(n.trim()));
     const [dlat, dlng] = dropVal.split(',').map(n => parseFloat(n.trim()));
     
     if (isNaN(plat) || isNaN(plng) || isNaN(dlat) || isNaN(dlng)) {
-        return alert("Invalid coordinates. Please enter numeric values for Lat and Lng.");
+        return showNotification("Invalid coordinates. Numeric Lat/Lng required.", "danger");
+    }
+
+    const phone = document.getElementById('receiver-phone').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        return showNotification("Receiver Phone must be exactly 10 digits.", "danger");
+    }
+
+    const email = document.getElementById('receiver-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return showNotification("Invalid email address format.", "danger");
+    }
+
+    const weight = parseFloat(document.getElementById('weight').value);
+    if (isNaN(weight) || weight <= 0) {
+        return showNotification("Weight must be a positive number.", "danger");
     }
     
     const data = {
         pickup: {lat: plat, lng: plng},
         drop: {lat: dlat, lng: dlng},
-        weight: parseFloat(document.getElementById('weight').value),
+        weight: weight,
         description: document.getElementById('description').value,
         is_perishable: document.getElementById('is-perishable').checked,
         receiver_name: document.getElementById('receiver-name').value,
-        receiver_phone: document.getElementById('receiver-phone').value.length === 10 ? "+91" + document.getElementById('receiver-phone').value : document.getElementById('receiver-phone').value,
-        receiver_email: document.getElementById('receiver-email').value,
-        eway_bill_no: document.getElementById('eway-no').value,
-        eway_bill_expiry: document.getElementById('eway-expiry').value,
-        labels: [] // Ensure labels is present as expected by ShipmentCreate
+        receiver_phone: "+91" + phone,
+        receiver_email: email,
+        eway_bill_no: document.getElementById('eway-no').value || null,
+        eway_bill_expiry: document.getElementById('eway-expiry').value || null,
+        company_id: localStorage.getItem('manager_id'),
+        labels: []
     };
     
     try {
-        data.company_id = localStorage.getItem('manager_id');
-        // Using trailing slash to be explicit and avoid 307 redirects
         await apiCall('/shipments/', 'POST', data);
-        alert('Shipment Created Successfully!');
+        showNotification('Shipment Created Successfully!', 'success');
         document.getElementById('create-shipment-form').reset();
         loadShipments();
     } catch(e) {
         console.error("Creation failed:", e);
-        // Error message is already alerted by apiCall, but we can log it here
     }
 });
+
+// --- SMART BULK ASSISTANT ENGINE (Multi-Entity Support) ---
+let smartQueue = [];
+let currentSmartShipment = {};
+let smartStepIndex = -1;
+let smartType = 'shipment'; // 'shipment', 'driver', or 'vehicle'
+
+const smartConfig = {
+    shipment: [
+        { 
+            field: 'pickup', 
+            label: 'Pickup Coordinates (Lat, Lng)', 
+            prompt: '📍 Where should we <b>Pick up</b> the shipment? (Lat, Lng)',
+            hint: 'Example: 28.7, 77.1',
+            validate: val => /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(val),
+            error: 'Please enter valid coordinates like "28.70, 77.12". No city names allowed!',
+            skipIfCloning: true
+        },
+        { 
+            field: 'drop', 
+            label: 'Drop Coordinates (Lat, Lng)', 
+            prompt: '🏁 And where is the <b>Drop Location</b>? (Lat, Lng)',
+            hint: 'Example: 19.1, 72.8',
+            validate: val => /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(val),
+            error: 'Please enter valid coordinates. City names are not accepted.'
+        },
+        { 
+            field: 'weight', 
+            label: 'Weight (kg)', 
+            prompt: '⚖️ What is the <b>Weight</b> in Kilograms?',
+            hint: 'Numbers only please!',
+            validate: val => !isNaN(parseFloat(val)) && isFinite(val) && parseFloat(val) > 0,
+            error: 'Weight must be a number (e.g. 10.5). Words are not allowed!',
+            skipIfCloning: true
+        },
+        { 
+            field: 'description', 
+            label: 'Description', 
+            prompt: '📝 Give a short <b>Description</b> or label for this shipment.',
+            hint: 'e.g. Electronics, Medical Supplies',
+            validate: val => val.length >= 2,
+            error: 'Please enter a valid description.',
+            skipIfCloning: true
+        },
+        { 
+            field: 'receiver_name', 
+            label: 'Receiver Name', 
+            prompt: '👤 Who is the <b>Recipient</b>?',
+            hint: 'Full name',
+            validate: val => val.length >= 2,
+            error: 'Please enter a valid name.'
+        },
+        { 
+            field: 'receiver_phone', 
+            label: 'Receiver Phone', 
+            prompt: '📱 What is their <b>Contact Number</b>?',
+            hint: '10 digits only',
+            validate: val => /^\d{10}$/.test(val),
+            error: 'Phone number must be exactly 10 digits. No text allowed!'
+        },
+        { 
+            field: 'receiver_email', 
+            label: 'Receiver Email', 
+            prompt: '📧 And their <b>Email Address</b>?',
+            hint: 'example@logistix.com',
+            validate: val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+            error: 'Invalid email format. It must contain @ and a domain.'
+        },
+        { 
+            field: 'eway_no', 
+            label: 'E-Way Bill Number', 
+            prompt: '📄 Please provide the <b>E-Way Bill No.</b>',
+            hint: '12 digit number',
+            validate: val => /^\d{12}$/.test(val),
+            error: 'E-Way Bill must be a 12-digit number.',
+            skipIfCloning: true
+        },
+        { 
+            field: 'eway_expiry', 
+            label: 'E-Way Bill Expiry', 
+            prompt: '📅 What is the <b>Expiry Date</b> of this E-Way Bill?',
+            hint: 'Format: YYYY-MM-DD',
+            validate: val => /^\d{4}-\d{2}-\d{2}$/.test(val),
+            error: 'Please enter date in YYYY-MM-DD format.',
+            skipIfCloning: true
+        },
+        { 
+            field: 'is_perishable', 
+            label: 'Perishable', 
+            prompt: '🍎 Is this a <b>Perishable</b> item? (Cold Chain)',
+            hint: 'Type "Yes" or "No"',
+            validate: val => ['yes', 'no', 'y', 'n'].includes(val.toLowerCase()),
+            error: 'Please type "Yes" or "No".',
+            skipIfCloning: true
+        },
+        {
+            field: 'confirm',
+            label: 'Confirm Details',
+            prompt: '✨ <b>Shipment Review:</b><br>{summary}<br><br>Type <b>"Save"</b> to add to queue or <b>"Reset"</b> to start over.',
+            validate: val => ['save', 'reset'].includes(val.toLowerCase()),
+            error: 'Type "Save" or "Reset".'
+        }
+    ],
+    driver: [
+        {
+            field: 'name',
+            prompt: '👤 What is the <b>Full Name</b> of the driver?',
+            validate: val => val.length >= 3,
+            error: 'Name must be at least 3 characters.'
+        },
+        {
+            field: 'login_id',
+            prompt: '🔑 Choose a <b>Login ID</b> for them.',
+            validate: val => val.length >= 4,
+            error: 'Login ID must be at least 4 characters.'
+        },
+        {
+            field: 'password',
+            prompt: '🔒 Set a <b>Security Password</b>.',
+            validate: val => val.length >= 1,
+            error: 'Password cannot be empty.'
+        },
+        {
+            field: 'license_type',
+            prompt: '🪪 Select their <b>License Category</b>:',
+            options: ['Truck (Heavy)', 'Truck (Small)', 'Delivery Van', 'Bike/Scooty', 'EV-Cargo'],
+            validate: val => true
+        },
+        {
+            field: 'base_hub',
+            prompt: '🏠 Which <b>Warehouse Hub</b> will be their base?',
+            options: 'hubs', // Dynamic fetch
+            validate: val => val !== ""
+        },
+        {
+            field: 'contact_number',
+            prompt: '📱 What is their <b>Contact Number</b>? (10 digits)',
+            validate: val => /^\d{10}$/.test(val),
+            error: 'Enter a valid 10-digit number.'
+        },
+        {
+            field: 'experience_years',
+            prompt: '⏳ How many <b>Years of Experience</b> do they have?',
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0,
+            error: 'Enter a valid number of years.'
+        },
+        {
+            field: 'past_accidents',
+            prompt: '⚠️ Number of <b>Past Accidents</b>?',
+            validate: val => !isNaN(parseInt(val)) && parseInt(val) >= 0,
+            error: 'Enter a valid count.'
+        },
+        {
+            field: 'traffic_violations',
+            prompt: '🚦 Number of <b>Traffic Violations</b> (Challans)?',
+            validate: val => !isNaN(parseInt(val)) && parseInt(val) >= 0,
+            error: 'Enter a valid count.'
+        },
+        {
+            field: 'confirm',
+            prompt: '📋 <b>Driver Summary:</b><br>{summary}<br><br>Type <b>"Save"</b> or <b>"Reset"</b>.',
+            validate: val => ['save', 'reset'].includes(val.toLowerCase())
+        }
+    ],
+    vehicle: [
+        {
+            field: 'type',
+            prompt: '🚛 What is the <b>Vehicle Type</b>?',
+            options: ['Truck (Heavy)', 'Truck (Small)', 'Delivery Van', 'Bike/Scooty', 'EV-Cargo'],
+            validate: val => true
+        },
+        {
+            field: 'number_plate',
+            prompt: '🔢 Enter the <b>Number Plate</b> (MH 12 AB 1234):',
+            validate: val => {
+                const formatted = val.toUpperCase().replace(/\s/g, '');
+                return /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/.test(formatted);
+            },
+            error: 'Invalid plate format. Example: MH 12 AB 1234'
+        },
+        {
+            field: 'capacity',
+            prompt: '⚖️ What is the <b>Load Capacity</b> (kg)?',
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0
+        },
+        {
+            field: 'base_hub',
+            prompt: '🏠 Which <b>Base Hub</b> will this vehicle use?',
+            options: 'hubs',
+            validate: val => val !== ""
+        },
+        {
+            field: 'confirm',
+            prompt: '📋 <b>Vehicle Summary:</b><br>{summary}<br><br>Type <b>"Save"</b> or <b>"Reset"</b>.',
+            validate: val => ['save', 'reset'].includes(val.toLowerCase())
+        }
+    ]
+};
+
+window.openSmartAssistant = function(type = 'shipment') {
+    smartType = type;
+    const modal = document.getElementById('smart-assistant-modal');
+    modal.style.display = 'flex';
+    
+    // Update Title and New Button
+    const title = modal.querySelector('h3');
+    const p = modal.querySelector('p');
+    const newBtn = document.getElementById('smart-new-btn');
+
+    if (type === 'driver') { 
+        title.innerText = 'Smart Driver Assistant'; 
+        p.innerText = 'Guided Driver Onboarding';
+        if (newBtn) newBtn.innerText = '🔄 New Driver';
+        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (mapTrigger) mapTrigger.style.display = 'none';
+    }
+    else if (type === 'vehicle') { 
+        title.innerText = 'Smart Vehicle Assistant'; 
+        p.innerText = 'Fleet Expansion Assistant';
+        if (newBtn) newBtn.innerText = '🔄 New Vehicle';
+        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (mapTrigger) mapTrigger.style.display = 'none';
+    }
+    else { 
+        title.innerText = 'Smart Bulk Assistant'; 
+        p.innerText = 'Interactive Shipment Flow';
+        if (newBtn) newBtn.innerText = '🔄 New Shipment';
+        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (mapTrigger) mapTrigger.style.display = 'block';
+    }
+
+    // Pre-fetch hubs if needed
+    if ((type === 'driver' || type === 'vehicle') && globalHubs.length === 0) {
+        loadMapData();
+    }
+
+    const input = document.getElementById('smart-command-input');
+    if (input && !input.dataset.listener) {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                processSmartCommand();
+            }
+        });
+        input.dataset.listener = "true";
+    }
+
+    if (smartStepIndex === -1 || smartStepIndex === 99) {
+        startNewSmartEntry();
+    }
+};
+
+window.closeSmartAssistant = function() {
+    document.getElementById('smart-assistant-modal').style.display = 'none';
+};
+
+window.startNewSmartEntry = function() {
+    currentSmartShipment = {};
+    smartStepIndex = 0;
+    const area = document.getElementById('smart-chat-area');
+    area.innerHTML = '';
+    const welcomeText = smartType === 'shipment' ? "Let's build a new shipment step-by-step." : 
+                      (smartType === 'driver' ? "Let's onboard a new driver." : "Let's add a new vehicle to the fleet.");
+    addAiMessage(`👋 Welcome! ${welcomeText}`);
+    askNextSmartStep();
+};
+
+function askNextSmartStep() {
+    const steps = smartConfig[smartType];
+    let step = steps[smartStepIndex];
+    
+    // Skip logic for clones (only for shipments)
+    while (step && smartType === 'shipment' && currentSmartShipment.is_clone && step.skipIfCloning) {
+        smartStepIndex++;
+        step = steps[smartStepIndex];
+    }
+
+    if (!step) return;
+
+    let prompt = step.prompt;
+    
+    if (step.field === 'confirm') {
+        const s = currentSmartShipment;
+        let summary = "";
+        if (smartType === 'shipment') {
+            summary = `• From: ${s.pickup}<br>• To: ${s.drop}<br>• Weight: ${s.weight}kg<br>• Desc: ${s.description}<br>• Receiver: ${s.receiver_name}<br>• E-Way: ${s.eway_no} (Exp: ${s.eway_expiry})`;
+        } else if (smartType === 'driver') {
+            summary = `• Name: ${s.name}<br>• ID: ${s.login_id}<br>• Type: ${s.license_type}<br>• Hub: ${s.base_hub}<br>• Exp: ${s.experience_years}y | Acc: ${s.past_accidents} | Viol: ${s.traffic_violations}`;
+        } else if (smartType === 'vehicle') {
+            summary = `• Type: ${s.type}<br>• Plate: ${s.number_plate}<br>• Cap: ${s.capacity}kg<br>• Hub: ${s.base_hub}`;
+        }
+        prompt = prompt.replace('{summary}', summary);
+    }
+    
+    addAiMessage(prompt);
+    
+    // Dropdown Handling
+    const input = document.getElementById('smart-command-input');
+    if (step.options) {
+        const area = document.getElementById('smart-chat-area');
+        const select = document.createElement('select');
+        select.className = 'polished-glass-input';
+        select.style = 'margin-bottom:10px; width:100%; padding: 6px 12px !important; height: 38px !important; font-size: 0.85rem !important; animation: slideUp 0.3s ease;';
+        
+        // Disable input to force dropdown selection
+        if (input) {
+            input.disabled = true;
+            input.placeholder = "Please select from the dropdown above...";
+            input.style.opacity = "0.5";
+        }
+
+        let opts = [];
+        if (step.options === 'hubs') {
+            opts = globalHubs.map(h => h.name);
+        } else {
+            opts = step.options;
+        }
+
+        select.innerHTML = `<option value="">Select an option...</option>` + opts.map(o => `<option value="${o}">${o}</option>`).join('');
+        select.onchange = (e) => {
+            if (e.target.value) {
+                // Re-enable input
+                if (input) {
+                    input.disabled = false;
+                    input.placeholder = "Type response...";
+                    input.style.opacity = "1";
+                    input.value = e.target.value;
+                }
+                processSmartCommand();
+                select.remove();
+            }
+        };
+        area.appendChild(select);
+        area.scrollTop = area.scrollHeight;
+    } else {
+        // Ensure input is enabled if no options
+        if (input) {
+            input.disabled = false;
+            input.placeholder = "Type response...";
+            input.style.opacity = "1";
+        }
+    }
+
+    if (step.hint) {
+        const area = document.getElementById('smart-chat-area');
+        const hint = document.createElement('small');
+        hint.style = 'color:var(--muted); margin-top:-10px; margin-bottom:10px; display:block;';
+        hint.innerText = `💡 ${step.hint}`;
+        area.appendChild(hint);
+    }
+    if (input && !input.disabled) input.focus();
+}
+
+window.processSmartCommand = function() {
+    const input = document.getElementById('smart-command-input');
+    let text = input.value.trim();
+    if (!text) return;
+
+    addUserMessage(text);
+    input.value = '';
+
+    const steps = smartConfig[smartType];
+
+    // Choice Mode
+    if (smartStepIndex === 99) {
+        if (text.toLowerCase().includes('clone') && smartType === 'shipment') {
+            addAiMessage("🔄 How many clones of this shipment do you need?");
+            smartStepIndex = 100;
+        } else if (text.toLowerCase().includes('more') || text.toLowerCase().includes('new')) {
+            startNewSmartEntry();
+        } else {
+            addAiMessage("Type <b>'More'</b> to add another.");
+        }
+        return;
+    }
+
+    if (smartStepIndex === 100) {
+        const num = parseInt(text);
+        if (isNaN(num) || num <= 0) { addAiMessage("❌ Enter valid count."); return; }
+        const last = smartQueue[smartQueue.length - 1];
+        addAiMessage(`🔄 Preparing ${num} clones...`);
+        for(let i=0; i<num; i++) {
+            smartQueue.push({ ...last, is_clone:true, clone_index:i+1, clone_total:num, drop:null, receiver_name:null, receiver_phone:null, receiver_email:null });
+        }
+        updateSmartUI();
+        processCloningQueue();
+        return;
+    }
+
+    const step = steps[smartStepIndex];
+    if (!step) return;
+
+    // Formatting for Number Plate
+    if (step.field === 'number_plate') {
+        text = text.toUpperCase().replace(/\s/g, '');
+        if (text.length === 10) {
+            text = text.slice(0,2) + ' ' + text.slice(2,4) + ' ' + text.slice(4,6) + ' ' + text.slice(6);
+        }
+    }
+
+    // Validation
+    if (step.validate && !step.validate(text)) {
+        addAiMessage(`❌ ${step.error || 'Invalid input.'}`);
+        return;
+    }
+
+    if (step.field === 'confirm') {
+        if (text.toLowerCase() === 'save') {
+            smartQueue.push({ ...currentSmartShipment });
+            addAiMessage(`📦 <b>${smartType.toUpperCase()} added to Queue!</b>`);
+            updateSmartUI();
+            addAiMessage("Would you like to add another? Type <b>'More'</b>.");
+            smartStepIndex = 99; 
+        } else {
+            startNewSmartEntry();
+        }
+        return;
+    }
+
+    currentSmartShipment[step.field] = text;
+    smartStepIndex++;
+    
+    // Skip logic
+    while (steps[smartStepIndex] && smartType === 'shipment' && currentSmartShipment.is_clone && steps[smartStepIndex].skipIfCloning) {
+        smartStepIndex++;
+    }
+    askNextSmartStep();
+};
+
+function processCloningQueue() {
+    // Find first shipment in queue that is missing unique fields
+    const nextIdx = smartQueue.findIndex(s => s.pickup === null || s.drop === null || s.receiver_name === null);
+    
+    if (nextIdx === -1) {
+        addAiMessage("✅ <b>All clones completed!</b> Your queue is ready.");
+        smartStepIndex = 99; // Back to choice mode
+        updateSmartUI();
+        return;
+    }
+
+    // Extract it to work on it
+    currentSmartShipment = smartQueue[nextIdx];
+    smartQueue.splice(nextIdx, 1);
+    
+    smartStepIndex = 0; // Restart from pickup for this specific clone
+    addAiMessage(`🔧 <b>Clone ${currentSmartShipment.clone_index} of ${currentSmartShipment.clone_total}</b>:`);
+    askNextSmartStep();
+}
+
+window.pickSmartCoordinates = function() {
+    openMapPicker(null, (coords) => {
+        document.getElementById('smart-command-input').value = coords;
+        // Don't auto-process, let user see it first
+    });
+};
+
+window.confirmSmartQueue = async function() {
+    if (smartQueue.length === 0) return;
+    const count = smartQueue.length;
+    addAiMessage(`🚀 Syncing ${count} entries with server...`);
+    
+    try {
+        for (const s of smartQueue) {
+            let endpoint = '/shipments/';
+            let data = {};
+            
+            if (smartType === 'shipment') {
+                data = {
+                    pickup: { lat: parseFloat(s.pickup.split(',')[0]), lng: parseFloat(s.pickup.split(',')[1]) },
+                    drop: { lat: parseFloat(s.drop.split(',')[0]), lng: parseFloat(s.drop.split(',')[1]) },
+                    weight: parseFloat(s.weight),
+                    description: s.description || "Smart Assistant Entry",
+                    is_perishable: s.is_perishable === 'yes' || s.is_perishable === 'y',
+                    receiver_name: s.receiver_name,
+                    receiver_phone: s.receiver_phone.startsWith('+91') ? s.receiver_phone : "+91" + s.receiver_phone,
+                    receiver_email: s.receiver_email,
+                    eway_bill_no: s.eway_no,
+                    eway_bill_expiry: s.eway_expiry,
+                    company_id: localStorage.getItem('manager_id'),
+                    labels: []
+                };
+            } else if (smartType === 'driver') {
+                endpoint = '/manager/drivers';
+                const hub = globalHubs.find(h => h.name === s.base_hub);
+                data = {
+                    name: s.name,
+                    login_id: s.login_id,
+                    password: s.password,
+                    license_type: s.license_type.toLowerCase().includes('truck') ? 'truck' : (s.license_type.toLowerCase().includes('bike') ? 'bike' : 'van'),
+                    base_warehouse_id: hub ? hub.id : null,
+                    experience_years: parseFloat(s.experience_years),
+                    contact_number: s.contact_number.startsWith('+91') ? s.contact_number : "+91" + s.contact_number,
+                    past_accidents: parseInt(s.past_accidents),
+                    traffic_violations: parseInt(s.traffic_violations),
+                    company_id: localStorage.getItem('manager_id')
+                };
+            } else if (smartType === 'vehicle') {
+                endpoint = '/manager/vehicles';
+                const hub = globalHubs.find(h => h.name === s.base_hub);
+                data = {
+                    type: s.type.toLowerCase().includes('truck') ? 'truck' : (s.type.toLowerCase().includes('bike') ? 'bike' : 'van'),
+                    number_plate: s.number_plate,
+                    capacity: parseFloat(s.capacity),
+                    fuel_efficiency: 15,
+                    base_warehouse_id: hub ? hub.id : null,
+                    company_id: localStorage.getItem('manager_id'),
+                    status: 'available'
+                };
+            }
+            
+            await apiCall(endpoint, 'POST', data);
+        }
+        showNotification(`Successfully created ${count} ${smartType}s!`, "success");
+        clearSmartQueue();
+        if (smartType === 'shipment') loadShipments();
+        else loadDriversAndVehicles();
+        closeSmartAssistant();
+    } catch(e) {
+        addAiMessage(`❌ Error creating ${smartType}. Check console.`);
+        console.error(e);
+    }
+};
+
+window.updateSmartUI = function() {
+    const count = smartQueue.length;
+    document.getElementById('smart-queue-count').innerText = count;
+    
+    const label = document.getElementById('smart-queue-text');
+    if (label) {
+        if (smartType === 'driver') label.innerText = count === 1 ? 'Driver' : 'Drivers';
+        else if (smartType === 'vehicle') label.innerText = count === 1 ? 'Vehicle' : 'Vehicles';
+        else label.innerText = count === 1 ? 'Shipment' : 'Shipments';
+    }
+    
+    document.getElementById('smart-queue-preview').style.display = count > 0 ? 'block' : 'none';
+};
+
+window.clearSmartQueue = function() {
+    smartQueue = [];
+    updateSmartUI();
+    addAiMessage("🗑️ Queue cleared.");
+};
+
+window.addAiMessage = function(text) {
+    const area = document.getElementById('smart-chat-area');
+    if (!area) return;
+    const msg = document.createElement('div');
+    msg.className = 'ai-msg';
+    msg.style = 'align-self:flex-start; background:var(--card); padding:12px 16px; border-radius:18px 18px 18px 0; border:1px solid var(--border); font-size:0.95rem; max-width:85%; margin-bottom:12px; line-height:1.4; animation: slideUp 0.3s ease;';
+    msg.innerHTML = text;
+    area.appendChild(msg);
+    area.scrollTop = area.scrollHeight;
+};
+
+window.addUserMessage = function(text) {
+    const area = document.getElementById('smart-chat-area');
+    if (!area) return;
+    const msg = document.createElement('div');
+    msg.style = 'align-self:flex-end; background:var(--primary); color:white; padding:12px 16px; border-radius:18px 18px 0 18px; font-size:0.95rem; max-width:85%; margin-bottom:12px; line-height:1.4; animation: slideUp 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2);';
+    msg.innerText = text;
+    area.appendChild(msg);
+    area.scrollTop = area.scrollHeight;
+};
+
+// Add Slide Animation to global styles
+if (!document.getElementById('smart-drawer-styles')) {
+    const style = document.createElement('style');
+    style.id = 'smart-drawer-styles';
+    style.innerHTML = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 // Shipments Table Rendering
 let globalShipments = [];
@@ -2401,7 +2997,7 @@ window.renderDriversTable = function() {
         const diffDays = Math.floor(Math.abs(new Date() - joinDate) / (1000 * 60 * 60 * 24));
         const baseWh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
         
-        let linkedVehInfo = `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`;
+        let linkedVehInfo = `<span class="status-pill" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`;
         if (d.assigned_vehicle_id) {
             const v = globalVehicles.find(vh => vh.id === d.assigned_vehicle_id);
             if (v) {
@@ -2420,15 +3016,23 @@ window.renderDriversTable = function() {
         dtbody.innerHTML += `<tr>
             <td><b>${d.name}</b><br><small style="color:var(--accent); font-family:monospace;">${d.system_id || 'ID: ' + d.id.substring(0,8)}</small></td>
             <td><small style="font-family:monospace;">${d.login_id || 'N/A'}</small></td>
-            <td><span class="badge" style="background:rgba(255,255,255,0.1)">${d.license_type}</span><br><small>Tenure: ${diffDays} Days</small></td>
+            <td>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <input type="password" value="${d.password || ''}" readonly id="pass-d-${d.id}" style="background:none; border:none; color:var(--text); font-family:monospace; font-size:0.8rem; width:80px; outline:none;">
+                    <button onclick="togglePasswordVisibility('pass-d-${d.id}', this)" style="background:none; border:none; cursor:pointer; font-size:0.9rem; padding:0;">👁️</button>
+                </div>
+            </td>
+            <td><span class="status-pill" style="background:rgba(255,255,255,0.1)">${d.license_type || 'N/A'}</span></td>
+            <td><b style="color:var(--primary);">${diffDays} Days</b></td>
             <td>${d.driving_score ? d.driving_score.toFixed(1) : '100.0'}/100<br><small>Safety: ${d.safety_rating || 5.0}⭐</small></td>
+            <td><span style="color:${d.past_accidents > 0 ? 'var(--danger)' : 'var(--success)'}">${d.past_accidents || 0}</span></td>
             <td><span style="color:${d.challan_count > 0 ? 'var(--danger)' : 'var(--success)'}">${d.challan_count}</span></td>
             <td><strong style="color:var(--accent)">${d.reward_points || 0}</strong></td>
             <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
             <td>${linkedVehInfo}</td>
             <td>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <button class="btn-primary btn-accent" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="openEditModal('drivers', '${d.id}', '${d.name}', '${d.license_type}', '${d.base_warehouse_id}')" title="Edit">✏️</button>
+                    <button class="btn-primary btn-accent" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="openEditModal('drivers', '${d.id}')" title="Edit">✏️</button>
                     <button class="btn-primary btn-danger" style="padding:8px; border-radius:8px; width:36px; height:36px;" onclick="deleteItem('drivers', '${d.id}')" title="Delete">🗑️</button>
                 </div>
             </td>
@@ -2537,11 +3141,11 @@ window.renderVehiclesTable = function() {
             <td>${destInfo}</td>
             <td>${statusTag}</td>
             <td>
-                ${linkedDriver ? `<b>${linkedDriver.name}</b><br><small>${linkedDriver.system_id}</small>` : `<span class="badge" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
+                ${linkedDriver ? `<b>${linkedDriver.name}</b><br><small>${linkedDriver.system_id}</small>` : `<span class="status-pill" style="background:var(--warning)22; color:var(--warning); margin:0;">Unlinked</span>`}
             </td>
             <td>
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <button class="btn-primary btn-accent" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="openEditModal('vehicles', '${v.id}', '${v.number_plate || ''}', '${v.capacity}', '${v.base_warehouse_id}', '${v.fuel_efficiency}')" title="Edit">✏️</button>
+                    <button class="btn-primary btn-accent" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="openEditModal('vehicles', '${v.id}')" title="Edit">✏️</button>
                     <button class="btn-primary btn-danger" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="deleteItem('vehicles', '${v.id}')" title="Delete">🗑️</button>
                 </div>
             </td>
@@ -2578,10 +3182,16 @@ async function unverifyDriver(driverId) {
     } catch (e) {}
 }
 
-// Generic Edit Modal Logic
-let currentEditType = null;
-let currentEditId = null;
-let currentSplitId = null;
+window.togglePasswordVisibility = function(id, btn) {
+    const el = document.getElementById(id);
+    if (el.type === 'password') {
+        el.type = 'text';
+        btn.innerText = '🙈';
+    } else {
+        el.type = 'password';
+        btn.innerText = '👁️';
+    }
+}
 
 window.openEditModal = function(type, id, val1, val2, val3, val4) {
     currentEditType = type;
@@ -2590,30 +3200,63 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
     
     let html = '';
     const fieldStyle = `style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit; font-size:0.95rem;"`;
+    const types = ['bike', 'scooty', 'van', 'truck', '3 wheeled (battery)'];
 
     if (type === 'shipments') {
         html = `<div style="display:flex;flex-direction:column;gap:10px;">
-                    <input type="text" id="edit-val1" value="${val1}" placeholder="Description" ${fieldStyle}>
-                    <input type="text" id="edit-val2" value="${val2}" placeholder="Status" ${fieldStyle}>
+                    <input type="text" id="edit-val1" value="${val1 || ''}" placeholder="Description" ${fieldStyle}>
+                    <input type="text" id="edit-val2" value="${val2 || ''}" placeholder="Status" ${fieldStyle}>
                 </div>`;
-    } else if (type === 'drivers' || type === 'vehicles') {
-        const placeholder1 = type === 'drivers' ? 'Name' : 'Number Plate';
-        const placeholder2 = type === 'drivers' ? 'License Type' : 'Capacity (kg)';
-        const inputType2 = type === 'drivers' ? 'text' : 'number';
-
-        let fieldsInner = `<input type="text" id="edit-val1" value="${val1}" placeholder="${placeholder1}" ${fieldStyle}>
-                           <input type="${inputType2}" id="edit-val2" value="${val2}" placeholder="${placeholder2}" ${fieldStyle}>`;
-
-        if (type === 'vehicles') {
-            fieldsInner += `<input type="number" id="edit-val4" value="${val4 || ''}" placeholder="Fuel Efficiency (km/l)" ${fieldStyle}>`;
-        }
-
-        fieldsInner += `<select id="edit-val3" ${fieldStyle}>
-                            <option value="">Select Base Hub</option>
-                            ${globalWarehouses.map(w => `<option value="${w.id}" ${w.id === val3 ? 'selected' : ''}>${w.name}</option>`).join('')}
-                        </select>`;
-
-        html = `<div style="display:flex;flex-direction:column;gap:10px;">${fieldsInner}</div>`;
+    } else if (type === 'drivers') {
+        const d = globalDrivers.find(item => item.id === id);
+        html = `<div style="display:flex;flex-direction:column;gap:10px;">
+                    <label style="font-size:0.8rem; color:var(--primary);">Full Name</label>
+                    <input type="text" id="edit-d-name" value="${d.name || ''}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Login ID</label>
+                    <input type="text" id="edit-d-login" value="${d.login_id || ''}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Password</label>
+                    <input type="text" id="edit-d-pass" value="${d.password || ''}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">License Type</label>
+                    <select id="edit-d-license" ${fieldStyle}>
+                        ${types.map(t => `<option value="${t}" ${t === d.license_type ? 'selected' : ''}>${t.toUpperCase()}</option>`).join('')}
+                    </select>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Years of Experience</label>
+                    <input type="number" id="edit-d-exp" value="${d.years_experience || 0}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Contact Number</label>
+                    <input type="text" id="edit-d-contact" value="${d.contact_number || ''}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Base Hub</label>
+                    <select id="edit-d-hub" ${fieldStyle}>
+                        ${globalWarehouses.map(w => `<option value="${w.id}" ${w.id === d.base_warehouse_id ? 'selected' : ''}>${w.name}</option>`).join('')}
+                    </select>
+                </div>`;
+    } else if (type === 'vehicles') {
+        const v = globalVehicles.find(item => item.id === id);
+        html = `<div style="display:flex;flex-direction:column;gap:10px;">
+                    <label style="font-size:0.8rem; color:var(--primary);">Number Plate</label>
+                    <input type="text" id="edit-v-plate" value="${v.number_plate || ''}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Vehicle Type</label>
+                    <select id="edit-v-type" ${fieldStyle}>
+                        ${types.map(t => `<option value="${t}" ${t === v.type ? 'selected' : ''}>${t.toUpperCase()}</option>`).join('')}
+                    </select>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Capacity (kg)</label>
+                    <input type="number" id="edit-v-cap" value="${v.capacity || 0}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Fuel Efficiency (km/l)</label>
+                    <input type="number" id="edit-v-eff" value="${v.fuel_efficiency || 0}" ${fieldStyle}>
+                    
+                    <label style="font-size:0.8rem; color:var(--primary);">Base Hub</label>
+                    <select id="edit-v-hub" ${fieldStyle}>
+                        ${globalWarehouses.map(w => `<option value="${w.id}" ${w.id === v.base_warehouse_id ? 'selected' : ''}>${w.name}</option>`).join('')}
+                    </select>
+                </div>`;
     }
     document.getElementById('edit-fields').innerHTML = html;
     document.getElementById('edit-modal').style.display = 'block';
@@ -2621,33 +3264,47 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
 
 document.getElementById('edit-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const val1 = document.getElementById('edit-val1').value;
-    const val2 = document.getElementById('edit-val2').value;
-    const val3 = document.getElementById('edit-val3')?.value;
-    const val4 = document.getElementById('edit-val4')?.value;
     
     let payload = { company_id: localStorage.getItem('manager_id') };
     let endpoint = `/${currentEditType}/${currentEditId}`;
     
     if (currentEditType === 'shipments') {
+        const val1 = document.getElementById('edit-val1').value;
+        const val2 = document.getElementById('edit-val2').value;
         payload = { ...payload, description: val1, status: val2 };
     } else if (currentEditType === 'drivers') {
-        payload = { ...payload, name: val1, license_type: val2, base_warehouse_id: val3 };
+        payload = { 
+            ...payload, 
+            name: document.getElementById('edit-d-name').value,
+            login_id: document.getElementById('edit-d-login').value,
+            password: document.getElementById('edit-d-pass').value,
+            license_type: document.getElementById('edit-d-license').value,
+            years_experience: parseFloat(document.getElementById('edit-d-exp').value),
+            contact_number: document.getElementById('edit-d-contact').value,
+            base_warehouse_id: document.getElementById('edit-d-hub').value
+        };
         endpoint = `/manager/drivers/${currentEditId}`;
     } else if (currentEditType === 'vehicles') {
-        payload = { ...payload, number_plate: val1, capacity: parseFloat(val2), base_warehouse_id: val3, fuel_efficiency: parseFloat(val4) };
+        payload = { 
+            ...payload, 
+            number_plate: document.getElementById('edit-v-plate').value,
+            type: document.getElementById('edit-v-type').value,
+            capacity: parseFloat(document.getElementById('edit-v-cap').value),
+            base_warehouse_id: document.getElementById('edit-v-hub').value,
+            fuel_efficiency: parseFloat(document.getElementById('edit-v-eff').value)
+        };
         endpoint = `/manager/vehicles/${currentEditId}`;
     }
     
     try {
         await apiCall(endpoint, 'PUT', payload);
-        alert(`Successfully updated!`);
+        showNotification(`Successfully updated!`, "success");
         document.getElementById('edit-modal').style.display = 'none';
         
         if (currentEditType === 'shipments') loadShipments();
         else loadDriversAndVehicles();
     } catch(err) {
-        alert("Failed to update.");
+        showNotification("Failed to update.", "error");
     }
 });
 
@@ -3289,7 +3946,7 @@ async function loadLeaderboard() {
                     </div>
                 </td>
                 <td><span style="color:var(--accent); font-weight:bold;">${displayScore}</span></td>
-                <td><span class="badge" style="font-size:0.7rem;">${item.status}</span></td>
+                <td><span class="status-pill" style="font-size:0.7rem;">${item.status}</span></td>
                 <td><button class="btn-primary" style="padding:4px 8px; font-size:0.7rem;" onclick="viewFullProfile('${category}', '${item.id}')">View Profile</button></td>
             </tr>
             `;
@@ -3377,7 +4034,7 @@ async function viewFullProfile(type, id) {
                 <td>${s.id.substring(0,8)}</td>
                 <td>${s.pickup.address.split(',')[0]} → ${s.drop.address.split(',')[0]}</td>
                 <td>${new Date(s.created_at).toLocaleDateString()}</td>
-                <td><span class="badge" style="font-size:0.7rem;">${s.status}</span></td>
+                <td><span class="status-pill" style="font-size:0.7rem;">${s.status}</span></td>
             </tr>
         `).join('');
         
@@ -4040,39 +4697,31 @@ let pickingMarker = null;
 let currentPickerTarget = null;
 let pickedCoords = null;
 
-function openMapPicker(targetId) {
+let smartPickerCallback = null;
+
+function openMapPicker(targetId, callback) {
     currentPickerTarget = targetId;
+    smartPickerCallback = callback;
     const modal = document.getElementById('map-picker-modal');
-    modal.style.display = 'flex'; // Use flex to ensure layout is triggered
+    modal.style.display = 'flex'; 
     
-    document.getElementById('map-picker-title').innerText = targetId === 'pickup-loc' ? 'Select Pickup Location' : 'Select Drop Location';
+    document.getElementById('map-picker-title').innerText = targetId === 'pickup-loc' ? 'Select Pickup Location' : (targetId ? 'Select Drop Location' : 'Select Smart Coordinate');
     document.getElementById('current-pick-display').innerText = 'Click on map to pick a location...';
     pickedCoords = null;
 
     if (!pickingMap) {
-        // Give a small timeout to let the modal display and layout
         setTimeout(() => {
             pickingMap = L.map('picking-map').setView([20.5937, 78.9629], 5);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(pickingMap);
-            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(pickingMap);
             applyOfficialBorders(pickingMap);
 
             pickingMap.on('click', function(e) {
                 const { lat, lng } = e.latlng;
                 pickedCoords = { lat, lng };
-                
-                if (pickingMarker) {
-                    pickingMarker.setLatLng(e.latlng);
-                } else {
-                    pickingMarker = L.marker(e.latlng).addTo(pickingMap);
-                }
-                
+                if (pickingMarker) pickingMarker.setLatLng(e.latlng);
+                else pickingMarker = L.marker(e.latlng).addTo(pickingMap);
                 document.getElementById('current-pick-display').innerText = `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             });
-            
-            // Refresh size immediately after init
             setTimeout(() => pickingMap.invalidateSize(), 50);
         }, 50);
     } else {
@@ -4085,31 +4734,40 @@ function openMapPicker(targetId) {
         }, 50);
     }
 
-    // Pre-fill if exists
-    const currentVal = document.getElementById(targetId).value;
-    if (currentVal && currentVal.includes(',')) {
-        const [lat, lng] = currentVal.split(',').map(s => parseFloat(s.trim()));
-        if (!isNaN(lat) && !isNaN(lng)) {
-            const ll = L.latLng(lat, lng);
-            pickingMap.setView(ll, 12);
-            pickingMarker = L.marker(ll).addTo(pickingMap);
-            pickedCoords = { lat, lng };
-            document.getElementById('current-pick-display').innerText = `Current: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    if (targetId) {
+        const currentVal = document.getElementById(targetId).value;
+        if (currentVal && currentVal.includes(',')) {
+            const [lat, lng] = currentVal.split(',').map(s => parseFloat(s.trim()));
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const ll = L.latLng(lat, lng);
+                pickingMap.setView(ll, 12);
+                pickingMarker = L.marker(ll).addTo(pickingMap);
+                pickedCoords = { lat, lng };
+                document.getElementById('current-pick-display').innerText = `Current: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            }
         }
     }
 }
 
 function confirmMapPick() {
-    if (!pickedCoords) return alert("Please select a location on the map first.");
-    
-    const val = `${pickedCoords.lat.toFixed(6)}, ${pickedCoords.lng.toFixed(6)}`;
-    document.getElementById(currentPickerTarget).value = val;
+    if (!pickedCoords) {
+        showNotification('Please click on the map first', 'warning');
+        return;
+    }
+    const coordsStr = `${pickedCoords.lat.toFixed(4)}, ${pickedCoords.lng.toFixed(4)}`;
+    if (currentPickerTarget) {
+        document.getElementById(currentPickerTarget).value = coordsStr;
+    }
+    if (smartPickerCallback) {
+        smartPickerCallback(coordsStr);
+    }
     closeMapPicker();
 }
 
 function closeMapPicker() {
     document.getElementById('map-picker-modal').style.display = 'none';
     currentPickerTarget = null;
+    smartPickerCallback = null;
     pickedCoords = null;
 }
 

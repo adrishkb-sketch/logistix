@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Updates History | Logistix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b1220;
+            --text: #ffffff;
+            --muted: #9aa4b2;
+            --primary: #4f8cff;
+            --card: rgba(255,255,255,0.05);
+            --border: rgba(255,255,255,0.08);
+            --accent: #6366f1;
+        }
+
+        body.light-mode {
+            --bg: #f6f8fc;
+            --text: #0f172a;
+            --muted: #475569;
+            --primary: #2563eb;
+            --card: #ffffff;
+            --border: rgba(0,0,0,0.08);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Manrope', sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            background-attachment: fixed;
+            transition: 0.3s ease;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Gradient Backgrounds */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(110deg, #080d1a 0%, #0f172a 45%, #1e1b4b 100%);
+            z-index: -1;
+        }
+        body.light-mode::before {
+            background: linear-gradient(110deg, #f8fafc 0%, #f1f5ff 45%, #e0e7ff 100%);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ffffff, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        body.light-mode h1 {
+            background: linear-gradient(90deg, #0f172a, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 1.1rem;
+        }
+
+        /* Timeline Styles */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .update-entry {
+            position: relative;
+            margin-bottom: 50px;
+            padding: 24px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            transition: 0.3s ease;
+        }
+
+        .update-entry:hover {
+            border-color: var(--primary);
+            transform: translateX(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .update-entry::before {
+            content: "";
+            position: absolute;
+            left: -37px;
+            top: 30px;
+            width: 14px;
+            height: 14px;
+            background: var(--primary);
+            border: 4px solid var(--bg);
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .entry-date {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .entry-version {
+            font-size: 0.8rem;
+            background: rgba(79, 140, 255, 0.1);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+
+        .entry-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .entry-content {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .feature-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.05);
+            margin-right: 5px;
+            margin-bottom: 5px;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .back-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card);
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            transition: 0.2s;
+        }
+
+        .back-link:hover {
+            background: var(--border);
+            transform: translateX(-5px);
+        }
+
+        /* Language Selector Override */
+        #lang-selector {
+            position: fixed;
+            top: 20px;
+            right: 120px;
+            z-index: 100;
+        }
+
+        #theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--card);
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text);
+        }
+    </style>
+</head>
+<body>
+
+    <a href="../index.html" class="back-link" data-i18n="back_to_home">← Back to Home</a>
+    
+    <button id="theme-toggle">🌙 Dark</button>
+
+    <div id="lang-selector" class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; backdrop-filter:blur(10px);">
+        <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
+        <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
+            <option value="en">English (EN)</option>
+            <option value="hi">हिंदी (HI)</option>
+            <option value="bn">বাংলা (BN)</option>
+        </select>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1 data-i18n="updates_title">Updates History</h1>
+            <p class="subtitle" data-i18n="updates_subtitle">Tracking the evolution of Logistix platform features and system improvements.</p>
+        </header>
+
+        <div class="timeline">
+            <!-- Latest Entry: v1.1.1 -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date">April 29, 2026 | 09:00 PM</div>
+                    <div class="entry-version">v1.1.1 (Interactive Smart Onboarding & Bulk Resilience)</div>
+                </div>
+                <h2 class="entry-title">Unified Smart Assistant Triggers & Bulk Data Hardening</h2>
+                <div class="entry-content">
+                    <h3 style="color:var(--primary); font-size:1.1rem; margin-top:0;">1) The Actual Updates</h3>
+                    <p>We have introduced deep AI integration across the entire manager management suite:</p>
+                    <ul>
+                        <li><strong>Universal Smart Assistant Buttons:</strong> Integrated dedicated "Smart Assistant" triggers directly into the Driver, Vehicle, and Shipment registration sections. Clicking these buttons instantly opens our intelligent chatbot.</li>
+                        <li><strong>Guided Conversational Flow:</strong> The chatbot now leads you through a step-by-step interactive dialogue to collect information, resolving common data entry friction and ensuring all required fields are captured.</li>
+                        <li><strong>Redefined Bulk Upload Infrastructure:</strong> Extensively audited and optimized the Bulk Upload features for Shipments, Drivers, and Vehicles. The ingestion engine has been redefined to handle larger datasets with perfect accuracy and zero runtime errors.</li>
+                        <li><strong>Safety Intelligence Capture:</strong> The interactive flow now seamlessly incorporates safety-critical driver metrics such as experience years, past accident history, and traffic violations.</li>
+                    </ul>
+
+                    <h3 style="color:var(--primary); font-size:1.1rem; margin-top:20px;">2) Impact & User Benefits</h3>
+                    <p>This version focuses on making the platform more accessible and precision-oriented:</p>
+                    <ul>
+                        <li><strong>Enhanced Interactivity:</strong> Moving away from static forms makes the platform significantly more user-friendly, simpler, and engaging for operational staff.</li>
+                        <li><strong>Precision & Accuracy:</strong> Guided flows eliminate guesswork. Interactive dropdowns and automated formatting ensure that every entry—from license types to number plates—is 100% accurate.</li>
+                        <li><strong>Accelerated Operations:</strong> Integrated map pickers for location data and strictly enforced dropdowns for categories enable much faster data entry without compromising quality.</li>
+                        <li><strong>Verified Bulk Reliability:</strong> The redefined bulk tools ensure that scaling your fleet or shipping volume is now a smooth, error-free experience.</li>
+                    </ul>
+
+                    <div style="margin-top: 20px;">
+                        <span class="feature-tag">Interactive Chatbot</span>
+                        <span class="feature-tag">Smart Triggers</span>
+                        <span class="feature-tag">Bulk Upload Hardening</span>
+                        <span class="feature-tag">Precision UX</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Second Log Entry -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date">April 29, 2026 | 02:45 PM</div>
+                    <div class="entry-version">v1.0.1 (Fleet Transparency & Control)</div>
+                </div>
+                <h2 class="entry-title">Advanced Fleet Oversight & Granular Data Control</h2>
+                <div class="entry-content">
+                    <h3 style="color:var(--primary); font-size:1.1rem; margin-top:0;">1) The Actual Updates</h3>
+                    <p>We have significantly enhanced the fleet management module to provide deeper operational insights and smoother data management:</p>
+                    <ul>
+                        <li><strong>Enhanced Driver Registry:</strong> The drivers table now includes dedicated columns for <strong>License Type</strong> and <strong>Past Accidents</strong>, allowing for immediate safety assessment at a glance.</li>
+                        <li><strong>Refined Data Display:</strong> Removed redundant fields like vehicle passwords to keep the interface focused. Passwords for drivers remain visible via a secure <strong>Show/Hide (👁️)</strong> toggle.</li>
+                        <li><strong>Intelligent Input Controls:</strong> Upgraded the Edit Modules for both drivers and vehicles. License and Vehicle types are now selectable via <strong>Dropdown Menus</strong> (Bike, Scooty, Van, Truck, etc.) to prevent manual entry errors and ensure data consistency.</li>
+                        <li><strong>Consolidated Communication:</strong> Simplified driver registration by merging duplicate phone sections into a single, standardized "Contact Number" field.</li>
+                        <li><strong>Comprehensive CRUD Oversight:</strong> Managers now have full authority to edit every system field for fleet assets, including credentials, hub assignments, and operational metrics.</li>
+                    </ul>
+
+                    <h3 style="color:var(--primary); font-size:1.1rem; margin-top:20px;">2) Impact & User Benefits</h3>
+                    <p>These refinements translate to measurable improvements for our core user base:</p>
+                    <ul>
+                        <li><strong>For Fleet Managers:</strong> Faster decision-making with enriched data tables. The addition of accident history and license types directly on the dashboard enables quicker driver dispatching and risk assessment.</li>
+                        <li><strong>For Data Administrators:</strong> Drastic reduction in data entry errors. Dropdown selections for vehicle types ensure that fleet categorization remains uniform across the entire platform.</li>
+                        <li><strong>For Support Teams:</strong> Improved troubleshooting efficiency. Direct access to driver credentials with secure toggling means login issues can be resolved in seconds without deep database queries.</li>
+                    </ul>
+
+                    <div style="margin-top: 20px;">
+                        <span class="feature-tag">Safety Transparency</span>
+                        <span class="feature-tag">Data Consistency</span>
+                        <span class="feature-tag">UX Refinement</span>
+                        <span class="feature-tag">Fleet Governance</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- First Log Entry -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date">April 29, 2026 | 09:00 AM</div>
+                    <div class="entry-version">v1.0.0 (Initial Launch)</div>
+                </div>
+                <h2 class="entry-title">Complete Platform Overview & Features</h2>
+                <div class="entry-content">
+                    <p>Welcome to the first version of Logistix. After extensive development, we are proud to present a fully digital, cashless, and AI-optimized logistics infrastructure. Here are the core features currently live:</p>
+                    
+                    <ul>
+                        <li><strong>AI-Powered Warehouse Management:</strong> Strategic hub deployment with intelligent suggestion algorithms, water-body detection, and terrain verification to ensure optimal infrastructure placement.</li>
+                        <li><strong>Real-Time Fleet Intelligence:</strong> A high-performance Digital Twin environment featuring live tracking with traffic simulation, driver fatigue monitoring, and instant breakdown alerts.</li>
+                        <li><strong>Advanced Shipment Lifecycle:</strong> End-to-end management with bulk upload capabilities, multi-leg shipment splitting (Manual & Auto), and OTP-based secure delivery verification.</li>
+                        <li><strong>Fintech Engine (Paisa-Fast):</strong> A digital escrow and payment system allowing drivers to request emergency funds (Fuel, Food, Tolls) with automated manager approval workflows and real-time ledger tracking.</li>
+                        <li><strong>Predictive Analytics:</strong> Cascading impact predictor that simulates downstream delays and recommends proactive rerouting strategies based on active transit deviations.</li>
+                        <li><strong>Safety & Wellness Center:</strong> 24/7 monitoring of driver vitals via wearable integration, stress index tracking, and automated "Zen Mode" triggers for high-fatigue patterns.</li>
+                        <li><strong>Simulation Sandbox:</strong> Test disaster scenarios (cyclones, floods, heatwaves, riots) on a map to see real-time impact on your supply chain and receive AI mitigation strategies.</li>
+                        <li><strong>Multi-Language Support:</strong> Full platform localization in English, Hindi, and Bengali to empower a diverse workforce with native language interfaces.</li>
+                        <li><strong>Strategy Oracle:</strong> Business growth forecasting tool to simulate revenue, profit, and ROI based on expansion parameters like warehouse automation and green fleet ratios.</li>
+                        <li><strong>Voice Command Interface:</strong> Hands-free control for drivers, allowing them to report incidents, check tasks, and navigate using simple voice instructions.</li>
+                        <li><strong>Blockchain-Verified Ledger:</strong> Secure transaction history for all payments and reward points, ensuring transparency and trust across the network.</li>
+                        <li><strong>Dynamic Routing & Traffic:</strong> Real-time route optimization using OSRM with simulated traffic overlays to provide the most efficient paths.</li>
+                    </ul>
+
+                    <div style="margin-top: 20px;">
+                        <span class="feature-tag">AI / ML</span>
+                        <span class="feature-tag">Fintech</span>
+                        <span class="feature-tag">Real-time Tracking</span>
+                        <span class="feature-tag">Logistics Infrastructure</span>
+                        <span class="feature-tag">Safety First</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/translations.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const btn = document.getElementById('theme-toggle');
+            if(localStorage.getItem('theme') === 'light'){
+                document.body.classList.add('light-mode');
+                btn.innerText = '☀️ Light';
+            } else {
+                btn.innerText = '🌙 Dark';
+            }
+
+            btn.addEventListener('click', () => {
+                document.body.classList.toggle('light-mode');
+                if(document.body.classList.contains('light-mode')){
+                    localStorage.setItem('theme','light');
+                    btn.innerText = '☀️ Light';
+                } else {
+                    localStorage.setItem('theme','dark');
+                    btn.innerText = '🌙 Dark';
+                }
+            });
+            
+            // Sync with global language
+            const currentLang = localStorage.getItem('app_lang') || 'en';
+            document.querySelector('select').value = currentLang;
+            if(typeof updatePageTranslations === 'function') updatePageTranslations();
+        });
+    </script>
+</body>
+</html>

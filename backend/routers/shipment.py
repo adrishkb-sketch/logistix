@@ -103,17 +103,35 @@ async def bulk_parse(company_id: str, file: Optional[UploadFile] = File(None), u
                 errors.append(f"Row {idx+1}: Missing Coordinates")
                 continue
 
-            if len(phone) == 10 and phone.isdigit():
-                phone = "+91" + phone
+            # Strict Phone Check
+            phone_clean = str(phone).replace(" ", "").replace("-", "")
+            if not re.match(r"^\d{10}$", phone_clean):
+                errors.append(f"Row {idx+1}: Invalid Phone Number '{phone}'. Must be 10 digits.")
+                continue
+            phone = "+91" + phone_clean
+
+            # Strict Email Check
+            email_str = str(email).strip().lower() if email and not pd.isna(email) else ""
+            if email_str and not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", email_str):
+                errors.append(f"Row {idx+1}: Invalid Email Format '{email_str}'")
+                continue
+
+            # Strict Weight Check
+            try:
+                weight_val = float(weight)
+                if weight_val <= 0: raise ValueError()
+            except:
+                errors.append(f"Row {idx+1}: Invalid Weight '{weight}'. Must be a positive number.")
+                continue
             
             s = {
                 "pickup": {"lat": float(p_lat), "lng": float(p_lng)},
                 "drop": {"lat": float(d_lat), "lng": float(d_lng)},
-                "weight": float(weight),
+                "weight": weight_val,
                 "description": str(desc),
                 "receiver_name": str(name),
                 "receiver_phone": phone,
-                "receiver_email": str(email).strip().lower() if email and not pd.isna(email) else None,
+                "receiver_email": email_str if email_str else None,
                 "is_perishable": str(perish).lower() in ['yes', 'y', 'true', '1'] if perish is not None else False,
                 "eway_bill_no": str(eway) if eway and not pd.isna(eway) else None,
                 "eway_bill_expiry": str(expiry) if expiry and not pd.isna(expiry) else None,
