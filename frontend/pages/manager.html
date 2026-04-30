@@ -171,6 +171,9 @@
                 grid-template-columns: 1fr !important;
             }
         }
+        body.light-mode input, body.light-mode select, body.light-mode textarea, body.light-mode .pin-box {
+            color: #000000 !important;
+        }
     </style>
 </head>
 <body>
@@ -185,7 +188,7 @@
                 <a href="#" id="btn-nav-analytics" class="nav-link active" onclick="showSection('analytics')" data-layout-id="nav-analytics"><span data-i18n="nav_analytics">Executive Analytics 📊</span></a>
                 <a href="#" class="nav-link" onclick="showSection('warehouses')" data-layout-id="nav-hubs"><span data-i18n="nav_hubs">Infrastructure (Hubs) 🏗️</span></a>
                 <a href="#" id="btn-nav-shipments" class="nav-link" onclick="showSection('shipments')" data-layout-id="nav-shipments"><span data-i18n="nav_shipments">Shipments 📦</span></a>
-                <a href="#" class="nav-link" onclick="showSection('drivers')" data-layout-id="nav-drivers"><span data-i18n="nav_drivers">Drivers & Vehicles 🚛</span></a>
+                <a href="#" class="nav-link" onclick="showSection('drivers')" data-layout-id="nav-drivers"><span data-i18n="nav_fleet">Drivers & Fleet 🚛</span></a>
                 <a href="#" class="nav-link" onclick="showSection('weather')" data-layout-id="nav-weather"><span data-i18n="nav_weather">Weather Fleet Map 🗺️</span></a>
                 <a href="#" class="nav-link" onclick="showSection('leaderboard')" data-layout-id="nav-leaderboard"><span data-i18n="nav_leaderboard">Leaderboards 🏆</span></a>
                 <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')" data-layout-id="nav-messages"><span data-i18n="nav_messages">Messages</span> <span id="msg-badge" class="badge"></span></a>
@@ -381,12 +384,11 @@
                                         <th data-i18n="warehouse_name">Warehouse Name</th>
                                         <th data-i18n="manager_contact">Manager / Contact</th>
                                         <th data-i18n="th_location">Location</th>
-                                        <th data-i18n="th_drones">Drones 🛰️</th>
                                         <th data-i18n="th_action">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="warehouses-table-body">
-                                    <tr><td colspan="6" style="text-align:center;" data-i18n="no_warehouses">No warehouses deployed yet.</td></tr>
+                                    <tr><td colspan="5" style="text-align:center;" data-i18n="no_warehouses">No warehouses deployed yet.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -672,6 +674,59 @@
                             <table>
                                 <thead><tr><th data-i18n="th_type_id">Type / System ID</th><th data-i18n="label_number_plate">Plate</th><th data-i18n="th_health">Health</th><th data-i18n="capacity">Capacity</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_loc_heading">Current Location / Heading</th><th data-i18n="hub_status">Status</th><th data-i18n="th_linked_driver">Linked Driver</th><th data-i18n="th_action">Action</th></tr></thead>
                                 <tbody id="vehicles-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Drones Section -->
+                    <div class="glass-card section-card" data-layout-id="drivers-drones-add" style="margin-top: 32px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0;" data-i18n="add_drone_title">Add Drone</h3>
+                            <div style="display:flex; gap:10px;">
+                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:linear-gradient(135deg, #6366f1, #a855f7); font-size:0.85rem;" onclick="openSmartAssistant('drone')" data-i18n="btn_smart_assistant">✨ Smart Assistant</button>
+                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openDroneBulkModal()" data-i18n="btn_bulk_drones">📤 Bulk Upload Drones</button>
+                            </div>
+                        </div>
+                        <form id="add-drone-form" class="form-grid">
+                            <div class="input-group">
+                                <label data-i18n="label_drone_license">Drone License Number</label>
+                                <input type="text" id="drone-license" placeholder="e.g. DRN-12345" required>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_base_hub">Base Warehouse Hub</label>
+                                <select id="drone-base-hub" required>
+                                    <option value="" data-i18n="option_select_hub">Select Base Hub</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_capacity">Carrying Capacity (kg)</label>
+                                <input type="number" id="drone-capacity" placeholder="e.g. 5" step="0.1" required>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_radius">Coverage Radius (km)</label>
+                                <input type="number" id="drone-radius" placeholder="e.g. 20" step="1" required>
+                            </div>
+                            <div class="input-group span-2">
+                                <button type="submit" class="btn-primary" data-i18n="btn_register_drone">Register New Drone</button>
+                            </div>
+                        </form>
+                        <div class="search-filter-bar" style="display:flex; gap:10px; margin: 15px 0;">
+                            <input type="text" id="drone-search" placeholder="Search by license or ID..." oninput="renderDronesTable()" class="polished-glass-input" data-i18n-placeholder="search_drone_placeholder">
+                            <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderDronesTable()">🔍</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="th_license_id">License / System ID</th>
+                                        <th data-i18n="label_base_hub">Base Hub</th>
+                                        <th data-i18n="label_capacity">Capacity (kg)</th>
+                                        <th data-i18n="label_radius">Radius (km)</th>
+                                        <th data-i18n="hub_status">Status</th>
+                                        <th data-i18n="th_action">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drones-table-body"></tbody>
                             </table>
                         </div>
                     </div>
@@ -1705,10 +1760,6 @@
                 <input type="text" id="sug-contact" data-i18n-placeholder="contact_number_placeholder" placeholder="Contact Number" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);">
             </div>
             <div class="responsive-flex-column" style="display:flex; gap:10px;">
-                <div style="flex:1;">
-                    <label style="font-size:0.8rem; color:var(--text-muted);" data-i18n="initial_drone_fleet">Initial Drone Fleet</label>
-                    <input type="number" id="sug-drone-count" value="0" min="0" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text); margin-top:5px;">
-                </div>
                 <div style="flex:2; display:flex; gap:10px; align-items:flex-end;" class="responsive-flex-column">
                     <button class="btn-primary" onclick="confirmSuggestedLocation()" style="flex:2; min-height:64px; padding:15px; font-size:1.1rem; font-weight:800; background:var(--accent); color:#000;" data-i18n="btn_adopt_location">Adopt Strategic Location</button>
                     <button class="btn-primary" onclick="stayWithManualLocation()" style="flex:1; min-height:48px; background:rgba(var(--primary-rgb), 0.1); border:1px solid var(--primary); color:var(--primary); font-size:0.9rem;" data-i18n="btn_stay_manual">Stay Manual</button>
@@ -1744,10 +1795,6 @@
                 <input type="text" id="wh-contact-input" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
         </div>
-        <div class="input-group" style="margin-top:15px;">
-            <label>Drone Fleet Size</label>
-            <input type="number" id="wh-drone-count" value="0" min="0" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
-        </div>
         
         <div style="margin-top:15px; padding:12px; background:rgba(79, 140, 255, 0.05); border:1px solid rgba(79, 140, 255, 0.1); border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
             <div style="font-size:0.8rem; color:var(--text-muted);">Want an AI-optimized site?</div>
@@ -1782,10 +1829,6 @@
                 <label data-i18n="contact_number">Contact Number</label>
                 <input type="text" id="edit-wh-contact" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
-        </div>
-        <div class="input-group" style="margin-top:15px;">
-            <label data-i18n="drone_fleet_size">Drone Fleet Size</label>
-            <input type="number" id="edit-wh-drone" min="0" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
         </div>
         
         <p style="margin-top:15px; font-size:0.75rem; color:var(--text-muted);">Note: Location coordinates are locked for this hub.</p>
@@ -2053,6 +2096,40 @@
                 <table><thead><tr><th data-i18n="th_type">Type</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_plate">Plate</th><th data-i18n="th_cap">Cap</th></tr></thead><tbody id="vehicle-preview-body"></tbody></table>
             </div>
             <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-vehicle-bulk-btn" onclick="confirmVehicleBulk()">Confirm Upload</button></div>
+        </div>
+    </div>
+
+    <!-- Bulk Drone Upload Modal -->
+    <div id="bulk-drone-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); overflow-y:auto; border:1px solid rgba(255,255,255,0.1);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h2 style="margin:0; font-size:1.8rem; color:var(--accent);" data-i18n="bulk_drone_title">Bulk Drone Upload</h2>
+            <button class="close-modal-btn" onclick="closeDroneBulkModal()">✖</button>
+        </div>
+        <div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
+            <h4 style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;" data-i18n="smart_drone_format">📋 Smart Drone Format</h4>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; font-size:0.85rem; color:var(--text); font-weight:500;">
+                <div data-i18n="drone_fmt_1">1. License Number</div><div data-i18n="drone_fmt_2">2. Hub Name/ID</div><div data-i18n="drone_fmt_3">3. Capacity (kg)</div>
+                <div data-i18n="drone_fmt_4">4. Radius (km)</div>
+            </div>
+            <p style="margin-top:10px; font-size:0.75rem; color:var(--muted);" data-i18n="drone_fmt_desc">Headers like "License", "Warehouse", and "Range" are also accepted.</p>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+                <input type="file" id="bulk-drone-file" accept=".xlsx, .csv" style="display:none;" onchange="handleDroneBulkFile(event)">
+                <button class="btn-primary" style="width:auto;" onclick="document.getElementById('bulk-drone-file').click()" data-i18n="btn_excel_csv">📁 Excel/CSV</button>
+            </div>
+            <div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+                <input type="text" id="drone-sheets-url" placeholder="Google Sheets Link..." style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white; margin-bottom:10px;" data-i18n-placeholder="placeholder_sheets_url">
+                <button class="btn-primary" style="width:auto; background:var(--success);" onclick="previewDroneSheets()" data-i18n="btn_fetch">🔗 Fetch</button>
+            </div>
+        </div>
+        <div id="drone-preview-section" style="display:none;">
+            <h4>Preview (<span id="drone-bulk-count">0</span>)</h4>
+            <div id="drone-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
+            <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+                <table><thead><tr><th data-i18n="th_license">License</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_cap">Cap</th><th data-i18n="th_radius">Radius</th></tr></thead><tbody id="drone-preview-body"></tbody></table>
+            </div>
+            <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-drone-bulk-btn" onclick="confirmDroneBulk()" data-i18n="btn_confirm_upload">Confirm Upload</button></div>
         </div>
     </div>
 

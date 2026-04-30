@@ -449,6 +449,9 @@ body.light-mode tr:hover td {
     display: inline-block !important;
     outline: none !important;
 }
+body.light-mode .pin-box {
+    color: #000000 !important;
+}
 .pin-box:focus {
     border-color: var(--primary) !important;
     background: rgba(var(--primary-rgb), 0.1) !important;

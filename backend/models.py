@@ -124,9 +124,19 @@ class Warehouse(BaseModel):
     name: str
     lat: float
     lng: float
-    drone_count: int = 0
     contact_number: Optional[str] = None
     manager_name: Optional[str] = None
+
+class Drone(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    system_id: str = Field(default_factory=lambda: generate_system_id("DRN"))
+    company_id: str
+    license_number: str
+    base_warehouse_id: str
+    capacity: float # kg
+    radius: float # km
+    status: str = "available" # available, assigned, in_transit, maintenance
+    join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
 
 class ShipmentEvent(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
-from backend.models import Driver, Vehicle, Warehouse, Shipment, ShipmentEvent, Location
+from backend.models import Driver, Vehicle, Drone, Warehouse, Shipment, ShipmentEvent, Location
 from backend.database import JSONDatabase
 from datetime import datetime
 from typing import List, Optional
@@ -19,6 +19,7 @@ warehouses_db = JSONDatabase("warehouses")
 ledger_db = JSONDatabase("ledger")
 reviews_db = JSONDatabase("journey_reviews")
 shipments_db = JSONDatabase("shipments")
+drones_db = JSONDatabase("drones")
 
 
 @router.post("/drivers/bulk-parse")
@@ -403,6 +404,126 @@ def delete_vehicle(vehicle_id: str):
     if vehicles_db.delete(vehicle_id):
         return {"message": "Deleted"}
     raise HTTPException(status_code=404, detail="Vehicle not found")
+
+# Drones CRUD
+@router.post("/drones")
+def create_drone(drone: Drone):
+    return drones_db.insert(drone.model_dump())
+
+@router.get("/drones")
+def get_drones(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
+    drones = drones_db.get_all()
+    return [d for d in drones if d and str(d.get("company_id")) == str(company_id)]
+
+@router.put("/drones/{drone_id}")
+def update_drone(drone_id: str, data: dict):
+    if drones_db.update(drone_id, data):
+        return {"message": "Drone updated successfully"}
+    raise HTTPException(status_code=404, detail="Drone not found")
+
+@router.delete("/drones/{drone_id}")
+def delete_drone(drone_id: str):
+    if drones_db.delete(drone_id):
+        return {"message": "Deleted"}
+    raise HTTPException(status_code=404, detail="Drone not found")
+
+@router.post("/drones/bulk-parse")
+async def bulk_parse_drones(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
+    import pandas as pd
+    import io
+    import requests
+    df = None
+    try:
+        if file:
+            content = await file.read()
+            if file.filename.endswith('.csv'):
+                df = pd.read_csv(io.BytesIO(content))
+            else:
+                df = pd.read_excel(io.BytesIO(content))
+        elif url_req:
+            match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_req)
+            if not match: raise HTTPException(status_code=400, detail="Invalid Google Sheets URL")
+            sheet_id = match.group(1)
+            csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+            resp = requests.get(csv_url)
+            if resp.status_code != 200: raise HTTPException(status_code=400, detail="Failed to fetch Google Sheet")
+            df = pd.read_csv(io.StringIO(resp.text))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"File parsing error: {str(e)}")
+    
+    if df is None or df.empty: raise HTTPException(status_code=400, detail="No data found")
+    
+    df.columns = [str(c).strip().lower().replace(' ', '_') for c in df.columns]
+    
+    whs = warehouses_db.get_all()
+    wh_map = {w.get("name").lower(): w.get("id") for w in whs if w.get("company_id") == company_id}
+    wh_ids = {w.get("id"): w.get("id") for w in whs if w.get("company_id") == company_id}
+    wh_short_ids = {w.get("id")[:8]: w.get("id") for w in whs if w.get("company_id") == company_id}
+
+    drones = []
+    errors = []
+    
+    col_map = {
+        "license": ["license", "license_number", "id", "drone_id"],
+        "hub": ["hub", "warehouse", "base_warehouse_id", "base_hub", "hub_id"],
+        "capacity": ["capacity", "payload", "weight_limit"],
+        "radius": ["radius", "distance", "range"]
+    }
+
+    def get_col(row, keys):
+        for k in keys:
+            if k in row: return row[k]
+        return None
+
+    for idx, row in df.iterrows():
+        try:
+            vals = row.values.tolist()
+            
+            license_no = get_col(row, col_map["license"]) or (vals[0] if len(vals) > 0 else None)
+            hub_val = str(get_col(row, col_map["hub"]) or (vals[1] if len(vals) > 1 else "")).strip()
+            capacity = get_col(row, col_map["capacity"]) or (vals[2] if len(vals) > 2 else 5.0)
+            radius = get_col(row, col_map["radius"]) or (vals[3] if len(vals) > 3 else 20.0)
+
+            if not license_no:
+                errors.append(f"Row {idx+1}: Missing Drone License Number")
+                continue
+
+            hub_id = wh_ids.get(hub_val) or wh_short_ids.get(hub_val) or wh_map.get(hub_val.lower()) or hub_val
+
+            d = {
+                "license_number": str(license_no).upper(),
+                "base_warehouse_id": hub_id,
+                "capacity": float(capacity) if capacity is not None and not pd.isna(capacity) else 5.0,
+                "radius": float(radius) if radius is not None and not pd.isna(radius) else 20.0,
+                "company_id": company_id,
+                "status": "available"
+            }
+            drones.append(d)
+        except Exception as e:
+            errors.append(f"Row {idx+1}: {str(e)}")
+            continue
+            
+    return {"drones": drones, "count": len(drones), "errors": errors}
+
+@router.post("/drones/bulk-confirm")
+async def bulk_confirm_drones(drones: List[Drone]):
+    all_existing = drones_db.get_all()
+    existing_licenses = {d.get("license_number") for d in all_existing}
+    
+    success_count = 0
+    errors = []
+    
+    for d in drones:
+        if d.license_number in existing_licenses:
+            errors.append(f"Drone '{d.license_number}' skipped: License number already exists.")
+            continue
+            
+        drones_db.insert(d.model_dump())
+        existing_licenses.add(d.license_number)
+        success_count += 1
+        
+    return {"message": f"Successfully created {success_count} drones.", "errors": errors}
 
 # Warehouses CRUD
 @router.post("/warehouses")

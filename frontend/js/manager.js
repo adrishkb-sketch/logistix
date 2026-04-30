@@ -29,16 +29,60 @@ function showNotification(message, type = 'info') {
     setTimeout(() => toast.remove(), 3000);
 }
 
+window.tableLimits = {
+    shipments: 5,
+    drivers: 5,
+    vehicles: 5,
+    drones: 5,
+    'linked-pairs': 5,
+    warehouses: 5,
+    nr: 5
+};
+
+window.renderTableControls = function(tableKey, dataLength, currentLimit, updateFn) {
+    const containerId = `${tableKey}-controls`;
+    let container = document.getElementById(containerId);
+    if (!container) {
+        const tableBody = document.getElementById(`${tableKey}-table-body`);
+        const table = tableBody?.closest('table');
+        if (!table) return;
+        container = document.createElement('div');
+        container.id = containerId;
+        container.className = 'table-controls-container';
+        container.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(255,255,255,0.03); border-radius:0 0 12px 12px; border-top:1px solid var(--border); margin-top:-1px;';
+        table.parentNode.insertBefore(container, table.nextSibling);
+    }
+
+    if (dataLength <= 5 && currentLimit <= 5) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'flex';
+
+    container.innerHTML = `
+        <div style="font-size:0.75rem; color:var(--text-muted);">
+            Showing ${Math.min(currentLimit, dataLength)} of ${dataLength}
+        </div>
+        <div style="display:flex; gap:8px;">
+            ${currentLimit > 5 ? `<button class="btn-primary" style="padding:4px 12px; font-size:0.7rem; background:rgba(255,255,255,0.1);" onclick="tableLimits.${tableKey} -= 5; ${updateFn}()">${getTranslation('btn_show_less')}</button>` : ''}
+            ${currentLimit < dataLength ? `<button class="btn-primary" style="padding:4px 12px; font-size:0.7rem;" onclick="tableLimits.${tableKey} += 5; ${updateFn}()">${getTranslation('btn_show_more')}</button>` : ''}
+        </div>
+    `;
+};
+
 let map, fleetMap;
 let markers = [];
 let globalHubs = [];
 let globalDrivers = [];
+let globalRisks = [];
 let globalVehicles = [];
 let volumeChart, fleetChart;
 let weatherMap;
 let weatherMarkers = [];
 let currentMarkers = [];
 let warehouses = [];
+let globalDrones = [];
+let globalWarehouses = [];
 
 const ICON_PICKUP = L.divIcon({
     html: `<div style="background:#f6ad55; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 10px rgba(246,173,85,0.5); font-size:16px;">🏢</div>`,
@@ -411,7 +455,10 @@ function loadWarehousesList(warehouses) {
         return;
     }
     
-    tbody.innerHTML = warehouses.map(w => `
+    const limit = window.tableLimits.warehouses;
+    const limited = warehouses.slice(0, limit);
+
+    tbody.innerHTML = limited.map(w => `
         <tr id="row-wh-${w.id}">
             <td style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${w.id.substring(0,8)}</td>
             <td><strong id="wh-name-display-${w.id}">${w.name}</strong></td>
@@ -420,7 +467,6 @@ function loadWarehousesList(warehouses) {
                 <div style="font-size:0.75rem; color:var(--text-muted);" id="wh-contact-display-${w.id}">📞 ${w.contact_number || getTranslation('na')}</div>
             </td>
             <td>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}</td>
-            <td><span style="color:var(--primary); font-weight:bold;" id="wh-drone-display-${w.id}">${w.drone_count || 0}</span> 🛰️</td>
             <td>
                 <div style="display:flex; gap:8px;">
                     <button class="btn-primary btn-accent" style="padding:6px 12px; font-size:0.75rem;" onclick="openEditWarehouse('${w.id}')">✏️ ${getTranslation('edit')}</button>
@@ -429,7 +475,13 @@ function loadWarehousesList(warehouses) {
             </td>
         </tr>
     `).join('');
+
+    renderTableControls('warehouses', warehouses.length, limit, 'refreshWarehousesTable');
 }
+
+window.refreshWarehousesTable = function() {
+    loadWarehousesList(globalHubs);
+};
 
 let highlightCircle = null;
 function locateWarehouse(id) {
@@ -465,7 +517,6 @@ async function openEditWarehouse(id) {
         document.getElementById('edit-wh-name').value = w.name;
         document.getElementById('edit-wh-manager').value = w.manager_name;
         document.getElementById('edit-wh-contact').value = w.contact_number;
-        document.getElementById('edit-wh-drone').value = w.drone_count;
 
         document.getElementById('wh-edit-modal').style.display = 'block';
     } catch(e) {}
@@ -482,7 +533,7 @@ async function submitEditWarehouse() {
 
     try {
         await apiCall(`/manager/warehouses/${id}?company_id=${localStorage.getItem('manager_id')}`, 'PUT', {
-            name, manager_name: manager, contact_number: contact, drone_count: drones
+            name, manager_name: manager, contact_number: contact
         });
         document.getElementById('wh-edit-modal').style.display = 'none';
         loadMapData();
@@ -517,53 +568,46 @@ async function submitNewWarehouse() {
     const name = document.getElementById('wh-name-input').value;
     const manager = document.getElementById('wh-manager-input').value;
     const contact = document.getElementById('wh-contact-input').value;
-    const drones = parseInt(document.getElementById('wh-drone-count').value || 0);
     
     if (!name || !manager || !contact) {
         return alert("Error: Warehouse Name, Manager Name, and Contact Number are all required.");
     }
-    if (isNaN(drones) || drones < 0) {
-        return alert("Error: Please provide a valid Drone Fleet Size.");
-    }
     
-    await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, drones, manager, contact);
+    await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact);
     document.getElementById('wh-modal').style.display = 'none';
     document.getElementById('wh-name-input').value = '';
 }
 
-async function createWarehouse(name, lat, lng, droneCount = 0, manager = '', contact = '') {
+async function createWarehouse(name, lat, lng, manager = '', contact = '') {
     try {
         await apiCall('/manager/warehouses', 'POST', {
             company_id: localStorage.getItem('manager_id'),
-            name, lat, lng, drone_count: droneCount,
+            name, lat, lng,
             manager_name: manager, contact_number: contact
         });
         loadMapData();
     } catch(e) {}
 }
 
-async function confirmSuggestedLocation() {
-    const drones = parseInt(document.getElementById('sug-drone-count').value || 0);
+async function adoptStrategicLocation() {
     const manager = document.getElementById('sug-manager').value;
     const contact = document.getElementById('sug-contact').value;
-    
     if (!manager || !contact) {
         return alert("Error: Manager Name and Contact Number are required for AI-suggested hubs.");
     }
     const name = prompt("Enter Warehouse Name for Strategic Hub:");
     if (name) {
-        await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, drones, manager, contact);
+        await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, manager, contact);
         document.getElementById('suggestion-modal').style.display = 'none';
     }
 }
 
 async function stayWithManualLocation() {
-    const drones = parseInt(document.getElementById('sug-drone-count').value || 0);
     const manager = document.getElementById('sug-manager').value;
     const contact = document.getElementById('sug-contact').value;
     const name = prompt("Enter Warehouse Name for Manual Hub:");
     if (name) {
-        await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, drones, manager, contact);
+        await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact);
         document.getElementById('suggestion-modal').style.display = 'none';
     }
 }
@@ -685,6 +729,7 @@ function copyCompanyID() {
 async function loadInsights() {
     try {
         const company_id = localStorage.getItem('manager_id');
+        const container = document.getElementById('alerts-container');
         
         // Load data in parallel but handle errors individually
         const [alerts, stats, cascade, pl] = await Promise.all([
@@ -895,10 +940,13 @@ async function loadNetworkResilience() {
 
         // Update Table
         const tbody = document.getElementById('nr-table-body');
+        globalRisks = data.risks;
         if (data.risks.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="padding:40px; text-align:center; color:var(--text-muted);">No disruption chains detected.</td></tr>`;
         } else {
-            tbody.innerHTML = data.risks.map(r => `
+            const limit = window.tableLimits.nr;
+            const limited = data.risks.slice(0, limit);
+            tbody.innerHTML = limited.map(r => `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                     <td style="padding:12px;">
                         <b>${r.description}</b><br>
@@ -916,12 +964,39 @@ async function loadNetworkResilience() {
                     </td>
                 </tr>
             `).join('');
+            renderTableControls('nr', data.risks.length, limit, 'refreshRisksTable');
         }
 
     } catch(e) {
         console.error("Resilience Load Error", e);
     }
 }
+
+window.refreshRisksTable = function() {
+    // We re-use the logic from loadNetworkResilience but without the API call
+    const tbody = document.getElementById('nr-table-body');
+    const limit = window.tableLimits.nr;
+    const limited = globalRisks.slice(0, limit);
+    tbody.innerHTML = limited.map(r => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:12px;">
+                <b>${r.description}</b><br>
+                <small style="color:var(--text-muted)">${r.source_shipment_id}</small>
+            </td>
+            <td style="padding:12px; color:var(--danger)">+${r.current_delay}</td>
+            <td style="padding:12px;">
+                ${r.impact_hubs.map(h => `<span class="badge" style="background:rgba(255,255,255,0.1); margin-right:5px;">${h.location}</span>`).join('')}
+            </td>
+            <td style="padding:12px;">
+                <span class="badge" style="background:${r.severity==='high'?'var(--danger)':'var(--warning)'}">${r.severity.toUpperCase()}</span>
+            </td>
+            <td style="padding:12px; text-align:center;">
+                <button class="btn-primary" style="width:auto; padding:4px 10px; font-size:0.75rem;" onclick="showSection('shipments')">Analyze Path</button>
+            </td>
+        </tr>
+    `).join('');
+    renderTableControls('nr', globalRisks.length, limit, 'refreshRisksTable');
+};
 
 async function loadSafetyCenter() {
     try {
@@ -1179,7 +1254,7 @@ const smartConfig = {
         { 
             field: 'pickup', 
             label: 'Pickup Coordinates (Lat, Lng)', 
-            prompt: '📍 Where should we <b>Pick up</b> the shipment? (Lat, Lng)',
+            promptKey: 'prompt_shipment_pickup',
             hint: 'Example: 28.7, 77.1',
             validate: val => /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(val),
             error: 'Please enter valid coordinates like "28.70, 77.12". No city names allowed!',
@@ -1188,7 +1263,7 @@ const smartConfig = {
         { 
             field: 'drop', 
             label: 'Drop Coordinates (Lat, Lng)', 
-            prompt: '🏁 And where is the <b>Drop Location</b>? (Lat, Lng)',
+            promptKey: 'prompt_shipment_drop',
             hint: 'Example: 19.1, 72.8',
             validate: val => /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(val),
             error: 'Please enter valid coordinates. City names are not accepted.'
@@ -1196,7 +1271,7 @@ const smartConfig = {
         { 
             field: 'weight', 
             label: 'Weight (kg)', 
-            prompt: '⚖️ What is the <b>Weight</b> in Kilograms?',
+            promptKey: 'prompt_shipment_weight',
             hint: 'Numbers only please!',
             validate: val => !isNaN(parseFloat(val)) && isFinite(val) && parseFloat(val) > 0,
             error: 'Weight must be a number (e.g. 10.5). Words are not allowed!',
@@ -1205,7 +1280,7 @@ const smartConfig = {
         { 
             field: 'description', 
             label: 'Description', 
-            prompt: '📝 Give a short <b>Description</b> or label for this shipment.',
+            promptKey: 'prompt_shipment_desc',
             hint: 'e.g. Electronics, Medical Supplies',
             validate: val => val.length >= 2,
             error: 'Please enter a valid description.',
@@ -1214,7 +1289,7 @@ const smartConfig = {
         { 
             field: 'receiver_name', 
             label: 'Receiver Name', 
-            prompt: '👤 Who is the <b>Recipient</b>?',
+            promptKey: 'prompt_shipment_receiver_name',
             hint: 'Full name',
             validate: val => val.length >= 2,
             error: 'Please enter a valid name.'
@@ -1222,7 +1297,7 @@ const smartConfig = {
         { 
             field: 'receiver_phone', 
             label: 'Receiver Phone', 
-            prompt: '📱 What is their <b>Contact Number</b>?',
+            promptKey: 'prompt_shipment_receiver_phone',
             hint: '10 digits only',
             validate: val => /^\d{10}$/.test(val),
             error: 'Phone number must be exactly 10 digits. No text allowed!'
@@ -1230,7 +1305,7 @@ const smartConfig = {
         { 
             field: 'receiver_email', 
             label: 'Receiver Email', 
-            prompt: '📧 And their <b>Email Address</b>?',
+            promptKey: 'prompt_shipment_receiver_email',
             hint: 'example@logistix.com',
             validate: val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
             error: 'Invalid email format. It must contain @ and a domain.'
@@ -1238,7 +1313,7 @@ const smartConfig = {
         { 
             field: 'eway_no', 
             label: 'E-Way Bill Number', 
-            prompt: '📄 Please provide the <b>E-Way Bill No.</b>',
+            promptKey: 'prompt_shipment_eway_no',
             hint: '12 digit number',
             validate: val => /^\d{12}$/.test(val),
             error: 'E-Way Bill must be a 12-digit number.',
@@ -1247,7 +1322,7 @@ const smartConfig = {
         { 
             field: 'eway_expiry', 
             label: 'E-Way Bill Expiry', 
-            prompt: '📅 What is the <b>Expiry Date</b> of this E-Way Bill?',
+            promptKey: 'prompt_shipment_eway_expiry',
             hint: 'Format: YYYY-MM-DD',
             validate: val => /^\d{4}-\d{2}-\d{2}$/.test(val),
             error: 'Please enter date in YYYY-MM-DD format.',
@@ -1256,7 +1331,7 @@ const smartConfig = {
         { 
             field: 'is_perishable', 
             label: 'Perishable', 
-            prompt: '🍎 Is this a <b>Perishable</b> item? (Cold Chain)',
+            promptKey: 'prompt_shipment_perishable',
             hint: 'Type "Yes" or "No"',
             validate: val => ['yes', 'no', 'y', 'n'].includes(val.toLowerCase()),
             error: 'Please type "Yes" or "No".',
@@ -1265,7 +1340,7 @@ const smartConfig = {
         {
             field: 'confirm',
             label: 'Confirm Details',
-            prompt: '✨ <b>Shipment Review:</b><br>{summary}<br><br>Type <b>"Save"</b> to add to queue or <b>"Reset"</b> to start over.',
+            promptKey: 'prompt_shipment_confirm',
             validate: val => ['save', 'reset'].includes(val.toLowerCase()),
             error: 'Type "Save" or "Reset".'
         }
@@ -1273,74 +1348,74 @@ const smartConfig = {
     driver: [
         {
             field: 'name',
-            prompt: '👤 What is the <b>Full Name</b> of the driver?',
+            promptKey: 'prompt_driver_name',
             validate: val => val.length >= 3,
             error: 'Name must be at least 3 characters.'
         },
         {
             field: 'login_id',
-            prompt: '🔑 Choose a <b>Login ID</b> for them.',
+            promptKey: 'prompt_driver_login',
             validate: val => val.length >= 4,
             error: 'Login ID must be at least 4 characters.'
         },
         {
             field: 'password',
-            prompt: '🔒 Set a <b>Security Password</b>.',
+            promptKey: 'prompt_driver_password',
             validate: val => val.length >= 1,
             error: 'Password cannot be empty.'
         },
         {
             field: 'license_type',
-            prompt: '🪪 Select their <b>License Category</b>:',
+            promptKey: 'prompt_driver_license',
             options: ['Truck (Heavy)', 'Truck (Small)', 'Delivery Van', 'Bike/Scooty', 'EV-Cargo'],
             validate: val => true
         },
         {
             field: 'base_hub',
-            prompt: '🏠 Which <b>Warehouse Hub</b> will be their base?',
+            promptKey: 'prompt_driver_hub',
             options: 'hubs', // Dynamic fetch
             validate: val => val !== ""
         },
         {
             field: 'contact_number',
-            prompt: '📱 What is their <b>Contact Number</b>? (10 digits)',
+            promptKey: 'prompt_driver_contact',
             validate: val => /^\d{10}$/.test(val),
             error: 'Enter a valid 10-digit number.'
         },
         {
             field: 'experience_years',
-            prompt: '⏳ How many <b>Years of Experience</b> do they have?',
+            promptKey: 'prompt_driver_exp',
             validate: val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0,
             error: 'Enter a valid number of years.'
         },
         {
             field: 'past_accidents',
-            prompt: '⚠️ Number of <b>Past Accidents</b>?',
+            promptKey: 'prompt_driver_accidents',
             validate: val => !isNaN(parseInt(val)) && parseInt(val) >= 0,
             error: 'Enter a valid count.'
         },
         {
             field: 'traffic_violations',
-            prompt: '🚦 Number of <b>Traffic Violations</b> (Challans)?',
+            promptKey: 'prompt_driver_violations',
             validate: val => !isNaN(parseInt(val)) && parseInt(val) >= 0,
             error: 'Enter a valid count.'
         },
         {
             field: 'confirm',
-            prompt: '📋 <b>Driver Summary:</b><br>{summary}<br><br>Type <b>"Save"</b> or <b>"Reset"</b>.',
+            promptKey: 'prompt_driver_confirm',
             validate: val => ['save', 'reset'].includes(val.toLowerCase())
         }
     ],
     vehicle: [
         {
             field: 'type',
-            prompt: '🚛 What is the <b>Vehicle Type</b>?',
+            promptKey: 'prompt_vehicle_type',
             options: ['Truck (Heavy)', 'Truck (Small)', 'Delivery Van', 'Bike/Scooty', 'EV-Cargo'],
             validate: val => true
         },
         {
             field: 'number_plate',
-            prompt: '🔢 Enter the <b>Number Plate</b> (MH 12 AB 1234):',
+            promptKey: 'prompt_vehicle_plate',
             validate: val => {
                 const formatted = val.toUpperCase().replace(/\s/g, '');
                 return /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/.test(formatted);
@@ -1349,24 +1424,54 @@ const smartConfig = {
         },
         {
             field: 'capacity',
-            prompt: '⚖️ What is the <b>Load Capacity</b> (kg)?',
+            promptKey: 'prompt_vehicle_capacity',
             validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0
         },
         {
             field: 'base_hub',
-            prompt: '🏠 Which <b>Base Hub</b> will this vehicle use?',
+            promptKey: 'prompt_vehicle_hub',
             options: 'hubs',
             validate: val => val !== ""
         },
         {
             field: 'confirm',
-            prompt: '📋 <b>Vehicle Summary:</b><br>{summary}<br><br>Type <b>"Save"</b> or <b>"Reset"</b>.',
+            promptKey: 'prompt_vehicle_confirm',
+            validate: val => ['save', 'reset'].includes(val.toLowerCase())
+        }
+    ],
+    drone: [
+        {
+            field: 'license_number',
+            promptKey: 'prompt_drone_license',
+            validate: val => val.length >= 5,
+            error: 'License must be at least 5 characters.'
+        },
+        {
+            field: 'base_warehouse_id',
+            promptKey: 'prompt_drone_hub',
+            options: 'hubs',
+            validate: val => val !== ""
+        },
+        {
+            field: 'capacity',
+            promptKey: 'prompt_drone_capacity',
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0
+        },
+        {
+            field: 'radius',
+            promptKey: 'prompt_drone_radius',
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0
+        },
+        {
+            field: 'confirm',
+            promptKey: 'prompt_drone_confirm',
             validate: val => ['save', 'reset'].includes(val.toLowerCase())
         }
     ]
 };
 
 window.openSmartAssistant = function(type = 'shipment') {
+    const oldType = smartType;
     smartType = type;
     const modal = document.getElementById('smart-assistant-modal');
     modal.style.display = 'flex';
@@ -1377,30 +1482,37 @@ window.openSmartAssistant = function(type = 'shipment') {
     const newBtn = document.getElementById('smart-new-btn');
 
     if (type === 'driver') { 
-        title.innerText = 'Smart Driver Assistant'; 
-        p.innerText = 'Guided Driver Onboarding';
-        if (newBtn) newBtn.innerText = '🔄 New Driver';
+        title.innerText = getTranslation('smart_driver_title'); 
+        p.innerText = getTranslation('smart_driver_desc');
+        if (newBtn) newBtn.innerText = getTranslation('btn_new_driver');
         const mapTrigger = document.getElementById('smart-map-trigger');
         if (mapTrigger) mapTrigger.style.display = 'none';
     }
     else if (type === 'vehicle') { 
-        title.innerText = 'Smart Vehicle Assistant'; 
-        p.innerText = 'Fleet Expansion Assistant';
-        if (newBtn) newBtn.innerText = '🔄 New Vehicle';
+        title.innerText = getTranslation('smart_vehicle_title'); 
+        p.innerText = getTranslation('smart_vehicle_desc');
+        if (newBtn) newBtn.innerText = getTranslation('btn_new_vehicle');
+        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (mapTrigger) mapTrigger.style.display = 'none';
+    }
+    else if (type === 'drone') { 
+        title.innerText = getTranslation('smart_drone_title'); 
+        p.innerText = getTranslation('smart_drone_desc');
+        if (newBtn) newBtn.innerText = getTranslation('btn_new_drone');
         const mapTrigger = document.getElementById('smart-map-trigger');
         if (mapTrigger) mapTrigger.style.display = 'none';
     }
     else { 
-        title.innerText = 'Smart Bulk Assistant'; 
-        p.innerText = 'Interactive Shipment Flow';
-        if (newBtn) newBtn.innerText = '🔄 New Shipment';
+        title.innerText = getTranslation('smart_bulk_title'); 
+        p.innerText = getTranslation('smart_bulk_desc');
+        if (newBtn) newBtn.innerText = getTranslation('btn_new_shipment');
         const mapTrigger = document.getElementById('smart-map-trigger');
         if (mapTrigger) mapTrigger.style.display = 'block';
     }
 
     // Pre-fetch hubs if needed
-    if ((type === 'driver' || type === 'vehicle') && globalHubs.length === 0) {
-        loadMapData();
+    if ((type === 'driver' || type === 'vehicle' || type === 'drone') && globalHubs.length === 0) {
+        loadDriversAndVehicles();
     }
 
     const input = document.getElementById('smart-command-input');
@@ -1414,7 +1526,8 @@ window.openSmartAssistant = function(type = 'shipment') {
         input.dataset.listener = "true";
     }
 
-    if (smartStepIndex === -1 || smartStepIndex === 99) {
+    // Force reset if type changed or session ended
+    if (oldType !== type || smartStepIndex === -1 || smartStepIndex === 99) {
         startNewSmartEntry();
     }
 };
@@ -1428,9 +1541,8 @@ window.startNewSmartEntry = function() {
     smartStepIndex = 0;
     const area = document.getElementById('smart-chat-area');
     area.innerHTML = '';
-    const welcomeText = smartType === 'shipment' ? "Let's build a new shipment step-by-step." : 
-                      (smartType === 'driver' ? "Let's onboard a new driver." : "Let's add a new vehicle to the fleet.");
-    addAiMessage(`👋 Welcome! ${welcomeText}`);
+    const welcomeText = getTranslation(`smart_welcome_${smartType}`);
+    addAiMessage(`👋 ${welcomeText}`);
     askNextSmartStep();
 };
 
@@ -1446,17 +1558,19 @@ function askNextSmartStep() {
 
     if (!step) return;
 
-    let prompt = step.prompt;
+    let prompt = getTranslation(step.promptKey);
     
     if (step.field === 'confirm') {
         const s = currentSmartShipment;
         let summary = "";
         if (smartType === 'shipment') {
-            summary = `• From: ${s.pickup}<br>• To: ${s.drop}<br>• Weight: ${s.weight}kg<br>• Desc: ${s.description}<br>• Receiver: ${s.receiver_name}<br>• E-Way: ${s.eway_no} (Exp: ${s.eway_expiry})`;
+            summary = `• ${getTranslation('label_from')}: ${s.pickup}<br>• ${getTranslation('label_to')}: ${s.drop}<br>• ${getTranslation('label_weight')}: ${s.weight}kg<br>• ${getTranslation('label_desc')}: ${s.description}<br>• ${getTranslation('label_receiver')}: ${s.receiver_name}<br>• ${getTranslation('label_eway')}: ${s.eway_no} (Exp: ${s.eway_expiry})`;
         } else if (smartType === 'driver') {
-            summary = `• Name: ${s.name}<br>• ID: ${s.login_id}<br>• Type: ${s.license_type}<br>• Hub: ${s.base_hub}<br>• Exp: ${s.experience_years}y | Acc: ${s.past_accidents} | Viol: ${s.traffic_violations}`;
+            summary = `• ${getTranslation('label_name')}: ${s.name}<br>• ${getTranslation('label_id')}: ${s.login_id}<br>• ${getTranslation('label_type')}: ${s.license_type}<br>• ${getTranslation('label_hub')}: ${s.base_hub}<br>• ${getTranslation('label_exp')}: ${s.experience_years}y | ${getTranslation('label_acc')}: ${s.past_accidents} | ${getTranslation('label_viol')}: ${s.traffic_violations}`;
         } else if (smartType === 'vehicle') {
-            summary = `• Type: ${s.type}<br>• Plate: ${s.number_plate}<br>• Cap: ${s.capacity}kg<br>• Hub: ${s.base_hub}`;
+            summary = `• ${getTranslation('label_type')}: ${s.type}<br>• ${getTranslation('label_plate')}: ${s.number_plate}<br>• ${getTranslation('label_cap')}: ${s.capacity}kg<br>• ${getTranslation('label_hub')}: ${s.base_hub}`;
+        } else if (smartType === 'drone') {
+            summary = `• ${getTranslation('label_license')}: ${s.license_number}<br>• ${getTranslation('label_hub')}: ${s.base_warehouse_id}<br>• ${getTranslation('label_cap')}: ${s.capacity}kg<br>• ${getTranslation('label_radius')}: ${s.radius}km`;
         }
         prompt = prompt.replace('{summary}', summary);
     }
@@ -1533,21 +1647,21 @@ window.processSmartCommand = function() {
     // Choice Mode
     if (smartStepIndex === 99) {
         if (text.toLowerCase().includes('clone') && smartType === 'shipment') {
-            addAiMessage("🔄 How many clones of this shipment do you need?");
+            addAiMessage(getTranslation('msg_how_many_clones'));
             smartStepIndex = 100;
         } else if (text.toLowerCase().includes('more') || text.toLowerCase().includes('new')) {
             startNewSmartEntry();
         } else {
-            addAiMessage("Type <b>'More'</b> to add another.");
+            addAiMessage(getTranslation('msg_type_more'));
         }
         return;
     }
 
     if (smartStepIndex === 100) {
         const num = parseInt(text);
-        if (isNaN(num) || num <= 0) { addAiMessage("❌ Enter valid count."); return; }
+        if (isNaN(num) || num <= 0) { addAiMessage(getTranslation('msg_enter_valid_count')); return; }
         const last = smartQueue[smartQueue.length - 1];
-        addAiMessage(`🔄 Preparing ${num} clones...`);
+        addAiMessage(getTranslation('msg_preparing_clones').replace('{num}', num));
         for(let i=0; i<num; i++) {
             smartQueue.push({ ...last, is_clone:true, clone_index:i+1, clone_total:num, drop:null, receiver_name:null, receiver_phone:null, receiver_email:null });
         }
@@ -1575,8 +1689,22 @@ window.processSmartCommand = function() {
 
     if (step.field === 'confirm') {
         if (text.toLowerCase() === 'save') {
-            smartQueue.push({ ...currentSmartShipment });
-            addAiMessage(`📦 <b>${smartType.toUpperCase()} added to Queue!</b>`);
+            if (smartType === 'drone') {
+                const dronePayload = {
+                    license_number: currentSmartShipment.license_number,
+                    base_warehouse_id: globalWarehouses.find(w => w.name === currentSmartShipment.base_warehouse_id)?.id || currentSmartShipment.base_warehouse_id,
+                    capacity: parseFloat(currentSmartShipment.capacity),
+                    radius: parseFloat(currentSmartShipment.radius),
+                    company_id: localStorage.getItem('manager_id')
+                };
+                apiCall('/manager/drones', 'POST', dronePayload).then(() => {
+                    addAiMessage(getTranslation('msg_drone_registered'));
+                    loadDriversAndVehicles();
+                }).catch(() => addAiMessage(getTranslation('error_drone_failed')));
+            } else {
+                smartQueue.push({ ...currentSmartShipment });
+                addAiMessage(`📦 <b>${smartType.toUpperCase()} added to Queue!</b>`);
+            }
             updateSmartUI();
             addAiMessage("Would you like to add another? Type <b>'More'</b>.");
             smartStepIndex = 99; 
@@ -1807,7 +1935,10 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
     if (!tbody) return;
     tbody.innerHTML = '';
     
-    parents.forEach(s => {
+    const limit = window.tableLimits.shipments;
+    const limitedParents = parents.slice(0, limit);
+
+    limitedParents.forEach(s => {
         try {
             const tr = document.createElement('tr');
             
@@ -1996,6 +2127,7 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
             console.error("Error rendering shipment:", err, s);
         }
     });
+    renderTableControls('shipments', parents.length, window.tableLimits.shipments, 'applyShipmentFilters');
 }
 
 async function optimizeFleet() {
@@ -2843,15 +2975,18 @@ async function submitMessage() {
 
 async function loadDriversAndVehicles() {
     try {
-        const [drivers, vehicles, warehouses, shipments] = await Promise.all([
+        const [drivers, vehicles, warehouses, shipments, drones] = await Promise.all([
             apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`)
+            apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`),
+            apiCall(`/manager/drones?company_id=${localStorage.getItem('manager_id')}`).catch(() => [])
         ]);
         globalDrivers = drivers;
         globalVehicles = vehicles;
         globalWarehouses = warehouses;
+        globalHubs = warehouses;
+        globalDrones = drones;
         
         // Populate Hub Filters and Add-Form Hubs
         const dHubFilter = document.getElementById('driver-filter-hub');
@@ -2866,9 +3001,12 @@ async function loadDriversAndVehicles() {
         if (vHubFilter) vHubFilter.innerHTML = hubsHtml;
         if (dHubSelect) dHubSelect.innerHTML = baseHubsHtml;
         if (vHubSelect) vHubSelect.innerHTML = baseHubsHtml;
+        const drHubSelect = document.getElementById('drone-base-hub');
+        if (drHubSelect) drHubSelect.innerHTML = baseHubsHtml;
 
         renderDriversTable();
         renderVehiclesTable();
+        renderDronesTable();
         renderLinkedPairs();
 
         const verifTbody = document.getElementById('verifications-table-body');
@@ -2992,7 +3130,10 @@ window.renderDriversTable = function() {
         return a.name.localeCompare(b.name);
     });
 
-    filtered.forEach(d => {
+    const limit = window.tableLimits.drivers;
+    const limited = filtered.slice(0, limit);
+
+    limited.forEach(d => {
         const joinDate = d.join_date ? new Date(d.join_date) : new Date();
         const diffDays = Math.floor(Math.abs(new Date() - joinDate) / (1000 * 60 * 60 * 24));
         const baseWh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
@@ -3041,6 +3182,7 @@ window.renderDriversTable = function() {
             dSelect.innerHTML += `<option value="${d.id}">${d.name} (${d.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
         }
     });
+    renderTableControls('drivers', filtered.length, window.tableLimits.drivers, 'renderDriversTable');
     if (window.updatePageTranslations) updatePageTranslations();
 };
 
@@ -3049,7 +3191,11 @@ window.renderLinkedPairs = function() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    globalDrivers.filter(d => d.assigned_vehicle_id).forEach(d => {
+    const filtered = globalDrivers.filter(d => d.assigned_vehicle_id);
+    const limit = window.tableLimits['linked-pairs'];
+    const limited = filtered.slice(0, limit);
+
+    limited.forEach(d => {
         const vehicle = globalVehicles.find(v => v.id === d.assigned_vehicle_id);
         const hub = globalWarehouses.find(w => w.id === d.base_warehouse_id);
         
@@ -3062,6 +3208,7 @@ window.renderLinkedPairs = function() {
             </td>
         </tr>`;
     });
+    renderTableControls('linked-pairs', filtered.length, limit, 'renderLinkedPairs');
     if (window.updatePageTranslations) updatePageTranslations();
 };
 
@@ -3106,7 +3253,10 @@ window.renderVehiclesTable = function() {
         return a.type.localeCompare(b.type);
     });
 
-    filtered.forEach(v => {
+    const limit = window.tableLimits.vehicles;
+    const limited = filtered.slice(0, limit);
+
+    limited.forEach(v => {
         const baseWh = globalWarehouses.find(w => w.id === v.base_warehouse_id);
         const activeShipment = globalShipments.find(s => s.assigned_vehicle_id === v.id && (s.status === 'assigned' || s.status === 'in_transit'));
         
@@ -3154,7 +3304,77 @@ window.renderVehiclesTable = function() {
             vSelect.innerHTML += `<option value="${v.id}">${v.type} - ${formatDisplayPlate(v.number_plate)} (${v.system_id}) - ${baseWh ? baseWh.name : 'No Hub'}</option>`;
         }
     });
+    renderTableControls('vehicles', filtered.length, window.tableLimits.vehicles, 'renderVehiclesTable');
 };
+
+window.renderDronesTable = function() {
+    const dtbody = document.getElementById('drones-table-body');
+    if (!dtbody) return;
+    if (!Array.isArray(globalDrones)) globalDrones = [];
+    
+    dtbody.innerHTML = '';
+    
+    const searchTerm = (document.getElementById('drone-search')?.value || '').toLowerCase();
+    const hubFilter = document.getElementById('drone-filter-hub')?.value || '';
+
+    let filtered = globalDrones.filter(d => {
+        const matchesSearch = (d.license_number || '').toLowerCase().includes(searchTerm) || (d.system_id || '').toLowerCase().includes(searchTerm);
+        const matchesHub = !hubFilter || d.base_warehouse_id === hubFilter;
+        return matchesSearch && matchesHub;
+    });
+
+    const limit = window.tableLimits.drones;
+    const limited = filtered.slice(0, limit);
+
+    limited.forEach(d => {
+        const baseWh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
+        
+        dtbody.innerHTML += `<tr>
+            <td><b style="font-family:monospace;">${d.license_number}</b><br><small style="color:var(--accent);">${d.system_id || d.id.substring(0,8)}</small></td>
+            <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
+            <td><b>${d.capacity}</b> kg</td>
+            <td><b>${d.radius}</b> km</td>
+            <td><span class="status-pill" style="background:var(--success)22; color:var(--success); font-size:0.6rem;">${getTranslation('status_ready')}</span></td>
+            <td>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="btn-primary btn-accent" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="openEditModal('drones', '${d.id}', '${d.license_number}', '${d.base_warehouse_id}', '${d.capacity}', '${d.radius}')" title="Edit">✏️</button>
+                    <button class="btn-primary btn-danger" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="deleteItem('drones', '${d.id}')" title="Delete">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    });
+    
+    if (filtered.length === 0) {
+        dtbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">${getTranslation('no_drones_found')}</td></tr>`;
+    }
+    renderTableControls('drones', filtered.length, limit, 'renderDronesTable');
+};
+
+async function submitNewDrone() {
+    const license = document.getElementById('drone-license').value;
+    const hub = document.getElementById('drone-base-hub').value;
+    const cap = parseFloat(document.getElementById('drone-capacity').value);
+    const rad = parseFloat(document.getElementById('drone-radius').value);
+
+    if (!license || !hub || isNaN(cap) || isNaN(rad)) {
+        return showNotification("All fields are required.", "error");
+    }
+
+    try {
+        await apiCall('/manager/drones', 'POST', {
+            license_number: license,
+            base_warehouse_id: hub,
+            capacity: cap,
+            radius: rad,
+            company_id: localStorage.getItem('manager_id')
+        });
+        showNotification("Drone registered successfully!", "success");
+        document.getElementById('add-drone-form').reset();
+        loadDriversAndVehicles();
+    } catch(err) {
+        showNotification("Failed to register drone.", "error");
+    }
+}
 
 async function manualVerify(driverId, status) {
     try {
@@ -3206,6 +3426,20 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
         html = `<div style="display:flex;flex-direction:column;gap:10px;">
                     <input type="text" id="edit-val1" value="${val1 || ''}" placeholder="Description" ${fieldStyle}>
                     <input type="text" id="edit-val2" value="${val2 || ''}" placeholder="Status" ${fieldStyle}>
+                </div>`;
+    } else if (type === 'drones') {
+        const hubOptions = (globalWarehouses || []).map(w => `<option value="${w.id}" ${w.id === val2 ? 'selected' : ''}>${w.name}</option>`).join('');
+        html = `<div style="display:flex;flex-direction:column;gap:10px;">
+                    <label style="font-size:0.75rem; color:var(--text-muted);">License Number</label>
+                    <input type="text" id="edit-dr-license" value="${val1 || ''}" ${fieldStyle}>
+                    <label style="font-size:0.75rem; color:var(--text-muted);">Base Warehouse</label>
+                    <select id="edit-dr-hub" ${fieldStyle}>
+                        ${hubOptions}
+                    </select>
+                    <label style="font-size:0.75rem; color:var(--text-muted);">Capacity (kg)</label>
+                    <input type="number" id="edit-dr-cap" value="${val3 || ''}" ${fieldStyle}>
+                    <label style="font-size:0.75rem; color:var(--text-muted);">Flight Radius (km)</label>
+                    <input type="number" id="edit-dr-rad" value="${val4 || ''}" ${fieldStyle}>
                 </div>`;
     } else if (type === 'drivers') {
         const d = globalDrivers.find(item => item.id === id);
@@ -3294,6 +3528,15 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
             fuel_efficiency: parseFloat(document.getElementById('edit-v-eff').value)
         };
         endpoint = `/manager/vehicles/${currentEditId}`;
+    } else if (currentEditType === 'drones') {
+        payload = {
+            ...payload,
+            license_number: document.getElementById('edit-dr-license').value,
+            base_warehouse_id: document.getElementById('edit-dr-hub').value,
+            capacity: parseFloat(document.getElementById('edit-dr-cap').value),
+            radius: parseFloat(document.getElementById('edit-dr-rad').value)
+        };
+        endpoint = `/manager/drones/${currentEditId}`;
     }
     
     try {
@@ -4456,6 +4699,8 @@ async function deleteItem(type, id) {
         endpoint = `/manager/${type}/${id}?company_id=${localStorage.getItem('manager_id')}`;
     } else if (type === 'shipments') {
         endpoint = `/shipments/${id}?company_id=${localStorage.getItem('manager_id')}`;
+    } else if (type === 'drones') {
+        endpoint = `/manager/drones/${id}?company_id=${localStorage.getItem('manager_id')}`;
     }
     
     try {
@@ -5062,6 +5307,70 @@ async function confirmVehicleBulk() {
         }
         alert(msg); 
         closeVehicleBulkModal(); 
+        loadDriversAndVehicles();
+    } catch(err) { alert("Bulk upload failed."); }
+}
+
+// Bulk Drone Upload
+let currentBulkDrones = [];
+function openDroneBulkModal() {
+    document.getElementById('bulk-drone-modal').style.display = 'block';
+    document.getElementById('drone-preview-section').style.display = 'none';
+}
+function closeDroneBulkModal() { document.getElementById('bulk-drone-modal').style.display = 'none'; }
+
+async function handleDroneBulkFile(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const fd = new FormData(); fd.append('file', file);
+    try {
+        const res = await fetch(`${API_BASE}/manager/drones/bulk-parse?company_id=${localStorage.getItem('manager_id')}`, { method:'POST', body:fd });
+        const data = await res.json(); renderDroneBulkPreview(data);
+    } catch(err) { alert("Failed to parse drones."); }
+}
+async function previewDroneSheets() {
+    const url = document.getElementById('drone-sheets-url').value;
+    try {
+        const res = await apiCall(`/manager/drones/bulk-parse?company_id=${localStorage.getItem('manager_id')}&url_req=${encodeURIComponent(url)}`, 'POST');
+        renderDroneBulkPreview(res);
+    } catch(err) { alert("Failed to fetch drone data."); }
+}
+function renderDroneBulkPreview(data) {
+    const drones = data.drones;
+    currentBulkDrones = drones;
+    document.getElementById('drone-bulk-count').innerText = drones.length;
+    document.getElementById('drone-preview-section').style.display = 'block';
+    
+    // Error handling
+    const errorDiv = document.getElementById('drone-bulk-errors');
+    if (errorDiv) {
+        if (data.errors && data.errors.length > 0) {
+            errorDiv.innerHTML = `<div class="glass-card" style="border-color:var(--danger); background:rgba(239,68,68,0.05); padding:10px; margin-bottom:15px;">
+                <h4 style="color:var(--danger); margin-top:0;">⚠️ Parsing Errors (${data.errors.length} rows skipped)</h4>
+                <ul style="font-size:0.8rem; color:var(--text-muted); margin:0; padding-left:20px;">
+                    ${data.errors.slice(0, 5).map(e => `<li>${e}</li>`).join('')}
+                </ul>
+            </div>`;
+            errorDiv.style.display = 'block';
+        } else {
+            errorDiv.style.display = 'none';
+        }
+    }
+
+    document.getElementById('drone-preview-body').innerHTML = drones.map(d => {
+        const wh = globalWarehouses.find(w => w.id === d.base_warehouse_id);
+        const hubName = wh ? wh.name : d.base_warehouse_id;
+        return `<tr><td>${d.license_number}</td><td>${hubName}</td><td>${d.capacity}kg</td><td>${d.radius}km</td></tr>`;
+    }).join('');
+}
+async function confirmDroneBulk() {
+    try {
+        const res = await apiCall('/manager/drones/bulk-confirm', 'POST', currentBulkDrones);
+        let msg = res.message;
+        if (res.errors && res.errors.length > 0) {
+            msg += "\n\nIssues:\n" + res.errors.join('\n');
+        }
+        alert(msg); 
+        closeDroneBulkModal(); 
         loadDriversAndVehicles();
     } catch(err) { alert("Bulk upload failed."); }
 }
