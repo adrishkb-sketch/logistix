@@ -3899,20 +3899,20 @@ async function loadLeaderboard() {
     // Update sort options based on category
     if (category === 'vehicle' && !sortSelect.dataset.isVehicle) {
         sortSelect.innerHTML = `
-            <option value="overall">General Ranking</option>
-            <option value="vehicle_health_score">Health Score</option>
-            <option value="fuel_efficiency">Fuel Efficiency</option>
-            <option value="distance">Distance Covered</option>
-            <option value="deliveries">Deliveries Made</option>
+            <option value="overall">${getTranslation('gen_ranking')}</option>
+            <option value="vehicle_health_score">${getTranslation('health_score')}</option>
+            <option value="fuel_efficiency">${getTranslation('fuel_efficiency')}</option>
+            <option value="distance">${getTranslation('dist_covered')}</option>
+            <option value="deliveries">${getTranslation('deliveries_made')}</option>
         `;
         sortSelect.dataset.isVehicle = "true";
     } else if (category === 'driver' && sortSelect.dataset.isVehicle) {
         sortSelect.innerHTML = `
-            <option value="overall">General Ranking</option>
-            <option value="safety_index">Safety Index</option>
-            <option value="punctuality_rate">Punctuality</option>
-            <option value="rating">Customer Rating</option>
-            <option value="deliveries">Deliveries Completed</option>
+            <option value="overall">${getTranslation('gen_ranking')}</option>
+            <option value="safety_index">${getTranslation('safety_index_label')}</option>
+            <option value="punctuality_rate">${getTranslation('punctuality_label')}</option>
+            <option value="rating">${getTranslation('rating_label')}</option>
+            <option value="deliveries">${getTranslation('deliveries_completed_label')}</option>
         `;
         sortSelect.removeAttribute('data-is-vehicle');
     }
@@ -3947,7 +3947,7 @@ async function loadLeaderboard() {
                 </td>
                 <td><span style="color:var(--accent); font-weight:bold;">${displayScore}</span></td>
                 <td><span class="status-pill" style="font-size:0.7rem;">${item.status}</span></td>
-                <td><button class="btn-primary" style="padding:4px 8px; font-size:0.7rem;" onclick="viewFullProfile('${category}', '${item.id}')">View Profile</button></td>
+                <td><button class="btn-primary" style="padding:4px 8px; font-size:0.7rem;" onclick="viewFullProfile('${category}', '${item.id}')">${getTranslation('view_profile_btn')}</button></td>
             </tr>
             `;
         }).join('');
@@ -3965,7 +3965,7 @@ async function viewFullProfile(type, id) {
         const modal = document.getElementById('profile-modal');
         document.getElementById('prof-image').src = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name || p.number_plate}`;
         document.getElementById('prof-name').innerText = p.name || p.number_plate;
-        document.getElementById('prof-sub').innerText = type === 'driver' ? `@${p.login_id || 'user'} | ${(p.license_type || 'regular').toUpperCase()} License` : `${(p.type || 'vehicle').toUpperCase()} | Health: ${p.vehicle_health_score || 100}%`;
+        document.getElementById('prof-sub').innerText = type === 'driver' ? `@${p.login_id || 'user'} | ${(p.license_type || 'regular').toUpperCase()} ${getTranslation('license_label')}` : `${(p.type || 'vehicle').toUpperCase()} | ${getTranslation('health_label')}: ${p.vehicle_health_score || 100}%`;
         
         if (type === 'driver') {
             document.getElementById('prof-stat-1').innerText = `${(p.safety_index || 100).toFixed(1)}%`;
@@ -3975,7 +3975,7 @@ async function viewFullProfile(type, id) {
             if (p.join_date) {
                 expMonths = Math.floor((new Date() - new Date(p.join_date)) / (1000 * 60 * 60 * 24 * 30));
             }
-            document.getElementById('prof-stat-3').innerText = `${expMonths || 0} months`;
+            document.getElementById('prof-stat-3').innerText = `${expMonths || 0} ${getTranslation('months_label')}`;
             document.getElementById('prof-stat-4').innerText = `${p.deliveries_completed || 0}`;
             
             let avgRating = 5.0;
@@ -3988,7 +3988,7 @@ async function viewFullProfile(type, id) {
             document.getElementById('prof-stat-5').style.display = 'block';
             document.getElementById('prof-stat-6').innerText = `₹${p.wallet_balance || 0} / ${p.reward_points || 0} pts`;
             
-            document.getElementById('prof-meter-label').innerText = `Fatigue Level: ${(p.fatigue_score || 0).toFixed(0)}%`;
+            document.getElementById('prof-meter-label').innerText = `${getTranslation('fatigue_level_label')}: ${(p.fatigue_score || 0).toFixed(0)}%`;
             const meter = document.getElementById('prof-meter-bar');
             meter.style.width = `${p.fatigue_score || 0}%`;
             meter.style.background = (p.fatigue_score || 0) > 80 ? 'var(--danger)' : 'var(--primary)';
@@ -4000,19 +4000,19 @@ async function viewFullProfile(type, id) {
             const hasVehicle = p.vehicle_id !== null;
 
             if (hasActiveShipment) {
-                statusEl.innerText = "🚚 ON THE ROAD";
+                statusEl.innerText = getTranslation('status_on_road');
                 statusEl.style.background = "rgba(16, 185, 129, 0.15)";
                 statusEl.style.color = "var(--success)";
             } else if (isResting) {
-                statusEl.innerText = "🧘 RESTING (ZEN MODE)";
+                statusEl.innerText = getTranslation('status_resting');
                 statusEl.style.background = "rgba(79, 140, 255, 0.15)";
                 statusEl.style.color = "var(--primary)";
             } else if (hasVehicle) {
-                statusEl.innerText = "🅿️ READY / ASSIGNED";
+                statusEl.innerText = getTranslation('status_ready');
                 statusEl.style.background = "rgba(245, 158, 11, 0.15)";
                 statusEl.style.color = "var(--warning)";
             } else {
-                statusEl.innerText = "🏠 UNAVAILABLE / OFF-DUTY";
+                statusEl.innerText = getTranslation('status_unavailable');
                 statusEl.style.background = "rgba(255, 255, 255, 0.05)";
                 statusEl.style.color = "var(--text-muted)";
             }
@@ -4024,7 +4024,7 @@ async function viewFullProfile(type, id) {
             document.getElementById('prof-stat-5').innerText = ''; 
             document.getElementById('prof-stat-6').innerText = '';
             
-            document.getElementById('prof-meter-label').innerText = `Fuel Efficiency Index`;
+            document.getElementById('prof-meter-label').innerText = getTranslation('fuel_eff_index_label');
             document.getElementById('prof-meter-bar').style.width = '85%';
         }
         
@@ -4167,7 +4167,7 @@ async function loadLedger() {
     const pbody = document.getElementById('driver-points-body');
     if (!tbody || !pbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading Blockchain Ledger...</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">${getTranslation('loading_ledger')}</td></tr>`;
     
     try {
         // Fetch Ledger
@@ -4181,7 +4181,7 @@ async function loadLedger() {
         renderDriverPointsSummary();
 
         if (txs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No Smart Contract transactions found.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">${getTranslation('no_contracts')}</td></tr>`;
             return;
         }
         
@@ -4253,7 +4253,7 @@ window.renderDriverPointsSummary = async function() {
         return `
             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                 <td style="padding:10px;"><b>${d.name}</b><br><small style="color:var(--text-muted)">${d.system_id}</small></td>
-                <td style="padding:10px;">${vehicle ? `<b>${vehicle.type}</b><br><small>${vehicle.number_plate}</small>` : '<small style="color:var(--text-muted)">Unlinked</small>'}</td>
+                <td style="padding:10px;">${vehicle ? `<b>${vehicle.type}</b><br><small>${vehicle.number_plate}</small>` : `<small style="color:var(--text-muted)">${getTranslation('unlinked')}</small>`}</td>
                 <td style="padding:10px;"><small>${hub ? hub.name : 'N/A'}</small></td>
                 <td style="padding:10px; color:var(--accent); font-weight:bold; font-size:1.1rem;">${Math.floor(d.reward_points || 0)}</td>
             </tr>

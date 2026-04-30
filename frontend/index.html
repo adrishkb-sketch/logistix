@@ -386,8 +386,20 @@ body:not(.light-mode) #theme-toggle {
     <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
     <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
             <option value="en">English (EN)</option>
-            <option value="hi">हिंदी (HI)</option>
             <option value="bn">বাংলা (BN)</option>
+            <option value="hi">हिंदी (HI)</option>
+            <option value="te">తెలుగు (TE)</option>
+            <option value="mr">मराठी (MR)</option>
+            <option value="ta">தமிழ் (TA)</option>
+            <option value="gu">ગુજરાતી (GU)</option>
+            <option value="kn">ಕನ್ನಡ (KN)</option>
+            <option value="or">ଓଡ଼ିଆ (OR)</option>
+            <option value="ml">മലയാളം (ML)</option>
+            <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+            <option value="as">অসমীয়া (AS)</option>
+            <option value="mai">मैथिली (MAI)</option>
+            <option value="sat">संताली (SAT)</option>
+            <option value="ks">کٲشُر (KS)</option>
         </select>
 </div>
 
@@ -528,7 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div id="step-1">
                     <input id="signup-name" type="text" placeholder="Company Name" data-i18n-placeholder="placeholder_company_name" required>
                     <input id="signup-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required oninput="validateSignupEmail(this.value)">
-                    <small id="email-warning" style="color:#ff4f4f; display:none; margin-top:-5px; font-size:0.75rem;">🚨 Email already registered!</small>
+                    <small id="email-warning" style="color:#ff4f4f; display:none; margin-top:-5px; font-size:0.75rem;" data-i18n="error_email_registered">🚨 Email already registered!</small>
                     <input id="signup-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
                     <button type="button" class="btn btn-primary" onclick="requestOTP()" data-i18n="btn_request_otp">Request OTP</button>
                 </div>
@@ -537,7 +549,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <input id="signup-otp" type="text" placeholder="6-digit OTP" data-i18n-placeholder="placeholder_otp" required>
                     <button type="submit" class="btn btn-primary" data-i18n="btn_verify_register">Verify & Register</button>
                     <p id="resend-timer-container" style="text-align:center; margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
-                        Didn't receive code? <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val">10</span>s)</span>
+                        <span data-i18n="didnt_receive_code">Didn't receive code?</span> <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
                     </p>
                 </div>
             </form>

@@ -30,26 +30,40 @@ class JSONDatabase:
 
     def get_all(self) -> List[Dict[str, Any]]:
         self._ensure_client()
-        try:
-            response = supabase.table(self.table_name).select("data").execute()
-            if response.data:
-                return [row["data"] for row in response.data if row.get("data")]
-            return []
-        except Exception as e:
-            print(f"Supabase GET_ALL Error on {self.table_name}: {e}")
-            return []
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = supabase.table(self.table_name).select("data").execute()
+                if response.data:
+                    return [row["data"] for row in response.data if row.get("data")]
+                return []
+            except Exception as e:
+                if "Errno 35" in str(e) and attempt < max_retries - 1:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                print(f"Supabase GET_ALL Error on {self.table_name}: {e}")
+                return []
+        return []
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         self._ensure_client()
-        try:
-            response = supabase.table(self.table_name).select("data").eq("id", item_id).execute()
-            if response.data and len(response.data) > 0:
-                data = response.data[0].get("data")
-                return data if isinstance(data, dict) else None
-            return None
-        except Exception as e:
-            print(f"Supabase GET_BY_ID Error on {self.table_name}: {e}")
-            return None
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = supabase.table(self.table_name).select("data").eq("id", item_id).execute()
+                if response.data and len(response.data) > 0:
+                    data = response.data[0].get("data")
+                    return data if isinstance(data, dict) else None
+                return None
+            except Exception as e:
+                if "Errno 35" in str(e) and attempt < max_retries - 1:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                print(f"Supabase GET_BY_ID Error on {self.table_name}: {e}")
+                return None
+        return None
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         self._ensure_client()

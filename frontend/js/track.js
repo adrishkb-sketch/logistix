@@ -2,7 +2,7 @@ let currentShipmentId = null;
 
 async function requestCustomerOTP() {
     let email = document.getElementById('cust-email').value.trim();
-    if (!email) return alert("Please enter your email address.");
+    if (!email) return alert(getTranslation('alert_enter_email'));
     
     // Handle OTP PIN Box Auto-focus and deletion
     const pinBoxes = document.querySelectorAll('.pin-box');
@@ -40,7 +40,7 @@ function startOTPTimer(linkId, valId, retryFn) {
 
     link.style.opacity = '0.5';
     link.style.pointerEvents = 'none';
-    link.innerHTML = `Resend OTP (<span id="${valId}">${timeLeft}</span>s)`;
+    link.innerHTML = `${getTranslation('resend_otp_btn')} (<span id="${valId}">${timeLeft}</span>s)`;
     
     const timer = setInterval(() => {
         timeLeft--;
@@ -51,7 +51,7 @@ function startOTPTimer(linkId, valId, retryFn) {
             clearInterval(timer);
             link.style.opacity = '1';
             link.style.pointerEvents = 'auto';
-            link.innerHTML = `Resend OTP Now`;
+            link.innerHTML = getTranslation('resend_otp_now');
             link.onclick = (e) => {
                 e.preventDefault();
                 retryFn();
@@ -64,7 +64,7 @@ async function verifyCustomerOTP() {
     const email = document.getElementById('cust-email').value.trim();
     const otp = Array.from(document.querySelectorAll('.pin-box')).map(i => i.value).join('');
     
-    if (otp.length < 6) return alert("Please enter the full 6-digit OTP.");
+    if (otp.length < 6) return alert(getTranslation('alert_full_otp'));
     
     try {
         const data = await apiCall('/auth/customer/verify-otp', 'POST', { email, otp });
@@ -74,7 +74,7 @@ async function verifyCustomerOTP() {
         showPanel('list');
         renderOrderList(data.orders);
     } catch (e) {
-        alert("Invalid OTP or session expired.");
+        alert(getTranslation('alert_invalid_otp'));
     }
 }
 
@@ -87,7 +87,7 @@ function showPanel(panelId) {
 function renderOrderList(orders) {
     const list = document.getElementById('orders-list');
     if (!orders || orders.length === 0) {
-        list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found') || 'No orders found for this number.'}</p>`;
+        list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found')}</p>`;
         return;
     }
     
@@ -106,13 +106,13 @@ function renderOrderList(orders) {
 
 async function loadCustomerOrders() {
     const list = document.getElementById('orders-list');
-    list.innerHTML = '<p style="text-align:center;">Loading orders...</p>';
+    list.innerHTML = `<p style="text-align:center;">${getTranslation('loading_orders')}</p>`;
     
     try {
         const myOrders = await apiCall('/auth/customer/shipments');
         
         if (myOrders.length === 0) {
-            list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found') || 'No orders found for this number.'}</p>`;
+            list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found')}</p>`;
             return;
         }
         
@@ -128,7 +128,7 @@ async function loadCustomerOrders() {
             </div>
         `).join('');
     } catch (e) {
-        list.innerHTML = '<p style="color:var(--danger);">Failed to load orders.</p>';
+        list.innerHTML = `<p style="color:var(--danger);">${getTranslation('failed_load_orders')}</p>`;
     }
 }
 
@@ -137,7 +137,7 @@ async function viewOrder(id) {
         const s = await apiCall(`/shipments/${id}`);
         currentShipmentId = s.id;
         
-        document.getElementById('det-id').innerText = `Order #${s.id.substring(0,8)}`;
+        document.getElementById('det-id').innerText = `${getTranslation('order_hash')} #${s.id.substring(0,8)}`;
         document.getElementById('det-desc').innerText = s.description;
         
         const statusEl = document.getElementById('det-status');
@@ -223,7 +223,7 @@ async function viewOrder(id) {
                     </div>
                     <div style="background:rgba(255,255,255,0.02); padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); position:relative;">
                         <p style="margin:0; font-size:0.9rem; color:var(--text); line-height:1.6; opacity:0.9;">${log.message}</p>
-                        ${log.reason ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); font-size:0.75rem; color:var(--text-muted); font-style:italic;">Note: ${log.reason}</div>` : ''}
+                        ${log.reason ? `<div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); font-size:0.75rem; color:var(--text-muted); font-style:italic;">${getTranslation('note_label')}: ${log.reason}</div>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -232,7 +232,7 @@ async function viewOrder(id) {
         showPanel('detail');
         initMap(s);
     } catch (e) {
-        alert("Failed to load order details.");
+        alert(getTranslation('failed_load_details'));
     }
 }
 
@@ -269,20 +269,20 @@ function setRating(val) {
 
 async function submitRating() {
     const val = parseInt(document.getElementById('selected-rating').value);
-    if (val === 0) return alert("Please select a star rating.");
+    if (val === 0) return alert(getTranslation('alert_select_rating'));
     
     const btn = document.getElementById('submit-rating-btn');
     btn.disabled = true;
-    btn.innerText = 'Submitting...';
+    btn.innerText = getTranslation('submitting_btn');
     
     try {
         await apiCall(`/shipments/${currentShipmentId}/rate`, 'POST', { rating: val });
-        alert("Thank you for your feedback!");
+        alert(getTranslation('thank_you_feedback'));
         document.getElementById('rating-box').style.display = 'none';
     } catch (e) {
-        alert("Failed to submit rating.");
+        alert(getTranslation('failed_submit_rating'));
         btn.disabled = false;
-        btn.innerText = 'Submit Rating';
+        btn.innerText = getTranslation('submit_rating');
     }
 }
 
@@ -303,14 +303,14 @@ async function simulatePayment() {
     const btn = document.getElementById('btn-pay-now');
     const originalText = btn.innerText;
     btn.disabled = true;
-    btn.innerText = "Processing Payment...";
+    btn.innerText = getTranslation('processing_pmt');
 
     try {
         await apiCall(`/shipments/${currentShipmentId}/pay`, 'POST');
-        alert("Payment Successful! Your order is now ready for delivery verification.");
+        alert(getTranslation('pmt_success'));
         viewOrder(currentShipmentId); // Refresh UI
     } catch (e) {
-        alert("Payment failed. Please try again.");
+        alert(getTranslation('pmt_failed'));
         btn.disabled = false;
         btn.innerText = originalText;
     }

@@ -45,19 +45,38 @@
 </head>
 <body>
     <div class="background-animation"></div>
-    <div id="theme-toggle" class="theme-switch" style="position:fixed; top:24px; right:24px;">🌙</div>
-    
-    <!-- Language Selector Dropdown -->
-    <div class="glass-card" style="position:fixed; top:24px; right:140px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; z-index:10002;">
-        <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
-        <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
-            <option value="en">English (EN)</option>
-            <option value="hi">हिंदी (HI)</option>
-            <option value="bn">বাংলা (BN)</option>
-        </select>
-    </div>
+    <!-- Controls Overlay -->
+    <div style="position:fixed; top:20px; right:20px; display:flex; align-items:center; gap:12px; z-index:10002; max-width: calc(100% - 40px); flex-wrap: wrap; justify-content: flex-end;">
+        <button id="modify-dash-btn" class="btn-primary btn-outline" style="padding:8px 16px; font-size:0.75rem; white-space:nowrap; margin:0;" onclick="window.logistixLayout.toggleEditMode()" data-i18n="modify_dashboard">📐 Modify Dashboard</button>
+        
+        <!-- Language Selector Dropdown -->
+        <div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:4px;">
+            <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
+            <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
+                <option value="en">English (EN)</option>
+                <option value="bn">বাংলা (BN)</option>
+                <option value="hi">हिंदी (HI)</option>
+                <option value="te">తెలుగు (TE)</option>
+                <option value="mr">मराठी (MR)</option>
+                <option value="ta">தமிழ் (TA)</option>
+                <option value="gu">ગુજરાતી (GU)</option>
+                <option value="kn">ಕನ್ನಡ (KN)</option>
+                <option value="or">ଓଡ଼ିଆ (OR)</option>
+                <option value="ml">മലയാളം (ML)</option>
+                <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                <option value="as">অসমীয়া (AS)</option>
+                <option value="mai">मैथिली (MAI)</option>
+                <option value="sat">সংताली (SAT)</option>
+                <option value="ks">کٲشُر (KS)</option>
+            </select>
+        </div>
 
-    <button id="modify-dash-btn" class="btn-primary btn-outline" style="position:fixed; top:24px; right:300px; padding:8px 16px; font-size:0.75rem; z-index:10002;" onclick="window.logistixLayout.toggleEditMode()" data-i18n="modify_dashboard">📐 Modify Dashboard</button>
+        <div id="theme-toggle" class="theme-switch" style="position:static; margin:0;">🌙</div>
+    </div>
+    
+
+
+
 
 
 
@@ -90,7 +109,7 @@
                 </div>
                 <button class="btn-primary" style="width:100%;" onclick="verifyCustomerOTP()" data-i18n="verify_otp">Track My Orders</button>
                 <p id="resend-timer-container" style="text-align:center; margin-top:20px; font-size:0.85rem; color:var(--text-muted);">
-                    Didn't receive code? <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val">10</span>s)</span>
+                    <span data-i18n="didnt_receive_code">Didn't receive code?</span> <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
                 </p>
                 <p style="text-align:center; margin-top:16px;"><a href="#" onclick="location.reload()" style="color:var(--muted); font-size:0.85rem;" data-i18n="change_email">Change Email Address</a></p>
             </div>

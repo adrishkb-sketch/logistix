@@ -72,8 +72,20 @@
                     <span style="font-size:0.8rem; font-weight:800; color:var(--muted);">🌐</span>
                     <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.75rem; font-weight:800; padding:2px; width:auto; appearance:auto; outline:none;">
                         <option value="en">EN</option>
-                        <option value="hi">HI</option>
                         <option value="bn">BN</option>
+                        <option value="hi">HI</option>
+                        <option value="te">TE</option>
+                        <option value="mr">MR</option>
+                        <option value="ta">TA</option>
+                        <option value="gu">GU</option>
+                        <option value="kn">KN</option>
+                        <option value="or">OR</option>
+                        <option value="ml">ML</option>
+                        <option value="pa">PA</option>
+                        <option value="as">AS</option>
+                        <option value="mai">MAI</option>
+                        <option value="sat">SAT</option>
+                        <option value="ks">KS</option>
                     </select>
                 </div>
 
@@ -110,14 +122,14 @@
                 <div id="v-pending-box" style="display:none;">
                     <div class="pulse-warning" style="color:var(--warning); font-weight:bold; font-size:1.2rem; margin-bottom:15px;"><span data-i18n="awaiting_approval">⏳ Awaiting Approval</span></div>
                     <p style="color:var(--text-muted);"><span data-i18n="v_pending_desc">Automated system could not verify the plate automatically. Your manager has been notified for manual review.</span></p>
-                    <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()"><span data-i18n="refresh_status">🔄 Refresh Status</span></button>
+                    <button class="btn-primary" style="margin-top:20px; background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;" onclick="loadMissions()" data-i18n="btn_refresh_status">🔄 Refresh Status</button>
                 </div>
 
                 <div id="v-no-vehicle-box" style="display:none; padding:20px;">
                     <div style="font-size:4rem; margin-bottom:20px;">🚛</div>
                     <h2 style="margin-bottom:10px;" data-i18n="v_pending_assignment">Waiting for Vehicle Assignment...</h2>
                     <p style="color:var(--text-muted); margin-bottom:30px;"><span data-i18n="v_ask_manager">Please ask your manager to link you to a vehicle in the fleet management panel to begin verification.</span></p>
-                    <button class="btn-primary" style="background:var(--accent); color:#000; width:auto; padding:12px 24px; font-weight:800;" onclick="loadMissions()"><span data-i18n="btn_refresh_status">🔄 Refresh Status</span></button>
+                    <button class="btn-primary" style="background:var(--accent); color:#000; width:auto; padding:12px 24px; font-weight:800;" onclick="loadMissions()" data-i18n="btn_refresh_status">🔄 Refresh Status</button>
                 </div>
                 </div>
              </div>
@@ -158,14 +170,14 @@
 
                 <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);">
                     <h4 style="margin:0 0 15px 0; color:var(--warning);" data-i18n="request_funds_title">Request Emergency Funds ⛽🍔</h4>
-                    <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px;">Requests are sent to the manager for instant approval.</p>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px;" data-i18n="incident_report_desc">Requests are sent to the manager for instant approval.</p>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <div style="display:flex; gap:10px;">
                             <select id="fund-req-type" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; flex:1;">
-                                <option value="FUEL">Fuel / Gas ⛽</option>
-                                <option value="FOOD">Food / Subsistence 🍔</option>
-                                <option value="MAINTENANCE">Emergency Repair 🛠️</option>
-                                <option value="OTHER">Other / Misc 📦</option>
+                                <option value="FUEL" data-i18n="fund_type_fuel">Fuel / Gas ⛽</option>
+                                <option value="FOOD" data-i18n="fund_type_food">Food / Subsistence 🍔</option>
+                                <option value="MAINTENANCE" data-i18n="fund_type_maintenance">Emergency Repair 🛠️</option>
+                                <option value="OTHER" data-i18n="fund_type_other">Other / Misc 📦</option>
                             </select>
                             <div style="position:relative;">
                                 <input type="number" id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;">
@@ -173,7 +185,7 @@
                             </div>
                         </div>
                         <button class="btn-primary" style="width:100%; padding:14px; font-weight:700;" onclick="handleFundRequest()">
-                            <span data-i18n="send">Request Funds Now</span>
+                            <span data-i18n="withdraw_btn">Request Funds Now</span>
                         </button>
                     </div>
                 </div>
@@ -244,15 +256,15 @@
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <h4 style="margin:0; font-size:1rem;" data-i18n="vehicle_status">Vehicle Status</h4>
-                            <div id="vehicle-status-badge" class="status-pill" style="background:var(--success)22; color:var(--success); margin-top:5px; display:inline-block; font-size:0.75rem;" data-i18n="operational">OPERATIONAL</div>
+                            <div id="vehicle-status-badge" class="status-pill" style="background:var(--success)22; color:var(--success); margin-top:5px; display:inline-block; font-size:0.75rem;" data-i18n="status_operational">OPERATIONAL</div>
                         </div>
                         <div id="vehicle-actions">
                             <!-- Injected via JS -->
                         </div>
                     </div>
                     <div id="breakdown-rescue-info" style="display:none; margin-top:15px; padding:15px; background:rgba(239, 68, 68, 0.08); border-radius:12px; border:1px solid rgba(239, 68, 68, 0.2);">
-                        <div style="font-weight:bold; color:var(--danger); margin-bottom:5px; font-size:0.9rem;">🚨 Rescue Protocol Active</div>
-                        <p style="font-size:0.85rem; color:var(--muted); margin:0;" id="rescue-details">Initiating emergency shipment transfer...</p>
+                        <div style="font-weight:bold; color:var(--danger); margin-bottom:5px; font-size:0.9rem;" data-i18n="rescue_protocol_active">🚨 Rescue Protocol Active</div>
+                        <p style="font-size:0.85rem; color:var(--muted); margin:0;" id="rescue-details" data-i18n="rescue_initiating">Initiating emergency shipment transfer...</p>
                     </div>
                 </div>
 
@@ -343,11 +355,11 @@
                         <div class="glass-card" style="padding:15px; background:rgba(255,255,255,0.05); grid-column: span 2;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div>
-                                    <small style="color:var(--text-muted)">Platform Tenure</small>
+                                    <small style="color:var(--text-muted)" data-i18n="platform_tenure_label">Platform Tenure</small>
                                     <h4 id="p-experience" style="margin:0; color:var(--primary);" data-i18n="platform_tenure">0 Days</h4>
                                 </div>
                                 <div style="text-align:right;">
-                                    <small style="color:var(--text-muted)">Reward Points 🏆</small>
+                                    <small style="color:var(--text-muted)" data-i18n="reward_points">Reward Points 🏆</small>
                                     <h4 id="p-wallet" style="margin:0; color:var(--success);">0</h4>
                                 </div>
                             </div>
@@ -492,22 +504,22 @@
     <!-- Verification Modal (QR + Photo) -->
     <div id="verify-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:95%; max-width:500px; padding:24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); border:1px solid var(--primary);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="verify-modal-title" style="margin:0; font-weight:800;">Verification Required</h3>
+            <h3 id="verify-modal-title" style="margin:0; font-weight:800;" data-i18n="security_verification">Verification Required</h3>
             <button onclick="closeVerifyModal()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
         </div>
         
         <div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden; border:2px solid var(--primary); background:#000;"></div>
         
         <div id="qr-success-msg" style="display:none; margin-top:15px; padding:15px; background:rgba(72,187,120,0.1); border:1px solid var(--success); border-radius:10px; text-align:center;">
-            <p style="color:var(--success); font-weight:bold; margin:0;">✅ QR Code Verified Successfully!</p>
+            <p style="color:var(--success); font-weight:bold; margin:0;" data-i18n="qr_matched">✅ QR Code Verified Successfully!</p>
         </div>
 
         <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
-            <button id="btn-submit-verify" class="btn-primary" style="width:100%; display:none;" onclick="closeVerifyModal()">Done</button>
-            <button id="btn-manual-verify" class="btn-primary" style="width:100%; display:none; background:var(--warning); color:#000;" onclick="manualVerify(currentVerifyId, 'pickup')">⚠️ Verify Manually (Audit Required)</button>
+            <button id="btn-submit-verify" class="btn-primary" style="width:100%; display:none;" onclick="closeVerifyModal()" data-i18n="btn_done">Done</button>
+            <button id="btn-manual-verify" class="btn-primary" style="width:100%; display:none; background:var(--warning); color:#000;" onclick="manualVerify(currentVerifyId, 'pickup')" data-i18n="btn_manual_verify">⚠️ Verify Manually (Audit Required)</button>
         </div>
         
-        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted); text-align:center;">Point your camera at the shipment's QR code to proceed.</p>
+        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted); text-align:center;" data-i18n="camera_qr_msg">Point your camera at the shipment's QR code to proceed.</p>
     </div>
 
     <!-- Health Vitals Modal -->
@@ -536,7 +548,7 @@
             </div>
             <div style="display:flex; gap:10px;">
                 <button type="submit" class="btn-primary" style="flex:1;" data-i18n="btn_update_vitals">Update Vitals</button>
-                <button type="button" class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="closeHealthModal()">Cancel</button>
+                <button type="button" class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="closeHealthModal()" data-i18n="btn_cancel">Cancel</button>
             </div>
         </form>
         </div> <!-- end main-content -->

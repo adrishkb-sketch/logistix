@@ -25,7 +25,7 @@ function showStatusOverlay(message, duration = 4000) {
     overlay.innerHTML = `
         <div style="font-size:4rem; margin-bottom:20px;">⚡</div>
         <h2 style="color:var(--accent); margin-bottom:12px; font-size:2rem; font-weight:800; letter-spacing:-0.5px;">${message}</h2>
-        <p style="color:var(--text-muted); font-size:1rem; line-height:1.5;">Status broadcasted to headquarters.<br>Awaiting automated ledger clearance.</p>
+        <p style="color:var(--text-muted); font-size:1rem; line-height:1.5;">${getTranslation('status_broadcasted')}</p>
     `;
     document.body.appendChild(overlay);
     setTimeout(() => {
@@ -71,7 +71,7 @@ function attachSimulationDrag(m) {
         if (!isSimulationMode) return;
         const { lat, lng } = e.target.getLatLng();
         await apiCall(`/driver/${localStorage.getItem('driver_id')}/location`, 'POST', { lat, lng });
-        showNotification("📍 Manual movement synced (SIMULATION)", "success");
+        showNotification(getTranslation('sim_movement_synced'), "success");
     });
 }
 
@@ -171,10 +171,10 @@ async function toggleSimHalt() {
         isHalted = res.halted;
         const haltBtn = document.getElementById('sim-halt-btn');
         if (haltBtn) {
-            haltBtn.innerText = isHalted ? "Resume Movement 🚛" : "Emergency Halt 🛑";
+            haltBtn.innerText = isHalted ? getTranslation('resume_movement_btn') : getTranslation('emergency_halt_btn');
             haltBtn.style.background = isHalted ? "var(--success)" : "var(--danger)";
         }
-        showNotification(isHalted ? "Vehicle Halted. All shipment timers paused." : "Movement Resumed.", isHalted ? "error" : "success");
+        showNotification(isHalted ? getTranslation('vehicle_halted_msg') : getTranslation('movement_resumed_msg'), isHalted ? "error" : "success");
     } catch (e) {
         alert("Failed to toggle halt status.");
     }
@@ -311,7 +311,7 @@ async function loadDashStats() {
         const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(localStorage.getItem('driver_id'))) : null;
         
         if (me && me.assigned_vehicle_id) {
-            document.getElementById('vehicle-mini-details').innerText = `Active Vehicle: ${me.assigned_vehicle_id}`;
+            document.getElementById('vehicle-mini-details').innerText = `${getTranslation('active_vehicle_label')}${me.assigned_vehicle_id}`;
             
             // Handle Breakdown/Maintenance UI
             const vehicles = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('company_id')}`);
@@ -328,7 +328,7 @@ async function loadDashStats() {
                     statusBadge.style.color = 'var(--danger)';
                     actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success); font-size:0.85rem;" onclick="completeMaintenance()">🔧 ${getTranslation('mark_repaired')}</button>`;
                     rescueInfo.style.display = 'block';
-                    document.getElementById('rescue-details').innerText = "Vehicle is locked in maintenance mode. Click 'Mark Repaired' to resume duties.";
+                    document.getElementById('rescue-details').innerText = getTranslation('maintenance_lock_desc');
                 } else {
                     statusBadge.innerText = (getTranslation(v.status) || v.status).toUpperCase().replace('_', '-');
                     statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
@@ -356,7 +356,7 @@ async function loadDashStats() {
                     </div>
                 `;
             } else {
-                document.getElementById('vehicle-mini-details').innerText = "Assigned vehicle data not found.";
+                document.getElementById('vehicle-mini-details').innerText = getTranslation('vehicle_data_not_found');
             }
         }
     } catch(e) {
@@ -365,15 +365,15 @@ async function loadDashStats() {
 }
 
 async function reportBreakdown() {
-    if (!confirm("🚨 MAJOR BREAKDOWN: Are you sure? This will trigger an automatic rescue vehicle to intercept your shipments.")) return;
+    if (!confirm(getTranslation('breakdown_confirm'))) return;
     try {
         const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000}));
         const res = await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: pos.coords.latitude, lng: pos.coords.longitude });
-        showNotification("Breakdown reported! Rescue protocol initiated.", "error");
+        showNotification(getTranslation('breakdown_reported'), "error");
         loadDashStats();
     } catch (e) {
         await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: 0, lng: 0 });
-        showNotification("Breakdown reported without GPS. Rescue assigned.", "error");
+        showNotification(getTranslation('breakdown_no_gps'), "error");
         loadDashStats();
     }
 }
@@ -381,7 +381,7 @@ async function reportBreakdown() {
 async function completeMaintenance() {
     try {
         await apiCall(`/driver/${dId}/maintenance-complete`, 'POST');
-        showNotification("Vehicle cleared for duty!", "success");
+        showNotification(getTranslation('vehicle_cleared'), "success");
         loadDashStats();
     } catch (e) {
         showNotification("Failed to update status.", "error");
@@ -504,21 +504,20 @@ async function loadMissions(autoStartNext = false) {
         } else {
             completedShipments.forEach(s => {
                 const isWarehouseHandoff = s.is_leg && s.drop.address;
-                const dropTitle = isWarehouseHandoff ? `Warehouse Handoff: ${s.drop.address}` : 'Customer Delivery';
-                compHtml += `
+                const dropTitle = isWarehouseHandoff ? `${getTranslation('warehouse_handoff')}: ${s.drop.address}` : getTranslation('customer_delivery');
+                completedContainer.innerHTML += `
                     <div class="glass-card" style="margin-bottom:15px; border-left: 4px solid var(--success); opacity: 0.8;">
                         <h4 style="margin-bottom:5px; color:var(--success);">✅ ${s.description}</h4>
                         <p style="margin-bottom:5px; font-size: 0.9rem; color:var(--text-muted);"><b>ID:</b> ${s.id}</p>
-                        <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Type:</b> ${dropTitle}</p>
-                        <p style="margin-bottom:5px; font-size: 0.9rem;"><b>OTP Used:</b> ${s.delivery_otp || 'N/A'}</p>
+                        <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('type_label')}:</b> ${dropTitle}</p>
+                        <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('otp_used')}:</b> ${s.delivery_otp || 'N/A'}</p>
                     </div>
                 `;
             });
         }
-        completedContainer.innerHTML = compHtml;
         
         if (activeShipments.length === 0) {
-            container.innerHTML = `<div class="glass-card"><p>No active shipments currently. You're all caught up!</p></div>`;
+            container.innerHTML = `<div class="glass-card"><p>${getTranslation('no_active_shipments')}</p></div>`;
             document.getElementById('route-map').style.display = 'none';
             document.getElementById('fullscreen-btn').style.display = 'none';
             return;
@@ -581,7 +580,7 @@ async function loadMissions(autoStartNext = false) {
         
         // Render Timeline
         if (orderedStops.length > 0 && me && me.verification_status === "verified") {
-            let html = `<h3>Multi-Stop Roadmap (${orderedStops.length} Stops)</h3><div class="timeline">`;
+            let html = `<h3>${getTranslation('multi_stop_roadmap')} (${orderedStops.length} ${getTranslation('stops_label') || 'Stops'})</h3><div class="timeline">`;
             
             orderedStops.forEach((stop, idx) => {
                 const isCurrent = idx === 0;
@@ -598,67 +597,67 @@ async function loadMissions(autoStartNext = false) {
 
                     if (stop.type === 'pickup') {
                         actionBtn = `
-                            <button class="btn-primary" style="margin-top:10px; width:100%;" onclick="handleScan('${s.id}', 'pickup')">📸 ${getTranslation('scan_qr_pickup') || 'Scan QR to Pickup'}</button>
+                            <button class="btn-primary" style="margin-top:10px; width:100%;" onclick="handleScan('${s.id}', 'pickup')">📸 ${getTranslation('scan_qr_pickup')}</button>
                         `;
                     } else if (isLastMile) {
                         actionBtn = `
-                            <button class="btn-primary btn-success" style="margin-top:10px; width:100%;" onclick="completeDeliveryFlow('${s.id}')">🏁 ${getTranslation('deliver_to_customer') || 'Deliver to Customer'}</button>
+                            <button class="btn-primary btn-success" style="margin-top:10px; width:100%;" onclick="completeDeliveryFlow('${s.id}')">🏁 ${getTranslation('deliver_to_customer')}</button>
                         `;
                     } else {
                         // Warehouse handoff
                         actionBtn = `
-                            <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--warning);" onclick="handleScan('${s.id}', 'warehouse')">🏢 ${getTranslation('scan_qr_warehouse') || 'Scan QR for Warehouse Handoff'}</button>
+                            <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--warning);" onclick="handleScan('${s.id}', 'warehouse')">🏢 ${getTranslation('scan_qr_warehouse')}</button>
                         `;
                     }
-                } else if (isLocked) {
-                    actionBtn = `
-                        <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.3); border:1px dashed rgba(255,255,255,0.1); cursor:not-allowed;">🔒 Locked: Pending previous leg</button>
-                    `;
+                } else {
+                        actionBtn = `
+                            <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.3); border:1px dashed rgba(255,255,255,0.1); cursor:not-allowed;">${getTranslation('locked_pending')}</button>
+                        `;
                 }
                 
                 html += `
                     <div class="timeline-node" style="${isLocked ? 'filter: grayscale(1) blur(2px); pointer-events: none;' : ''}">
                         <div class="timeline-dot" style="background:${dotColor}; opacity:${isLocked ? 0.3 : 1}"></div>
                         <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.4; filter: blur(3px);'}">
-                            <h4 style="margin-bottom:5px; color:${dotColor}; opacity:${isLocked ? 0.5 : 1}">${actionText} ${isLocked ? '(Queued)' : ''}</h4>
-                            <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Shipment:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
+                            <h4 style="margin-bottom:5px; color:${dotColor}; opacity:${isLocked ? 0.5 : 1}">${actionText} ${isLocked ? `(${getTranslation('queued')})` : ''}</h4>
+                            <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('shipment_label')}:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
                             
                             ${actionBtn}
                             
                             ${s.is_perishable ? `
                                 <div style="background:rgba(0,242,254,0.1); padding:10px; border-radius:8px; border:1px solid var(--primary); margin:10px 0;">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                        <span style="font-size:0.75rem; color:var(--primary); font-weight:bold;">❄️ COLD CHAIN CARGO</span>
-                                        <span style="font-size:0.75rem; font-weight:bold; color:${(s.vitality||100) < 60 ? 'var(--danger)' : 'var(--success)'}">${(s.vitality||100).toFixed(0)}% Vitality</span>
+                                        <span style="font-size:0.75rem; color:var(--primary); font-weight:bold;">❄️ ${getTranslation('cold_chain_cargo')}</span>
+                                        <span style="font-size:0.75rem; font-weight:bold; color:${(s.vitality||100) < 60 ? 'var(--danger)' : 'var(--success)'}">${(s.vitality||100).toFixed(0)}% ${getTranslation('vitality')}</span>
                                     </div>
                                     <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
                                         <div style="width:${s.vitality||100}%; height:100%; background:${(s.vitality||100) < 60 ? 'var(--danger)' : 'var(--primary)'};"></div>
                                     </div>
-                                    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:5px;">AI Warning: Perishable items detected. Maintain speed and avoid high-temperature delays.</p>
+                                    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:5px;">${getTranslation('perishable_ai_warning')}</p>
                                 </div>
                             ` : ''}
 
-                            <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ Deadline:</b> ${formatDate(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery)}</p>
-                            <p style="margin-bottom:5px; font-size: 0.9rem;"><b>Location:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
+                            <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ ${getTranslation('deadline_label')}:</b> ${formatDate(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery)}</p>
+                            <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('location_label')}:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
                             
                             ${s.is_leg ? `
                                 <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(245, 158, 11, 0.1); border:1px solid var(--warning); border-left: 4px solid var(--warning);">
-                                    <p style="margin:0; font-size:0.75rem; color:var(--warning); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">🤝 Rendezvous Protocol</p>
-                                    <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">Meet at ${stop.type === 'pickup' ? 'Outbound Hub' : 'Receiving Hub'}</p>
-                                    <p style="margin:2px 0 0 0; font-size:0.9rem; color:var(--text-muted);">Coordinate with depot manager for handoff.</p>
+                                    <p style="margin:0; font-size:0.75rem; color:var(--warning); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">${getTranslation('rendezvous_protocol')}</p>
+                                    <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">${getTranslation('meet_at')} ${stop.type === 'pickup' ? getTranslation('outbound_hub') : getTranslation('receiving_hub')}</p>
+                                    <p style="margin:2px 0 0 0; font-size:0.9rem; color:var(--text-muted);">${getTranslation('handoff_coord_desc')}</p>
                                     
                                     ${isCurrent && stop.type === 'pickup' ? `
                                         <div style="display:flex; gap:10px; margin-top:12px;">
                                             ${s.has_refuel_req ? `
-                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ Refuel Requested</button>
+                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ ${getTranslation('refuel_requested')}</button>
                                             ` : `
-                                                <button class="btn-primary" style="flex:1; background:rgba(245, 158, 11, 0.2); color:var(--warning); border:1px solid var(--warning); font-size:0.75rem;" id="refuel-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'refuel')">⛽ Refuel</button>
+                                                <button class="btn-primary" style="flex:1; background:rgba(245, 158, 11, 0.2); color:var(--warning); border:1px solid var(--warning); font-size:0.75rem;" id="refuel-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'refuel')">⛽ ${getTranslation('refuel')}</button>
                                             `}
                                             
                                             ${s.has_toll_req ? `
-                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ Toll Requested</button>
+                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ ${getTranslation('toll_requested')}</button>
                                             ` : `
-                                                <button class="btn-primary" style="flex:1; background:rgba(79, 140, 255, 0.2); color:var(--primary); border:1px solid var(--primary); font-size:0.75rem;" id="toll-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'toll')">🛣️ Toll</button>
+                                                <button class="btn-primary" style="flex:1; background:rgba(79, 140, 255, 0.2); color:var(--primary); border:1px solid var(--primary); font-size:0.75rem;" id="toll-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'toll')">🛣️ ${getTranslation('toll')}</button>
                                             `}
                                         </div>
                                     ` : ''}
@@ -668,20 +667,20 @@ async function loadMissions(autoStartNext = false) {
                             ${s.performance_stats ? `
                                 <div style="margin:8px 0; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <span style="font-size:0.75rem; color:var(--text-muted);">Journey Status:</span>
+                                        <span style="font-size:0.75rem; color:var(--text-muted);">${getTranslation('journey_status_label')}</span>
                                         <span class="badge" style="background:${s.performance_stats.status === 'delayed' ? 'var(--danger)' : (s.performance_stats.status === 'early' ? 'var(--success)' : 'var(--primary)')}; font-size:0.7rem;">
                                             ${s.performance_stats.status.toUpperCase()} (${s.performance_stats.diff_mins}m)
                                         </span>
                                     </div>
                                     <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
-                                         ${s.performance_stats.dist_remaining_km}km left | Weather: ${s.performance_stats.weather}
+                                         ${s.performance_stats.dist_remaining_km}km ${getTranslation('left_label')} | ${getTranslation('weather_label')}: ${s.performance_stats.weather}
                                     </div>
                                 </div>
                             ` : ''}
                             
                             ${(stop.type === 'drop' && s.receiver_name) ? `
                                 <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(72, 187, 120, 0.1); border:1px solid var(--success); border-left: 4px solid var(--success);">
-                                    <p style="margin:0; font-size:0.75rem; color:var(--success); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Recipient Details</p>
+                                    <p style="margin:0; font-size:0.75rem; color:var(--success); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">${getTranslation('recipient_details_label')}</p>
                                     <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">👤 ${s.receiver_name}</p>
                                     <p style="margin:2px 0 0 0; font-size:1rem; color:var(--text-muted);">📞 ${s.receiver_phone}</p>
                                 </div>
@@ -725,11 +724,11 @@ async function loadMissions(autoStartNext = false) {
             drawMultiStopRoute(orderedStops);
             
         } else if (me && me.verification_status !== "verified") {
-            container.innerHTML = `<div class="glass-card"><p>Awaiting vehicle verification before roadmap can be loaded.</p></div>`;
+            container.innerHTML = `<div class="glass-card"><p>${getTranslation('awaiting_verification')}</p></div>`;
             document.getElementById('route-map').style.display = 'none';
             document.getElementById('fullscreen-btn').style.display = 'none';
         } else {
-            container.innerHTML = `<div class="glass-card"><p>No valid stops to route currently.</p></div>`;
+            container.innerHTML = `<div class="glass-card"><p>${getTranslation('no_stops_to_route')}</p></div>`;
             document.getElementById('route-map').style.display = 'none';
         }
         
@@ -738,7 +737,7 @@ async function loadMissions(autoStartNext = false) {
         
     } catch(e) {
         console.error("[Bootstrap] loadMissions Failed:", e);
-        showError(`Failed to load dashboard: ${e.message}`);
+        showError(`${getTranslation('failed_load_dashboard')}: ${e.message}`);
     }
 }
 
@@ -751,7 +750,7 @@ document.getElementById('verify-form-main')?.addEventListener('submit', async (e
     formData.append('file', file);
     
     const btn = document.getElementById('verify-btn-main');
-    btn.innerText = "Scanning Plate...";
+    btn.innerText = getTranslation('scanning_plate');
     btn.disabled = true;
     
     try {
@@ -763,22 +762,22 @@ document.getElementById('verify-form-main')?.addEventListener('submit', async (e
         
         if (!res.ok) {
             const errData = await res.json().catch(() => ({detail: "Server Error"}));
-            throw new Error(errData.detail || "Verification failed on server");
+            throw new Error(errData.detail || getTranslation('verification_failed'));
         }
         
         const data = await res.json();
         console.log("[Verification] Success:", data);
         
         if (data.status === "verified") {
-            alert("✅ Verification Successful!\n" + (data.ml_result.message || ""));
+            alert(getTranslation('verification_success') + "\n" + (data.ml_result.message || ""));
         } else {
-            alert("⏳ Verification Pending.\n" + (data.ml_result.message || "Manual review required."));
+            alert(getTranslation('verification_pending') + "\n" + (data.ml_result.message || getTranslation('manual_review_required')));
         }
         loadMissions();
     } catch (err) {
         console.error("[Verification] Error:", err);
-        alert("❌ Verification Error: " + err.message);
-        btn.innerText = "🚀 Upload & Verify (AI)";
+        alert("❌ " + getTranslation('verification_error') + ": " + err.message);
+        btn.innerText = getTranslation('upload_verify');
         btn.disabled = false;
     }
 });
@@ -825,15 +824,15 @@ async function updateLocation(position) {
 }
 
 function handleError() {
-    console.warn("Real GPS failed, falling back to manual click-to-move GPS movement for demo.");
+    console.warn(getTranslation('gps_failed_msg'));
     
     if (!map) return;
     
-    showNotification("Map Click-to-Move enabled. Click anywhere on the map to manually move your vehicle.", "success");
+    showNotification(getTranslation('map_click_enabled'), "success");
     
     map.on('click', async function(e) {
         if (isHalted) {
-            showNotification("Vehicle is currently halted. Cannot move.", "error");
+            showNotification(getTranslation('vehicle_halted'), "error");
             return;
         }
         
@@ -878,12 +877,12 @@ async function drawMultiStopRoute(stops) {
         const icon = stop.type === 'pickup' ? ICON_PICKUP : ICON_DROP;
         const m = L.marker([stop.lat, stop.lng], {icon: icon}).addTo(map);
         
-        let popupHtml = `<b>${stop.type === 'pickup' ? '📦 Pickup' : '📍 Drop'}</b><br>${stop.shipment.description}`;
+        let popupHtml = `<b>${stop.type === 'pickup' ? getTranslation('pickup') : getTranslation('drop')}</b><br>${stop.shipment.description}`;
         if (isCurrent) {
             if (stop.type === 'pickup') {
-                 popupHtml += `<br><button style="margin-top:5px; background:var(--primary); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmPickup('${stop.shipment.id}')">Confirm Pickup</button>`;
+                 popupHtml += `<br><button style="margin-top:5px; background:var(--primary); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmPickup('${stop.shipment.id}')">${getTranslation('confirm_pickup')}</button>`;
             } else {
-                 popupHtml += `<br><button style="margin-top:5px; background:var(--success); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmDelivery('${stop.shipment.id}', '${stop.shipment.delivery_otp}')">Confirm Drop (OTP)</button>`;
+                 popupHtml += `<br><button style="margin-top:5px; background:var(--success); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmDelivery('${stop.shipment.id}', '${stop.shipment.delivery_otp}')">${getTranslation('confirm_drop_otp')}</button>`;
             }
         }
         m.bindPopup(popupHtml);
@@ -934,9 +933,9 @@ function showPopupAlert(msg) {
     alertDiv.style.borderLeft = '4px solid var(--danger)';
     alertDiv.style.marginBottom = '10px';
     alertDiv.innerHTML = `
-        <h4 style="color:var(--danger); margin-bottom:5px;">⚠️ Alert</h4>
+        <h4 style="color:var(--danger); margin-bottom:5px;">⚠️ ${getTranslation('alert_label')}</h4>
         <p style="font-size:0.85rem">${msg}</p>
-        <button class="btn-primary" style="margin-top:10px; padding: 5px;" onclick="this.parentElement.remove()">Acknowledge</button>
+        <button class="btn-primary" style="margin-top:10px; padding: 5px;" onclick="this.parentElement.remove()">${getTranslation('acknowledge')}</button>
     `;
     container.appendChild(alertDiv);
     setTimeout(() => alertDiv.remove(), 10000);
@@ -980,7 +979,7 @@ async function loadAlertsAndMessages() {
                 banner.style.display = 'block';
             } else if (activeShipment.is_perishable) {
                 const v = activeShipment.vitality || 100;
-                banner.innerHTML = `❄️ <b>Cold Chain Active:</b> Product Vitality at <b>${v.toFixed(0)}%</b>. Avoid delays.`;
+                banner.innerHTML = `❄️ <b>${getTranslation('cold_chain_active')}:</b> ${getTranslation('product_vitality')} <b>${v.toFixed(0)}%</b>. ${getTranslation('avoid_delays')}.`;
                 banner.style.background = v < 60 ? 'linear-gradient(90deg, #e53e3e, #c53030)' : 'linear-gradient(90deg, #3182ce, #2b6cb0)';
                 banner.style.display = 'block';
             } else {
@@ -1020,7 +1019,7 @@ function renderDriverMessages(msgs) {
     
     // Use the same beautiful bubble layout as the manager dashboard
     container.innerHTML = msgs.length === 0
-        ? '<p style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:20px;">No conversation history. Message your manager for updates.</p>'
+        ? `<p style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:20px;">${getTranslation('no_conversation_history')}</p>`
         : msgs.map(m => {
             const isMe = m.sender_type === 'driver';
             let mediaHtml = '';
@@ -1038,7 +1037,7 @@ function renderDriverMessages(msgs) {
                                 border: 1px solid ${isMe ? 'transparent' : 'var(--border)'};
                                 box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                         <div style="font-size:0.65rem; margin-bottom:4px; opacity:0.7; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">
-                            ${isMe ? 'You' : 'Operations 🛡️'}
+                            ${isMe ? getTranslation('you') : getTranslation('operations_label')}
                         </div>
                         ${m.content && m.content !== '[Media]' ? `<div style="font-size:0.95rem; line-height:1.4;">${m.content}</div>` : ''}
                         ${mediaHtml}
@@ -1086,7 +1085,7 @@ async function sendMessageToManager() {
         if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
         loadAlertsAndMessages();
     } catch(e) {
-        alert("Failed to send message.");
+        alert(getTranslation('failed_send_message'));
     }
 }
 
@@ -1102,7 +1101,7 @@ function driverChatHandlePhoto(input) {
         driverChatMediaData = { type: 'image', url: e.target.result };
         const preview = document.getElementById('driver-media-preview');
         preview.style.display = 'flex';
-        preview.innerHTML = `<img src="${e.target.result}" style="height:52px;border-radius:8px;border:1px solid var(--border);"><span style="font-size:0.8rem;color:var(--muted);flex:1;">Photo ready</span><button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;">✕</button>`;
+        preview.innerHTML = `<img src="${e.target.result}" style="height:52px;border-radius:8px;border:1px solid var(--border);"><span style="font-size:0.8rem;color:var(--muted);flex:1;">${getTranslation('photo_ready')}</span><button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;">✕</button>`;
     };
     reader.readAsDataURL(file);
     input.value = '';
@@ -1142,7 +1141,7 @@ async function driverChatToggleRecording() {
             btn.style.background = 'rgba(229,62,62,0.2)';
             btn.style.color = 'var(--danger)';
         } catch(e) {
-            alert('Microphone access denied. Please allow mic permission.');
+            alert(getTranslation('mic_access_denied'));
         }
     } else {
         driverMediaRecorder.stop();
@@ -1161,7 +1160,7 @@ async function loadProfileData() {
     const data = await apiCall(`/manager/drivers/${dId}/profile`);
     const p = data.profile;
     
-    document.getElementById('p-name').innerText = p.name || "Driver";
+    document.getElementById('p-name').innerText = p.name || getTranslation('driver_label');
     document.getElementById('p-login').innerText = `@${p.login_id || 'user'}`;
     document.getElementById('p-trips').innerText = p.total_trips || 0;
     document.getElementById('p-safety').innerText = `${(p.safety_index || 100).toFixed(1)}%`;
@@ -1176,7 +1175,7 @@ async function loadProfileData() {
     const today = new Date();
     const diffTime = Math.abs(today - joinDate);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    document.getElementById('p-experience').innerText = `${diffDays} Days`;
+    document.getElementById('p-experience').innerText = `${diffDays} ${getTranslation('days_label')}`;
     
     // Health Card Population
     if (p.health_metrics) {
@@ -1187,10 +1186,10 @@ async function loadProfileData() {
         
         const hStatus = document.getElementById('h-status');
         if (p.health_metrics.stress_index > 80 || p.health_metrics.heart_rate > 120) {
-            hStatus.innerText = "REST REQUIRED";
+            hStatus.innerText = getTranslation('rest_required');
             hStatus.style.background = "var(--danger)";
         } else {
-            hStatus.innerText = "FIT TO DRIVE";
+            hStatus.innerText = getTranslation('fit_to_drive');
             hStatus.style.background = "var(--success)";
         }
     }
@@ -1225,11 +1224,11 @@ document.getElementById('health-form')?.addEventListener('submit', async (e) => 
     
     try {
         await apiCall(`/driver/${localStorage.getItem('driver_id')}/health`, 'POST', metrics);
-        alert("Vitals updated successfully!");
+        alert(getTranslation('vitals_updated_success'));
         closeHealthModal();
         loadProfileData();
     } catch (e) {
-        alert("Failed to update vitals");
+        alert(getTranslation('failed_update_vitals'));
     }
 });
 
@@ -1252,15 +1251,15 @@ async function uploadProfilePic() {
         };
         reader.readAsDataURL(file);
     } catch(e) {
-        alert("Upload failed");
+        alert(getTranslation('upload_failed'));
     }
 }
 
 async function startRest() {
     const dId = localStorage.getItem('driver_id');
-    if (confirm("Starting a rest period will reduce your fatigue level. Ready to clock out for a break?")) {
+    if (confirm(getTranslation('rest_period_confirm'))) {
         await submitIncident('resting');
-        alert("Rest period logged. Your fatigue level has been reduced.");
+        alert(getTranslation('rest_period_logged'));
         loadProfileData();
     }
 }
@@ -1303,15 +1302,15 @@ async function submitIncident(type, fromStationary = false) {
         const dId = localStorage.getItem('driver_id');
         await apiCall(`/driver/${dId}/incident`, 'POST', {
             type: type,
-            description: `Driver reported a ${type} issue.`,
+            description: `${getTranslation('driver_reported')} ${type} ${getTranslation('issue_label')}.`,
             lat: lat,
             lng: lng
         });
-        alert(`🚨 Incident reported: ${type.toUpperCase()}. Manager has been notified.`);
+        alert(`🚨 ${getTranslation('incident_reported')}: ${type.toUpperCase()}. ${getTranslation('manager_notified')}.`);
         loadMissions();
         loadProfileData();
     } catch(err) {
-        alert("Failed to report incident.");
+        alert(getTranslation('failed_report_incident'));
     }
 }
 
@@ -1322,20 +1321,20 @@ async function requestSensorPermission() {
             const permissionState = await DeviceMotionEvent.requestPermission();
             if (permissionState === 'granted') {
                 window.addEventListener('devicemotion', handleMotion);
-                document.getElementById('sensor-btn').innerText = "🛡️ Safety Active";
+                document.getElementById('sensor-btn').innerText = `🛡️ ${getTranslation('safety_active')}`;
                 document.getElementById('sensor-btn').style.background = "var(--success)";
-                alert("Safety Sensors Calibrated & Active.");
+                alert(getTranslation('sensors_calibrated'));
             }
         } catch (error) {
             console.error(error);
-            alert("Sensor access denied. Safety monitoring disabled.");
+            alert(getTranslation('sensor_access_denied'));
         }
     } else {
         // Android / Desktop non-standard
         window.addEventListener('devicemotion', handleMotion);
-        document.getElementById('sensor-btn').innerText = "🛡️ Safety Active";
+        document.getElementById('sensor-btn').innerText = `🛡️ ${getTranslation('safety_active')}`;
         document.getElementById('sensor-btn').style.background = "var(--success)";
-        alert("Safety Sensors Active.");
+        alert(getTranslation('sensors_active'));
     }
 }
 
@@ -1376,8 +1375,8 @@ async function triggerZenMode(reason) {
         const stops = await apiCall(`/driver/safety/rest-stops?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
         const bestStop = stops[0]; // Nearest high rated
         
-        document.getElementById('zen-rest-stop-name').innerText = `Nearest: ${bestStop.name} (${bestStop.rating}⭐)`;
-        document.getElementById('zen-rest-stop-amenities').innerText = `Facilities: ${bestStop.amenities.join(", ")}`;
+        document.getElementById('zen-rest-stop-name').innerText = `${getTranslation('nearest_label')}: ${bestStop.name} (${bestStop.rating}⭐)`;
+        document.getElementById('zen-rest-stop-amenities').innerText = `${getTranslation('facilities')}: ${bestStop.amenities.join(", ")}`;
         
         // Notify Backend
         await apiCall(`/driver/${localStorage.getItem('driver_id')}/zen`, 'POST', {
@@ -1388,7 +1387,7 @@ async function triggerZenMode(reason) {
         
         // Update mission roadmap temporarily (visual only for now)
         const banner = document.getElementById('instruction-banner');
-        banner.innerHTML = `🧘 <b>Zen Mode Active:</b> Safety reroute to ${bestStop.name}. Take a break.`;
+        banner.innerHTML = `🧘 <b>${getTranslation('zen_mode_active')}:</b> ${getTranslation('safety_reroute_to')} ${bestStop.name}. ${getTranslation('take_a_break')}.`;
         banner.style.background = 'linear-gradient(90deg, #6b46c1, #553c9a)';
         banner.style.display = 'block';
         
@@ -1405,7 +1404,7 @@ async function deactivateZen() {
 }
 
 async function confirmArrival() {
-    alert("Safety rest logged. Fatigue score will be reduced. Take your time.");
+    alert(getTranslation('rest_logged_fatigue_reduced'));
     await submitIncident('resting');
     deactivateZen();
 }
@@ -1428,16 +1427,16 @@ let qrVerified = false;
 let qrFailCount = 0;
 
 async function manualVerify(shipmentId, type) {
-    if (!confirm("⚠️ MANUAL OVERRIDE: Are you sure you want to verify this shipment manually? This will be logged for audit.")) return;
+    if (!confirm(getTranslation('manual_override_confirm'))) return;
     try {
         await apiCall(`/driver/${dId}/verify-qr/${shipmentId}`, 'POST', { qr_data: "MANUAL_OVERRIDE" });
         closeVerifyModal();
-        showNotification("Manual Verification Successful!", "success");
+        showNotification(getTranslation('manual_verification_success'), "success");
         qrFailCount = 0;
         loadMissions();
         if (type === 'delivery') proceedToLastMile(shipmentId);
     } catch(e) {
-        alert("Manual verification failed: " + e.message);
+        alert(getTranslation('manual_verification_failed') + ": " + e.message);
     }
 }
 
@@ -1476,10 +1475,10 @@ async function openVerifyModal(shipmentId, type = 'pickup') {
                 try {
                     await apiCall(`/driver/${dId}/verify-qr/${shipmentId}`, 'POST', { qr_data: decodedText });
                     closeVerifyModal();
-                    showNotification(type === 'pickup' ? "Pickup Successful!" : "Warehouse Handoff Recorded!", "success");
+                    showNotification(type === 'pickup' ? getTranslation('pickup_success') : getTranslation('warehouse_handoff_recorded'), "success");
                     loadMissions();
                 } catch(e) {
-                    alert("Verification failed: " + e.message);
+                    alert(getTranslation('verification_failed') + ": " + e.message);
                 }
             } else if (type === 'delivery') {
                 // Return to delivery flow
@@ -1488,7 +1487,7 @@ async function openVerifyModal(shipmentId, type = 'pickup') {
             }
         } else {
             qrFailCount++;
-            showNotification(`QR Code Mismatch! (${qrFailCount}/3 attempts)`, "error");
+            showNotification(`${getTranslation('qr_mismatch')} (${qrFailCount}/3)`, "error");
             
             if (qrFailCount >= 3) {
                 html5QrScanner.clear();
@@ -1498,8 +1497,8 @@ async function openVerifyModal(shipmentId, type = 'pickup') {
                 msg.style.background = 'rgba(236,201,75,0.1)';
                 msg.style.borderColor = 'var(--warning)';
                 msg.innerHTML = `
-                    <p style="color:var(--warning); font-weight:bold; margin:0;">🚨 QR Verification Failed 3 Times</p>
-                    <p style="color:var(--text); font-size:0.8rem; margin-top:5px;">Please contact your Manager to verify this shipment manually from their dashboard.</p>
+                    <p style="color:var(--warning); font-weight:bold; margin:0;">🚨 ${getTranslation('qr_verification_failed')}</p>
+                    <p style="color:var(--text); font-size:0.8rem; margin-top:5px;">${getTranslation('qr_manual_contact_manager')}</p>
                 `;
             }
             
@@ -1522,11 +1521,11 @@ async function completeDeliveryFlow(shipmentId) {
 
 async function proceedToLastMile(shipmentId) {
     // Step 2: OTP
-    const otp = prompt("Step 2: Enter the Delivery OTP provided by the customer:");
+    const otp = prompt(getTranslation('enter_delivery_otp'));
     if (!otp) return;
 
     // Step 3: Photo
-    alert("Step 3: Capture a photo of the product at the delivery location.");
+    alert(getTranslation('capture_photo_at_location'));
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -1535,7 +1534,7 @@ async function proceedToLastMile(shipmentId) {
         const file = e.target.files[0];
         if (!file) return;
 
-        showNotification("Completing delivery... Please wait.", "info");
+        showNotification(getTranslation('completing_delivery'), "info");
         
         try {
             // Upload photo first
@@ -1550,11 +1549,11 @@ async function proceedToLastMile(shipmentId) {
 
             // Complete delivery
             await apiCall(`/driver/${dId}/complete-delivery/${shipmentId}?otp=${otp}&image_url=${encodeURIComponent(photoUrl)}`, 'POST');
-            showNotification("Delivery Successful! Points added to wallet.", "success");
+            showNotification(getTranslation('delivery_successful'), "success");
             loadMissions();
             loadWallet();
         } catch(e) {
-            alert("Error: " + e.message + ". Check payment status and OTP.");
+            alert(getTranslation('error_label') + ": " + e.message + ". " + getTranslation('check_payment_status'));
         }
     };
     input.click();
@@ -1630,7 +1629,7 @@ async function loadWallet() {
 }
 
 async function withdrawMoney() {
-    alert("Withdrawal request initiated. Money will be credited to your linked UPI/Bank account within 30 minutes.");
+    alert(getTranslation('withdrawal_initiated'));
 }
 
 window.calculateSuggestedFuel = async function(e) {
@@ -1649,9 +1648,9 @@ window.calculateSuggestedFuel = async function(e) {
         const data = await apiCall(`/driver/${dId}/calculate-fuel?lat=${lat}&lng=${lng}`, 'GET');
         document.getElementById('fund-req-amount').value = Math.round(data.suggested_amount);
         document.getElementById('fund-req-type').value = 'FUEL';
-        showNotification(`Fuel Oracle: ₹${data.price_per_liter}/L in ${data.state}. Suggested: ₹${Math.round(data.suggested_amount)}`, 'success');
+        showNotification(`${getTranslation('fuel_oracle')}: ₹${data.price_per_liter}/L ${getTranslation('in_label')} ${data.state}. ${getTranslation('suggested_amount')}: ₹${Math.round(data.suggested_amount)}`, 'success');
     } catch (e) {
-        showNotification("Fuel Oracle unavailable. Please enter manually.", "error");
+        showNotification(getTranslation('fuel_oracle_unavailable'), "error");
     } finally {
         btn.innerText = originalText;
         btn.disabled = false;
@@ -1660,7 +1659,7 @@ window.calculateSuggestedFuel = async function(e) {
 
 window.loadContracts = async function() {
     const container = document.getElementById('contracts-list');
-    container.innerHTML = '<p style="text-align:center;">Analyzing escrow status...</p>';
+    container.innerHTML = `<p style="text-align:center;">${getTranslation('analyzing_escrow')}</p>`;
     
     try {
         const shipments = await apiCall(`/driver/${dId}/shipments`, 'GET');
@@ -1670,7 +1669,7 @@ window.loadContracts = async function() {
         if (totalPointsEl) totalPointsEl.innerText = `${stats.total_points || 0} pts`;
         
         if (!shipments || shipments.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">No active contracts found.</p>';
+            container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:20px;">${getTranslation('no_contracts_found')}</p>`;
             return;
         }
         
@@ -1683,27 +1682,27 @@ window.loadContracts = async function() {
                 <div class="glass-card" style="padding:20px; border-left:4px solid ${statusColor};">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
                         <div>
-                            <h4 style="margin:0;">Contract #${s.id.substring(0,8)}</h4>
-                            <small style="color:var(--text-muted)">Type: ${s.description || 'General Cargo'}</small>
+                            <h4 style="margin:0;" id="det-id">${getTranslation('order_hash')} #${s.id.substring(0,8)}</h4>
+                            <small style="color:var(--text-muted)">${getTranslation('type_label')}: ${s.description || getTranslation('general_cargo')}</small>
                         </div>
                         <div style="text-align:right;">
-                            <span class="badge" style="background:${statusColor}22; color:${statusColor}; font-size:0.7rem;">${isPaid ? 'ESCROW RELEASED' : 'ESCROW LOCKED'}</span>
+                            <span class="badge" style="background:${statusColor}22; color:${statusColor}; font-size:0.7rem;">${isPaid ? getTranslation('escrow_released') : getTranslation('escrow_locked')}</span>
                         </div>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; font-size:0.85rem;">
                         <div style="color:var(--text-muted);">
-                            💰 Payout: <span style="color:var(--text); font-weight:bold;">₹${s.finance?.driver_payout || 0}</span>
+                            💰 ${getTranslation('payout_label')}: <span style="color:var(--text); font-weight:bold;">₹${s.finance?.driver_payout || 0}</span>
                         </div>
                         <div style="color:var(--accent); font-weight:bold;">
-                            🏆 +${pointsValue} Reward Points
+                            🏆 +${pointsValue} ${getTranslation('reward_points')}
                         </div>
                     </div>
-                    ${!isPaid ? `<p style="margin:10px 0 0 0; font-size:0.7rem; color:var(--warning);">⚠️ Manager must verify receiver payment before final delivery.</p>` : ''}
+                    ${!isPaid ? `<p style="margin:10px 0 0 0; font-size:0.7rem; color:var(--warning);">⚠️ ${getTranslation('manager_verify_payment_notice')}</p>` : ''}
                 </div>
             `;
         }).join('');
     } catch (e) {
-        container.innerHTML = '<p style="text-align:center; color:var(--danger);">Failed to load contracts.</p>';
+        container.innerHTML = `<p style="text-align:center; color:var(--danger);">${getTranslation('failed_load_contracts')}</p>`;
     }
 }
 
@@ -1711,7 +1710,7 @@ async function handleFundRequest() {
     const amt = document.getElementById('fund-req-amount').value;
     const type = document.getElementById('fund-req-type').value;
     if (!amt || amt <= 0) {
-        showNotification("Please enter a valid amount", "error");
+        showNotification(getTranslation('enter_valid_amount'), "error");
         return;
     }
     
@@ -1720,19 +1719,19 @@ async function handleFundRequest() {
             amount: parseFloat(amt), 
             type: type
         });
-        showNotification(`Emergency fund request for ₹${amt} (${type}) sent to Manager!`, 'success');
+        showNotification(`${getTranslation('emergency_fund_sent')} ₹${amt} (${type})!`, 'success');
         document.getElementById('fund-req-amount').value = '';
     } catch (e) {
-        showNotification("Failed to send request.", "error");
+        showNotification(getTranslation('failed_send_request'), "error");
     }
 }
 
 async function completeDelivery(shipmentId) {
-    const otp = prompt("Enter the 4-digit Delivery OTP provided by the customer:");
+    const otp = prompt(getTranslation('enter_delivery_otp'));
     if (!otp) return;
     
     // We also need to upload a photo proof
-    const confirmPhoto = confirm("Please click an image of the product before completion. (Simulated photo upload)");
+    const confirmPhoto = confirm(getTranslation('confirm_photo_upload'));
     if (!confirmPhoto) return;
     
     try {
@@ -1742,7 +1741,7 @@ async function completeDelivery(shipmentId) {
         loadMissions();
         loadWallet();
     } catch(e) {
-        showNotification("Error: " + (e.message || "Invalid OTP or Payment Pending"), "error");
+        showNotification(getTranslation('error_label') + ": " + (e.message || getTranslation('invalid_otp_or_pending')), "error");
     }
 }
 
@@ -1767,7 +1766,7 @@ async function triggerFundRequest(shipmentId, type) {
     let amount = 0;
     
     if (type === 'toll') {
-        const val = prompt("Enter Toll Amount (₹):");
+        const val = prompt(getTranslation('enter_toll_amount'));
         if (!val || isNaN(val)) return;
         amount = parseFloat(val);
     }
@@ -1776,12 +1775,12 @@ async function triggerFundRequest(shipmentId, type) {
         const btn = document.getElementById(`${type}-btn-${shipmentId}`);
         
         // Show high-visibility overlay
-        const actionLabel = type === 'refuel' ? 'Refuelling In Progress' : 'Toll Payment Processing';
+        const actionLabel = type === 'refuel' ? getTranslation('refuelling_in_progress') : getTranslation('toll_payment_processing');
         showStatusOverlay(actionLabel);
 
         if (btn) {
             btn.disabled = true;
-            btn.innerText = "Requested...";
+            btn.innerText = getTranslation('requested');
         }
         
         const res = await apiCall(`/driver/${driverId}/fund-request/${shipmentId}`, 'POST', { type, amount });
@@ -1791,14 +1790,11 @@ async function triggerFundRequest(shipmentId, type) {
         if (btn) {
             btn.style.opacity = '0.5';
             btn.style.pointerEvents = 'none';
-            btn.innerText = type === 'refuel' ? "✅ Refuel Req Sent" : "✅ Toll Req Sent";
+            btn.innerText = type === 'refuel' ? `✅ ${getTranslation('refuel_req_sent')}` : `✅ ${getTranslation('toll_req_sent')}`;
         }
     } catch (e) {
-        alert("Failed to submit request: " + (e.message || "Error"));
+        alert(getTranslation('failed_submit_request') + ": " + (e.message || "Error"));
         const btn = document.getElementById(`${type}-btn-${shipmentId}`);
         if (btn) {
             btn.disabled = false;
-            btn.innerText = type === 'refuel' ? "⛽ Refuel" : "🛣️ Toll";
-        }
-    }
 }

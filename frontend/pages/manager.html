@@ -179,7 +179,7 @@
     <div class="dashboard-layout">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h2>Logistix</h2>
+                <h2><span data-i18n="logistix_brand">Logistix</span></h2>
             </div>
             <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
                 <a href="#" id="btn-nav-analytics" class="nav-link active" onclick="showSection('analytics')" data-layout-id="nav-analytics"><span data-i18n="nav_analytics">Executive Analytics 📊</span></a>
@@ -216,8 +216,20 @@
                     <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
                     <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
             <option value="en">English (EN)</option>
-            <option value="hi">हिंदी (HI)</option>
             <option value="bn">বাংলা (BN)</option>
+            <option value="hi">हिंदी (HI)</option>
+            <option value="te">తెలుగు (TE)</option>
+            <option value="mr">मराठी (MR)</option>
+            <option value="ta">தமிழ் (TA)</option>
+            <option value="gu">ગુજરાતી (GU)</option>
+            <option value="kn">ಕನ್ನಡ (KN)</option>
+            <option value="or">ଓଡ଼ିଆ (OR)</option>
+            <option value="ml">മലയാളം (ML)</option>
+            <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+            <option value="as">অসমীয়া (AS)</option>
+            <option value="mai">मैथिলি (MAI)</option>
+            <option value="sat">संताली (SAT)</option>
+            <option value="ks">کٲشُر (KS)</option>
         </select>
                 </div>
 
@@ -294,7 +306,7 @@
                     <div class="glass-card section-card" data-layout-id="analytics-cascade" style="margin-bottom:2rem; border-top:4px solid var(--warning);">
                         <div class="responsive-flex-column" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:16px;">
                             <div>
-                                <h3 style="margin:0;" data-i18n="cascade_title">Cascading Impact Predictor (Automated Simulation)</h3>
+                                <h3 style="margin:0;" data-i18n="cascade_title_full">Cascading Impact Predictor (Automated Simulation)</h3>
                                 <p class="subtitle" data-i18n="cascade_subtitle">Predicting downstream bottlenecks based on active transit deviations</p>
                             </div>
                             <div style="text-align:right; min-width:140px;">
@@ -306,7 +318,7 @@
                         <div id="cascade-container" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:1rem;">
                             <!-- Automated Cascade Cards -->
                             <div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted);">
-                                <span data-i18n="scanning_network">Scanning network for potential disruptions...</span>
+                                <span data-i18n="scanning_network_full">Scanning network for potential disruptions...</span>
                             </div>
                         </div>
                     </div>
@@ -374,7 +386,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="warehouses-table-body">
-                                    <tr><td colspan="6" style="text-align:center;">No warehouses deployed yet.</td></tr>
+                                    <tr><td colspan="6" style="text-align:center;" data-i18n="no_warehouses">No warehouses deployed yet.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -389,7 +401,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                             <h3 style="margin:0;" data-i18n="create_shipment">Create Shipment</h3>
                             <div style="display:flex; gap:10px;">
-                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:linear-gradient(135deg, #6366f1, #a855f7); font-size:0.85rem;" onclick="openSmartAssistant()">✨ Smart Assistant</button>
+                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:linear-gradient(135deg, #6366f1, #a855f7); font-size:0.85rem;" onclick="openSmartAssistant()" data-i18n="btn_smart_assistant">✨ Smart Assistant</button>
                                 <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openBulkUploadModal()" data-i18n="btn_bulk_upload">📤 Excel Bulk</button>
                             </div>
                         </div>
@@ -410,42 +422,42 @@
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label>Weight (kg)</label>
+                                    <label data-i18n="label_weight">Weight (kg)</label>
                                     <input type="number" id="weight" step="0.1" required>
                                 </div>
                                 <div class="input-group">
-                                    <label>Receiver Name</label>
+                                    <label data-i18n="label_receiver_name">Receiver Name</label>
                                     <input type="text" id="receiver-name" placeholder="John Doe" required>
                                 </div>
                                 <div class="input-group">
-                                    <label>Receiver Phone</label>
+                                    <label data-i18n="label_receiver_phone">Receiver Phone</label>
                                     <div style="display:flex; gap:8px;">
                                         <span style="background:rgba(255,255,255,0.05); padding:12px; border-radius:12px; border:1px solid var(--border); color:var(--muted); font-weight:800;">+91</span>
                                         <input type="tel" id="receiver-phone" placeholder="9876543210" maxlength="10" required style="flex:1;">
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label>Receiver Email Address</label>
+                                    <label data-i18n="email_address">Receiver Email Address</label>
                                     <input type="email" id="receiver-email" placeholder="customer@example.com" required>
                                 </div>
                                 <div class="input-group span-2">
-                                    <label>Description</label>
+                                    <label data-i18n="label_description">Description</label>
                                     <input type="text" id="description" placeholder="Brief description of cargo..." required>
                                 </div>
                                 <div class="input-group">
-                                    <label>E-Way Bill No 📄</label>
+                                    <label data-i18n="label_eway_bill">E-Way Bill No 📄</label>
                                     <input type="text" id="eway-no" placeholder="121012345678" required pattern="^\d{12}$" title="Please enter a 12-digit E-Way Bill number">
                                 </div>
                                 <div class="input-group">
-                                    <label>E-Way Expiry ⏰</label>
+                                    <label data-i18n="label_eway_expiry">E-Way Expiry ⏰</label>
                                     <input type="datetime-local" id="eway-expiry">
                                 </div>
                                 <div class="input-group span-2" style="display:flex; flex-direction:row; align-items:center; gap:12px; padding:15px; background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border);">
                                     <input type="checkbox" id="is-perishable" style="width:20px; height:20px; cursor:pointer; margin:0;">
-                                    <label for="is-perishable" style="cursor:pointer; margin:0; font-size:1rem; color:var(--text);">🍎 Cold Chain Protocol (Perishable / Medicine)</label>
+                                    <label for="is-perishable" style="cursor:pointer; margin:0; font-size:1rem; color:var(--text);" data-i18n="label_cold_chain_protocol">🍎 Cold Chain Protocol (Perishable / Medicine)</label>
                                 </div>
                             </div>
-                            <button type="submit" class="btn-primary" style="margin-top:20px; width:100%;">Create Shipment</button>
+                            <button type="submit" class="btn-primary" style="margin-top:20px; width:100%;" data-i18n="create_shipment">Create Shipment</button>
                         </form>
                     </div>
 
@@ -502,13 +514,13 @@
                             <div class="input-group">
                                 <label data-i18n="label_select_driver">Select Driver</label>
                                 <select id="link-driver" required>
-                                    <option value="">Select Driver</option>
+                                    <option value="" data-i18n="option_select_driver">Select Driver</option>
                                 </select>
                             </div>
                             <div class="input-group">
                                 <label data-i18n="label_select_vehicle">Select Vehicle</label>
                                 <select id="link-vehicle" required>
-                                    <option value="">Select Vehicle</option>
+                                    <option value="" data-i18n="option_select_vehicle">Select Vehicle</option>
                                 </select>
                             </div>
                             <div class="input-group span-2">
@@ -542,7 +554,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                             <h3 style="margin:0;" data-i18n="add_driver_title">Add Driver</h3>
                             <div style="display:flex; gap:10px;">
-                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:linear-gradient(135deg, #6366f1, #a855f7); font-size:0.85rem;" onclick="openSmartAssistant('driver')">✨ Smart Assistant</button>
+                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:linear-gradient(135deg, #6366f1, #a855f7); font-size:0.85rem;" onclick="openSmartAssistant('driver')" data-i18n="btn_smart_assistant">✨ Smart Assistant</button>
                                 <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openDriverBulkModal()" data-i18n="btn_bulk_drivers">📤 Bulk Upload Drivers</button>
                             </div>
                         </div>
@@ -562,17 +574,17 @@
                             <div class="input-group">
                                 <label data-i18n="label_license_type">License Type</label>
                                 <select id="d-license" required>
-                                    <option value="Truck (Small)">Truck (Small)</option>
-                                    <option value="Truck (Heavy)">Truck (Heavy)</option>
-                                    <option value="Delivery Van">Delivery Van</option>
-                                    <option value="Bike/Scooty">Bike/Scooty</option>
-                                    <option value="EV-Cargo">EV-Cargo</option>
+                                    <option value="Truck (Small)" data-i18n="license_truck_small">Truck (Small)</option>
+                                    <option value="Truck (Heavy)" data-i18n="license_truck_heavy">Truck (Heavy)</option>
+                                    <option value="Delivery Van" data-i18n="license_delivery_van">Delivery Van</option>
+                                    <option value="Bike/Scooty" data-i18n="license_bike_scooty">Bike/Scooty</option>
+                                    <option value="EV-Cargo" data-i18n="license_ev_cargo">EV-Cargo</option>
                                 </select>
                             </div>
                             <div class="input-group">
                                 <label data-i18n="label_base_hub">Base Warehouse Hub</label>
                                 <select id="d-hub" required>
-                                    <option value="">Select Base Hub</option>
+                                    <option value="" data-i18n="option_select_hub">Select Base Hub</option>
                                 </select>
                             </div>
                             <div class="input-group">
@@ -614,7 +626,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                             <h3 style="margin:0;" data-i18n="add_vehicle_title">Add Vehicle</h3>
                             <div style="display:flex; gap:10px;">
-                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:linear-gradient(135deg, #6366f1, #a855f7); font-size:0.85rem;" onclick="openSmartAssistant('vehicle')">✨ Smart Assistant</button>
+                                <button class="btn-primary" style="width:auto; padding:8px 16px; background:linear-gradient(135deg, #6366f1, #a855f7); font-size:0.85rem;" onclick="openSmartAssistant('vehicle')" data-i18n="btn_smart_assistant">✨ Smart Assistant</button>
                                 <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;" onclick="openVehicleBulkModal()" data-i18n="btn_bulk_vehicles">📤 Bulk Upload Vehicles</button>
                             </div>
                         </div>
@@ -622,23 +634,23 @@
                             <div class="input-group">
                                 <label data-i18n="label_vehicle_type">Vehicle Type</label>
                                 <select id="v-type" required>
-                                    <option value="Truck (Small)">Truck (Small)</option>
-                                    <option value="Truck (Heavy)">Truck (Heavy)</option>
-                                    <option value="Delivery Van">Delivery Van</option>
-                                    <option value="Bike/Scooty">Bike/Scooty</option>
-                                    <option value="EV-Cargo">EV-Cargo</option>
+                                    <option value="Truck (Small)" data-i18n="license_truck_small">Truck (Small)</option>
+                                    <option value="Truck (Heavy)" data-i18n="license_truck_heavy">Truck (Heavy)</option>
+                                    <option value="Delivery Van" data-i18n="license_delivery_van">Delivery Van</option>
+                                    <option value="Bike/Scooty" data-i18n="license_bike_scooty">Bike/Scooty</option>
+                                    <option value="EV-Cargo" data-i18n="license_ev_cargo">EV-Cargo</option>
                                 </select>
                             </div>
                             <div class="input-group">
                                 <label data-i18n="label_base_hub">Base Warehouse Hub</label>
                                 <select id="v-hub" required>
-                                    <option value="">Select Base Hub</option>
+                                    <option value="" data-i18n="option_select_hub">Select Base Hub</option>
                                 </select>
                             </div>
                             <div class="input-group">
                                 <label data-i18n="label_number_plate">Number Plate</label>
                                 <input type="text" id="v-plate" placeholder="e.g. MH 12 AB 1234" maxlength="13" required data-i18n-placeholder="placeholder_plate" oninput="handlePlateInput(this)">
-                                <small id="plate-warning" style="color:var(--danger); display:none;">🚨 Plate already registered!</small>
+                                <small id="plate-warning" style="color:var(--danger); display:none;" data-i18n="error_plate_registered">🚨 Plate already registered!</small>
                             </div>
                             <div class="input-group">
                                 <label data-i18n="capacity">Load Capacity (kg)</label>
@@ -670,33 +682,33 @@
             <section id="verifications" class="section-content" data-layout-id="section-verifications" style="display:none;">
                 <div data-layout-container="verifications-content">
                     <div class="glass-card section-card" data-layout-id="verifications-manual">
-                        <h2 style="margin:0; font-size:1.6rem; color:var(--accent);">Manual ML Verifications</h2>
+                        <h2 style="margin:0; font-size:1.6rem; color:var(--accent);" data-i18n="manual_verifications_title">Manual ML Verifications</h2>
                         <div style="width:50px; height:4px; background:var(--accent); margin:16px 0; border-radius:2px;"></div>
-                        <p class="subtitle" style="margin-bottom:40px; font-size:0.95rem;">Review number plates that the automated system could not confidently read.</p>
+                        <p class="subtitle" style="margin-bottom:40px; font-size:0.95rem;" data-i18n="manual_verifications_desc">Review number plates that the automated system could not confidently read.</p>
                         <div class="table-container">
                             <table>
-                                <thead><tr><th>Driver</th><th>Vehicle Plate</th><th>Image</th><th>Action</th></tr></thead>
+                                <thead><tr><th data-i18n="platform_driver">Driver</th><th data-i18n="label_number_plate">Vehicle Plate</th><th data-i18n="label_image">Image</th><th data-i18n="th_action">Action</th></tr></thead>
                                 <tbody id="verifications-table-body"></tbody>
                             </table>
                         </div>
                     </div>
 
                     <div class="glass-card section-card" data-layout-id="verifications-verified" style="margin-top:32px;">
-                        <h2 style="margin:0; font-size:1.6rem; color:var(--success);">Verified Vehicles</h2>
+                        <h2 style="margin:0; font-size:1.6rem; color:var(--success);" data-i18n="verified_vehicles_title">Verified Vehicles</h2>
                         <div style="width:50px; height:4px; background:var(--success); margin:16px 0; border-radius:2px;"></div>
-                        <p class="subtitle" style="margin-bottom:32px; font-size:0.95rem;">List of all vehicles successfully verified automatically or Manual review.</p>
+                        <p class="subtitle" style="margin-bottom:32px; font-size:0.95rem;" data-i18n="verified_vehicles_desc">List of all vehicles successfully verified automatically or Manual review.</p>
                         <div style="margin-top:40px; border-top:1px solid var(--border); padding-top:30px;">
                             <h3 style="margin:0 0 10px 0; color:var(--success);" data-i18n="title_verified_fleet">Verified Fleet Registry</h3>
-                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Master list of all vehicles and drivers who have successfully completed security verification.</p>
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="verified_vehicles_desc">Master list of all vehicles and drivers who have successfully completed security verification.</p>
                             <div class="table-container" style="background:rgba(72, 187, 120, 0.05); border-radius:12px; border:1px solid rgba(72, 187, 120, 0.1);">
                                 <table style="width:100%;">
                                     <thead>
                                         <tr style="text-align:left; border-bottom:1px solid var(--border);">
                                             <th style="padding:12px;" data-i18n="vehicle_type">Vehicle Type</th>
-                                            <th style="padding:12px;">Number Plate</th>
-                                            <th style="padding:12px;">System ID</th>
-                                            <th style="padding:12px;">Verified Driver</th>
-                                            <th style="padding:12px; text-align:right;">Action</th>
+                                            <th style="padding:12px;" data-i18n="label_number_plate">Number Plate</th>
+                                            <th style="padding:12px;" data-i18n="th_id">System ID</th>
+                                            <th style="padding:12px;" data-i18n="th_linked_driver">Verified Driver</th>
+                                            <th style="padding:12px; text-align:right;" data-i18n="th_action">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="verified-vehicles-table-body">
@@ -870,7 +882,7 @@
             <section id="leaderboard" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
                     <div class="leaderboard-header">
-                        <h3 style="margin:0;">Performance Leaderboard 🏆</h3>
+                        <h3 style="margin:0;" data-i18n="performance_leaderboard">Performance Leaderboard 🏆</h3>
                         <div class="leaderboard-selects">
                             <select id="leader-type" class="glass-card" style="padding:10px 15px; border-radius:10px; border:1px solid var(--border); color:var(--text); background:rgba(128,128,128,0.15); font-size:0.95rem; cursor:pointer; outline:none;" onchange="loadLeaderboard()">
                                 <option value="driver">Drivers</option>
@@ -889,7 +901,7 @@
                         <table class="leaderboard-table">
                             <thead>
                                 <tr>
-                                    <th>Rank</th>
+                                    <th data-i18n="rank">Rank</th>
                                     <th style="padding:10px;" data-i18n="th_name_plate">Name / Plate</th>
                                     <th style="padding:10px;" data-i18n="score">Score</th>
                                     <th style="padding:10px;" data-i18n="hub_status">Status</th>
@@ -905,18 +917,18 @@
             <section id="ledger" class="section-content" style="display:none;">
                 <div class="glass-card section-card" style="margin-bottom: 25px; border-left: 4px solid var(--warning); background:rgba(245, 158, 11, 0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0; color:var(--warning);">⛽ Pending Fund Requests (Refuel/Toll)</h3>
-                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--warning);" onclick="loadFundRequests()">Refresh Requests</button>
+                        <h3 style="margin:0; color:var(--warning);" data-i18n="pending_fund_requests_smart">⛽ Pending Fund Requests (Refuel/Toll)</h3>
+                        <button class="btn-primary" style="width:auto; padding:8px 16px; background:var(--warning);" onclick="loadFundRequests()" data-i18n="refresh_requests">Refresh Requests</button>
                     </div>
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Driver / Shipment</th>
-                                    <th>Expense Type</th>
-                                    <th>Amt Requested</th>
-                                    <th>Est. Distance</th>
-                                    <th style="text-align:center;">Action</th>
+                                    <th data-i18n="driver_shipment">Driver / Shipment</th>
+                                    <th data-i18n="expense_type">Expense Type</th>
+                                    <th data-i18n="amt_requested">Amt Requested</th>
+                                    <th data-i18n="est_distance">Est. Distance</th>
+                                    <th style="text-align:center;" data-i18n="action">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="fund-requests-body">
@@ -1014,8 +1026,8 @@
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="Tier 1 cities have 25% higher demand but come with a significant rent premium per shipment.">ⓘ</span>
                                 </label>
                                 <select id="param-loc" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
-                                    <option value="tier1">Tier 1 (High Demand, High Rent)</option>
-                                    <option value="tier2" selected>Tier 2 (Standard Growth)</option>
+                                    <option value="tier1" data-i18n="tier1_desc">Tier 1 (High Demand, High Rent)</option>
+                                    <option value="tier2" data-i18n="tier2_desc" selected>Tier 2 (Standard Growth)</option>
                                 </select>
                             </div>
 
@@ -1068,7 +1080,7 @@
                                 <label style="display:flex; justify-content:space-between;">
                                     <span data-i18n="forecast_horizon">Forecast Horizon</span> 
                                     <span class="info-icon" onclick="showInfoTip(this)" data-tip="The period over which the Automated will simulate market fluctuations and operational results.">ⓘ</span>
-                                    <span><b id="val-months">6</b> Months</span>
+                                    <span><b id="val-months">6</b> <span data-i18n="months_label">Months</span></span>
                                 </label>
                                 <input type="range" id="param-months" min="1" max="24" value="6" style="width:100%;" oninput="document.getElementById('val-months').innerText=this.value">
                             </div>
@@ -1088,7 +1100,7 @@
                                     <div class="glass-card result-card" style="padding:10px; position:relative; cursor:help;" id="profit-card">
                                         <small style="color:var(--text-muted)" data-i18n="proj_profit">Projected Profit</small>
                                         <h2 id="res-profit" style="margin:5px 0; color:var(--success);"></h2>
-                                        <div class="calc-tooltip" id="profit-calc">Breakdown loading...</div>
+                                        <div class="calc-tooltip" id="profit-calc" data-i18n="breakdown_loading">Breakdown loading...</div>
                                     </div>
                                     <div class="glass-card" style="padding:10px;">
                                         <small style="color:var(--text-muted)" data-i18n="eta_success">ETA Success Rate</small>
@@ -1110,7 +1122,7 @@
                                 </div>
                                 
                                 <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
-                                    <span><span data-i18n="risk_level">Risk Level:</span> <b id="res-risk"></b></span>
+                                    <span><span data-i18n="risk_level_label">Risk Level:</span> <b id="res-risk"></b></span>
                                     <button class="btn-primary" style="width:auto; padding:5px 15px; font-size:0.8rem;" onclick="applyOracleStrategy()" data-i18n="apply_strategy">Apply to Strategy Plan</button>
                                 </div>
                             </div>
@@ -1202,7 +1214,7 @@
                                     <div style="padding:20px; border-radius:12px; background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2);">
                                         <h4 style="margin:0; color:#f59e0b;"><span data-i18n="opt_stop">Optimal Stop:</span> <span id="opt-best-state">Gujarat</span></h4>
                                         <p id="opt-suggestion" style="font-size:0.85rem; margin-top:10px; color:var(--text-muted);"></p>
-                                        <div style="margin-top:15px; font-size:1.1rem; font-weight:bold;">₹ <span id="opt-savings">0.00</span> <span data-i18n="liter_saved">/ Liter Saved</span></div>
+                                        <div style="margin-top:15px; font-size:1.1rem; font-weight:bold;">₹ <span id="opt-savings">0.00</span> <span data-i18n="th_liter_saved">/ Liter Saved</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -1237,19 +1249,19 @@
 
                     <div class="responsive-grid-4" data-layout-id="paisa-stats-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:32px; margin-bottom:48px;">
                         <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--success);">
-                            <small style="color:var(--text-muted)">Total Revenue (Gross)</small>
+                            <small style="color:var(--text-muted)" data-i18n="total_rev_gross">Total Revenue (Gross)</small>
                             <h3 id="fintech-total-revenue" style="margin:10px 0 0 0;">₹ 0.00</h3>
                         </div>
                         <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--danger);">
-                            <small style="color:var(--text-muted)">Operational Costs</small>
+                            <small style="color:var(--text-muted)" data-i18n="ops_costs">Operational Costs</small>
                             <h3 id="fintech-total-expenses" style="margin:10px 0 0 0;">₹ 0.00</h3>
                         </div>
                         <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--accent);">
-                            <small style="color:var(--text-muted)">Unpaid / In Escrow</small>
+                            <small style="color:var(--text-muted)" data-i18n="unpaid_escrow">Unpaid / In Escrow</small>
                             <h3 id="fintech-cod" style="margin:10px 0 0 0;">₹ 0.00</h3>
                         </div>
                         <div class="glass-card" style="padding:20px; border-bottom: 3px solid var(--primary); background:linear-gradient(135deg, rgba(49,130,206,0.1) 0%, transparent 100%);">
-                            <small style="color:var(--text-muted); font-weight:bold;">Net Profit (P&L)</small>
+                            <small style="color:var(--text-muted); font-weight:bold;" data-i18n="net_profit_pl">Net Profit (P&L)</small>
                             <h3 id="fintech-profit" style="margin:10px 0 0 0; font-size:1.8rem; color:#10b981;">₹ 0.00</h3>
                         </div>
                     </div>
@@ -1277,14 +1289,14 @@
 
                     <div class="responsive-grid-2" data-layout-id="paisa-tables-row" style="margin-top:48px; display:grid; grid-template-columns: 1fr 1fr; gap:40px;">
                         <div data-layout-id="paisa-driver-payouts">
-                            <h3 style="margin-bottom:24px;">Pending Driver Payouts 💸</h3>
+                            <h3 style="margin-bottom:24px;" data-i18n="pending_driver_payouts">Pending Driver Payouts 💸</h3>
                             <div class="table-container">
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Driver</th>
-                                            <th>Accrued Balance</th>
-                                            <th>Action</th>
+                                            <th data-i18n="platform_driver">Driver</th>
+                                            <th data-i18n="th_accrued_balance">Accrued Balance</th>
+                                            <th data-i18n="th_action">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="fintech-payout-table">
@@ -1294,15 +1306,15 @@
                             </div>
                         </div>
                         <div data-layout-id="paisa-payment-audit">
-                            <h3 style="margin-bottom:24px;">Customer Payment Audit 🧾</h3>
+                            <h3 style="margin-bottom:24px;" data-i18n="cust_pmt_audit">Customer Payment Audit 🧾</h3>
                             <div class="table-container">
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Shipment</th>
-                                            <th>Amount</th>
+                                            <th data-i18n="shipment">Shipment</th>
+                                            <th data-i18n="amount">Amount</th>
                                             <th data-i18n="hub_status">Status</th>
-                                            <th>Action</th>
+                                            <th data-i18n="th_action">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="fintech-payment-audit-table">
@@ -1336,13 +1348,13 @@
 
 
                     <div data-layout-id="paisa-fund-requests-main" style="margin-top:48px;">
-                        <h3 style="margin-bottom:12px;">🆘 Pending Driver Fund Requests</h3>
-                        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:24px;">Approve to instantly transfer funds into the driver's digital wallet.</p>
+                        <h3 style="margin-bottom:12px;" data-i18n="pending_fund_requests_driver">🆘 Pending Driver Fund Requests</h3>
+                        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:24px;" data-i18n="payout_approve_desc">Approve to instantly transfer funds into the driver's digital wallet.</p>
                         <div class="table-container">
                             <table>
-                                <thead><tr><th>Driver</th><th>Requested Amount</th><th>Type</th><th>Action</th></tr></thead>
+                                <thead><tr><th data-i18n="th_driver">Driver</th><th data-i18n="th_requested_amount">Requested Amount</th><th data-i18n="th_type">Type</th><th data-i18n="th_action">Action</th></tr></thead>
                                 <tbody id="fintech-fund-requests-table">
-                                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No pending requests</td></tr>
+                                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted);" data-i18n="no_pending_req">No pending requests</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1414,13 +1426,13 @@
 
             <section id="system" class="section-content" style="display:none;">
                 <div class="glass-card section-card">
-                    <h3>System Management</h3>
-                    <p style="color:var(--text-muted); margin-bottom: 20px;">Use these tools to reset database tables or manage your company account.</p>
+                    <h3 data-i18n="sys_mgmt">System Management</h3>
+                    <p style="color:var(--text-muted); margin-bottom: 20px;" data-i18n="sys_mgmt_desc">Use these tools to reset database tables or manage your company account.</p>
 
                     <div class="glass-card" style="padding:15px; background:rgba(79, 140, 255, 0.1); border-left:4px solid var(--primary); margin-bottom:30px; display:flex; justify-content:space-between; align-items:center;">
                         <div>
-                            <h4 style="margin:0; color:var(--primary);">Your Company ID</h4>
-                            <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted);">Share this ID with your drivers so they can log in.</p>
+                            <h4 style="margin:0; color:var(--primary);" data-i18n="company_id_label">Your Company ID</h4>
+                            <p style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted);" data-i18n="company_id_desc">Share this ID with your drivers so they can log in.</p>
                         </div>
                         <div style="display:flex; gap:10px; align-items:center;">
                             <code id="display-company-id" style="background:rgba(0,0,0,0.3); padding:10px 15px; border-radius:8px; font-weight:bold; color:var(--primary); font-size:1.1rem; border:1px solid var(--primary);">LOADING...</code>
@@ -1430,50 +1442,50 @@
                     
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:20px;">
                         <div class="glass-card" style="padding:20px; border:1px solid rgba(229,62,62,0.3); background:rgba(255,255,255,0.02);">
-                            <h4 style="color:var(--danger)">Reset Shipments</h4>
-                            <p style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);">Permanently delete all shipment records and history.</p>
-                            <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="systemReset('shipments')">Clear All Shipments</button>
+                            <h4 style="color:var(--danger)" data-i18n="reset_shipments">Reset Shipments</h4>
+                            <p style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);" data-i18n="reset_shipments_desc">Permanently delete all shipment records and history.</p>
+                            <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="systemReset('shipments')" data-i18n="btn_clear_shipments">Clear All Shipments</button>
                         </div>
                         
                         <div class="glass-card" style="padding:20px; border:1px solid rgba(229,62,62,0.3); background:rgba(255,255,255,0.02);">
-                            <h4 style="color:var(--danger)">Reset Drivers</h4>
-                            <p style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);">Permanently delete all driver records and unlink vehicles.</p>
-                            <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="systemReset('drivers')">Clear All Drivers</button>
+                            <h4 style="color:var(--danger)" data-i18n="reset_drivers">Reset Drivers</h4>
+                            <p style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);" data-i18n="reset_drivers_desc">Permanently delete all driver records and unlink vehicles.</p>
+                            <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="systemReset('drivers')" data-i18n="btn_clear_drivers">Clear All Drivers</button>
                         </div>
                         
                         <div class="glass-card" style="padding:20px; border:1px solid rgba(229,62,62,0.3); background:rgba(255,255,255,0.02);">
-                            <h4 style="color:var(--danger)">Reset Vehicles</h4>
-                            <p style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);">Permanently delete all vehicle records and unlink drivers.</p>
-                            <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="systemReset('vehicles')">Clear All Vehicles</button>
+                            <h4 style="color:var(--danger)" data-i18n="reset_vehicles">Reset Vehicles</h4>
+                            <p style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);" data-i18n="reset_vehicles_desc">Permanently delete all vehicle records and unlink drivers.</p>
+                            <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="systemReset('vehicles')" data-i18n="btn_clear_vehicles">Clear All Vehicles</button>
                         </div>
                     </div>
 
                     <div class="glass-card" style="padding:25px; border:2px solid var(--danger); background:rgba(229,62,62,0.05); margin-top:30px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
                             <div>
-                                <h4 style="color:var(--danger); margin:0; font-size:1.2rem;">Full Operational Reset</h4>
-                                <p style="font-size:0.9rem; margin:10px 0 0 0; color:var(--text);">Set all wallets, profit, and shipments to zero. <br>
-                                <span style="color:var(--text-muted); font-size:0.8rem;">Warehouses, Drivers, and Vehicles will remain unchanged, but all their history and balances will be wiped.</span></p>
+                                <h4 style="color:var(--danger); margin:0; font-size:1.2rem;" data-i18n="full_ops_reset">Full Operational Reset</h4>
+                                <p style="font-size:0.9rem; margin:10px 0 0 0; color:var(--text);" data-i18n="full_ops_reset_desc">Set all wallets, profit, and shipments to zero. <br>
+                                <span style="color:var(--text-muted); font-size:0.8rem;" data-i18n="full_ops_reset_warning">Warehouses, Drivers, and Vehicles will remain unchanged, but all their history and balances will be wiped.</span></p>
                             </div>
-                            <button class="btn-primary" style="background:var(--danger); width:auto; padding:12px 24px; font-weight:bold; box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);" onclick="systemReset('operations')">RESET ALL FUNCTIONS ⚠️</button>
+                            <button class="btn-primary" style="background:var(--danger); width:auto; padding:12px 24px; font-weight:bold; box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);" onclick="systemReset('operations')" data-i18n="btn_reset_all_functions">RESET ALL FUNCTIONS ⚠️</button>
                         </div>
                     </div>
 
                     <hr style="border-color:rgba(255,255,255,0.1); margin:40px 0;">
 
                     <div class="glass-card" style="padding:30px; border:1px solid var(--danger); background:rgba(229,62,62,0.05);">
-                        <h3 style="color:var(--danger)">⚠️ Danger Zone</h3>
-                        <p style="color:var(--text-muted); margin-bottom:20px;">Once you delete your company account, there is no going back. Please be certain.</p>
+                        <h3 style="color:var(--danger)" data-i18n="danger_zone">⚠️ Danger Zone</h3>
+                        <p style="color:var(--text-muted); margin-bottom:20px;" data-i18n="delete_account_desc">Once you delete your company account, there is no going back. Please be certain.</p>
                         
                         <div id="delete-account-step1">
-                            <button class="btn-primary" style="background:var(--danger); width:auto; padding:12px 30px;" onclick="requestDeleteAccount()">Delete Company Account</button>
+                            <button class="btn-primary" style="background:var(--danger); width:auto; padding:12px 30px;" onclick="requestDeleteAccount()" data-i18n="btn_delete_account">Delete Company Account</button>
                         </div>
                         
                         <div id="delete-account-step2" style="display:none; margin-top:20px;">
-                            <p style="color:var(--warning); font-weight:bold; margin-bottom:10px;">OTP sent to your email. Enter it below to confirm deletion:</p>
+                            <p style="color:var(--warning); font-weight:bold; margin-bottom:10px;" data-i18n="delete_otp_msg">OTP sent to your email. Enter it below to confirm deletion:</p>
                             <div style="display:flex; gap:10px; max-width:400px;">
-                                <input type="text" id="delete-otp" placeholder="Enter 6-digit OTP" style="padding:10px; border-radius:8px; border:1px solid var(--danger); background:rgba(0,0,0,0.3); color:white; flex:1;">
-                                <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="confirmDeleteAccount()">Confirm</button>
+                                <input type="text" id="delete-otp" placeholder="Enter 6-digit OTP" data-i18n-placeholder="placeholder_delete_otp" style="padding:10px; border-radius:8px; border:1px solid var(--danger); background:rgba(0,0,0,0.3); color:white; flex:1;">
+                                <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="confirmDeleteAccount()" data-i18n="btn_confirm">Confirm</button>
                             </div>
                             <p id="resend-timer-container-del" style="margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
                                 Didn't receive code? <span id="resend-link-del" style="color:var(--danger); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val-del">10</span>s)</span>
@@ -1489,12 +1501,12 @@
 
                     <div data-layout-id="safety-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                         <div>
-                            <h2 style="color:var(--danger); margin:0; font-size:2rem;">Safety Center 🛡️</h2>
+                            <h2 style="color:var(--danger); margin:0; font-size:2rem;" data-i18n="safety_center_title">Safety Center 🛡️</h2>
                             <div style="width:60px; height:5px; background:var(--danger); margin:18px 0; border-radius:2px;"></div>
                             <p class="subtitle" style="margin-bottom:0; font-size:1rem; opacity:0.8;" data-i18n="safety_desc">Automated-monitored safety incidents, fatigue alerts, and Zen Mode activations.</p>
                         </div>
                         <div style="text-align:right;">
-                            <span style="font-size:0.8rem; color:var(--text-muted);">Fleet Safety Index:</span>
+                            <span style="font-size:0.8rem; color:var(--text-muted);" data-i18n="fleet_safety_index">Fleet Safety Index:</span>
                             <h2 id="fleet-safety-index" style="margin:0; color:var(--success);">98.4%</h2>
                         </div>
                     </div>
@@ -1502,13 +1514,13 @@
 
                     <div data-layout-id="safety-alerts-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:30px;">
                         <div class="glass-card" data-layout-id="safety-fatigue-card" style="padding:20px; background:rgba(229,62,62,0.05); border:1px solid rgba(229,62,62,0.2);">
-                            <h4 style="color:var(--danger); margin-top:0;">⚠️ Critical Fatigue Alerts</h4>
+                            <h4 style="color:var(--danger); margin-top:0;" data-i18n="critical_fatigue_alerts">⚠️ Critical Fatigue Alerts</h4>
                             <div id="fatigue-alerts-list" style="max-height:250px; overflow-y:auto;">
                                 <!-- Injected -->
                             </div>
                         </div>
                         <div class="glass-card" data-layout-id="safety-zen-card" style="padding:20px; background:rgba(49, 130, 206, 0.05); border:1px solid rgba(49, 130, 206, 0.2);">
-                            <h4 style="color:var(--primary); margin-top:0;">🧘 Active Zen Mode Sessions</h4>
+                            <h4 style="color:var(--primary); margin-top:0;" data-i18n="active_zen_sessions">🧘 Active Zen Mode Sessions</h4>
                             <div id="zen-sessions-list" style="max-height:250px; overflow-y:auto;">
                                 <!-- Injected -->
                             </div>
@@ -1517,17 +1529,17 @@
 
 
                     <div data-layout-id="safety-incidents-table">
-                        <h3>Recent Incident Reports</h3>
+                        <h3 data-i18n="recent_incident_reports">Recent Incident Reports</h3>
                         <div class="table-container">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Driver</th>
-                                        <th>Incident Type</th>
-                                        <th>Time</th>
-                                        <th>Location</th>
+                                        <th data-i18n="th_driver">Driver</th>
+                                        <th data-i18n="th_incident_type">Incident Type</th>
+                                        <th data-i18n="th_time">Time</th>
+                                        <th data-i18n="th_location">Location</th>
                                         <th data-i18n="hub_status">Status</th>
-                                        <th>Action</th>
+                                        <th data-i18n="th_action">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="incidents-table-body">
@@ -1548,13 +1560,13 @@
     <!-- Manual Assignment Modal -->
     <div id="manual-assign-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:500px; max-width:90vw; padding:30px; border:1px solid rgba(255,255,255,0.1);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0;">Manual Assignment</h3>
+            <h3 style="margin:0;" data-i18n="manual_assignment">Manual Assignment</h3>
             <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('manual-assign-modal').style.display='none'">&times;</button>
         </div>
-        <p class="subtitle" style="margin-bottom:25px;">Select a driver and vehicle from your active fleet.</p>
+        <p class="subtitle" style="margin-bottom:25px;" data-i18n="manual_assignment_desc">Select a driver and vehicle from your active fleet.</p>
         
         <div class="input-group span-2" style="margin-bottom:25px;">
-            <label style="display:block; margin-bottom:10px; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted);">Available Fleet Pairs</label>
+            <label style="display:block; margin-bottom:10px; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted);" data-i18n="available_fleet_pairs">Available Fleet Pairs</label>
             <select id="manual-assign-select" class="polished-glass-input" style="width:100%; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:white;">
                 <option value="">Loading fleet...</option>
             </select>
@@ -1844,7 +1856,7 @@
 
         <h4>Recent Trip History</h4>
         <table style="font-size:0.85rem;">
-            <thead><tr><th>ID</th><th>Route</th><th>Date</th><th data-i18n="hub_status">Status</th></tr></thead>
+            <thead><tr><th data-i18n="th_id">ID</th><th data-i18n="th_route">Route</th><th data-i18n="th_date">Date</th><th data-i18n="hub_status">Status</th></tr></thead>
             <tbody id="prof-trips-body"></tbody>
         </table>
     </div>
@@ -1950,13 +1962,13 @@
                 <table style="width:100%; border-collapse:collapse;">
                     <thead style="position:sticky; top:0; background:var(--bg); z-index:1;">
                         <tr style="text-align:left; border-bottom:2px solid var(--border);">
-                            <th style="padding:12px;">Pickup</th>
-                            <th style="padding:12px;">Drop</th>
-                            <th style="padding:12px;">Weight</th>
-                            <th style="padding:12px;">Description</th>
-                            <th style="padding:12px;">Receiver</th>
-                            <th style="padding:12px;">Perish?</th>
-                            <th style="padding:12px;">E-Way Bill</th>
+                            <th style="padding:12px;" data-i18n="th_pickup">Pickup</th>
+                            <th style="padding:12px;" data-i18n="th_drop">Drop</th>
+                            <th style="padding:12px;" data-i18n="th_weight">Weight</th>
+                            <th style="padding:12px;" data-i18n="th_description">Description</th>
+                            <th style="padding:12px;" data-i18n="th_receiver">Receiver</th>
+                            <th style="padding:12px;" data-i18n="th_perish">Perish?</th>
+                            <th style="padding:12px;" data-i18n="th_eway_bill">E-Way Bill</th>
                         </tr>
                     </thead>
                     <tbody id="bulk-preview-body"></tbody>
@@ -1998,7 +2010,7 @@
             <h4>Preview (<span id="driver-bulk-count">0</span>)</h4>
             <div id="driver-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
             <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
-                <table><thead><tr><th>Name</th><th>Type</th><th>Hub ID</th><th>Contact</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
+                <table><thead><tr><th data-i18n="th_name">Name</th><th data-i18n="th_type">Type</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_contact">Contact</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
             </div>
             <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-driver-bulk-btn" onclick="confirmDriverBulk()">Confirm Upload</button></div>
         </div>
@@ -2032,7 +2044,7 @@
             <h4>Preview (<span id="vehicle-bulk-count">0</span>)</h4>
             <div id="vehicle-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
             <div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
-                <table><thead><tr><th>Type</th><th>Hub ID</th><th>Plate</th><th>Cap</th></tr></thead><tbody id="vehicle-preview-body"></tbody></table>
+                <table><thead><tr><th data-i18n="th_type">Type</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_plate">Plate</th><th data-i18n="th_cap">Cap</th></tr></thead><tbody id="vehicle-preview-body"></tbody></table>
             </div>
             <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-vehicle-bulk-btn" onclick="confirmVehicleBulk()">Confirm Upload</button></div>
         </div>
