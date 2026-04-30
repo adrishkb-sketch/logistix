@@ -2,19 +2,34 @@
 
 async function requestOTP() {
     const email = document.getElementById('signup-email').value;
+    const company_name = document.getElementById('signup-name').value;
+    const btn = document.getElementById('signup-otp-btn');
+
     if (!email) {
         alert(getTranslation('auth_error_email'));
         return;
     }
     
+    // UI Feedback: Disable and show waiting
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = getTranslation('otp_sending');
+    }
+    showToast(getTranslation('otp_sending'), 'info');
+
     try {
-        const res = await apiCall('/auth/company/request-otp', 'POST', { email });
-        alert(res.message); // Inform user to check email
+        const res = await apiCall('/auth/company/request-otp', 'POST', { email, company_name });
+        showToast(getTranslation('otp_sent_success'), 'success');
         document.getElementById('step-1').style.display = 'none';
         document.getElementById('step-2').style.display = 'block';
+        if (typeof updatePageTranslations === 'function') updatePageTranslations();
         startOTPTimer('resend-link', 'timer-val', requestOTP);
     } catch(e) {
-        // Error handled in api.js
+        // Re-enable if failed
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = getTranslation('btn_request_otp') || 'Request OTP';
+        }
     }
 }
 
@@ -27,7 +42,7 @@ function startOTPTimer(linkId, valId, retryFn) {
 
     link.style.opacity = '0.5';
     link.style.pointerEvents = 'none';
-    link.innerHTML = `Resend OTP (<span id="${valId}">${timeLeft}</span>s)`;
+    link.innerHTML = `${getTranslation('resend_otp')} (<span id="${valId}">${timeLeft}</span>s)`;
     
     const timer = setInterval(() => {
         timeLeft--;
@@ -38,7 +53,7 @@ function startOTPTimer(linkId, valId, retryFn) {
             clearInterval(timer);
             link.style.opacity = '1';
             link.style.pointerEvents = 'auto';
-            link.innerHTML = `Resend OTP Now`;
+            link.innerHTML = getTranslation('resend_otp_now') || `Resend OTP Now`;
             link.onclick = (e) => {
                 e.preventDefault();
                 retryFn();
@@ -104,22 +119,34 @@ document.addEventListener('submit', async (e) => {
 
         // Company Signup
         if (isSignupForm) {
+            // If Step 1 is active, Enter should trigger requestOTP
+            const step1 = document.getElementById('step-1');
+            if (step1 && step1.style.display !== 'none') {
+                await requestOTP();
+                return;
+            }
+
             const name = document.getElementById('signup-name')?.value;
             const email = document.getElementById('signup-email')?.value;
             const password = document.getElementById('signup-password')?.value;
-            const otp = document.getElementById('signup-otp')?.value;
+            const otp = Array.from(document.querySelectorAll('.signup-pin')).map(i => i.value).join('');
             
-            await apiCall('/auth/company/verify-signup', 'POST', {
+            const btn = target.querySelector('button[type="submit"]');
+            if (btn) btn.disabled = true;
+
+            const res = await apiCall('/auth/company/verify-signup', 'POST', {
                 email,
                 otp,
                 company_data: { name, email, password }
             });
-            alert(getTranslation('auth_success_signup'));
-            if (window.closeModal) window.closeModal();
-            else {
-                const m = document.getElementById('modal');
-                if (m) m.style.display = 'none';
-            }
+            
+            // Success! Store credentials for auto-login after welcome
+            localStorage.setItem('manager_id', res.company_id);
+            localStorage.setItem('company_id', res.company_id);
+            localStorage.setItem('manager_name', name);
+
+            // Show Welcome Modal
+            showWelcomeModal(name);
         }
     } catch (err) {
         console.error("Auth Action Failed:", err);
@@ -134,8 +161,10 @@ document.addEventListener('submit', async (e) => {
 
 async function validateSignupEmail(email) {
     const warning = document.getElementById('email-warning');
+    const input = document.getElementById('signup-email');
     if (!email || !email.includes('@')) {
         if (warning) warning.style.display = 'none';
+        if (input) input.style.borderColor = 'rgba(255,255,255,0.1)';
         return;
     }
     try {
@@ -143,8 +172,68 @@ async function validateSignupEmail(email) {
         if (warning) {
             warning.style.display = res.exists ? 'block' : 'none';
         }
+        if (input) {
+            input.style.borderColor = res.exists ? '#ff4f4f' : '#4fff4f';
+            input.style.boxShadow = res.exists ? '0 0 10px rgba(255,79,79,0.2)' : '0 0 10px rgba(79,255,79,0.2)';
+        }
     } catch (e) {
         console.error("Email check failed:", e);
     }
 }
 window.validateSignupEmail = validateSignupEmail;
+
+/**
+ * Shows a beautiful welcome modal for newly registered companies.
+ * @param {string} companyName 
+ */
+function showWelcomeModal(companyName) {
+    const modal = document.getElementById('modal');
+    const content = document.getElementById('modal-content');
+    if (!modal || !content) return;
+
+    // Use absolute URL for the image or relative to root
+    const imageSrc = window.location.origin + '/welcome.png';
+
+    content.innerHTML = `
+        <div style="text-align: center; padding: 10px;">
+            <div style="width: 100%; height: 220px; background: url('${imageSrc}') no-repeat center/cover; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);"></div>
+            
+            <h2 style="font-size: 1.8rem; font-weight: 800; background: linear-gradient(90deg, #fff, #4f8cff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px;">
+                Welcome, ${companyName}!
+            </h2>
+            <p style="color: var(--muted); font-size: 0.95rem; margin-bottom: 25px; line-height: 1.6;">
+                Your logistics journey just got smarter. Here's what <b>Logistix</b> empowers you with:
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; margin-bottom: 30px;">
+                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="font-size: 1.2rem; margin-bottom: 5px;">🚚</div>
+                    <div style="font-weight: 700; font-size: 0.85rem;">Smart Dispatch</div>
+                    <div style="font-size: 0.75rem; color: var(--muted);">AI-driven driver matching</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="font-size: 1.2rem; margin-bottom: 5px;">❄️</div>
+                    <div style="font-weight: 700; font-size: 0.85rem;">Cold Chain</div>
+                    <div style="font-size: 0.75rem; color: var(--muted);">Spoilage prediction sensor</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="font-size: 1.2rem; margin-bottom: 5px;">📊</div>
+                    <div style="font-weight: 700; font-size: 0.85rem;">Real-time Fleet</div>
+                    <div style="font-size: 0.75rem; color: var(--muted);">Live GPS & status tracking</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="font-size: 1.2rem; margin-bottom: 5px;">🔐</div>
+                    <div style="font-weight: 700; font-size: 0.85rem;">Secure Escrow</div>
+                    <div style="font-size: 0.75rem; color: var(--muted);">Cashless transaction safety</div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 1.1rem;" onclick="window.location.href='pages/manager.html'">
+                Go to Dashboard →
+            </button>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+window.showWelcomeModal = showWelcomeModal;

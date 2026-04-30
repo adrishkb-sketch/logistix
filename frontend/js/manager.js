@@ -4308,20 +4308,60 @@ async function systemReset(type) {
 }
 
 async function requestDeleteAccount() {
-    if (!confirm("Are you absolutely sure? Your account and all company data will be permanently deleted.")) {
-        return;
+    const password = prompt("To authorize account deletion, please enter your Manager Password:");
+    if (!password) return;
+
+    const btn = document.getElementById('request-del-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = getTranslation('otp_sending') || "Sending OTP...";
     }
-    
+    showToast(getTranslation('otp_sending') || "Sending OTP...", 'info');
+
     try {
         const companyId = localStorage.getItem('manager_id');
-        const res = await apiCall(`/manager/system/delete-account-request?company_id=${companyId}`, 'POST');
-        alert(res.message);
+        const res = await apiCall(`/manager/system/delete-account-request`, 'POST', { 
+            company_id: companyId,
+            manager_password: password
+        });
+        
+        showToast(getTranslation('otp_sent_success'), 'success');
         document.getElementById('delete-account-step1').style.display = 'none';
         document.getElementById('delete-account-step2').style.display = 'block';
+        
+        // Initialize PIN auto-focus listeners if not already done
+        initDeletePinListeners();
+        
+        if (typeof updatePageTranslations === 'function') updatePageTranslations();
         startOTPTimer('resend-link-del', 'timer-val-del', requestDeleteAccount);
     } catch(err) {
-        alert("Failed to request account deletion.");
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = getTranslation('btn_delete_account') || 'Delete Company Account';
+        }
+        // apiCall already shows an alert for the error (e.g. "Incorrect password")
     }
+}
+
+function initDeletePinListeners() {
+    const pins = document.querySelectorAll('.delete-pin');
+    pins.forEach((pin, idx) => {
+        // Auto-focus next box
+        pin.oninput = (e) => {
+            if (pin.value && idx < pins.length - 1) {
+                pins[idx + 1].focus();
+            }
+        };
+        // Backspace support
+        pin.onkeydown = (e) => {
+            if (e.key === 'Backspace' && !pin.value && idx > 0) {
+                pins[idx - 1].focus();
+            }
+            if (e.key === 'Enter') {
+                confirmDeleteAccount();
+            }
+        };
+    });
 }
 
 function startOTPTimer(linkId, valId, retryFn) {
@@ -4333,7 +4373,7 @@ function startOTPTimer(linkId, valId, retryFn) {
 
     link.style.opacity = '0.5';
     link.style.pointerEvents = 'none';
-    link.innerHTML = `Resend OTP (<span id="${valId}">${timeLeft}</span>s)`;
+    link.innerHTML = `${getTranslation('resend_otp')} (<span id="${valId}">${timeLeft}</span>s)`;
     
     const timer = setInterval(() => {
         timeLeft--;
@@ -4344,7 +4384,7 @@ function startOTPTimer(linkId, valId, retryFn) {
             clearInterval(timer);
             link.style.opacity = '1';
             link.style.pointerEvents = 'auto';
-            link.innerHTML = `Resend OTP Now`;
+            link.innerHTML = getTranslation('resend_otp_now') || `Resend OTP Now`;
             link.onclick = (e) => {
                 e.preventDefault();
                 retryFn();
@@ -4354,19 +4394,23 @@ function startOTPTimer(linkId, valId, retryFn) {
 }
 
 async function confirmDeleteAccount() {
-    const otp = document.getElementById('delete-otp').value;
+    const otp = Array.from(document.querySelectorAll('.delete-pin')).map(i => i.value).join('');
     if (!otp || otp.length < 6) {
-        alert("Please enter a valid 6-digit OTP.");
+        showToast("Please enter a valid 6-digit OTP.", "error");
         return;
     }
     
+    const btn = document.getElementById('confirm-del-btn');
+    if (btn) btn.disabled = true;
+
     try {
         const companyId = localStorage.getItem('manager_id');
         const res = await apiCall(`/manager/system/delete-account-confirm?company_id=${companyId}&otp=${otp}`, 'POST');
-        alert(res.message);
-        logout(); // Force logout after deletion
+        showToast(res.message, 'success');
+        setTimeout(() => logout(), 2000);
     } catch(err) {
-        alert("Incorrect OTP or account already deleted.");
+        if (btn) btn.disabled = false;
+        showToast("Incorrect OTP or account already deleted.", "error");
     }
 }
 async function dispatchRescueVehicle() {

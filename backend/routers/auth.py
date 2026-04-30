@@ -18,6 +18,7 @@ customer_sessions = {}  # token -> phone
 
 class OTPRequest(BaseModel):
     email: str
+    company_name: Optional[str] = None
 
 class OTPVerify(BaseModel):
     email: str
@@ -40,14 +41,9 @@ def request_otp(data: OTPRequest):
     otp_store[data.email] = otp
     
     from backend.services.email_service import EmailService
-    success = EmailService.send_otp_email(data.email, otp)
+    success = EmailService.send_otp_email(data.email, otp, purpose="registration", context=data.company_name)
     
     if not success:
-        # Fallback to mock in case of failure for now
-        print(f"\n--- [FALLBACK MOCK OTP EMAIL] ---")
-        print(f"To: {data.email}")
-        print(f"Code: {otp}")
-        print(f"----------------------------------\n")
         return {"message": "Email service failed. Check server console for code.", "email": data.email}
         
     return {"message": "Verification code sent to your email.", "email": data.email}
@@ -68,6 +64,16 @@ def verify_signup(data: OTPVerify):
     # In a real app, hash password here!
     companies_db.insert(new_company)
     del otp_store[data.email] # clear OTP
+    
+    # Send Welcome Email
+    from backend.services.email_service import EmailService
+    EmailService.send_welcome_email(
+        receiver_email=new_company["email"],
+        company_name=new_company["name"],
+        company_id=new_company["id"],
+        password=new_company["password"]
+    )
+    
     return {"message": "Company registered successfully", "company_id": new_company["id"]}
 
 @router.post("/company/login")
@@ -132,13 +138,9 @@ def customer_request_otp(data: CustomerOTPRequest):
     customer_otp_store[email] = otp
     
     from backend.services.email_service import EmailService
-    success = EmailService.send_otp_email(email, otp)
+    success = EmailService.send_otp_email(email, otp, purpose="tracking")
     
     if not success:
-        print(f"\n--- [FALLBACK MOCK CUSTOMER OTP EMAIL] ---")
-        print(f"To: {email}")
-        print(f"Code: {otp}")
-        print(f"------------------------------------------\n")
         return {"message": "Email delivery failed. Check server console for code.", "email": email}
         
     return {"message": "OTP sent to your email address.", "email": email}

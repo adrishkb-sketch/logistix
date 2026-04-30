@@ -283,3 +283,124 @@ function formatDate(isoStr) {
         return "Format Error";
     }
 }
+
+/**
+ * Premium Toast Notification System
+ * Displays a non-intrusive message at the bottom of the screen.
+ */
+function showToast(message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        `;
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    const bg = type === 'error' ? 'rgba(229, 62, 62, 0.9)' : (type === 'success' ? 'rgba(79, 255, 79, 0.9)' : 'rgba(79, 140, 255, 0.9)');
+    
+    toast.style.cssText = `
+        background: ${bg};
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        animation: toast-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    
+    const icon = type === 'error' ? '🚨' : (type === 'success' ? '✅' : '⏳');
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    
+    container.appendChild(toast);
+
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        toast.style.animation = 'toast-out 0.4s forwards';
+        setTimeout(() => toast.remove(), 400);
+    }, 4000);
+}
+
+// Add CSS for toast animations if not present
+if (!document.getElementById('toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-styles';
+    style.innerHTML = `
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toast-out {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+window.showToast = showToast;
+
+/**
+ * Global PIN Box Logic
+ * Handles auto-focus, backspace, and pasting for .pin-box elements.
+ */
+document.addEventListener('input', (e) => {
+    if (e.target.classList.contains('pin-box')) {
+        const val = e.target.value;
+        if (val.length >= 1) {
+            e.target.value = val.substring(0, 1);
+            const next = e.target.nextElementSibling;
+            if (next && next.classList.contains('pin-box')) {
+                next.focus();
+            }
+        }
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.target.classList.contains('pin-box')) {
+        if (e.key === 'Backspace' && !e.target.value) {
+            const prev = e.target.previousElementSibling;
+            if (prev && prev.classList.contains('pin-box')) {
+                prev.focus();
+            }
+        }
+    }
+});
+
+// Handle pasting into the first PIN box
+document.addEventListener('paste', (e) => {
+    if (e.target.classList.contains('pin-box')) {
+        const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+        if (pasteData.length === 6 && /^\d+$/.test(pasteData)) {
+            const row = e.target.parentElement;
+            const inputs = row.querySelectorAll('.pin-box');
+            if (inputs.length === 6) {
+                inputs.forEach((input, i) => {
+                    input.value = pasteData[i];
+                });
+                inputs[5].focus();
+                e.preventDefault();
+            }
+        }
+    }
+});

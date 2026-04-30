@@ -1478,15 +1478,21 @@
                         <p style="color:var(--text-muted); margin-bottom:20px;" data-i18n="delete_account_desc">Once you delete your company account, there is no going back. Please be certain.</p>
                         
                         <div id="delete-account-step1">
-                            <button class="btn-primary" style="background:var(--danger); width:auto; padding:12px 30px;" onclick="requestDeleteAccount()" data-i18n="btn_delete_account">Delete Company Account</button>
+                            <button id="request-del-btn" class="btn-primary" style="background:var(--danger); width:auto; padding:12px 30px;" onclick="requestDeleteAccount()" data-i18n="btn_delete_account">Delete Company Account</button>
                         </div>
                         
                         <div id="delete-account-step2" style="display:none; margin-top:20px;">
                             <p style="color:var(--warning); font-weight:bold; margin-bottom:10px;" data-i18n="delete_otp_msg">OTP sent to your email. Enter it below to confirm deletion:</p>
-                            <div style="display:flex; gap:10px; max-width:400px;">
-                                <input type="text" id="delete-otp" placeholder="Enter 6-digit OTP" data-i18n-placeholder="placeholder_delete_otp" style="padding:10px; border-radius:8px; border:1px solid var(--danger); background:rgba(0,0,0,0.3); color:white; flex:1;">
-                                <button class="btn-primary" style="background:var(--danger); width:auto;" onclick="confirmDeleteAccount()" data-i18n="btn_confirm">Confirm</button>
+                            <div class="pin-row" id="delete-pin-row">
+                                <input class="pin-box delete-pin" maxlength="1" type="text" inputmode="numeric">
+                                <input class="pin-box delete-pin" maxlength="1" type="text" inputmode="numeric">
+                                <input class="pin-box delete-pin" maxlength="1" type="text" inputmode="numeric">
+                                <input class="pin-box delete-pin" maxlength="1" type="text" inputmode="numeric">
+                                <input class="pin-box delete-pin" maxlength="1" type="text" inputmode="numeric">
+                                <input class="pin-box delete-pin" maxlength="1" type="text" inputmode="numeric">
                             </div>
+                            <button id="confirm-del-btn" class="btn-primary" style="background:var(--danger); width:100%;" onclick="confirmDeleteAccount()" data-i18n="btn_confirm">Confirm Deletion</button>
+                        </div>
                             <p id="resend-timer-container-del" style="margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
                                 Didn't receive code? <span id="resend-link-del" style="color:var(--danger); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val-del">10</span>s)</span>
                             </p>

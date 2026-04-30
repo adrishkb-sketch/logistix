@@ -945,24 +945,30 @@ def reset_vehicles(data: dict, x_logistix_context: Optional[str] = Header(None))
 
 # Account Deletion with OTP
 @router.post("/system/delete-account-request")
-def request_account_deletion(company_id: str):
+def request_account_deletion(data: dict):
+    company_id = data.get("company_id")
+    password = data.get("manager_password")
+    
+    if not company_id or not password:
+        raise HTTPException(status_code=400, detail="Missing company_id or password")
+
     c_db = JSONDatabase("companies")
     company = c_db.get_by_id(company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
+        
+    if company.get("password") != password:
+        raise HTTPException(status_code=401, detail="Incorrect manager password. Authorization failed.")
     
     otp = str(random.randint(100000, 999999))
     deletion_otp_store[company_id] = otp
     
     from backend.services.email_service import EmailService
-    success = EmailService.send_otp_email(company["email"], otp)
+    success = EmailService.send_otp_email(company["email"], otp, purpose="deletion")
     
     if not success:
-        print(f"\n--- [FALLBACK MOCK DELETION OTP] ---")
-        print(f"To: {company['email']}")
-        print(f"Code: {otp}")
-        print(f"------------------------------------\n")
-        return {"message": "Email delivery failed. Check server console for code."}
+        # Don't proceed if email failed, or return a clear error
+        raise HTTPException(status_code=500, detail="Failed to send verification email. Please check your SMTP settings.")
         
     return {"message": "OTP sent to your registered email."}
 
@@ -972,6 +978,12 @@ def confirm_account_deletion(company_id: str, otp: str):
         raise HTTPException(status_code=400, detail="Invalid OTP")
         
     c_db = JSONDatabase("companies")
+    company = c_db.get_by_id(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Account already deleted or not found")
+        
+    company_email = company.get("email")
+    company_name = company.get("name")
     
     # 1. Wipe all associated data
     # Helper to wipe table by company_id
@@ -988,7 +1000,12 @@ def confirm_account_deletion(company_id: str, otp: str):
     if c_db.delete(company_id):
         if company_id in deletion_otp_store:
             del deletion_otp_store[company_id]
-        return {"message": "Account and all associated data deleted successfully."}
+            
+        # Send goodbye email
+        from backend.services.email_service import EmailService
+        EmailService.send_goodbye_email(company_email, company_name)
+        
+        return {"message": "Account and all associated data deleted successfully. We are sorry to see you go."}
     
     raise HTTPException(status_code=404, detail="Account not found")
 @router.post("/rescue-shipment")

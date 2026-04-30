@@ -258,6 +258,7 @@ input, select, textarea {
 
 body.light-mode input, body.light-mode select, body.light-mode textarea {
     background: rgba(0, 0, 0, 0.02);
+    color: #000000 !important;
 }
 
 option {
@@ -421,6 +422,43 @@ body.light-mode tr:hover td {
 .status-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
 .status-active { background: rgba(16, 185, 129, 0.15); color: var(--success); }
 .status-delivered { background: rgba(79, 140, 255, 0.15); color: var(--primary); }
+
+/* PIN Box System (OTP) */
+.pin-row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 24px 0 !important;
+    width: 100% !important;
+}
+.pin-box {
+    width: 52px !important;
+    height: 52px !important; /* Professional Square */
+    border-radius: 12px !important; /* Curved Edges */
+    border: 2px solid var(--border) !important;
+    background: rgba(255,255,255,0.05) !important;
+    color: var(--text) !important;
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-block !important;
+    outline: none !important;
+}
+.pin-box:focus {
+    border-color: var(--primary) !important;
+    background: rgba(var(--primary-rgb), 0.1) !important;
+    box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.3) !important;
+    transform: translateY(-3px);
+}
+@media (max-width: 480px) {
+    .pin-row { gap: 8px !important; }
+    .pin-box { width: 42px !important; height: 42px !important; font-size: 1.2rem !important; }
+}
 
 /* Buttons */
 .btn-primary {

@@ -6,16 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="11472a96-f390-43dd-8cbb-cf9433a633f1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/driver.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/driver.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/manager.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/manager.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/track.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/track.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/translations.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/translations.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/js/voice.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/js/voice.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/pages/driver.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/pages/driver.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/pages/manager.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/pages/manager.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/pages/track.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/pages/track.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/pages/updates.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/pages/updates.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

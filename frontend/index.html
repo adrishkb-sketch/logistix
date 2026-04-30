@@ -294,6 +294,7 @@ section {
 /* Light mode inputs */
 body.light-mode .modal-box input {
     background: rgba(255,255,255,0.8);
+    color: #000000 !important;
 }
 
 /* Button spacing */
@@ -369,9 +370,37 @@ input {
     color: var(--text);
 }
 
-/* Extra safety for dark mode */
-body:not(.light-mode) #theme-toggle {
-    color: #ffffff;
+    /* PIN Box System (OTP) */
+.pin-row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 24px 0 !important;
+    width: 100% !important;
+}
+.pin-box {
+    width: 52px !important;
+    height: 52px !important; /* Square */
+    border-radius: 12px !important; /* Curved edges */
+    border: 2px solid var(--border) !important;
+    background: rgba(255,255,255,0.05) !important;
+    color: var(--text) !important;
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    margin: 0 !important; /* IMPORTANT: Overrides .modal-box input margin */
+    padding: 0 !important;
+    display: inline-block !important;
+    outline: none !important;
+}
+.pin-box:focus {
+    border-color: var(--primary) !important;
+    background: rgba(var(--primary-rgb, 79, 140, 255), 0.1) !important;
+    box-shadow: 0 0 15px rgba(var(--primary-rgb, 79, 140, 255), 0.3) !important;
+    transform: translateY(-3px);
 }
 </style>
 </head>
@@ -542,11 +571,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     <input id="signup-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required oninput="validateSignupEmail(this.value)">
                     <small id="email-warning" style="color:#ff4f4f; display:none; margin-top:-5px; font-size:0.75rem;" data-i18n="error_email_registered">🚨 Email already registered!</small>
                     <input id="signup-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                    <button type="button" class="btn btn-primary" onclick="requestOTP()" data-i18n="btn_request_otp">Request OTP</button>
+                    <button id="signup-otp-btn" type="button" class="btn btn-primary" onclick="requestOTP()" data-i18n="btn_request_otp">Request OTP</button>
                 </div>
                 <div id="step-2" style="display:none;">
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;" data-i18n="otp_sent_to">OTP sent to your email.</p>
-                    <input id="signup-otp" type="text" placeholder="6-digit OTP" data-i18n-placeholder="placeholder_otp" required>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
+                    <div class="pin-row" id="signup-pin-row">
+                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                    </div>
                     <button type="submit" class="btn btn-primary" data-i18n="btn_verify_register">Verify & Register</button>
                     <p id="resend-timer-container" style="text-align:center; margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
                         <span data-i18n="didnt_receive_code">Didn't receive code?</span> <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>

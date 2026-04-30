@@ -4,30 +4,25 @@ async function requestCustomerOTP() {
     let email = document.getElementById('cust-email').value.trim();
     if (!email) return alert(getTranslation('alert_enter_email'));
     
-    // Handle OTP PIN Box Auto-focus and deletion
-    const pinBoxes = document.querySelectorAll('.pin-box');
-    pinBoxes.forEach((box, idx) => {
-        box.addEventListener('input', (e) => {
-            if (e.target.value && idx < pinBoxes.length - 1) {
-                pinBoxes[idx + 1].focus();
-            }
-        });
-        box.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && idx > 0) {
-                pinBoxes[idx - 1].focus();
-            }
-        });
-    });
+    const btn = document.querySelector('#step-phone button');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = getTranslation('otp_sending');
+    }
+    showToast(getTranslation('otp_sending'), 'info');
 
     try {
         const res = await apiCall('/auth/customer/request-otp', 'POST', { email });
-        alert(res.message);
+        showToast(getTranslation('otp_sent_success'), 'success');
         document.getElementById('step-phone').style.display = 'none';
         document.getElementById('step-otp').style.display = 'block';
         document.getElementById('otp-phone-label').innerText = email;
         startOTPTimer('resend-link', 'timer-val', requestCustomerOTP);
     } catch (e) {
-        // Error already handled by apiCall
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = getTranslation('send_otp') || 'Send OTP';
+        }
     }
 }
 
@@ -66,15 +61,22 @@ async function verifyCustomerOTP() {
     
     if (otp.length < 6) return alert(getTranslation('alert_full_otp'));
     
+    const btn = document.querySelector('#step-otp button');
+    if (btn) btn.disabled = true;
+
     try {
         const data = await apiCall('/auth/customer/verify-otp', 'POST', { email, otp });
+        showToast(getTranslation('tracking_auth_success') || 'Tracking Access Granted!', 'success');
         localStorage.setItem('tracking_token', data.session_token);
         localStorage.setItem('tracking_email', email);
         
-        showPanel('list');
-        renderOrderList(data.orders);
+        setTimeout(() => {
+            showPanel('list');
+            renderOrderList(data.orders);
+        }, 1000);
     } catch (e) {
-        alert(getTranslation('alert_invalid_otp'));
+        if (btn) btn.disabled = false;
+        showToast(getTranslation('alert_invalid_otp'), 'error');
     }
 }
 
@@ -289,15 +291,6 @@ async function submitRating() {
 function logoutCustomer() {
     location.reload();
 }
-
-// Auto-focus PIN boxes
-document.addEventListener('input', (e) => {
-    if (e.target.classList.contains('pin-box')) {
-        if (e.target.value && e.target.nextElementSibling) {
-            e.target.nextElementSibling.focus();
-        }
-    }
-});
 
 async function simulatePayment() {
     const btn = document.getElementById('btn-pay-now');
