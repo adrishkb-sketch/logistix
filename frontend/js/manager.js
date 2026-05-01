@@ -1281,18 +1281,25 @@ const smartConfig = {
             field: 'description', 
             label: 'Description', 
             promptKey: 'prompt_shipment_desc',
-            hint: 'e.g. Electronics, Medical Supplies',
-            validate: val => val.length >= 2,
-            error: 'Please enter a valid description.',
-            skipIfCloning: true
+            hint: 'What are you shipping?',
+            validate: val => val.length >= 3,
+            error: 'err_desc_short'
+        },
+        { 
+            field: 'weight', 
+            label: 'Weight (kg)', 
+            promptKey: 'prompt_shipment_weight',
+            hint: 'Number only',
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+            error: 'err_invalid_number'
         },
         { 
             field: 'receiver_name', 
             label: 'Receiver Name', 
             promptKey: 'prompt_shipment_receiver_name',
             hint: 'Full name',
-            validate: val => val.length >= 2,
-            error: 'Please enter a valid name.'
+            validate: val => val.length >= 3,
+            error: 'err_name_short'
         },
         { 
             field: 'receiver_phone', 
@@ -1300,7 +1307,7 @@ const smartConfig = {
             promptKey: 'prompt_shipment_receiver_phone',
             hint: '10 digits only',
             validate: val => /^\d{10}$/.test(val),
-            error: 'Phone number must be exactly 10 digits. No text allowed!'
+            error: 'err_phone_10_digits'
         },
         { 
             field: 'receiver_email', 
@@ -1308,7 +1315,7 @@ const smartConfig = {
             promptKey: 'prompt_shipment_receiver_email',
             hint: 'example@logistix.com',
             validate: val => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
-            error: 'Invalid email format. It must contain @ and a domain.'
+            error: 'err_email_invalid'
         },
         { 
             field: 'eway_no', 
@@ -1316,7 +1323,7 @@ const smartConfig = {
             promptKey: 'prompt_shipment_eway_no',
             hint: '12 digit number',
             validate: val => /^\d{12}$/.test(val),
-            error: 'E-Way Bill must be a 12-digit number.',
+            error: 'err_eway_12_digits',
             skipIfCloning: true
         },
         { 
@@ -1325,7 +1332,7 @@ const smartConfig = {
             promptKey: 'prompt_shipment_eway_expiry',
             hint: 'Format: YYYY-MM-DD',
             validate: val => /^\d{4}-\d{2}-\d{2}$/.test(val),
-            error: 'Please enter date in YYYY-MM-DD format.',
+            error: 'err_date_format',
             skipIfCloning: true
         },
         { 
@@ -1334,7 +1341,7 @@ const smartConfig = {
             promptKey: 'prompt_shipment_perishable',
             hint: 'Type "Yes" or "No"',
             validate: val => ['yes', 'no', 'y', 'n'].includes(val.toLowerCase()),
-            error: 'Please type "Yes" or "No".',
+            error: 'err_yes_no',
             skipIfCloning: true
         },
         {
@@ -1342,7 +1349,7 @@ const smartConfig = {
             label: 'Confirm Details',
             promptKey: 'prompt_shipment_confirm',
             validate: val => ['save', 'reset'].includes(val.toLowerCase()),
-            error: 'Type "Save" or "Reset".'
+            error: 'err_save_reset'
         }
     ],
     driver: [
@@ -1350,19 +1357,19 @@ const smartConfig = {
             field: 'name',
             promptKey: 'prompt_driver_name',
             validate: val => val.length >= 3,
-            error: 'Name must be at least 3 characters.'
+            error: 'err_name_short'
         },
         {
             field: 'login_id',
             promptKey: 'prompt_driver_login',
             validate: val => val.length >= 4,
-            error: 'Login ID must be at least 4 characters.'
+            error: 'err_login_short'
         },
         {
             field: 'password',
             promptKey: 'prompt_driver_password',
             validate: val => val.length >= 1,
-            error: 'Password cannot be empty.'
+            error: 'err_password_empty'
         },
         {
             field: 'license_type',
@@ -1374,36 +1381,38 @@ const smartConfig = {
             field: 'base_hub',
             promptKey: 'prompt_driver_hub',
             options: 'hubs', // Dynamic fetch
-            validate: val => val !== ""
+            validate: val => val !== "",
+            error: 'err_hub_not_found'
         },
         {
             field: 'contact_number',
             promptKey: 'prompt_driver_contact',
             validate: val => /^\d{10}$/.test(val),
-            error: 'Enter a valid 10-digit number.'
+            error: 'err_contact_invalid'
         },
         {
             field: 'experience_years',
             promptKey: 'prompt_driver_exp',
             validate: val => !isNaN(parseFloat(val)) && parseFloat(val) >= 0,
-            error: 'Enter a valid number of years.'
+            error: 'err_exp_invalid'
         },
         {
             field: 'past_accidents',
             promptKey: 'prompt_driver_accidents',
             validate: val => !isNaN(parseInt(val)) && parseInt(val) >= 0,
-            error: 'Enter a valid count.'
+            error: 'err_count_invalid'
         },
         {
             field: 'traffic_violations',
             promptKey: 'prompt_driver_violations',
             validate: val => !isNaN(parseInt(val)) && parseInt(val) >= 0,
-            error: 'Enter a valid count.'
+            error: 'err_count_invalid'
         },
         {
             field: 'confirm',
             promptKey: 'prompt_driver_confirm',
-            validate: val => ['save', 'reset'].includes(val.toLowerCase())
+            validate: val => ['save', 'reset'].includes(val.toLowerCase()),
+            error: 'err_save_reset'
         }
     ],
     vehicle: [
@@ -1420,18 +1429,20 @@ const smartConfig = {
                 const formatted = val.toUpperCase().replace(/\s/g, '');
                 return /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/.test(formatted);
             },
-            error: 'Invalid plate format. Example: MH 12 AB 1234'
+            error: 'err_invalid_plate'
         },
         {
             field: 'capacity',
             promptKey: 'prompt_vehicle_capacity',
-            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+            error: 'err_invalid_number'
         },
         {
             field: 'base_hub',
             promptKey: 'prompt_vehicle_hub',
             options: 'hubs',
-            validate: val => val !== ""
+            validate: val => val !== "",
+            error: 'err_hub_not_found'
         },
         {
             field: 'confirm',
@@ -1444,23 +1455,26 @@ const smartConfig = {
             field: 'license_number',
             promptKey: 'prompt_drone_license',
             validate: val => val.length >= 5,
-            error: 'License must be at least 5 characters.'
+            error: 'err_invalid_license'
         },
         {
             field: 'base_warehouse_id',
             promptKey: 'prompt_drone_hub',
             options: 'hubs',
-            validate: val => val !== ""
+            validate: val => val !== "",
+            error: 'err_hub_not_found'
         },
         {
             field: 'capacity',
             promptKey: 'prompt_drone_capacity',
-            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+            error: 'err_invalid_number'
         },
         {
             field: 'radius',
             promptKey: 'prompt_drone_radius',
-            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0
+            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+            error: 'err_invalid_number'
         },
         {
             field: 'confirm',
@@ -1475,40 +1489,41 @@ window.openSmartAssistant = function(type = 'shipment') {
     smartType = type;
     const modal = document.getElementById('smart-assistant-modal');
     modal.style.display = 'flex';
-    
-    // Update Title and New Button
-    const title = modal.querySelector('h3');
-    const p = modal.querySelector('p');
+    const title = document.getElementById('smart-assistant-title');
+    const p = document.getElementById('smart-assistant-desc');
     const newBtn = document.getElementById('smart-new-btn');
+    const mapTrigger = document.getElementById('smart-map-trigger');
 
     if (type === 'driver') { 
-        title.innerText = getTranslation('smart_driver_title'); 
-        p.innerText = getTranslation('smart_driver_desc');
-        if (newBtn) newBtn.innerText = getTranslation('btn_new_driver');
-        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (title) title.innerText = getTranslation('smart_driver_title', 'en');
+        if (p) p.innerText = getTranslation('smart_driver_desc', 'en');
+        if (newBtn) newBtn.innerText = getTranslation('btn_new_driver', 'en');
         if (mapTrigger) mapTrigger.style.display = 'none';
     }
     else if (type === 'vehicle') { 
-        title.innerText = getTranslation('smart_vehicle_title'); 
-        p.innerText = getTranslation('smart_vehicle_desc');
-        if (newBtn) newBtn.innerText = getTranslation('btn_new_vehicle');
-        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (title) title.innerText = getTranslation('smart_vehicle_title', 'en');
+        if (p) p.innerText = getTranslation('smart_vehicle_desc', 'en');
+        if (newBtn) newBtn.innerText = getTranslation('btn_new_vehicle', 'en');
         if (mapTrigger) mapTrigger.style.display = 'none';
     }
     else if (type === 'drone') { 
-        title.innerText = getTranslation('smart_drone_title'); 
-        p.innerText = getTranslation('smart_drone_desc');
-        if (newBtn) newBtn.innerText = getTranslation('btn_new_drone');
-        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (title) title.innerText = getTranslation('smart_drone_title', 'en');
+        if (p) p.innerText = getTranslation('smart_drone_desc', 'en');
+        if (newBtn) newBtn.innerText = getTranslation('btn_new_drone', 'en');
         if (mapTrigger) mapTrigger.style.display = 'none';
     }
     else { 
-        title.innerText = getTranslation('smart_bulk_title'); 
-        p.innerText = getTranslation('smart_bulk_desc');
-        if (newBtn) newBtn.innerText = getTranslation('btn_new_shipment');
-        const mapTrigger = document.getElementById('smart-map-trigger');
+        if (title) title.innerText = getTranslation('smart_bulk_title', 'en');
+        if (p) p.innerText = getTranslation('smart_bulk_desc', 'en');
+        if (newBtn) newBtn.innerText = getTranslation('new_shipment_btn', 'en');
         if (mapTrigger) mapTrigger.style.display = 'block';
     }
+
+
+    if (typeof updatePageTranslations === 'function') {
+        updatePageTranslations();
+    }
+
 
     // Pre-fetch hubs if needed
     if ((type === 'driver' || type === 'vehicle' || type === 'drone') && globalHubs.length === 0) {
@@ -1541,7 +1556,7 @@ window.startNewSmartEntry = function() {
     smartStepIndex = 0;
     const area = document.getElementById('smart-chat-area');
     area.innerHTML = '';
-    const welcomeText = getTranslation(`smart_welcome_${smartType}`);
+    const welcomeText = getTranslation(`smart_welcome_${smartType}`, 'en');
     addAiMessage(`👋 ${welcomeText}`);
     askNextSmartStep();
 };
@@ -1558,19 +1573,19 @@ function askNextSmartStep() {
 
     if (!step) return;
 
-    let prompt = getTranslation(step.promptKey);
+    let prompt = getTranslation(step.promptKey, 'en');
     
     if (step.field === 'confirm') {
         const s = currentSmartShipment;
         let summary = "";
         if (smartType === 'shipment') {
-            summary = `• ${getTranslation('label_from')}: ${s.pickup}<br>• ${getTranslation('label_to')}: ${s.drop}<br>• ${getTranslation('label_weight')}: ${s.weight}kg<br>• ${getTranslation('label_desc')}: ${s.description}<br>• ${getTranslation('label_receiver')}: ${s.receiver_name}<br>• ${getTranslation('label_eway')}: ${s.eway_no} (Exp: ${s.eway_expiry})`;
+            summary = `• ${getTranslation('label_from', 'en')}: ${s.pickup}<br>• ${getTranslation('label_to', 'en')}: ${s.drop}<br>• ${getTranslation('label_weight', 'en')}: ${s.weight}kg<br>• ${getTranslation('label_desc', 'en')}: ${s.description}<br>• ${getTranslation('label_receiver', 'en')}: ${s.receiver_name}<br>• ${getTranslation('label_eway', 'en')}: ${s.eway_no} (Exp: ${s.eway_expiry})`;
         } else if (smartType === 'driver') {
-            summary = `• ${getTranslation('label_name')}: ${s.name}<br>• ${getTranslation('label_id')}: ${s.login_id}<br>• ${getTranslation('label_type')}: ${s.license_type}<br>• ${getTranslation('label_hub')}: ${s.base_hub}<br>• ${getTranslation('label_exp')}: ${s.experience_years}y | ${getTranslation('label_acc')}: ${s.past_accidents} | ${getTranslation('label_viol')}: ${s.traffic_violations}`;
+            summary = `• ${getTranslation('label_name', 'en')}: ${s.name}<br>• ${getTranslation('label_id', 'en')}: ${s.login_id}<br>• ${getTranslation('label_type', 'en')}: ${s.license_type}<br>• ${getTranslation('label_hub', 'en')}: ${s.base_hub}<br>• ${getTranslation('label_exp', 'en')}: ${s.experience_years}y | ${getTranslation('label_acc', 'en')}: ${s.past_accidents} | ${getTranslation('label_viol', 'en')}: ${s.traffic_violations}`;
         } else if (smartType === 'vehicle') {
-            summary = `• ${getTranslation('label_type')}: ${s.type}<br>• ${getTranslation('label_plate')}: ${s.number_plate}<br>• ${getTranslation('label_cap')}: ${s.capacity}kg<br>• ${getTranslation('label_hub')}: ${s.base_hub}`;
+            summary = `• ${getTranslation('label_type', 'en')}: ${s.type}<br>• ${getTranslation('label_plate', 'en')}: ${s.number_plate}<br>• ${getTranslation('label_cap', 'en')}: ${s.capacity}kg<br>• ${getTranslation('label_hub', 'en')}: ${s.base_hub}`;
         } else if (smartType === 'drone') {
-            summary = `• ${getTranslation('label_license')}: ${s.license_number}<br>• ${getTranslation('label_hub')}: ${s.base_warehouse_id}<br>• ${getTranslation('label_cap')}: ${s.capacity}kg<br>• ${getTranslation('label_radius')}: ${s.radius}km`;
+            summary = `• ${getTranslation('label_license', 'en')}: ${s.license_number}<br>• ${getTranslation('label_hub', 'en')}: ${s.base_warehouse_id}<br>• ${getTranslation('label_cap', 'en')}: ${s.capacity}kg<br>• ${getTranslation('label_radius', 'en')}: ${s.radius}km`;
         }
         prompt = prompt.replace('{summary}', summary);
     }
@@ -1583,7 +1598,7 @@ function askNextSmartStep() {
         const area = document.getElementById('smart-chat-area');
         const select = document.createElement('select');
         select.className = 'polished-glass-input';
-        select.style = 'margin-bottom:10px; width:100%; padding: 6px 12px !important; height: 38px !important; font-size: 0.85rem !important; animation: slideUp 0.3s ease;';
+        select.style = 'margin-bottom:10px; width:auto; min-width:240px; max-width:100%; padding: 4px 10px !important; height: 36px !important; font-size: 0.85rem !important; animation: slideUp 0.3s ease; flex: none !important;';
         
         // Disable input to force dropdown selection
         if (input) {
@@ -1647,21 +1662,21 @@ window.processSmartCommand = function() {
     // Choice Mode
     if (smartStepIndex === 99) {
         if (text.toLowerCase().includes('clone') && smartType === 'shipment') {
-            addAiMessage(getTranslation('msg_how_many_clones'));
+            addAiMessage(getTranslation('msg_how_many_clones', 'en'));
             smartStepIndex = 100;
         } else if (text.toLowerCase().includes('more') || text.toLowerCase().includes('new')) {
             startNewSmartEntry();
         } else {
-            addAiMessage(getTranslation('msg_type_more'));
+            addAiMessage(getTranslation('msg_type_more', 'en'));
         }
         return;
     }
 
     if (smartStepIndex === 100) {
         const num = parseInt(text);
-        if (isNaN(num) || num <= 0) { addAiMessage(getTranslation('msg_enter_valid_count')); return; }
+        if (isNaN(num) || num <= 0) { addAiMessage(getTranslation('msg_enter_valid_count', 'en')); return; }
         const last = smartQueue[smartQueue.length - 1];
-        addAiMessage(getTranslation('msg_preparing_clones').replace('{num}', num));
+        addAiMessage(getTranslation('msg_preparing_clones', 'en').replace('{num}', num));
         for(let i=0; i<num; i++) {
             smartQueue.push({ ...last, is_clone:true, clone_index:i+1, clone_total:num, drop:null, receiver_name:null, receiver_phone:null, receiver_email:null });
         }
@@ -1683,7 +1698,8 @@ window.processSmartCommand = function() {
 
     // Validation
     if (step.validate && !step.validate(text)) {
-        addAiMessage(`❌ ${step.error || 'Invalid input.'}`);
+        const err = getTranslation(step.error || 'err_invalid_input', 'en');
+        addAiMessage(`❌ ${err}`);
         return;
     }
 
@@ -1698,16 +1714,22 @@ window.processSmartCommand = function() {
                     company_id: localStorage.getItem('manager_id')
                 };
                 apiCall('/manager/drones', 'POST', dronePayload).then(() => {
-                    addAiMessage(getTranslation('msg_drone_registered'));
+                    addAiMessage(getTranslation('msg_drone_registered', 'en'));
                     loadDriversAndVehicles();
-                }).catch(() => addAiMessage(getTranslation('error_drone_failed')));
+                    renderDronesTable();
+                    addAiMessage(getTranslation('msg_type_more', 'en'));
+                    smartStepIndex = 99; 
+                }).catch(() => {
+                    addAiMessage(getTranslation('error_drone_failed', 'en'));
+                    smartStepIndex = 99;
+                });
             } else {
                 smartQueue.push({ ...currentSmartShipment });
-                addAiMessage(`📦 <b>${smartType.toUpperCase()} added to Queue!</b>`);
+                addAiMessage(getTranslation('msg_added_to_queue', 'en'));
+                addAiMessage(getTranslation('msg_type_more', 'en'));
+                smartStepIndex = 99; 
             }
             updateSmartUI();
-            addAiMessage("Would you like to add another? Type <b>'More'</b>.");
-            smartStepIndex = 99; 
         } else {
             startNewSmartEntry();
         }
@@ -1841,10 +1863,14 @@ window.clearSmartQueue = function() {
 window.addAiMessage = function(text) {
     const area = document.getElementById('smart-chat-area');
     if (!area) return;
+
+    // Support for **bold** text
+    let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
     const msg = document.createElement('div');
     msg.className = 'ai-msg';
     msg.style = 'align-self:flex-start; background:var(--card); padding:12px 16px; border-radius:18px 18px 18px 0; border:1px solid var(--border); font-size:0.95rem; max-width:85%; margin-bottom:12px; line-height:1.4; animation: slideUp 0.3s ease;';
-    msg.innerHTML = text;
+    msg.innerHTML = formattedText;
     area.appendChild(msg);
     area.scrollTop = area.scrollHeight;
 };
@@ -2641,7 +2667,7 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
 
         // Algorithmic Safety Rating Logic
         let safetyRating = 5.0;
-        safetyRating -= (accidents * 1.0); // Penalty for accidents (Backend aligned)
+        safetyRating -= (accidents * 1.0); // Penalty for accidents
         safetyRating -= (challans * 0.2);   // Penalty for challans
         safetyRating += (exp * 0.1);       // Reward for years of experience
         safetyRating = Math.max(1.0, Math.min(5.0, safetyRating)); // Cap between 1 and 5
@@ -2657,15 +2683,18 @@ document.getElementById('add-driver-form').addEventListener('submit', async (e) 
             past_accidents: accidents,
             traffic_violations: challans,
             challan_count: challans,
-            driving_score: 100.0, // New drivers start with a perfect score
+            driving_score: 100.0,
             safety_rating: safetyRating.toFixed(1),
-            on_time_rate: 100, // Initial perfect rate
+            on_time_rate: 100,
             contact_number: document.getElementById('d-contact') ? (document.getElementById('d-contact').value.length === 10 ? "+91" + document.getElementById('d-contact').value : document.getElementById('d-contact').value) : "N/A"
         };
         await apiCall('/manager/drivers', 'POST', driverData);
         document.getElementById('add-driver-form').reset();
+        showNotification("Driver registered successfully!", "success");
         loadDriversAndVehicles();
-    } catch(e) {}
+    } catch(e) {
+        showNotification("Failed to register driver.", "error");
+    }
 });
 
 document.getElementById('add-vehicle-form').addEventListener('submit', async (e) => {
@@ -2674,17 +2703,25 @@ document.getElementById('add-vehicle-form').addEventListener('submit', async (e)
         const vehicleData = {
             company_id: localStorage.getItem('manager_id'),
             type: document.getElementById('v-type').value,
-            number_plate: document.getElementById('v-plate').value.replace(/\s/g, ''),
+            number_plate: document.getElementById('v-plate').value.replace(/\s/g, '').toUpperCase(),
             capacity: parseFloat(document.getElementById('v-cap').value),
             speed: 60,
             fuel_efficiency: parseFloat(document.getElementById('v-eff').value),
             base_warehouse_id: document.getElementById('v-hub').value,
-            vehicle_health_score: 100 // New vehicles start at perfect health
+            vehicle_health_score: 100
         };
         await apiCall('/manager/vehicles', 'POST', vehicleData);
         document.getElementById('add-vehicle-form').reset();
+        showNotification("Vehicle registered successfully!", "success");
         loadDriversAndVehicles();
-    } catch(e) {}
+    } catch(e) {
+        showNotification("Failed to register vehicle.", "error");
+    }
+});
+
+document.getElementById('add-drone-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitNewDrone();
 });
 
 document.getElementById('link-form').addEventListener('submit', async (e) => {
@@ -2869,7 +2906,7 @@ async function miniChatSend() {
         // Also refresh main messages if open
         if (currentActiveSection === 'messages') loadMessages();
     } catch(e) {
-        showNotification(getTranslation('msg_failed'), 'error');
+        showNotification(getTranslation('msg_failed', 'en'), 'error');
     }
 }
 
@@ -2967,7 +3004,7 @@ async function submitMessage() {
             sender_type: 'manager'
         });
         document.getElementById('message-modal').style.display = 'none';
-        showNotification(getTranslation('msg_sent'), "success");
+        showNotification(getTranslation('msg_sent', 'en'), "success");
     } catch (e) {
         alert("Failed to send message to driver.");
     }
@@ -3334,7 +3371,7 @@ window.renderDronesTable = function() {
             <td><small>${baseWh ? baseWh.name : 'N/A'}</small></td>
             <td><b>${d.capacity}</b> kg</td>
             <td><b>${d.radius}</b> km</td>
-            <td><span class="status-pill" style="background:var(--success)22; color:var(--success); font-size:0.6rem;">${getTranslation('status_ready')}</span></td>
+            <td><span class="status-pill" style="background:var(--success)22; color:var(--success); font-size:0.6rem;">${getTranslation('status_ready', 'en')}</span></td>
             <td>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button class="btn-primary btn-accent" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="openEditModal('drones', '${d.id}', '${d.license_number}', '${d.base_warehouse_id}', '${d.capacity}', '${d.radius}')" title="Edit">✏️</button>
@@ -3345,7 +3382,7 @@ window.renderDronesTable = function() {
     });
     
     if (filtered.length === 0) {
-        dtbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">${getTranslation('no_drones_found')}</td></tr>`;
+        dtbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">${getTranslation('no_drones_found', 'en')}</td></tr>`;
     }
     renderTableControls('drones', filtered.length, limit, 'renderDronesTable');
 };

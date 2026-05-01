@@ -62,6 +62,16 @@
 </head>
 <body>
     <div class="background-animation"></div>
+    
+    <!-- Location Lock Overlay -->
+    <div id="location-lock-overlay" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(10, 15, 28, 0.7); backdrop-filter:blur(10px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px;">
+        <div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--accent); box-shadow:0 0 50px rgba(0,242,254,0.3);">
+            <div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 20px var(--accent));">📍</div>
+            <h2 style="color:var(--accent); margin-bottom:15px; font-weight:800; font-size:2rem;" data-i18n="location_required_title">Location Required</h2>
+            <p style="color:var(--text-muted); margin-bottom:30px; font-size:1.1rem; line-height:1.6;" data-i18n="location_required_desc">Compulsory location sharing is active. Please allow GPS access to unlock your driver dashboard and begin missions.</p>
+            <button class="btn-primary" style="width:100%; padding:15px; font-size:1.1rem; background:var(--accent); color:#000; font-weight:800;" onclick="retryLocation()" data-i18n="btn_enable_location">🚀 Enable Location Access</button>
+        </div>
+    </div>
 
     <div class="driver-layout">
         <div class="top-bar">

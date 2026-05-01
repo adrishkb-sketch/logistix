@@ -1589,7 +1589,61 @@ async function applyOfficialBorders(mapInstance) {
     }
 }
 
-loadMissions();
+async function initDriverDashboard() {
+    const overlay = document.getElementById('location-lock-overlay');
+    const btn = overlay ? overlay.querySelector('button') : null;
+    const originalText = btn ? btn.innerText : '';
+
+    if (!navigator.geolocation) {
+        showNotification("Geolocation is not supported by your browser.", "error");
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = getTranslation('location_checking') || "Checking...";
+    }
+
+    try {
+        const pos = await new Promise((res, rej) => {
+            navigator.geolocation.getCurrentPosition(res, rej, {
+                enableHighAccuracy: true, 
+                timeout: 8000,
+                maximumAge: 0
+            });
+        });
+        
+        if (overlay) overlay.style.display = 'none';
+        document.querySelector('.driver-layout').style.filter = 'none';
+        document.querySelector('.driver-layout').style.pointerEvents = 'auto';
+        
+        loadMissions();
+    } catch (err) {
+        console.error("Location Error:", err);
+        let msgKey = 'location_error_unknown';
+        if (err.code === 1) msgKey = 'location_error_denied';
+        else if (err.code === 2) msgKey = 'location_error_unavailable';
+        else if (err.code === 3) msgKey = 'location_error_timeout';
+        
+        const msg = getTranslation(msgKey);
+        showNotification(msg, "error");
+
+        if (overlay) overlay.style.display = 'flex';
+        document.querySelector('.driver-layout').style.filter = 'blur(15px)';
+        document.querySelector('.driver-layout').style.pointerEvents = 'none';
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = originalText || getTranslation('btn_enable_location');
+        }
+    }
+}
+
+window.retryLocation = function() {
+    initDriverDashboard();
+};
+
+initDriverDashboard();
 
 async function loadWallet() {
     try {
@@ -1797,4 +1851,6 @@ async function triggerFundRequest(shipmentId, type) {
         const btn = document.getElementById(`${type}-btn-${shipmentId}`);
         if (btn) {
             btn.disabled = false;
+        }
+    }
 }
