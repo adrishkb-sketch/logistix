@@ -1283,15 +1283,8 @@ const smartConfig = {
             promptKey: 'prompt_shipment_desc',
             hint: 'What are you shipping?',
             validate: val => val.length >= 3,
-            error: 'err_desc_short'
-        },
-        { 
-            field: 'weight', 
-            label: 'Weight (kg)', 
-            promptKey: 'prompt_shipment_weight',
-            hint: 'Number only',
-            validate: val => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
-            error: 'err_invalid_number'
+            error: 'err_desc_short',
+            skipIfCloning: true
         },
         { 
             field: 'receiver_name', 
@@ -1674,11 +1667,30 @@ window.processSmartCommand = function() {
 
     if (smartStepIndex === 100) {
         const num = parseInt(text);
-        if (isNaN(num) || num <= 0) { addAiMessage(getTranslation('msg_enter_valid_count', 'en')); return; }
-        const last = smartQueue[smartQueue.length - 1];
+        if (isNaN(num) || num <= 0) { 
+            addAiMessage(getTranslation('msg_enter_valid_count', 'en')); 
+            return; 
+        }
+        
+        if (smartQueue.length === 0 && Object.keys(currentSmartShipment).length === 0) {
+            addAiMessage("❌ No shipment found to clone. Please add at least one shipment first.");
+            smartStepIndex = 99;
+            return;
+        }
+
+        const last = smartQueue.length > 0 ? smartQueue[smartQueue.length - 1] : { ...currentSmartShipment };
         addAiMessage(getTranslation('msg_preparing_clones', 'en').replace('{num}', num));
         for(let i=0; i<num; i++) {
-            smartQueue.push({ ...last, is_clone:true, clone_index:i+1, clone_total:num, drop:null, receiver_name:null, receiver_phone:null, receiver_email:null });
+            smartQueue.push({ 
+                ...last, 
+                is_clone: true, 
+                clone_index: i + 1, 
+                clone_total: num, 
+                drop: null, 
+                receiver_name: null, 
+                receiver_phone: null, 
+                receiver_email: null 
+            });
         }
         updateSmartUI();
         processCloningQueue();
@@ -1725,11 +1737,16 @@ window.processSmartCommand = function() {
                 });
             } else {
                 smartQueue.push({ ...currentSmartShipment });
-                addAiMessage(getTranslation('msg_added_to_queue', 'en'));
-                addAiMessage(getTranslation('msg_type_more', 'en'));
-                smartStepIndex = 99; 
+                updateSmartUI();
+                
+                if (currentSmartShipment.is_clone) {
+                    processCloningQueue();
+                } else {
+                    addAiMessage(getTranslation('msg_added_to_queue', 'en'));
+                    addAiMessage(getTranslation('msg_type_more', 'en'));
+                    smartStepIndex = 99; 
+                }
             }
-            updateSmartUI();
         } else {
             startNewSmartEntry();
         }
@@ -1748,7 +1765,7 @@ window.processSmartCommand = function() {
 
 function processCloningQueue() {
     // Find first shipment in queue that is missing unique fields
-    const nextIdx = smartQueue.findIndex(s => s.pickup === null || s.drop === null || s.receiver_name === null);
+    const nextIdx = smartQueue.findIndex(s => s.is_clone && (s.drop === null || s.receiver_name === null));
     
     if (nextIdx === -1) {
         addAiMessage("✅ <b>All clones completed!</b> Your queue is ready.");
