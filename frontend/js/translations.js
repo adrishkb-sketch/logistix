@@ -1,5 +1,41 @@
 const translations = {
     "ks": {
+        "btn_manage": "منظم",
+        "th_vitality": "صحت",
+        "th_status_perf": "حیثیت",
+        "th_compliance": "تعمیل 📄",
+        "th_assigned_fleet": "بیڑہ",
+        "th_actions_intel": "کارروائی",
+        "th_shipment_charge": "شپمنٹ چارج",
+        "welcome_title": "خوش آمدید",
+        "platform_wh_manager": "ویئر ہاؤس منیجر",
+        "platform_wh_manager_desc": "کُنہہ خاص ہبہٕ خٲطرٕ انوینٹری تہٕ آپریشنز منظم کٔرِو۔",
+        "modal_wh_manager_title": "🏗️ ویئر ہاؤس منیجر لاگ ان",
+        "nav_modify_dashboard": "ڈیش بورڈ منسوخ کٔرِو",
+        "nav_hub_leaves": "ہب لِيوز 📅",
+        "warehouse_label": "ویئر ہاؤس",
+        "label_manager_email": "منیجر اِي ميل",
+        "label_manager_password": "منیجر پاس ورڈ",
+        "th_manager_email": "اِي ميل",
+        "th_manager_password": "پاس ورڈ",
+
+        "nav_receivers": "وصول کنندہ 👥",
+        "nav_daily_audit": "روزانہ آڈٹ 📋",
+        "nav_leaderboard": "لیڈر بورڈ 🏆",
+
+        "receivers_title": "وصول کنندہ مینجمنٹ",
+
+        "receivers_subtitle": "پلیٹ فارم پر تمام شپمنٹ وصول کنندگان دیکھیں اور ان کا انتظام کریں۔",
+
+        "receiver_id": "آئی ڈی",
+
+        "receiver_name": "نام",
+
+        "receiver_email": "ای میل",
+
+        "receiver_phone": "فون نمبر",
+
+        "action": "کارروائی",
         "active_disruptions": "سرگرم خلل",
         "active_fleet": "سرگرم بیڑہ",
         "active_fleet_links_desc": "فی الحال سرگرم ڈرائیور-گاڑی جوڑے م لنک ختم کرنے سے دونوں آزاد ہو جائیں گے۔",
@@ -882,6 +918,39 @@ const translations = {
         "new_drone_btn": "🔄 نیا ڈرون"
     },
     "or": {
+        "btn_manage": "ପରିଚାଳନା",
+        "th_vitality": "ସ୍ୱାସ୍ଥ୍ୟ",
+        "th_status_perf": "ସ୍ଥିତି",
+        "th_compliance": "ପାଳନ 📄",
+        "th_assigned_fleet": "କାଫଲା",
+        "th_actions_intel": "କାର୍ଯ୍ୟ",
+        "th_shipment_charge": "ପରିବହନ ଶୁଳ୍କ",
+        "welcome_title": "ସ୍ୱାଗତ",
+        "platform_wh_manager": "ୱେୟାରହାଉସ୍ ମ୍ୟାନେଜର",
+        "platform_wh_manager_desc": "ଏକ ନିର୍ଦ୍ଦିଷ୍ଟ ହବ୍ ପାଇଁ ଇନଭେଣ୍ଟୋରୀ ଏବଂ କାର୍ଯ୍ୟ ପରିଚାଳନା କରନ୍ତୁ |",
+        "modal_wh_manager_title": "🏗️ ୱେୟାରହାଉସ୍ ମ୍ୟାନେଜର ଲଗଇନ୍",
+        "nav_modify_dashboard": "ଡ୍ୟାସବୋର୍ଡ ସଂଶୋଧନ କରନ୍ତୁ",
+        "warehouse_label": "ୱେୟାରହାଉସ୍",
+        "label_manager_email": "ମ୍ୟାନେଜର ଇମେଲ",
+        "label_manager_password": "ମ୍ୟାନେଜର ପାସୱାର୍ଡ",
+        "th_manager_email": "ଇମେଲ",
+        "th_manager_password": "ପାସୱାର୍ଡ",
+
+        "nav_receivers": "ପ୍ରାପ୍ତକର୍ତ୍ତା 👥",
+
+        "receivers_title": "ପ୍ରାପ୍ତକର୍ତ୍ତା ପରିଚାଳନା",
+
+        "receivers_subtitle": "ପ୍ଲାଟଫର୍ମରେ ଥିବା ସମସ୍ତ ପଠାଣ ପ୍ରାପ୍ତକର୍ତ୍ତାଙ୍କୁ ଦେଖନ୍ତୁ ଏବଂ ପରିଚାଳନା କରନ୍ତୁ |",
+
+        "receiver_id": "ପ୍ରାପ୍ତକର୍ତ୍ତା ଆଇଡି",
+
+        "receiver_name": "ପ୍ରାପ୍ତକର୍ତ୍ତାଙ୍କ ନାମ",
+
+        "receiver_email": "ଇମେଲ୍",
+
+        "receiver_phone": "ଫୋନ୍ ନମ୍ବର",
+
+        "action": "କାର୍ଯ୍ୟ",
         "active_disruptions": "ସକ୍ରିୟ ବ୍ୟାହତ",
         "active_fleet": "ସକ୍ରିୟ ଗାଡ଼ି ବହର",
         "active_fleet_links_desc": "ବର୍ତ୍ତମାନ ସକ୍ରିୟ ଥିବା ଚାଳକ-ଗାଡ଼ି ଯୋଡ଼ି। ଲିଙ୍କ୍ ହଟାଇଲେ ଉଭୟ ସମ୍ପତ୍ତି ମୁକ୍ତ ହେବ।",
@@ -1761,6 +1830,39 @@ const translations = {
         "new_drone_btn": "🔄 ନୂତନ ଡ୍ରୋନ୍"
     },
     "mr": {
+        "btn_manage": "व्यवस्थापित",
+        "th_vitality": "आरोग्य",
+        "th_status_perf": "स्थिती",
+        "th_compliance": "पालन 📄",
+        "th_assigned_fleet": "ताफा",
+        "th_actions_intel": "कृती",
+        "th_shipment_charge": "शिपमेंट चार्ज",
+        "welcome_title": "स्वागत आहे",
+        "platform_wh_manager": "वेअरहाऊस व्यवस्थापक",
+        "platform_wh_manager_desc": "विशिष्ट केंद्रासाठी इन्व्हेंटरी आणि ऑपरेशन्स व्यवस्थापित करा.",
+        "modal_wh_manager_title": "🏗️ वेअरहाऊस व्यवस्थापक लॉगिन",
+        "nav_modify_dashboard": "डॅशबोर्ड सुधारित करा",
+        "warehouse_label": "वेअरहाऊस",
+        "label_manager_email": "व्यवस्थापक ईमेल",
+        "label_manager_password": "व्यवस्थापक पासवर्ड",
+        "th_manager_email": "ईमेल",
+        "th_manager_password": "पासवर्ड",
+
+        "nav_receivers": "प्राप्तकर्ते 👥",
+
+        "receivers_title": "प्राप्तकर्ता व्यवस्थापन",
+
+        "receivers_subtitle": "प्लॅटफॉर्मवरील सर्व शिपमेंट प्राप्तकर्ते पहा आणि व्यवस्थापित करा.",
+
+        "receiver_id": "प्राप्तकर्ता आयडी",
+
+        "receiver_name": "प्राप्तकर्त्याचे नाव",
+
+        "receiver_email": "ईमेल",
+
+        "receiver_phone": "फोन नंबर",
+
+        "action": "कृती",
         "active_disruptions": "सक्रिय व्यत्यय",
         "active_fleet": "सक्रिय ताफा",
         "active_fleet_links_desc": "सध्या सक्रिय ड्रायव्हर-वाहन जोड्या. अनलिंक केल्याने दोन्ही संसाधने मुक्त होतील.",
@@ -2640,6 +2742,39 @@ const translations = {
         "new_drone_btn": "🔄 नवीन ड्रोन"
     },
     "bn": {
+        "btn_manage": "পরিচালনা",
+        "th_vitality": "স্বাস্থ্য",
+        "th_status_perf": "স্থিতি",
+        "th_compliance": "সম্মতি 📄",
+        "th_assigned_fleet": "ফ্লিট",
+        "th_actions_intel": "কর্ম",
+        "th_shipment_charge": "চালান চার্জ",
+        "welcome_title": "স্বাগতম",
+        "platform_wh_manager": "ওয়্যারহাউস ম্যানেজার",
+        "platform_wh_manager_desc": "একটি নির্দিষ্ট হাবের জন্য ইনভেন্টরি এবং ক্রিয়াকলাপ পরিচালনা করুন।",
+        "modal_wh_manager_title": "🏗️ ওয়্যারহাউস ম্যানেজার লগইন",
+        "nav_modify_dashboard": "ড্যাশবোর্ড সংশোধন করুন",
+        "warehouse_label": "ওয়্যারহাউস",
+        "label_manager_email": "ম্যানেজার ইমেল",
+        "label_manager_password": "ম্যানেজার পাসওয়ার্ড",
+        "th_manager_email": "ইমেল",
+        "th_manager_password": "পাসওয়ার্ড",
+
+        "nav_receivers": "প্রাপক 👥",
+
+        "receivers_title": "প্রাপক ব্যবস্থাপনা",
+
+        "receivers_subtitle": "প্ল্যাটফর্মের সমস্ত শিপমেন্ট প্রাপকদের দেখুন এবং পরিচালনা করুন।",
+
+        "receiver_id": "প্রাপক আইডি",
+
+        "receiver_name": "প্রাপকের নাম",
+
+        "receiver_email": "ইমেল",
+
+        "receiver_phone": "ফোন নম্বর",
+
+        "action": "অ্যাকশন",
         "active_disruptions": "সক্রিয় বিঘ্ন",
         "active_fleet": "সক্রিয় বহর",
         "active_fleet_links_desc": "বর্তমানে সক্রিয় ড্রাইভার-যানবাহন জোড়া। লিঙ্ক বিচ্ছিন্ন করলে উভয় সম্পদ মুক্ত হবে।",
@@ -3605,6 +3740,54 @@ const translations = {
         "nav_overview": "🏠 ওভারভিউ"
     },
     "sat": {
+        "th_shipment_charge": "ᱠᱷᱟᱨᱪᱟ",
+        "btn_manage": "ᱥᱟᱯᱲᱟᱣ",
+        "th_vitality": "ᱦᱟᱞᱚᱛ",
+        "th_status_perf": "ᱦᱟᱞᱚᱛ / ᱠᱟᱹᱢᱤ",
+        "th_compliance": "ᱠᱟᱜᱚᱡᱽ-ᱯᱚᱛᱨᱚ 📄",
+        "th_assigned_fleet": "ᱜᱟᱹᱰᱤ ᱠᱚ",
+        "th_actions_intel": "ᱠᱟᱹᱢᱤ ᱠᱚ",
+        "th_status": "ᱦᱟᱞᱚᱛ",
+        "th_finance": "ᱴᱟᱠᱟ-ᱯᱩᱭᱥᱟᱹ",
+        "th_view": "ᱵᱤᱵᱚᱨᱚᱱ",
+        "btn_view_details": "ᱵᱤᱵᱚᱨᱚᱱ ᱧᱮᱞ ᱢᱮ",
+        "btn_qr": "QR ᱵᱮᱱᱟᱣ ᱢᱮ",
+        "btn_timeline": "ᱴᱟᱭᱤᱢ ᱞᱟᱭᱤᱱ",
+        "btn_track": "ᱴᱨᱮᱠ ᱢᱮ",
+        "btn_message": "ᱠᱷᱚᱵᱚᱨ",
+        "btn_auto_assign": "AI ᱟᱡ ᱛᱮ ᱵᱟᱪᱷᱟᱣ",
+        "btn_manual_split": "ᱦᱟᱹᱴᱤᱧ ᱢᱮ",
+        "btn_finalize": "ᱢᱩᱪᱟᱹᱫ ᱢᱮ",
+        "btn_manual_assign": "ᱜᱟᱹᱰᱤ ᱵᱚᱫᱚᱞ ᱢᱮ",
+        "btn_override": "ᱟᱡ ᱛᱮ ᱧᱮᱞ ᱢᱮ",
+        "btn_edit": "ᱥᱟᱯᱲᱟᱣ ᱢᱮ",
+        "btn_delete": "ᱢᱮᱴᱟᱣ ᱢᱮ",
+        "welcome_title": "ᱥᱟᱜᱩᱱ ᱫᱟᱨᱟᱢ",
+        "platform_wh_manager": "ᱢᱟᱹᱞᱤᱠ ᱤᱢᱮᱞ",
+        "platform_wh_manager_desc": "ᱢᱤᱫᱴᱟᱹᱝ ᱵᱷᱮᱜᱟᱨ ᱦᱟᱹᱵᱽ ᱞᱟᱹᱜᱤᱫ ᱡᱤᱱᱤᱥ ᱟᱨ ᱠᱟᱹᱢᱤ ᱠᱚ ᱱᱤᱭᱚᱱᱛᱨᱚᱱ ᱢᱮ ᱾",
+        "modal_wh_manager_title": "🏗️ ᱢᱟᱹᱞᱤᱠ ᱤᱢᱮᱞ ᱞᱚᱜᱤᱱ",
+        "nav_modify_dashboard": "ᱰᱮᱥᱵᱚᱨᱰ ᱵᱚᱫᱚᱞ ᱢᱮ",
+        "warehouse_label": "ᱵᱷᱟᱱᱰᱟᱨ",
+        "label_manager_email": "ᱢᱟᱹᱞᱤᱠ ᱤᱢᱮᱞ",
+        "label_manager_password": "ᱢᱟᱹᱞᱤᱠ ᱫᱟᱱᱟᱝ ᱥᱟᱵᱟᱫᱽ",
+        "th_manager_email": "ᱤᱢᱮᱞ",
+        "th_manager_password": "ᱫᱟᱱᱟᱝ ᱥᱟᱵᱟᱫᱽ",
+
+        "nav_receivers": "ᱧᱟᱢᱤᱭᱟᱹ 👥",
+
+        "receivers_title": "ᱧᱟᱢᱤᱭᱟᱹ ᱵᱮᱵᱚᱥᱛᱟ",
+
+        "receivers_subtitle": "ᱯᱞᱮᱴᱯᱷᱚᱨᱢ ᱨᱮ ᱡᱚᱛᱚ ᱥᱤᱯᱢᱮᱱᱴ ᱧᱟᱢᱤᱭᱟᱹ ᱠᱚ ᱧᱮᱞ ᱟᱨ ᱵᱮᱵᱚᱥᱛᱟ ᱢᱮ ᱾",
+
+        "receiver_id": "ᱧᱟᱢᱤᱭᱟᱹ ID",
+
+        "receiver_name": "ᱧᱟᱢᱤᱭᱟᱹ ᱧᱩᱛᱩᱢ",
+
+        "receiver_email": "ᱤᱢᱮᱞ",
+
+        "receiver_phone": "ᱯᱷᱚᱱ ᱱᱚᱢᱵᱚᱨ",
+
+        "action": "ᱠᱟᱹᱢᱤ",
         "active_disruptions": "ᱥᱚᱠᱨᱤᱭᱚ ᱮᱴᱠᱮᱴᱚᱬᱮ",
         "active_fleet": "ᱥᱚᱠᱨᱤᱭᱚ ᱜᱟᱹᱰᱤ ᱜᱟᱫᱮᱞ",
         "active_fleet_links_desc": "ᱱᱤᱛᱚᱜ ᱥᱚᱠᱨᱤᱭᱚ ᱰᱨᱟᱭᱵᱷᱟᱨ-ᱜᱟᱹᱰᱤ ᱡᱩᱲᱤ ᱾ ᱡᱩᱲᱤ ᱵᱷᱮᱜᱟᱨ ᱞᱮᱠᱷᱟᱱ ᱵᱟᱱᱟᱨ ᱜᱮ ᱯᱷᱩᱨᱜᱟᱹᱞᱚᱜᱼᱟ ᱾",
@@ -4251,7 +4434,7 @@ const translations = {
         "expense_type": "खर्चाचा प्रकार",
         "amt_requested": "नेह अकाना रकम",
         "est_distance": "अंदाजे सांगी",
-        "action": "Action",
+        "action": "ᱠᱟᱹᱢᱤ",
         "sys_mgmt": "सिस्टम मॅनेजमेंट",
         "sys_mgmt_desc": "डेटाबेस टेबल रीसेट लगित आर अबेन रेनाः कंपनी अकाउंट प्रबंधन लगित नुआ को टूल व्यवहार में।",
         "company_id_label": "अबेन रेनाः कंपनी आईडी",
@@ -4484,6 +4667,39 @@ const translations = {
         "new_drone_btn": "🔄 ᱱᱟᱣᱟ ᱰᱨᱳᱱ"
     },
     "ta": {
+        "btn_manage": "நிர்வகி",
+        "th_vitality": "ஆரோக்கியம்",
+        "th_status_perf": "நிலை",
+        "th_compliance": "இணக்கம் 📄",
+        "th_assigned_fleet": "கடற்படை",
+        "th_actions_intel": "செயல்கள்",
+        "th_shipment_charge": "ஏற்றுமதி கட்டணம்",
+        "welcome_title": "வரவேற்கிறோம்",
+        "platform_wh_manager": "கிடங்கு மேலாளர்",
+        "platform_wh_manager_desc": "ஒரு குறிப்பிட்ட மையத்திற்கான சரக்கு மற்றும் செயல்பாடுகளை நிர்வகிக்கவும்.",
+        "modal_wh_manager_title": "🏗️ கிடங்கு மேலாளர் உள்நுழைவு",
+        "nav_modify_dashboard": "டாஷ்போர்டை மாற்றியமைக்கவும்",
+        "warehouse_label": "கிடங்கு",
+        "label_manager_email": "மேலாளர் மின்னஞ்சல்",
+        "label_manager_password": "மேலாளர் கடவுச்சொல்",
+        "th_manager_email": "மின்னஞ்சல்",
+        "th_manager_password": "கடவுச்சொல்",
+
+        "nav_receivers": "பெறுநர்கள் 👥",
+
+        "receivers_title": "பெறுநர் மேலாண்மை",
+
+        "receivers_subtitle": "தளமெங்கும் உள்ள அனைத்து ஏற்றுமதி பெறுநர்களையும் பார்த்து நிர்வகிக்கவும்.",
+
+        "receiver_id": "பெறுநர் ஐடி",
+
+        "receiver_name": "பெறுநர் பெயர்",
+
+        "receiver_email": "மின்னஞ்சல்",
+
+        "receiver_phone": "தொலைபேசி எண்",
+
+        "action": "நடவடிக்கை",
         "active_disruptions": "செயலில் உள்ள இடையூறுகள்",
         "active_fleet": "செயலில் உள்ள வாகனக் குழு",
         "active_fleet_links_desc": "தற்போது செயலில் உள்ள ஓட்டுநர்-வாகன இணைகள். இணைப்பைத் துண்டிப்பது இரண்டு சொத்துக்களையும் விடுவிக்கும்.",
@@ -5363,6 +5579,39 @@ const translations = {
         "new_drone_btn": "🔄 புதிய ட்ரோன்"
     },
     "ml": {
+        "btn_manage": "നിയന്ത്രിക്കുക",
+        "th_vitality": "ആരോഗ്യം",
+        "th_status_perf": "നില",
+        "th_compliance": "അനുസരണം 📄",
+        "th_assigned_fleet": "ഫ്ലീറ്റ്",
+        "th_actions_intel": "പ്രവർത്തനങ്ങൾ",
+        "th_shipment_charge": "ഷിപ്പ്‌മെന്റ് ചാർജ്",
+        "welcome_title": "സ്വാഗതം",
+        "platform_wh_manager": "വെയർഹൗസ് മാനേജർ",
+        "platform_wh_manager_desc": "ഒരു പ്രത്യേക ഹബ്ബിനായി ഇൻവെന്ററിയും പ്രവർത്തനങ്ങളും നിയന്ത്രിക്കുക.",
+        "modal_wh_manager_title": "🏗️ വെയർഹൗസ് മാനേജർ ലോഗിൻ",
+        "nav_modify_dashboard": "ഡാഷ്ബോർഡ് പരിഷ്ക്കരിക്കുക",
+        "warehouse_label": "വെയർഹൗസ്",
+        "label_manager_email": "മാനേജർ ഇമെയിൽ",
+        "label_manager_password": "മാനേജർ പാസ്‌വേഡ്",
+        "th_manager_email": "ഇമെയിൽ",
+        "th_manager_password": "പാസ്‌വേഡ്",
+
+        "nav_receivers": "സ്വീകർത്താക്കൾ 👥",
+
+        "receivers_title": "സ്വീകർത്താവ് മാനേജ്മെന്റ്",
+
+        "receivers_subtitle": "പ്ലാറ്റ്‌ഫോമിലുടനീളമുള്ള എല്ലാ ഷിപ്പ്‌മെന്റ് സ്വീകർത്താക്കളെയും കാണുക, നിയന്ത്രിക്കുക.",
+
+        "receiver_id": "സ്വീകർത്താവ് ഐഡി",
+
+        "receiver_name": "സ്വീകർത്താവിന്റെ പേര്",
+
+        "receiver_email": "ഇമെയിൽ",
+
+        "receiver_phone": "ഫോൺ നമ്പർ",
+
+        "action": "നടപടി",
         "active_disruptions": "സജീവമായ തടസ്സങ്ങൾ",
         "active_fleet": "സജീവമായ വാഹനങ്ങൾ",
         "active_fleet_links_desc": "നിലവിൽ സജീവമായ ഡ്രൈവർ-വാഹന ജോഡികൾ. ലിങ്ക് മാറ്റുന്നത് രണ്ട് അസറ്റുകളെയും സ്വതന്ത്രമാക്കും.",
@@ -6242,6 +6491,59 @@ const translations = {
         "new_drone_btn": "🔄 പുതിയ ഡ്രോൺ"
     },
     "en": {
+        "th_shipment_charge": "Shipment Charge",
+        "split_label": "Split",
+        "route_optimized": "Route Optimized",
+        "btn_manage": "Manage",
+        "th_vitality": "Vitality / Health",
+        "th_status_perf": "Status / Perf",
+        "th_compliance": "Compliance 📄",
+        "th_assigned_fleet": "Assigned Fleet",
+        "th_actions_intel": "Actions & Intel",
+        "th_status": "Status",
+        "th_finance": "Logistics Finance",
+        "th_view": "Details",
+        "btn_view_details": "View Details",
+        "btn_qr": "Generate QR",
+        "btn_timeline": "Timeline",
+        "btn_track": "Live Track",
+        "btn_message": "Message",
+        "btn_auto_assign": "AI Auto Assign",
+        "btn_manual_split": "Manual Split",
+        "btn_finalize": "Finalize",
+        "btn_manual_assign": "Change Fleet",
+        "btn_override": "Manual Verify",
+        "btn_edit": "Edit",
+        "btn_delete": "Delete",
+        "welcome_title": "Welcome",
+        "platform_wh_manager": "Warehouse Manager",
+        "platform_wh_manager_desc": "Manage inventory and operations for a specific hub.",
+        "modal_wh_manager_title": "🏗️ Warehouse Manager Login",
+        "nav_modify_dashboard": "Modify Dashboard",
+        "warehouse_label": "Warehouse",
+        "label_manager_email": "Manager Email",
+        "label_manager_password": "Manager Password",
+        "th_manager_email": "Email",
+        "th_manager_password": "Password",
+
+        "nav_receivers": "Receivers 👥",
+        "nav_daily_audit": "Daily Audit 📋",
+        "nav_leaderboard": "Leaderboard 🏆",
+
+        "receivers_title": "Receiver Management",
+
+        "receivers_subtitle": "View and manage all shipment receivers across the platform.",
+
+        "receiver_id": "Receiver ID",
+
+        "receiver_name": "Receiver Name",
+
+        "receiver_email": "Email",
+
+        "receiver_phone": "Phone Number",
+
+        "action": "Action",
+        "th_operational_days": "Op. Days",
         "active_disruptions": "Active Disruptions",
         "active_fleet": "Active Fleet",
         "active_fleet_links_desc": "Currently active driver-vehicle pairs. Unlinking will free both assets.",
@@ -6552,6 +6854,7 @@ const translations = {
         "stat_drivers": "Drivers",
         "stat_ontime": "On-Time",
         "stat_timely_change": "↑ 2.4% from last week",
+        "nav_hub_leaves": "Hub Leaves 📅",
         "stat_trips": "Trips",
         "stationary_msg": "We noticed you haven't moved in a while. Need help?",
         "strategy_ai_reason": "AI identified this as a high-potential future growth node.",
@@ -7210,6 +7513,39 @@ const translations = {
         "nav_overview": "🏠 Overview"
     },
     "pa": {
+        "btn_manage": "ਪ੍ਰਬੰਧਿਤ",
+        "th_vitality": "ਸਿਹਤ",
+        "th_status_perf": "ਸਥਿਤੀ",
+        "th_compliance": "ਪਾਲਣਾ 📄",
+        "th_assigned_fleet": "ਫਲੀਟ",
+        "th_actions_intel": "ਕਾਰਵਾਈ",
+        "th_shipment_charge": "ਸ਼ਿਪਮੈਂਟ ਚਾਰਜ",
+        "welcome_title": "ਜੀ ਆਇਆਂ ਨੂੰ",
+        "platform_wh_manager": "ਵੇਅਰਹਾਊਸ ਮੈਨੇਜਰ",
+        "platform_wh_manager_desc": "ਇੱਕ ਖਾਸ ਹੱਬ ਲਈ ਵਸਤੂ ਸੂਚੀ ਅਤੇ ਕਾਰਜਾਂ ਦਾ ਪ੍ਰਬੰਧਨ ਕਰੋ।",
+        "modal_wh_manager_title": "🏗️ ਵੇਅਰਹਾਊਸ ਮੈਨੇਜਰ ਲੌਗਿਨ",
+        "nav_modify_dashboard": "ਡੈਸ਼ਬੋਰਡ ਨੂੰ ਸੋਧੋ",
+        "warehouse_label": "ਵੇਅਰਹਾਊਸ",
+        "label_manager_email": "ਮੈਨੇਜਰ ਈਮੇਲ",
+        "label_manager_password": "ਮੈਨੇਜਰ ਪਾਸਵਰਡ",
+        "th_manager_email": "ਈਮੇਲ",
+        "th_manager_password": "ਪਾਸਵਰਡ",
+
+        "nav_receivers": "ਪ੍ਰਾਪਤਕਰਤਾ 👥",
+
+        "receivers_title": "ਪ੍ਰਾਪਤਕਰਤਾ ਪ੍ਰਬੰಧਨ",
+
+        "receivers_subtitle": "ਪਲੇਟਫਾਰਮ 'ਤੇ ਸਾਰੇ ਸ਼ਿਪਮੈਂਟ ਪ੍ਰਾਪਤਕਰਤਾਵਾਂ ਨੂੰ ਦੇਖੋ ਅਤੇ ਪ੍ਰਬੰਧਿਤ ਕਰੋ।",
+
+        "receiver_id": "ਪ੍ਰਾਪਤਕਰਤਾ ਆਈਡੀ",
+
+        "receiver_name": "ਪ੍ਰਾਪਤਕਰਤਾ ਦਾ ਨਾਮ",
+
+        "receiver_email": "ਈਮੇਲ",
+
+        "receiver_phone": "ਫੋਨ ਨੰਬਰ",
+
+        "action": "ਕਾਰਵਾਈ",
         "active_disruptions": "ਸਰਗਰਮ ਰੁਕਾਵਟਾਂ",
         "active_fleet": "ਸਰਗਰਮ ਫਲੀਟ",
         "active_fleet_links_desc": "ਇਸ ਸਮੇਂ ਸਰਗਰਮ ਡਰਾਈਵਰ-ਵਾਹਨ ਜੋੜੀਆਂ। ਲਿੰਕ ਹਟਾਉਣ ਨਾਲ ਦੋਵੇਂ ਮੁਕਤ ਹੋ ਜਾਣਗੇ।",
@@ -8089,6 +8425,39 @@ const translations = {
         "new_drone_btn": "🔄 ਨਵਾਂ ਡਰੋਨ"
     },
     "kn": {
+        "btn_manage": "ನಿರ್ವಹಿಸು",
+        "th_vitality": "ಆರೋಗ್ಯ",
+        "th_status_perf": "ಸ್ಥಿತಿ",
+        "th_compliance": "ಅನುಸರಣೆ 📄",
+        "th_assigned_fleet": "ಫ್ಲೀಟ್",
+        "th_actions_intel": "ಕ್ರಿಯೆಗಳು",
+        "th_shipment_charge": "ಸಾಗಣೆ ಶುಲ್ಕ",
+        "welcome_title": "ಸ್ವಾಗತ",
+        "platform_wh_manager": "ವೇರ್‌ಹೌಸ್ ಮ್ಯಾನೇಜರ್",
+        "platform_wh_manager_desc": "ನಿರ್ದಿಷ್ಟ ಹಬ್‌ಗಾಗಿ ದಾಸ್ತಾನು ಮತ್ತು ಕಾರ್ಯಾಚರಣೆಗಳನ್ನು ನಿರ್ವಹಿಸಿ.",
+        "modal_wh_manager_title": "🏗️ ವೇರ್‌ಹೌಸ್ ಮ್ಯಾನೇಜರ್ ಲಾಗಿನ್",
+        "nav_modify_dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ಮಾರ್ಪಡಿಸಿ",
+        "warehouse_label": "ವೇರ್‌ಹೌಸ್",
+        "label_manager_email": "ಮ್ಯಾನೇಜರ್ ಇಮೇಲ್",
+        "label_manager_password": "ಮ್ಯಾನೇಜರ್ ಪಾಸ್‌ವರ್ಡ್",
+        "th_manager_email": "ಇಮೇಲ್",
+        "th_manager_password": "ಪಾಸ್‌ವರ್ಡ್",
+
+        "nav_receivers": "ಸ್ವೀಕರಿಸುವವರು 👥",
+
+        "receivers_title": "ಸ್ವೀಕರಿಸುವವರ ನಿರ್ವಹಣೆ",
+
+        "receivers_subtitle": "ಪ್ಲಾಟ್‌ಫಾರ್ಮ್‌ನಾದ್ಯಂತ ಎಲ್ಲಾ ಶಿಪ್‌ಮೆಂಟ್ ಸ್ವೀಕರಿಸುವವರನ್ನು ವೀಕ್ಷಿಸಿ ಮತ್ತು ನಿರ್ವಹಿಸಿ.",
+
+        "receiver_id": "ಸ್ವೀಕರಿಸುವವರ ಐಡಿ",
+
+        "receiver_name": "ಸ್ವೀಕರಿಸುವವರ ಹೆಸರು",
+
+        "receiver_email": "ಇಮೇಲ್",
+
+        "receiver_phone": "ದೂರವಾಣಿ ಸಂಖ್ಯೆ",
+
+        "action": "ಕ್ರಮ",
         "active_disruptions": "ಸಕ್ರಿಯ ಅಡೆತಡೆಗಳು",
         "active_fleet": "ಸಕ್ರಿಯ ವಾಹನ ಸಮೂಹ",
         "active_fleet_links_desc": "ಪ್ರಸ್ತುತ ಸಕ್ರಿಯವಾಗಿರುವ ಚಾಲಕ-ವಾಹನ ಜೋಡಿಗಳು. ಅನ್ಲಿಂಕ್ ಮಾಡುವುದರಿಂದ ಎರಡೂ ಸ್ವತಂತ್ರವಾಗುತ್ತವೆ.",
@@ -9033,6 +9402,39 @@ const translations = {
         "nav_overview": "🏠 ಅವಲೋಕನ"
     },
     "gu": {
+        "btn_manage": "મેનેજ કરો",
+        "th_vitality": "સ્વાસ્થ્ય",
+        "th_status_perf": "સ્થિતિ",
+        "th_compliance": "પાલન 📄",
+        "th_assigned_fleet": "કાફલો",
+        "th_actions_intel": "ક્રિયાઓ",
+        "th_shipment_charge": "શિપમેન્ટ ચાર્જ",
+        "welcome_title": "સ્વાગત છે",
+        "platform_wh_manager": "વેરહાઉસ મેનેજર",
+        "platform_wh_manager_desc": "ચોક્કસ હબ માટે ઇન્વેન્ટરી અને કામગીરીનું સંચાલન કરો.",
+        "modal_wh_manager_title": "🏗️ વેરહાઉસ મેનેજર લોગિન",
+        "nav_modify_dashboard": "ડેશબોર્ડ સુધારો",
+        "warehouse_label": "વેરહાઉસ",
+        "label_manager_email": "મેનેજર ઇમેઇલ",
+        "label_manager_password": "મેનેજર પાસવર્ડ",
+        "th_manager_email": "ઇમેઇલ",
+        "th_manager_password": "પાસવર્ડ",
+
+        "nav_receivers": "પ્રાપ્તકર્તાઓ 👥",
+
+        "receivers_title": "પ્રાપ્તકર્તા વ્યવસ્થાપન",
+
+        "receivers_subtitle": "પ્લેટફોર્મ પરના તમામ શિપમેન્ટ પ્રાપ્તકર્તાઓને જુઓ અને સંચાલિત કરો.",
+
+        "receiver_id": "પ્રાપ્તકર્તા આઈડી",
+
+        "receiver_name": "પ્રાપ્તકર્તાનું નામ",
+
+        "receiver_email": "ઈમેઈલ",
+
+        "receiver_phone": "ફોન નંબર",
+
+        "action": "ક્રિયા",
         "active_disruptions": "સક્રિય વિક્ષેપો",
         "active_fleet": "સક્રિય કાફલો",
         "active_fleet_links_desc": "હાલમાં સક્રિય ડ્રાઈવર-વાહન જોડીઓ. અનલિંક કરવાથી બંને સંપત્તિ મુક્ત થશે.",
@@ -9957,6 +10359,56 @@ const translations = {
         "new_drone_btn": "🔄 નવું ડ્રોન"
     },
     "hi": {
+        "th_shipment_charge": "शिपमेंट शुल्क",
+        "split_label": "विभाजित",
+        "route_optimized": "रूट अनुकूलित",
+        "btn_manage": "प्रबंधन",
+        "th_vitality": "महत्व / स्वास्थ्य",
+        "th_status_perf": "स्थिति / प्रदर्शन",
+        "th_compliance": "अनुपालन 📄",
+        "th_assigned_fleet": "असाइन किया गया बेड़ा",
+        "th_actions_intel": "कार्रवाई और इंटेल",
+        "th_status": "स्थिति",
+        "th_finance": "रसद वित्त",
+        "th_view": "विवरण",
+        "btn_view_details": "विवरण देखें",
+        "btn_qr": "QR जनरेट करें",
+        "btn_timeline": "टाइमलाइन",
+        "btn_track": "लाइव ट्रैक",
+        "btn_message": "संदेश",
+        "btn_auto_assign": "AI ऑटो असाइन",
+        "btn_manual_split": "मैनुअल स्प्लिट",
+        "btn_finalize": "पूरा करें",
+        "btn_manual_assign": "वाहन बदलें",
+        "btn_override": "मैनुअल सत्यापन",
+        "btn_edit": "संपादित करें",
+        "btn_delete": "हटाएं",
+        "welcome_title": "स्वागत है",
+        "platform_wh_manager": "वेयरहाउस मैनेजर",
+        "platform_wh_manager_desc": "एक विशिष्ट हब के लिए इन्वेंट्री और संचालन प्रबंधित करें।",
+        "modal_wh_manager_title": "🏗️ वेयरहाउस मैनेजर लॉगिन",
+        "nav_modify_dashboard": "डैशबोर्ड संशोधित करें",
+        "warehouse_label": "वेयरहाउस",
+        "label_manager_email": "प्रबंधक ईमेल",
+        "label_manager_password": "प्रबंधक पासवर्ड",
+        "th_manager_email": "ईमेल",
+        "th_manager_password": "पासवर्ड",
+
+        "nav_receivers": "प्राप्तकर्ता 👥",
+
+        "receivers_title": "प्राप्तकर्ता प्रबंधन",
+
+        "receivers_subtitle": "प्लेटफ़ॉर्म पर सभी शिपमेंट प्राप्तकर्ताओं को देखें और प्रबंधित करें।",
+
+        "receiver_id": "प्राप्तकर्ता आईडी",
+
+        "receiver_name": "प्राप्तकर्ता का नाम",
+
+        "receiver_email": "ईमेल",
+
+        "receiver_phone": "फ़ोन नंबर",
+
+        "action": "कार्रवाई",
         "active_disruptions": "सक्रिय व्यवधान",
         "active_fleet": "सक्रिय बेड़ा",
         "active_fleet_links_desc": "वर्तमान में सक्रिय ड्राइवर-वाहन जोड़ियां। लिंक हटाने से दोनों संसाधन मुक्त हो जाएंगे।",
@@ -10904,6 +11356,39 @@ const translations = {
         "nav_overview": "🏠 अवलोकन"
     },
     "te": {
+        "btn_manage": "నిర్వహించు",
+        "th_vitality": "ఆరోగ్యం",
+        "th_status_perf": "స్థితి",
+        "th_compliance": "సమ్మతి 📄",
+        "th_assigned_fleet": "విమానము",
+        "th_actions_intel": "చర్యలు",
+        "th_shipment_charge": "షిప్‌మెంట్ ఛార్జ్",
+        "welcome_title": "స్వాగతం",
+        "platform_wh_manager": "వేర్‌హౌస్ మేనేజర్",
+        "platform_wh_manager_desc": "నిర్దిష్ట హబ్ కోసం ఇన్వెంటరీ మరియు కార్యకలాపాలను నిర్వహించండి.",
+        "modal_wh_manager_title": "🏗️ వేర్‌హౌస్ మేనేజర్ లాగిన్",
+        "nav_modify_dashboard": "డ్యాష్‌బోర్డ్‌ను సవరించండి",
+        "warehouse_label": "వేర్‌హౌస్",
+        "label_manager_email": "మేనేజర్ ఇమెయిల్",
+        "label_manager_password": "మేనేజర్ పాస్‌వర్డ్",
+        "th_manager_email": "ఇమెయిల్",
+        "th_manager_password": "పాస్‌వర్డ్",
+
+        "nav_receivers": "గ్రహీతలు 👥",
+
+        "receivers_title": "గ్రహీత నిర్వహణ",
+
+        "receivers_subtitle": "ప్లాట్‌ఫారమ్ అంతటా షిప్‌మెంట్ గ్రహీతలందరినీ వీక్షించండి మరియు నిర్వహించండి.",
+
+        "receiver_id": "గ్రహీత ఐడి",
+
+        "receiver_name": "గ్రహీత పేరు",
+
+        "receiver_email": "ఈమెయిల్",
+
+        "receiver_phone": "ఫోన్ నంబర్",
+
+        "action": "చర్య",
         "active_disruptions": "క్రియాశీల అంతరాయాలు",
         "active_fleet": "క్రియాశీల ఫ్లీట్",
         "active_fleet_links_desc": "ప్రస్తుతం యాక్టివ్‌గా ఉన్న డ్రైవర్-వాహనం జంటలు. లింక్ తీసివేస్తే రెండు వనరులు విడుదలవుతాయి.",
@@ -11848,6 +12333,39 @@ const translations = {
         "nav_overview": "🏠 అవలోకనం"
     },
     "as": {
+        "btn_manage": "পৰিচালনা",
+        "th_vitality": "স্বাস্থ্য",
+        "th_status_perf": "স্থিতি",
+        "th_compliance": "পালন 📄",
+        "th_assigned_fleet": "ফ্লীট",
+        "th_actions_intel": "কাৰ্য",
+        "th_shipment_charge": "চালান চাৰ্জ",
+        "welcome_title": "স্বাগতম",
+        "platform_wh_manager": "ৱেৰহাউচ মেনেজাৰ",
+        "platform_wh_manager_desc": "এটা নিৰ্দিষ্ট হাবৰ বাবে ইনভেণ্টৰী আৰু কাৰ্যকলাপ পৰিচালনা কৰক।",
+        "modal_wh_manager_title": "🏗️ ৱেৰহাউচ মেনেজাৰ লগইন",
+        "nav_modify_dashboard": "ডেচবৰ্ড সংশোধন কৰক",
+        "warehouse_label": "ৱেৰহাউচ",
+        "label_manager_email": "মেনেজাৰ ইমেইল",
+        "label_manager_password": "মেনেজাৰ পাছৱৰ্ড",
+        "th_manager_email": "ইমেইল",
+        "th_manager_password": "পাছৱৰ্ড",
+
+        "nav_receivers": "প্ৰাপকসকল 👥",
+
+        "receivers_title": "প্ৰাপক ব্যৱস্থাপনা",
+
+        "receivers_subtitle": "প্লেটফৰ্মৰ সকলো চালান প্ৰাপকক চাওক আৰু পৰিচালনা কৰক।",
+
+        "receiver_id": "প্ৰাপক আইডি",
+
+        "receiver_name": "প্ৰাপকৰ নাম",
+
+        "receiver_email": "ইমেইল",
+
+        "receiver_phone": "ফোন নম্বৰ",
+
+        "action": "কাৰ্য",
         "active_disruptions": "সক্ৰিয় বিঘিনিসমূহ",
         "active_fleet": "সক্ৰিয় যান-বাহন",
         "active_fleet_links_desc": "বৰ্তমান সক্ৰিয় ড্ৰাইভাৰ-যান-বাহন যুটী। আনলিংক কৰিলে দুয়োটা সম্পদ মুক্ত হ’ব।",
@@ -12727,6 +13245,54 @@ const translations = {
         "new_drone_btn": "🔄 নতুন ড্ৰোন"
     },
     "mai": {
+        "th_shipment_charge": "शिपमेंट शुल्क",
+        "btn_manage": "प्रबंधन",
+        "th_vitality": "महत्व / स्वास्थ्य",
+        "th_status_perf": "स्थिति / प्रदर्शन",
+        "th_compliance": "अनुपालन 📄",
+        "th_assigned_fleet": "असाइन कएल गेल बेड़ा",
+        "th_actions_intel": "कार्रवाई और इंटेल",
+        "th_status": "स्थिति",
+        "th_finance": "रसद वित्त",
+        "th_view": "विवरण",
+        "btn_view_details": "विवरण देखू",
+        "btn_qr": "QR बनाओ",
+        "btn_timeline": "टाइमलाइन",
+        "btn_track": "लाइव ट्रैक",
+        "btn_message": "संदेश",
+        "btn_auto_assign": "AI ऑटो असाइन",
+        "btn_manual_split": "मैनुअल स्प्लिट",
+        "btn_finalize": "पूरा करू",
+        "btn_manual_assign": "वाहन बदलू",
+        "btn_override": "मैनुअल सत्यापन",
+        "btn_edit": "संपादित करू",
+        "btn_delete": "हटाउ",
+        "welcome_title": "स्वागत अछि",
+        "platform_wh_manager": "वेयरहाउस मैनेजर",
+        "platform_wh_manager_desc": "एकटा विशिष्ट हब क लेल इन्वेंट्री आ संचालन प्रबंधित करू।",
+        "modal_wh_manager_title": "🏗️ वेयरहाउस मैनेजर लॉगिन",
+        "nav_modify_dashboard": "डैशबोर्ड संशोधित करू",
+        "warehouse_label": "वेयरहाउस",
+        "label_manager_email": "प्रबंधक ईमेल",
+        "label_manager_password": "प्रबंधक पासवर्ड",
+        "th_manager_email": "ईमेल",
+        "th_manager_password": "पासवर्ड",
+
+        "nav_receivers": "प्राप्तकर्ता 👥",
+
+        "receivers_title": "प्राप्तकर्ता प्रबंधन",
+
+        "receivers_subtitle": "प्लेटफ़ॉर्म पर सभ शिपमेंट प्राप्तकर्ता सभ के देखू आओर प्रबंधित करू।",
+
+        "receiver_id": "प्राप्तकर्ता आईडी",
+
+        "receiver_name": "प्राप्तकर्ता के नाम",
+
+        "receiver_email": "ईमेल",
+
+        "receiver_phone": "फोन नंबर",
+
+        "action": "कार्रवाई",
         "active_disruptions": "सक्रिय व्यवधान",
         "active_fleet": "सक्रिय बेड़ा",
         "active_fleet_links_desc": "वर्तमान में सक्रिय चालक-वाहन जोड़ी। अनलिंक केला सं दुनू संसाधन मुक्त भ जायत।",
@@ -13374,7 +13940,7 @@ const translations = {
         "expense_type": "खर्च क प्रकार",
         "amt_requested": "अनुरोध कएल राशि",
         "est_distance": "अनुमानित दूरी",
-        "action": "Action",
+        "action": "कार्रवाई",
         "sys_mgmt": "सिस्टम प्रबंधन",
         "sys_mgmt_desc": "डेटाबेस टेबल के रिसेट करय लेल या अपन कंपनीक खाताक प्रबंधन करय लेल एहि उपकरण सभक उपयोग करू।",
         "company_id_label": "अपन कंपनी आईडी",

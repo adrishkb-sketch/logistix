@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Header
 from pydantic import BaseModel
 from typing import Optional, List
 import random
-from backend.models import CompanyCreate, CompanyLogin, DriverLogin
+from backend.models import CompanyCreate, CompanyLogin, DriverLogin, Warehouse
 from backend.database import JSONDatabase
 import uuid
 
@@ -24,6 +24,11 @@ class OTPVerify(BaseModel):
     email: str
     otp: str
     company_data: CompanyCreate
+
+class WarehouseManagerLogin(BaseModel):
+    company_id: str
+    email: str
+    password: str
 
 @router.get("/check-email")
 async def check_email(email: str):
@@ -108,6 +113,26 @@ def driver_login(data: DriverLogin):
         "driver_id": driver["id"],
         "name": driver["name"],
         "company_id": driver["company_id"]
+    }
+
+@router.post("/warehouse-manager/login")
+def warehouse_manager_login(data: WarehouseManagerLogin):
+    company = companies_db.get_by_id(data.company_id)
+    if not company:
+        raise HTTPException(status_code=401, detail="Invalid Company ID")
+        
+    warehouses_db = JSONDatabase("warehouses")
+    whs = warehouses_db.get_all()
+    target_wh = next((w for w in whs if w and w.get("company_id") == data.company_id and w.get("manager_email") == data.email and w.get("manager_password") == data.password), None)
+    
+    if not target_wh:
+        raise HTTPException(status_code=401, detail="Invalid Email or Password for this company")
+        
+    return {
+        "warehouse_id": target_wh["id"],
+        "warehouse_name": target_wh["name"],
+        "company_id": target_wh["company_id"],
+        "manager_name": target_wh.get("manager_name", "Warehouse Manager")
     }
 
 # ──────────────────────────────────────────────────────────────

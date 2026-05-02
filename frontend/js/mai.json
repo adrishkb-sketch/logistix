@@ -646,7 +646,7 @@
     "expense_type": "खर्च क प्रकार",
     "amt_requested": "अनुरोध कएल राशि",
     "est_distance": "अनुमानित दूरी",
-    "action": "Action",
+    "action": "कार्रवाई",
     "sys_mgmt": "सिस्टम प्रबंधन",
     "sys_mgmt_desc": "डेटाबेस टेबल के रिसेट करय लेल या अपन कंपनीक खाताक प्रबंधन करय लेल एहि उपकरण सभक उपयोग करू।",
     "company_id_label": "अपन कंपनी आईडी",
@@ -829,5 +829,16 @@
     "label_capacity": "Carrying Capacity (kg)",
     "label_radius": "Max Flight Radius (km)",
     "search_drone_placeholder": "Search by license or ID...",
-    "th_license_id": "License / System ID"
+    "th_license_id": "License / System ID",
+    "nav_receivers": "प्राप्तकर्ता 👥",
+    "receivers_title": "प्राप्तकर्ता प्रबंधन",
+    "receivers_subtitle": "प्लेटफ़ॉर्म पर सभ शिपमेंट प्राप्तकर्ता सभ के देखू आओर प्रबंधित करू।",
+    "receiver_id": "प्राप्तकर्ता आईडी",
+    "receiver_name": "प्राप्तकर्ता के नाम",
+    "receiver_email": "ईमेल",
+    "receiver_phone": "फोन नंबर",
+    "label_manager_email": "प्रबंधक ईमेल",
+    "label_manager_password": "प्रबंधक पासवर्ड",
+    "th_manager_email": "ईमेल",
+    "th_manager_password": "पासवर्ड"
 }

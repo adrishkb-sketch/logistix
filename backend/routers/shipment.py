@@ -26,6 +26,34 @@ router = APIRouter()
 shipments_db = JSONDatabase("shipments")
 warehouses_db = JSONDatabase("warehouses")
 
+def increment_operational_days(driver_id: str, vehicle_id: str):
+    from datetime import datetime
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    
+    if driver_id and driver_id != "DRONE-SYSTEM":
+        d_db = JSONDatabase("drivers")
+        driver = d_db.get_by_id(driver_id)
+        if driver:
+            dates = driver.get("operational_dates", [])
+            if today not in dates:
+                dates.append(today)
+                d_db.update(driver_id, {
+                    "operational_dates": dates,
+                    "operational_days": len(dates)
+                })
+                
+    if vehicle_id:
+        v_db = JSONDatabase("vehicles")
+        vehicle = v_db.get_by_id(vehicle_id)
+        if vehicle:
+            dates = vehicle.get("operational_dates", [])
+            if today not in dates:
+                dates.append(today)
+                v_db.update(vehicle_id, {
+                    "operational_dates": dates,
+                    "operational_days": len(dates)
+                })
+
 class ShipmentRating(BaseModel):
     rating: float # 1-5
 
@@ -260,8 +288,49 @@ def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
     
     return {"message": "Rating submitted", "bonus_points": rating_bonus}
 
+receivers_db = JSONDatabase("receivers")
+
 @router.post("/")
 def create_shipment(shipment_data: ShipmentCreate):
+    # 1. Receiver Management Logic
+    receiver_id = shipment_data.receiver_id
+    email_norm = shipment_data.receiver_email.strip().lower() if shipment_data.receiver_email else None
+    
+    if email_norm:
+        existing_receivers = receivers_db.get_all()
+        rec = next((r for r in existing_receivers if r.get("company_id") == shipment_data.company_id and r.get("email", "").strip().lower() == email_norm), None)
+        
+        if rec:
+            # Strict validation for existing receivers
+            existing_name = rec.get("name", "").strip().lower()
+            existing_phone = rec.get("phone", "").strip().replace("+91", "").strip()
+            
+            new_name = (shipment_data.receiver_name or "").strip().lower()
+            new_phone = (shipment_data.receiver_phone or "").strip().replace("+91", "").strip()
+            
+            if existing_name != new_name or existing_phone != new_phone:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Receiver Details Mismatch: The email '{email_norm}' is already registered to '{rec.get('name')}' with phone '{rec.get('phone')}'. Please use the exact same name and phone number for this email or use a different email address."
+                )
+            
+            receiver_id = rec["id"]
+        else:
+            # Create new receiver
+            from backend.models import Receiver
+            new_rec = Receiver(
+                company_id=shipment_data.company_id,
+                name=shipment_data.receiver_name,
+                email=email_norm,
+                phone=shipment_data.receiver_phone
+            )
+            receivers_db.insert(new_rec.model_dump())
+            receiver_id = new_rec.id
+
+    # 1. Weight Guard: World's Strongest Engine Rule
+    if shipment_data.weight > 100:
+        raise HTTPException(status_code=400, detail="Shipment rejected: Maximum allowed weight is 100kg per shipment.")
+
     dist = haversine(shipment_data.pickup.lat, shipment_data.pickup.lng, shipment_data.drop.lat, shipment_data.drop.lng)
     
     # Cold Chain Feasibility Validation
@@ -276,7 +345,6 @@ def create_shipment(shipment_data: ShipmentCreate):
         # Advanced Fleet Availability Check
         drivers_db = JSONDatabase("drivers")
         vehicles_db = JSONDatabase("vehicles")
-        warehouses_db = JSONDatabase("warehouses")
         
         available_drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == shipment_data.company_id and d.get("status") == "available" and d.get("assigned_vehicle_id")]
         
@@ -340,18 +408,24 @@ def create_shipment(shipment_data: ShipmentCreate):
     from backend.services.finance_engine import estimate_delivery_cost
     finance = estimate_delivery_cost(shipment_data.model_dump())
 
-    new_shipment = Shipment(
-        **shipment_data.model_dump(),
-        route_type="direct",
-        expected_delivery=expected_delivery,
-        pickup_deadline=pickup_deadline,
-        delivery_otp=otp,
-        logs=[initial_log],
-        vitality=100.0,
-        qr_code_data=f"LX-{uuid.uuid4().hex[:8].upper()}",
-        finance=finance,
-        payment_status="unpaid"
-    )
+    from backend.services.route_engine import calculate_route_type
+    route_type = calculate_route_type(shipment_data.pickup, shipment_data.drop, shipment_data.company_id)
+
+    shipment_dict = shipment_data.model_dump()
+    shipment_dict.update({
+        "receiver_id": receiver_id,
+        "route_type": route_type,
+        "expected_delivery": expected_delivery,
+        "pickup_deadline": pickup_deadline,
+        "delivery_otp": otp,
+        "logs": [initial_log],
+        "vitality": 100.0,
+        "qr_code_data": f"LX-{uuid.uuid4().hex[:8].upper()}",
+        "finance": finance,
+        "payment_status": "unpaid"
+    })
+
+    new_shipment = Shipment(**shipment_dict)
     
     shipments_db.insert(new_shipment.model_dump())
             
@@ -520,6 +594,9 @@ def update_shipment(shipment_id: str, data: dict):
                     
                     drivers_db.update(driver_id, driver)
                     
+                    # Increment operational days on completion if not already done
+                    increment_operational_days(driver_id, shipment.get("assigned_vehicle_id"))
+                    
                     # Update Vehicle Health (Wear & Tear)
                     vehicle_id = shipment.get("assigned_vehicle_id")
                     if vehicle_id:
@@ -672,59 +749,76 @@ def auto_assign(shipment_id: str):
         d = shipment["drop"]
         total_dist = haversine(p["lat"], p["lng"], d["lat"], d["lng"])
         
-        # AUTOMATIC ROUTE SPLITTING:
-        # If distance > 50km (or user requirement for robustness) and it's a fresh shipment, force a split first
-        if (total_dist > 50 or shipment.get("is_perishable")) and not shipment.get("is_leg") and shipment.get("status") == "pending":
+        from backend.services.assignment import auto_assign_shipment
+        
+        # AUTOMATIC ROUTE SPLITTING AND MULTI-LEG ASSIGNMENT
+        child_ids = shipment.get("child_leg_ids", [])
+        if not child_ids:
+            # Fallback: Query DB for children
+            all_s = shipments_db.get_all()
+            child_ids = [s["id"] for s in all_s if s.get("parent_id") == shipment["id"]]
+        
+        # Scenario 1: Fresh shipment needs splitting
+        if not child_ids and (total_dist > 50 or shipment.get("is_perishable")) and not shipment.get("is_leg") and shipment.get("status") == "pending":
             from backend.services.route_engine import decompose_shipment
             legs_data = decompose_shipment(shipment)
             if len(legs_data) > 1:
-                new_leg_ids = _generate_legs(shipment, legs_data)
-                
-                # AUTO-ASSIGN ALL LEGS IMMEDIATELY
-                assigned_count = 0
-                from backend.services.assignment import auto_assign_shipment
-                for leg_id in new_leg_ids:
-                    try:
-                        leg = shipments_db.get_by_id(leg_id)
-                        assigned_data = auto_assign_shipment(leg)
-                        if assigned_data:
-                            # Add logs to leg
-                            from backend.models import ShipmentEvent
-                            d_db = JSONDatabase("drivers")
-                            v_db = JSONDatabase("vehicles")
-                            d_id = assigned_data.get("assigned_driver_id")
-                            v_id = assigned_data.get("assigned_vehicle_id")
-                            
-                            if d_id == "DRONE-SYSTEM":
-                                log_event = ShipmentEvent(status="in_transit", message=f"🛰️ AI deployed autonomous drone {v_id} for the last-mile segment.")
-                            else:
-                                d = d_db.get_by_id(d_id)
-                                v = v_db.get_by_id(v_id)
-                                driver_name = d.get("name", "Unknown") if d else "Unknown"
-                                plate = v.get("number_plate", "Unknown") if v else "Unknown"
-                                log_event = ShipmentEvent(status="assigned", message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}.")
-                            
-                            assigned_data["logs"] = (leg.get("logs") or []) + [log_event.model_dump()]
-                            shipments_db.update(leg["id"], assigned_data)
-                            
-                            # SIDE EFFECTS: Link driver and vehicle, set status
-                            if d_id != "DRONE-SYSTEM":
-                                d_db.update(d_id, {"status": "assigned", "assigned_vehicle_id": v_id})
-                                v_db.update(v_id, {"status": "assigned", "assigned_driver_id": d_id})
-                            
-                            assigned_count += 1
-                    except Exception as le:
-                        print(f"Leg Assignment Error: {str(le)}")
-                
-                return {
-                    "message": f"Shipment automatically segmented into {len(new_leg_ids)} legs and assigned to base warehouse drivers.",
-                    "action": "split",
-                    "legs_count": len(new_leg_ids),
-                    "assigned_count": assigned_count
-                }
+                child_ids = _generate_legs(shipment, legs_data)
+        
+        # Scenario 2: Already split or newly split, now assign all legs
+        if child_ids and not shipment.get("is_leg"):
+            assigned_count = 0
+            for leg_id in child_ids:
+                try:
+                    leg = shipments_db.get_by_id(leg_id)
+                    if leg.get("assigned_driver_id"): continue # Already assigned
+                    
+                    assigned_data_leg = auto_assign_shipment(leg)
+                    if assigned_data_leg and "error" in assigned_data_leg:
+                        print(f"Leg {leg_id} assignment failed: {assigned_data_leg['error']}")
+                        continue
 
+                    if assigned_data_leg:
+                        from backend.models import ShipmentEvent
+                        d_db = JSONDatabase("drivers")
+                        v_db = JSONDatabase("vehicles")
+                        d_id = assigned_data_leg.get("assigned_driver_id")
+                        v_id = assigned_data_leg.get("assigned_vehicle_id")
+                        
+                        if d_id == "DRONE-SYSTEM":
+                            log_event = ShipmentEvent(status="in_transit", message=f"🛰️ AI deployed autonomous drone {v_id} for the last-mile segment.")
+                        else:
+                            d = d_db.get_by_id(d_id)
+                            v = v_db.get_by_id(v_id)
+                            driver_name = d.get("name", "Unknown") if d else "Unknown"
+                            plate = v.get("number_plate", "Unknown") if v else "Unknown"
+                            log_event = ShipmentEvent(status="assigned", message=f"🤖 AI successfully assigned driver {driver_name} and vehicle {plate}.")
+                        
+                        assigned_data_leg["logs"] = (leg.get("logs") or []) + [log_event.model_dump()]
+                        shipments_db.update(leg["id"], assigned_data_leg)
+                        
+                        if d_id != "DRONE-SYSTEM":
+                            d_db.update(d_id, {"status": "assigned", "assigned_vehicle_id": v_id})
+                            v_db.update(v_id, {"status": "assigned", "assigned_driver_id": d_id})
+                            increment_operational_days(d_id, v_id)
+                        assigned_count += 1
+                except Exception as le:
+                    print(f"Leg Assignment Error: {str(le)}")
+            
+            if assigned_count == 0:
+                raise HTTPException(status_code=400, detail="AI could not find any suitable drivers for this journey's segments. Check hub availability.")
+
+            return {
+                "message": f"Processed {len(child_ids)} journey legs. Total {assigned_count} new assignments confirmed.",
+                "action": "multi_assign",
+                "legs_count": len(child_ids),
+                "assigned_count": assigned_count
+            }
         assigned_data = auto_assign_shipment(shipment)
         
+        if assigned_data and "error" in assigned_data:
+             raise HTTPException(status_code=400, detail=assigned_data["error"])
+
         if assigned_data:
             from backend.models import ShipmentEvent
             d_db = JSONDatabase("drivers")
@@ -755,6 +849,7 @@ def auto_assign(shipment_id: str):
             if d_id != "DRONE-SYSTEM":
                 d_db.update(d_id, {"status": "assigned", "assigned_vehicle_id": v_id})
                 v_db.update(v_id, {"status": "assigned", "assigned_driver_id": d_id})
+                increment_operational_days(d_id, v_id)
                 
             updated = shipments_db.update(shipment_id, assigned_data)
             try:
@@ -1047,6 +1142,37 @@ def manual_split(shipment_id: str, req: ManualSplitRequest):
     
     return {"message": f"Manually split into {len(legs)} legs with planned assignments."}
 
+@router.post("/auto-split/bulk")
+async def bulk_auto_split(company_id: str):
+    """
+    Automated Route Splitter for all pending shipments.
+    """
+    all_ships = shipments_db.get_all()
+    pending = [s for s in all_ships if s and s.get("company_id") == company_id and s.get("status") == "pending" and not s.get("is_leg")]
+    
+    success_count = 0
+    error_count = 0
+    
+    from backend.services.route_engine import decompose_shipment
+    for s in pending:
+        try:
+            legs_data = decompose_shipment(s)
+            if legs_data:
+                _generate_legs(s, legs_data)
+                success_count += 1
+            else:
+                error_count += 1
+        except Exception as e:
+            print(f"Bulk Split Error for {s.get('id')}: {e}")
+            error_count += 1
+            
+    return {
+        "message": f"Bulk Route Optimization Complete. Optimized {success_count} journeys. {error_count} skipped (under 50km or no warehouses).",
+        "success_count": success_count,
+        "error_count": error_count
+    }
+
+@router.post("/{shipment_id}/auto-split")
 def auto_split(shipment_id: str):
     """
     Manual trigger for splitting a shipment.
@@ -1059,17 +1185,20 @@ def auto_split(shipment_id: str):
     legs_data = decompose_shipment(shipment)
     
     if not legs_data:
-        raise HTTPException(status_code=400, detail="No warehouses available for splitting or route too short.")
+        # Gracefully handle "optimized as direct" case
+        shipments_db.update(shipment_id, {
+            "route_type": "direct",
+            "stage": "Route Optimized",
+            "status": "pending" # Keep pending but optimized
+        })
+        return {"message": "Journey Optimized: Direct delivery is most efficient for this route."}
     
     new_leg_ids = _generate_legs(shipment, legs_data)
     
-    # AUTO-ASSIGN ALL LEGS IMMEDIATELY
-    for leg_id in new_leg_ids:
-        try:
-            auto_assign(leg_id)
-        except: pass
+    # Optional: Auto-assign is usually a separate step, but we'll keep it if needed.
+    # For now, following "Route Splitter" focus.
         
-    return {"message": f"Successfully planned optimized {len(legs_data)}-leg journey via Hub Network and auto-assigned fleet."}
+    return {"message": f"Successfully planned optimized {len(legs_data)}-leg journey via Hub Network."}
 
 def _generate_legs(parent_shipment, leg_data):
     from backend.models import ShipmentEvent
@@ -1121,6 +1250,10 @@ def _generate_legs(parent_shipment, leg_data):
         
         l_type = leg.get("leg_type") or "standard_leg"
         is_middle_mile = l_type == "middle_mile"
+        
+        # Mandatory 12-hour delay for middle mile (Trucks) for load consolidation/scheduling
+        if is_middle_mile:
+            p_deadline = snap_eta_to_business_hours(p_deadline + timedelta(hours=12))
         
         # 2. Travel & Processing Duration
         speed = 65.0 if is_middle_mile else 30.0 
@@ -1316,7 +1449,6 @@ def rate_shipment(shipment_id: str, data: dict):
 def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str] = None, to_wh: Optional[str] = None):
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
-        # Try prefix matching
         shipment = next((s for s in shipments_db.get_all() if s["id"].startswith(shipment_id)), None)
     
     if not shipment:
@@ -1326,21 +1458,19 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
     vehicles = [v for v in JSONDatabase("vehicles").get_all() if v and v.get("company_id") == company_id and v.get("status") in ["available", "on_duty"]]
     warehouses = JSONDatabase("warehouses").get_all()
     
-    # Use overrides if provided (for planning phase)
     p_wh_id = from_wh if from_wh and from_wh != "null" else shipment.get("pickup_warehouse_id")
     d_wh_id = to_wh if to_wh and to_wh != "null" else shipment.get("drop_warehouse_id")
+    leg_type = shipment.get("leg_type")
     
-    # If not a leg, try to find nearest warehouse to pickup
-    if not p_wh_id:
-        from backend.services.route_engine import haversine
-        nearest = None
-        min_dist = float('inf')
-        for w in warehouses:
-            dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], w["lat"], w["lng"])
-            if dist < min_dist:
-                min_dist = dist
-                nearest = w["id"]
-        p_wh_id = nearest
+    is_first_mile = leg_type == "first_mile" or (d_wh_id and not p_wh_id)
+    is_last_mile = leg_type == "last_mile" or (p_wh_id and not d_wh_id)
+    is_middle_mile = leg_type == "middle_mile" or (p_wh_id and d_wh_id)
+    is_direct = not p_wh_id and not d_wh_id
+
+    # Weather Check for bikes
+    from backend.services.route_engine import predict_weather_impact
+    weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
+    bad_weather = weather.get("condition") in ["Storm", "Rain"]
 
     eligible = {
         "local": [],
@@ -1352,17 +1482,37 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
     from backend.services.route_engine import haversine
     all_shipments = shipments_db.get_all()
     
+    L_MILE_TYPES = ["EV-Cargo", "Bike/Scooty", "Delivery Van", "Scooty", "Bike"]
+    M_MILE_TYPES = ["Large Truck", "Small Truck", "Truck (Heavy)"]
+
     for d in drivers:
         v_id = d.get("assigned_vehicle_id")
         if not v_id: continue
         v = next((veh for veh in vehicles if veh["id"] == v_id), None)
         if not v: continue
         
-        # Determine status/location
+        v_type = v.get("type", "")
+        v_base = v.get("base_warehouse_id")
+
+        # 1. Filter by Vehicle Type Rules
+        if is_first_mile or is_last_mile or is_direct:
+            if not any(t in v_type for t in L_MILE_TYPES): continue
+        if is_middle_mile:
+            if not any(t in v_type for t in M_MILE_TYPES): continue
+        
+        # 2. Weather Filter
+        if bad_weather and any(t in v_type for t in ["Bike", "Scooty"]): continue
+
+        # 3. Capacity Check (Current load + this shipment)
+        active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == v["id"] and s.get("status") in ["assigned", "in_transit"]]
+        curr_load = sum(s.get("weight", 0) for s in active_for_v)
+        if curr_load + shipment.get("weight", 0) > v.get("capacity", 0): continue
+
+        # Determine location category
         p_wh = next((w for w in warehouses if w["id"] == p_wh_id), None) if p_wh_id else None
-        loc_status = "Unknown"
+        loc_status = "Available"
         is_local = False
-        is_enroute = False
+        is_returning = False
         
         curr_loc = v.get("current_location")
         if curr_loc and p_wh:
@@ -1370,49 +1520,31 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
             if dist < 0.5:
                 loc_status = f"At {p_wh.get('name', 'Warehouse')}"
                 is_local = True
-            else:
-                # Check if en route to this warehouse
-                active_s = next((s for s in all_shipments if s and s.get("assigned_vehicle_id") == v["id"] and s.get("status") == "in_transit"), None)
-                if active_s and active_s.get("drop_warehouse_id") == p_wh_id:
-                    loc_status = f"On the way to {p_wh.get('name', 'Warehouse')}"
-                    is_enroute = True
-                else:
-                    # Find nearest warehouse for general display
-                    nearest_w = None
-                    min_w_dist = float('inf')
-                    for w in warehouses:
-                        w_dist = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), w.get("lat", 0), w.get("lng", 0))
-                        if w_dist < min_w_dist:
-                            min_w_dist = w_dist
-                            nearest_w = w
-                    if nearest_w and min_w_dist < 1.0:
-                        loc_status = f"Near {nearest_w.get('name')}"
-                    else:
-                        loc_status = "In Transit / Outdoor"
-        elif v.get("base_warehouse_id") == p_wh_id:
+            elif v_base == d_wh_id:
+                is_returning = True
+                loc_status = "Back-haul Eligible"
+        elif v_base == p_wh_id:
             loc_status = "Stationary at Base"
             is_local = True
 
         asset = {
             "driver_id": d["id"],
             "driver_name": d["name"],
+            "driver_rating": d.get("driving_score", 0) + (d.get("safety_rating", 5) * 10),
             "vehicle_id": v["id"],
             "vehicle_plate": v["number_plate"],
             "vehicle_type": v["type"],
             "base_warehouse_id": v.get("base_warehouse_id"),
             "location_status": loc_status,
-            "is_enroute": is_enroute
+            "is_enroute": False
         }
         
-        if is_local or is_enroute:
-            eligible["local"].append(asset)
-        elif d_wh_id and v.get("base_warehouse_id") == d_wh_id:
-            eligible["returning"].append(asset)
-        else:
-            eligible["others"].append(asset)
+        if is_local: eligible["local"].append(asset)
+        elif is_returning: eligible["returning"].append(asset)
+        else: eligible["others"].append(asset)
             
     # Check for Drones at pickup warehouse
-    if p_wh_id:
+    if (is_last_mile or is_direct) and p_wh_id:
         wh = next((w for w in warehouses if w["id"] == p_wh_id), None)
         if wh and wh.get("drone_count", 0) > 0:
             drone_vehicles = [v for v in vehicles if "drone" in v["type"].lower() and v.get("base_warehouse_id") == p_wh_id]

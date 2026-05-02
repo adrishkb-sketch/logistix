@@ -11,18 +11,28 @@ def calculate_shipment_vitality(shipment: dict) -> float:
         return vitality
 
     # 0. Base Decay (0.5% per hour since creation)
-    created_at = datetime.fromisoformat(shipment.get("created_at").replace('Z', ''))
-    now = datetime.utcnow()
+    from datetime import timezone
+    c_str = shipment.get("created_at")
+    # Handle 'Z' suffix by replacing with +00:00 for robust fromisoformat support
+    created_at = datetime.fromisoformat(c_str.replace('Z', '+00:00'))
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+        
+    now = datetime.now(timezone.utc)
     total_hours = (now - created_at).total_seconds() / 3600.0
     vitality -= (total_hours * 0.5)
 
     # 1. Decay based on Time Delay
-    expected = datetime.fromisoformat(shipment.get("expected_delivery").replace('Z', ''))
-    
-    if now > expected:
-        delay_hours = (now - expected).total_seconds() / 3600.0
-        # For every hour of delay, lose 2% vitality
-        vitality -= (delay_hours * 2.0)
+    exp_str = shipment.get("expected_delivery")
+    if exp_str:
+        expected = datetime.fromisoformat(exp_str.replace('Z', '+00:00'))
+        if expected.tzinfo is None:
+            expected = expected.replace(tzinfo=timezone.utc)
+            
+        if now > expected:
+            delay_hours = (now - expected).total_seconds() / 3600.0
+            # For every hour of delay, lose 2% vitality
+            vitality -= (delay_hours * 2.0)
 
     # 2. Decay based on Temperature (Weather Cells)
     weather_db = JSONDatabase("weather_cells")

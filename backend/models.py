@@ -95,9 +95,20 @@ class Driver(BaseModel):
     total_earnings: float = 0.0
     monthly_earnings: float = 0.0
     
-    # Zen Mode Fields
     is_zen_mode: bool = False
     zen_destination: Optional[Location] = None
+    is_on_duty: bool = True # For the "Not Working" toggle
+    breaks_taken: int = 0
+    smartwatch_sync_enabled: bool = False
+    
+    # Operational Consistency
+    operational_days: int = 0
+    operational_dates: List[str] = Field(default_factory=list)
+    
+    # Daily Audit Fields
+    is_fit: bool = True # fit, unfit (marked by manager)
+    current_warehouse_id: Optional[str] = None # Where the driver is right now
+    last_audit_date: Optional[str] = None # Refresh every 24h logic
 
 class Vehicle(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -117,6 +128,15 @@ class Vehicle(BaseModel):
     join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     total_distance_km: float = 0.0
     efficiency_score: float = 100.0
+    
+    # Daily Audit Fields
+    is_operational: bool = True # working, breakdown (marked by manager)
+    current_warehouse_id: Optional[str] = None # Where the vehicle is right now
+    last_audit_date: Optional[str] = None # Refresh every 24h logic
+
+    # Operational Consistency
+    operational_days: int = 0
+    operational_dates: List[str] = Field(default_factory=list)
 
 class Warehouse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -126,6 +146,8 @@ class Warehouse(BaseModel):
     lng: float
     contact_number: Optional[str] = None
     manager_name: Optional[str] = None
+    manager_email: Optional[EmailStr] = None
+    manager_password: Optional[str] = None
 
 class Drone(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -145,6 +167,14 @@ class ShipmentEvent(BaseModel):
     reason: Optional[str] = None # 'weather', 'traffic', 'challan', 'mechanical'
     location: Optional[Location] = None
     photo_url: Optional[str] = None
+
+class Receiver(BaseModel):
+    id: str = Field(default_factory=lambda: generate_system_id("REC"))
+    company_id: str
+    name: str
+    email: str
+    phone: str
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
 
 class Shipment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -177,6 +207,7 @@ class Shipment(BaseModel):
     temperature_last_recorded: Optional[float] = None
     loading_blueprint: Optional[List[dict]] = None
     qr_code_data: Optional[str] = None
+    receiver_id: Optional[str] = None
     receiver_name: Optional[str] = None
     receiver_phone: Optional[str] = None
     receiver_email: Optional[str] = None
@@ -197,6 +228,7 @@ class ShipmentCreate(BaseModel):
     company_id: str
     labels: Optional[List[str]] = []
     is_perishable: bool = False
+    receiver_id: Optional[str] = None
     receiver_name: str
     receiver_phone: str
     receiver_email: Optional[str] = None
@@ -236,6 +268,15 @@ class JourneyReview(BaseModel):
     challan_penalty: float
     total_score: float
     feedback_message: str
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+
+class WarehouseLeaveRequest(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    warehouse_id: str
+    company_id: str
+    start_date: str # ISO format
+    end_date: str # ISO format
+    status: str = "pending" # pending, approved, rejected
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
 
 class FundRequest(BaseModel):

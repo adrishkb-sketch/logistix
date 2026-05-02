@@ -19,8 +19,7 @@ alerts_db = JSONDatabase("alerts")
 def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(driver_id, x_logistix_context)
     from backend.services.cold_chain import calculate_shipment_vitality
-    all_shipments = shipments_db.get_all()
-    assigned = [s for s in all_shipments if s and s.get("assigned_driver_id") == driver_id]
+    assigned = shipments_db.get_filtered({"assigned_driver_id": driver_id})
     
     fund_db = JSONDatabase("fund_requests")
     all_funds = fund_db.get_all()
@@ -89,20 +88,22 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
     from backend.services.alert_engine import check_weather_alerts
     from backend.services.route_engine import check_shipment_performance
     
-    all_shipments = shipments_db.get_all()
-    for s in all_shipments:
-        if not s: continue
-        if s.get("assigned_driver_id") == driver_id and s.get("status") in ["in_transit", "assigned"]:
+    active_shipments = shipments_db.get_filtered({"assigned_driver_id": driver_id})
+    for s in active_shipments:
+        if s.get("status") in ["in_transit", "assigned"]:
             # GPS Speed Guard
             prev_loc = s.get("current_location")
             last_update = s.get("last_location_time")
-            now = datetime.utcnow()
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
             
             if prev_loc and last_update:
                 from backend.services.route_engine import haversine
                 dist_jump = haversine(prev_loc.get("lat", 0), prev_loc.get("lng", 0), location.get("lat", 0), location.get("lng", 0))
                 try:
-                    last_time = datetime.fromisoformat(last_update.replace('Z', ''))
+                    last_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
+                    if last_time.tzinfo is None:
+                        last_time = last_time.replace(tzinfo=timezone.utc)
                     seconds = (now - last_time).total_seconds()
                     if seconds > 10:
                         kmh = (dist_jump / seconds) * 3600
@@ -144,7 +145,8 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
 
             # Automatic Warehouse Checkpoint Logging
             from backend.services.route_engine import haversine
-            warehouses = JSONDatabase("warehouses").get_all()
+            # We filter by company_id if we have it, otherwise get all warehouses (still fewer than shipments)
+            warehouses = warehouses_db.get_filtered({"company_id": s.get("company_id")}) if s.get("company_id") else warehouses_db.get_all()
             in_warehouse = False
             for w in warehouses:
                 if not w: continue
@@ -234,8 +236,8 @@ def request_fund(driver_id: str, shipment_id: str, data: dict, x_logistix_contex
     from backend.models import FundRequest
     # Check for existing pending/approved requests for this shipment to prevent double-dip
     alerts_db = JSONDatabase("alerts")
-    existing = alerts_db.get_all()
-    duplicate = next((a for a in existing if a.get("shipment_id") == shipment_id and a.get("type") == "finance" and req_type.upper() in a.get("description", "").upper() and a.get("status") != "resolved"), None)
+    existing = alerts_db.get_filtered({"shipment_id": shipment_id, "type": "finance"})
+    duplicate = next((a for a in existing if a.get("status") != "resolved" and req_type.upper() in a.get("description", "").upper()), None)
     if duplicate:
         raise HTTPException(status_code=400, detail=f"{req_type.capitalize()} request already pending for this journey.")
 
@@ -315,8 +317,12 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
             try:
                 from backend.services.ocr_service import normalize
                 found_norm = ml_result["detected_norm"]
+                # We can't easily filter by normalized plate in Supabase without a custom RPC or view, 
+                # but we can filter by exact plate or just get all for this company if we had it.
+                # Since this is a rare operation (verify vehicle), get_all is okay-ish, 
+                # but let's try to find it by plate if possible.
                 all_vehicles = vehicles_db.get_all()
-                target_v = next((v for v in all_vehicles if normalize(v.get("number_plate", "")) == found_norm), None)
+                target_v = next((v for v in all_vehicles if v and normalize(v.get("number_plate", "")) == found_norm), None)
                 if target_v:
                     v_id = target_v["id"]
                     drivers_db.update(driver_id, {"assigned_vehicle_id": v_id})
@@ -406,8 +412,8 @@ async def scan_cargo(driver_id: str, shipment_id: str, file: UploadFile = File(.
 @router.post("/{driver_id}/optimize-loading")
 async def optimize_loading(driver_id: str, file: UploadFile = File(...)):
     # Fetch active shipment to customize blueprint
-    all_shipments = shipments_db.get_all()
-    active = next((s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
+    all_shipments = shipments_db.get_filtered({"assigned_driver_id": driver_id})
+    active = next((s for s in all_shipments if s.get("status") in ["assigned", "in_transit"]), None)
     
     shipment_desc = active.get("description", "Cargo") if active else "General Cargo"
     weight = active.get("weight", 10) if active else 10
@@ -440,8 +446,8 @@ async def optimize_loading(driver_id: str, file: UploadFile = File(...)):
 @router.post("/{driver_id}/upload-evidence")
 async def upload_evidence(driver_id: str, file: UploadFile = File(...)):
     # 1. Find active shipment
-    all_s = shipments_db.get_all()
-    active = next((s for s in all_s if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
+    all_s = shipments_db.get_filtered({"assigned_driver_id": driver_id})
+    active = next((s for s in all_s if s.get("status") in ["assigned", "in_transit"]), None)
     
     ext = file.filename.split('.')[-1]
     filename = f"evidence_{uuid.uuid4()}.{ext}"
@@ -500,9 +506,8 @@ def report_incident(driver_id: str, data: dict):
         # Minor stop log
         pass
         
-    # Find active shipment
-    all_shipments = shipments_db.get_all()
-    active = next((s for s in all_shipments if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]), None)
+    all_shipments = shipments_db.get_filtered({"assigned_driver_id": driver_id})
+    active = next((s for s in all_shipments if s.get("status") in ["assigned", "in_transit"]), None)
     
     if active:
         # Re-fetch to ensure we have the latest version (including any logs added by background tasks)
@@ -566,8 +571,7 @@ def get_driver_stats(driver_id: str):
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
         
-    all_ships = shipments_db.get_all()
-    my_ships = [s for s in all_ships if s.get("assigned_driver_id") == driver_id]
+    my_ships = shipments_db.get_filtered({"assigned_driver_id": driver_id})
     
     delivered = [s for s in my_ships if s.get("status") == "delivered"]
     timely = [s for s in delivered if s.get("actual_delivery", "") <= s.get("expected_delivery", "9999")]
@@ -631,6 +635,58 @@ def update_health_metrics(driver_id: str, metrics: Dict[str, Any]):
     }
     drivers_db.update(driver_id, driver)
     return {"message": "Health metrics updated successfully"}
+
+@router.post("/{driver_id}/health-emergency")
+def health_emergency(driver_id: str, location: dict, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    # Find nearest warehouse
+    all_whs = warehouses_db.get_all()
+    if not all_whs:
+        raise HTTPException(status_code=400, detail="No warehouses found")
+        
+    def get_haversine(l1, ln1, l2, ln2):
+        R = 6371
+        dl = math.radians(l2 - l1)
+        dn = math.radians(ln2 - ln1)
+        a = math.sin(dl/2)**2 + math.cos(math.radians(l1)) * math.cos(math.radians(l2)) * math.sin(dn/2)**2
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    lat, lng = location.get("lat"), location.get("lng")
+    nearest = min(all_whs, key=lambda w: get_haversine(lat, lng, w["lat"], w["lng"]))
+    
+    # Dock driver and vehicle
+    drivers_db.update(driver_id, {
+        "status": "emergency_dock",
+        "current_warehouse_id": nearest["id"],
+        "is_on_duty": False
+    })
+    
+    if driver.get("assigned_vehicle_id"):
+        vehicles_db.update(driver["assigned_vehicle_id"], {
+            "status": "maintenance",
+            "current_warehouse_id": nearest["id"]
+        })
+        
+    return {
+        "message": "Emergency Docking Initiated",
+        "warehouse_name": nearest["name"],
+        "warehouse_location": {"lat": nearest["lat"], "lng": nearest["lng"]}
+    }
+
+@router.post("/{driver_id}/toggle-duty")
+def toggle_duty(driver_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    is_on_duty = data.get("is_on_duty", True)
+    drivers_db.update(driver_id, {"is_on_duty": is_on_duty})
+    return {"message": f"Driver duty status updated to {'ON' if is_on_duty else 'OFF'}", "is_on_duty": is_on_duty}
 
 @router.post("/{driver_id}/breakdown")
 def report_breakdown(driver_id: str, location: Dict[str, Any]):
@@ -699,8 +755,8 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
         leg_order = shipment.get("leg_order", 1)
         if leg_order > 1:
             p_id = shipment.get("parent_id")
-            all_s = shipments_db.get_all()
-            prev_leg = next((s for s in all_s if s.get("parent_id") == p_id and s.get("leg_order") == leg_order - 1), None)
+            all_s = shipments_db.get_filtered({"parent_id": p_id})
+            prev_leg = next((s for s in all_s if s.get("leg_order") == leg_order - 1), None)
             if prev_leg and prev_leg.get("status") != "delivered":
                 raise HTTPException(status_code=400, detail=f"Protocol Violation: Leg {leg_order} cannot begin until Leg {leg_order-1} has been delivered and processed at the hub.")
         
@@ -720,13 +776,27 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
     
     # Warehouse Handoff / Leg Completion
     if shipment.get("is_leg"):
+        drop_wh_id = shipment.get('drop_warehouse_id')
         shipments_db.update(shipment_id, {
             "status": "delivered",
-            "stage": f"Reached Hub: {shipment.get('drop_warehouse_id')}",
+            "stage": f"Reached Hub: {drop_wh_id}",
             "logs": shipment.get("logs", []) + [
-                ShipmentEvent(status="delivered", message="🏭 Warehouse handoff completed. Leg finalized.").model_dump()
+                ShipmentEvent(status="delivered", message=f"🏭 Warehouse handoff completed at Hub {drop_wh_id}. Leg finalized.").model_dump()
             ]
         })
+
+        # Update Driver and Vehicle current location
+        driver = drivers_db.get_by_id(driver_id)
+        v_id = shipment.get("assigned_vehicle_id")
+        if driver and v_id:
+            vehicle = vehicles_db.get_by_id(v_id)
+            if vehicle:
+                v_type = (vehicle.get("type") or "").lower()
+                is_truck = "truck" in v_type
+                target_wh = drop_wh_id if is_truck else vehicle.get("base_warehouse_id")
+                
+                drivers_db.update(driver_id, {"current_warehouse_id": target_wh})
+                vehicles_db.update(v_id, {"current_warehouse_id": target_wh})
 
         # CREDIT DRIVER WALLET & POINTS
         driver = drivers_db.get_by_id(driver_id)
@@ -742,9 +812,9 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
         # Check if there are more legs or if parent should move to next stage
         p_id = shipment.get("parent_id")
         if p_id:
-            all_ships = shipments_db.get_all()
+            all_ships = shipments_db.get_filtered({"parent_id": p_id})
             parent = shipments_db.get_by_id(p_id)
-            legs = sorted([s for s in all_ships if s.get("parent_id") == p_id], key=lambda x: x.get("leg_order", 0))
+            legs = sorted(all_ships, key=lambda x: x.get("leg_order", 0))
             
             curr_leg_idx = next((i for i, l in enumerate(legs) if l["id"] == shipment_id), -1)
             if curr_leg_idx < len(legs) - 1:
@@ -792,6 +862,15 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
             ShipmentEvent(status="delivered", message="🏁 Delivery completed! Product photo uploaded.", photo_url=image_url).model_dump()
         ]
     })
+
+    # Return to base after final delivery
+    driver = drivers_db.get_by_id(driver_id)
+    if driver:
+        base_wh = driver.get("base_warehouse_id")
+        drivers_db.update(driver_id, {"current_warehouse_id": base_wh})
+        v_id = driver.get("assigned_vehicle_id")
+        if v_id:
+            vehicles_db.update(v_id, {"current_warehouse_id": base_wh})
     
     # Update Driver Wallet & Log Expense
     driver = drivers_db.get_by_id(driver_id)

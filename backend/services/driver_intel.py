@@ -13,11 +13,14 @@ def calculate_fatigue(driver: Dict[str, Any]) -> float:
     if not last_rest:
         return current_fatigue
         
+    from datetime import timezone
     try:
         last_rest_dt = datetime.fromisoformat(last_rest.replace("Z", "+00:00"))
+        if last_rest_dt.tzinfo is None:
+            last_rest_dt = last_rest_dt.replace(tzinfo=timezone.utc)
     except:
         return current_fatigue
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     rest_duration = now - last_rest_dt
     
     # 12-hour full reset rule
@@ -53,10 +56,11 @@ def calculate_driver_performance_score(driver: Dict[str, Any]) -> float:
     """
     Performance Score (driving_score):
     - Starts at 100.
-    - Safety Rating (Experience/Accidents/Challans): 40%
-    - Punctuality: 30%
-    - Customer Rating: 20%
+    - Safety Rating: 35%
+    - Punctuality: 25%
+    - Customer Rating: 15%
     - Volume (Trips): 10%
+    - Consistency (Operational Days): 15%
     """
     safety_rating = calculate_safety_rating(driver)
     safety_component = (safety_rating / 5.0) * 100
@@ -68,8 +72,12 @@ def calculate_driver_performance_score(driver: Dict[str, Any]) -> float:
     
     trips = min(100, driver.get("total_trips", 0))
     
+    # Consistency component (normalized to 100 based on a 30-day target)
+    op_days = driver.get("operational_days", 0)
+    consistency_component = min(100, (op_days / 30.0) * 100)
+    
     # Base weighted score
-    score = (safety_component * 0.4) + (punctuality * 0.3) + (avg_rating * 0.2) + (trips * 0.1)
+    score = (safety_component * 0.35) + (punctuality * 0.25) + (avg_rating * 0.15) + (trips * 0.10) + (consistency_component * 0.15)
     
     # Additional penalty for active challans
     challans = driver.get("challan_count", 0)
@@ -80,13 +88,14 @@ def calculate_driver_performance_score(driver: Dict[str, Any]) -> float:
 def calculate_vehicle_efficiency_score(vehicle: Dict[str, Any]) -> float:
     """
     Vehicle Efficiency Score:
-    - Health Score (Maintenance): 50%
-    - Fuel Efficiency (vs Max for type): 50%
+    - Health Score (Maintenance): 40%
+    - Fuel Efficiency: 40%
+    - Consistency (Operational Days): 20%
     """
     health = float(vehicle.get("vehicle_health_score", 100.0))
     fuel_eff = float(vehicle.get("fuel_efficiency", 15.0))
     
-    # Max expected fuel efficiency by type (rough estimates for normalization)
+    # Max expected fuel efficiency by type
     max_eff_map = {
         "bike": 50, "scooty": 45, 
         "3 wheeled (battery)": 80, "3 wheeled (non EV)": 25,
@@ -97,5 +106,9 @@ def calculate_vehicle_efficiency_score(vehicle: Dict[str, Any]) -> float:
     
     fuel_component = (fuel_eff / max_eff) * 100
     
-    score = (health * 0.5) + (fuel_component * 0.5)
+    # Consistency component (normalized to 100 based on a 30-day target)
+    op_days = vehicle.get("operational_days", 0)
+    consistency_component = min(100, (op_days / 30.0) * 100)
+    
+    score = (health * 0.4) + (fuel_component * 0.4) + (consistency_component * 0.2)
     return round(max(0.0, min(100.0, score)), 2)

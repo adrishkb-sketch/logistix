@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
 from backend.models import Driver, Vehicle, Drone, Warehouse, Shipment, ShipmentEvent, Location
 from backend.database import JSONDatabase
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
 import uuid
@@ -20,6 +20,39 @@ ledger_db = JSONDatabase("ledger")
 reviews_db = JSONDatabase("journey_reviews")
 shipments_db = JSONDatabase("shipments")
 drones_db = JSONDatabase("drones")
+receivers_db = JSONDatabase("receivers")
+
+from backend.models import Receiver, WarehouseLeaveRequest
+
+leave_requests_db = JSONDatabase("warehouse_leave_requests")
+
+@router.get("/receivers")
+async def get_receivers(company_id: str):
+    all_rec = receivers_db.get_all()
+    return [r for r in all_rec if r.get("company_id") == company_id]
+
+@router.post("/receivers/upsert")
+async def upsert_receiver(rec: Receiver):
+    existing = receivers_db.get_all()
+    # Check if this company already has a receiver with this email
+    match = next((r for r in existing if r.get("company_id") == rec.company_id and r.get("email") == rec.email), None)
+    
+    if match:
+        # Update existing
+        receivers_db.update(match["id"], rec.model_dump())
+        return {"message": "Receiver updated", "id": match["id"]}
+    else:
+        # Create new
+        receivers_db.insert(rec.model_dump())
+        return {"message": "Receiver created", "id": rec.id}
+
+@router.delete("/receivers/{id}")
+async def delete_receiver(id: str, company_id: str):
+    rec = receivers_db.get_by_id(id)
+    if not rec or rec.get("company_id") != company_id:
+        raise HTTPException(status_code=404, detail="Receiver not found")
+    receivers_db.delete(id)
+    return {"message": "Receiver deleted"}
 
 
 @router.post("/drivers/bulk-parse")
@@ -378,8 +411,24 @@ def create_driver(driver: Driver):
 @router.get("/drivers")
 def get_drivers(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
-    drivers = drivers_db.get_all()
-    return [d for d in drivers if d and d.get("company_id") == company_id]
+    drivers = drivers_db.get_filtered({"company_id": company_id})
+    
+    # 24-hour Audit Reset Logic
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+    for d in drivers:
+        last_audit = d.get("last_audit_date")
+        if last_audit:
+            try:
+                dt = datetime.fromisoformat(last_audit.replace('Z', '+00:00'))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if (now - dt).total_seconds() > 21600:
+                    d["is_fit"] = True
+                    d["last_audit_date"] = None
+                    drivers_db.update(d["id"], {"is_fit": True, "last_audit_date": None})
+            except: pass
+    return drivers
 
 @router.delete("/drivers/{driver_id}")
 def delete_driver(driver_id: str):
@@ -395,9 +444,24 @@ def create_vehicle(vehicle: Vehicle):
 @router.get("/vehicles")
 def get_vehicles(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
-    vehicles = vehicles_db.get_all()
-    # Safe comparison with string casting
-    return [v for v in vehicles if str(v.get("company_id")) == str(company_id)]
+    vehicles = vehicles_db.get_filtered({"company_id": company_id})
+    
+    # 24-hour Audit Reset Logic
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+    for v in vehicles:
+        last_audit = v.get("last_audit_date")
+        if last_audit:
+            try:
+                dt = datetime.fromisoformat(last_audit.replace('Z', '+00:00'))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                if (now - dt).total_seconds() > 21600:
+                    v["is_operational"] = True
+                    v["last_audit_date"] = None
+                    vehicles_db.update(v["id"], {"is_operational": True, "last_audit_date": None})
+            except: pass
+    return vehicles
 
 @router.delete("/vehicles/{vehicle_id}")
 def delete_vehicle(vehicle_id: str):
@@ -413,8 +477,7 @@ def create_drone(drone: Drone):
 @router.get("/drones")
 def get_drones(company_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
-    drones = drones_db.get_all()
-    return [d for d in drones if d and str(d.get("company_id")) == str(company_id)]
+    return drones_db.get_filtered({"company_id": company_id})
 
 @router.put("/drones/{drone_id}")
 def update_drone(drone_id: str, data: dict):
@@ -528,13 +591,29 @@ async def bulk_confirm_drones(drones: List[Drone]):
 # Warehouses CRUD
 @router.post("/warehouses")
 def create_warehouse(warehouse: Warehouse):
+    if warehouse.manager_email:
+        existing = warehouses_db.get_filtered({"manager_email": warehouse.manager_email})
+        if existing:
+            raise HTTPException(status_code=400, detail="A warehouse manager with this email already exists.")
     return warehouses_db.insert(warehouse.model_dump())
 
 @router.get("/warehouses")
-def get_warehouses(company_id: str, x_logistix_context: Optional[str] = Header(None)):
-    verify_context(company_id, x_logistix_context)
-    warehouses = warehouses_db.get_all()
-    return [w for w in warehouses if w and str(w.get("company_id")) == str(company_id)]
+def get_warehouses(company_id: Optional[str] = None, id: Optional[str] = None, x_logistix_context: Optional[str] = Header(None)):
+    # Fallback to header context if query param is missing
+    target_company = company_id or x_logistix_context
+    if not target_company:
+        raise HTTPException(status_code=400, detail="Missing company context")
+        
+    verify_context(target_company, x_logistix_context)
+    
+    if id:
+        w = warehouses_db.get_by_id(id)
+        if w and w.get("company_id") == target_company:
+            return w
+        # If not found or wrong company, return empty or 404
+        return []
+        
+    return warehouses_db.get_filtered({"company_id": target_company})
 
 @router.delete("/warehouses/{warehouse_id}")
 def delete_warehouse(warehouse_id: str):
@@ -557,39 +636,67 @@ def suggest_warehouse_location(data: dict):
     all_shipments = shipments_db.get_all()
     my_ships = [s for s in all_shipments if s and s.get("company_id") == company_id]
     
-    if not my_ships:
-        # Use a deterministic but variable offset based on coordinates to avoid 2.35km
-        # We use math.sin/cos to create a pseudo-random but stable strategic point
-        offset_lat = 0.01 + abs(math.sin(lat * 10)) * 0.02
-        offset_lng = 0.01 + abs(math.cos(lng * 10)) * 0.02
-        s_lat = lat + offset_lat
-        s_lng = lng + offset_lng
-        reason = "strategy_ai_reason"
-    else:
-        # 2. Find centroid of nearby shipments
-        nearby = [s for s in my_ships if s and abs(s["drop"]["lat"] - lat) < 1.0 and abs(s["drop"]["lng"] - lng) < 1.0]
-        if nearby:
-            s_lat = sum(s["drop"]["lat"] for s in nearby) / len(nearby)
-            s_lng = sum(s["drop"]["lng"] for s in nearby) / len(nearby)
-            reason = "strategy_reason_sector"
-        else:
-            avg_lat = sum(s["drop"]["lat"] for s in my_ships) / len(my_ships)
-            avg_lng = sum(s["drop"]["lng"] for s in my_ships) / len(my_ships)
-            s_lat = (lat + avg_lat) / 2
-            s_lng = (lng + avg_lng) / 2
-            reason = "strategy_reason_bridge"
+    def get_haversine(l1, ln1, l2, ln2):
+        R = 6371
+        dl = math.radians(l2 - l1)
+        dn = math.radians(ln2 - ln1)
+        a = math.sin(dl/2)**2 + math.cos(math.radians(l1)) * math.cos(math.radians(l2)) * math.sin(dn/2)**2
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-    # 3. GET ACTUAL ROAD DISTANCE FROM MAP ENGINE (OSRM)
+    # 2. Localized Strategy Logic
+    nearby = [s for s in my_ships if s and get_haversine(lat, lng, s["drop"]["lat"], s["drop"]["lng"]) < 30.0]
+    
+    if nearby:
+        # Centroid of nearby demand
+        s_lat = sum(s["drop"]["lat"] for s in nearby) / len(nearby)
+        s_lng = sum(s["drop"]["lng"] for s in nearby) / len(nearby)
+        reason = "strategy_reason_sector"
+    else:
+        # Route-Based Strategic Expansion
+        # Find the company's operational "Center of Gravity"
+        my_whs = [w for w in warehouses_db.get_all() if w.get("company_id") == company_id]
+        if my_whs:
+            center_lat = sum(w["lat"] for w in my_whs) / len(my_whs)
+            center_lng = sum(w["lng"] for w in my_whs) / len(my_whs)
+        elif my_ships:
+            center_lat = sum(s["drop"]["lat"] for s in my_ships) / len(my_ships)
+            center_lng = sum(s["drop"]["lng"] for s in my_ships) / len(my_ships)
+        else:
+            # Absolute new player: suggest a local optimization near an intersection
+            center_lat, center_lng = lat + 0.1, lng + 0.1 # Arbitrary target for route probe
+        
+        dist_to_center = get_haversine(lat, lng, center_lat, center_lng)
+        
+        # We aim for a "Leg" hub: ~5-15% of the way to the center, or at least 3km
+        pull_factor = min(0.15, 10.0 / dist_to_center) if dist_to_center > 0 else 0.05
+        # Add some "jitter" based on coordinates to make it dynamic/unique per location
+        pull_factor *= (0.8 + (abs(math.sin(lat * 100)) * 0.4)) 
+        
+        target_lat = lat + (center_lat - lat) * pull_factor
+        target_lng = lng + (center_lng - lng) * pull_factor
+        
+        # Snap to nearest road
+        s_lat, s_lng = target_lat, target_lng
+        try:
+            nearest_url = f"http://router.project-osrm.org/nearest/v1/driving/{target_lng},{target_lat}?number=1"
+            n_resp = requests.get(nearest_url, timeout=2).json()
+            if n_resp.get("code") == "Ok":
+                s_lng, s_lat = n_resp["waypoints"][0]["location"]
+        except: pass
+        
+        reason = "strategy_reason_bridge" if my_ships or my_whs else "strategy_ai_reason"
+
+    # 4. FINAL DISTANCE CALCULATION
     dist_km = 0
     try:
-        # OSRM expects [lng,lat;lng,lat]
         osrm_url = f"http://router.project-osrm.org/route/v1/driving/{lng},{lat};{s_lng},{s_lat}?overview=false"
         resp = requests.get(osrm_url, timeout=3).json()
         if resp.get("code") == "Ok":
             dist_km = resp["routes"][0]["distance"] / 1000.0
+        else:
+            dist_km = get_haversine(lat, lng, s_lat, s_lng)
     except:
-        # Fallback to Haversine if API is down
-        dist_km = math.sqrt((s_lat - lat)**2 + (s_lng - lng)**2) * 111
+        dist_km = get_haversine(lat, lng, s_lat, s_lng)
 
     return {
         "suggested_lat": s_lat,
@@ -612,9 +719,9 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     v_db = JSONDatabase("vehicles")
     d_db = JSONDatabase("drivers")
     
-    shipments = [s for s in s_db.get_all() if s and s.get("company_id") == company_id]
-    vehicles = [v for v in v_db.get_all() if v and v.get("company_id") == company_id]
-    drivers = [d for d in d_db.get_all() if d and d.get("company_id") == company_id]
+    shipments = s_db.get_filtered({"company_id": company_id})
+    vehicles = v_db.get_filtered({"company_id": company_id})
+    drivers = d_db.get_filtered({"company_id": company_id})
     
     # 1. Timely Delivery %
     delivered = [s for s in shipments if s.get("status") == "delivered"]
@@ -736,6 +843,13 @@ def update_warehouse(wh_id: str, data: dict):
     wh = warehouses_db.get_by_id(wh_id)
     if not wh:
         raise HTTPException(status_code=404, detail="Warehouse not found")
+    
+    new_email = data.get("manager_email")
+    if new_email and new_email != wh.get("manager_email"):
+        existing = warehouses_db.get_filtered({"manager_email": new_email})
+        if existing:
+            raise HTTPException(status_code=400, detail="This email is already assigned to another warehouse manager.")
+            
     warehouses_db.update(wh_id, data)
     return {"message": "Warehouse updated successfully"}
 
@@ -848,11 +962,14 @@ def unverify_driver(driver_id: str, company_id: str):
     return {"message": "Driver unverified successfully"}
 
 @router.get("/leaderboard")
-def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "overall"):
+def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "overall", warehouse_id: Optional[str] = None):
     from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue, calculate_vehicle_efficiency_score
     
     if category == "driver":
         drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
+        if warehouse_id:
+            drivers = [d for d in drivers if d.get("base_warehouse_id") == warehouse_id]
+            
         processed = []
         for d in drivers:
             d["fatigue_score"] = calculate_fatigue(d)
@@ -867,13 +984,17 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
             "overall": "overall_score",
             "safety_index": "safety_index",
             "punctuality_rate": "punctuality_rate",
-            "rating": "safety_rating",
-            "deliveries": "deliveries_completed"
+            "rating": "rating",
+            "deliveries": "total_deliveries",
+            "operational_days": "operational_days"
         }
         target_key = key_map.get(sort_by, "overall_score")
         return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
     else:
         vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id]
+        if warehouse_id:
+            vehicles = [v for v in vehicles if v.get("base_warehouse_id") == warehouse_id]
+            
         processed = []
         for v in vehicles:
             v["efficiency_score"] = calculate_vehicle_efficiency_score(v)
@@ -883,8 +1004,9 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
             "overall": "efficiency_score",
             "vehicle_health_score": "vehicle_health_score",
             "fuel_efficiency": "fuel_efficiency",
-            "distance": "kilometers_covered",
-            "deliveries": "deliveries_completed"
+            "distance": "total_distance_km",
+            "deliveries": "total_deliveries", # if we track deliveries for vehicles
+            "operational_days": "operational_days"
         }
         target_key = key_map.get(sort_by, "efficiency_score")
         return sorted(processed, key=lambda x: x.get(target_key, 0), reverse=True)
@@ -1145,6 +1267,9 @@ def rescue_shipment(shipment_id: str, driver_id: str, vehicle_id: str, x_logisti
     drivers_db.update(driver_id, {"assigned_vehicle_id": vehicle_id})
     vehicles_db.update(vehicle_id, {"assigned_driver_id": driver_id, "status": "in_transit"})
     
+    from backend.routers.shipment import increment_operational_days
+    increment_operational_days(driver_id, vehicle_id)
+    
     # Update shipment
     log = ShipmentEvent(
         status="in_transit",
@@ -1286,6 +1411,21 @@ def finalize_shipment_completion(shipment_id: str, x_logistix_context: Optional[
             "message": "📦 Lifecycle complete. Shipment archived and cleared for rating.",
             "timestamp": datetime.utcnow().isoformat()
         }]
+    })
+    
+    # Blockchain record for Finalized Delivery
+    import hashlib
+    tx_hash_data = f"DELIVERY-{shipment_id}-{datetime.utcnow().isoformat()}"
+    tx_hash = hashlib.sha256(tx_hash_data.encode()).hexdigest()
+    
+    ledger_db.insert({
+        "id": f"TX-{uuid.uuid4().hex[:8]}",
+        "company_id": shipment.get("company_id"),
+        "type": "BLOCKCHAIN_PROOF",
+        "desc": f"Immutable Proof of Delivery for {shipment_id[:8]}",
+        "hash": tx_hash,
+        "amount": 0,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
     })
 
     # If it's multi-leg, finalize all legs too
@@ -1629,4 +1769,40 @@ def approve_merge(data: dict, x_logistix_context: Optional[str] = Header(None)):
                 "logs": logs
             })
             
-    return {"message": f"Successfully merged {len(shipment_ids)} shipments onto {best_vehicle['number_plate']} ({best_vehicle['type']})"}
+    # Blockchain record for Merge
+    import hashlib
+    tx_hash_data = f"MERGE-{'-'.join(shipment_ids)}-{best_vehicle['id']}-{datetime.utcnow().isoformat()}"
+    tx_hash = hashlib.sha256(tx_hash_data.encode()).hexdigest()
+    
+    ledger_db.insert({
+        "id": f"TX-{uuid.uuid4().hex[:8]}",
+        "company_id": company_id,
+        "type": "BLOCKCHAIN_MERGE",
+        "desc": f"Immutable Proof of Route Merge for {len(shipment_ids)} shipments onto {best_vehicle['number_plate']}",
+        "hash": tx_hash,
+        "amount": 0,
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    })
+            
+    return {"message": f"Successfully merged {len(shipment_ids)} shipments onto {best_vehicle['number_plate']} ({best_vehicle['type']}). Blockchain record created.", "tx_hash": tx_hash}
+
+# Warehouse Leave Requests
+@router.post("/warehouses/leave-request")
+def request_warehouse_leave(req: WarehouseLeaveRequest):
+    return leave_requests_db.insert(req.model_dump())
+
+@router.get("/warehouses/leave-requests")
+def get_warehouse_leave_requests(company_id: str, warehouse_id: Optional[str] = None):
+    all_reqs = leave_requests_db.get_filtered({"company_id": company_id})
+    if warehouse_id:
+        return [r for r in all_reqs if r.get("warehouse_id") == warehouse_id]
+    return all_reqs
+
+@router.put("/warehouses/leave-requests/{req_id}/status")
+def update_leave_status(req_id: str, status: str):
+    req = leave_requests_db.get_by_id(req_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+    req["status"] = status
+    leave_requests_db.update(req_id, {"status": status})
+    return {"message": f"Request {status}"}

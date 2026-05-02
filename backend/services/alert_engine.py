@@ -116,16 +116,49 @@ def check_weather_alerts(shipment: dict, lat: float, lng: float):
             existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "weather" and a.get("status") == "active"]
             if not existing:
                 cond = cell.get('condition') or cell.get('type') or 'Weather Anomaly'
+                cell_type = str(cell.get('type', '')).lower()
+                
+                ai_action = "Reroute"
+                if cell_type in ['cyclone', 'flood']:
+                    ai_action = "Emergency Halt & Seek High Ground"
+                elif cell_type == 'heatwave':
+                    ai_action = "Mandatory Stop (Vulnerable Vehicles) / Reroute"
+                elif cell_type == 'earthquake':
+                    ai_action = "Emergency Halt & Open Area Check"
+                elif cell_type == 'riot':
+                    ai_action = "Immediate Diversion (Avoid Zone)"
+                elif cell_type == 'hail':
+                    ai_action = "Shelter Search / Underpass Parking"
+                elif cell_type == 'blockade':
+                    ai_action = "Recalculate Route (OSRM Bypass)"
+                
                 new_alert = Alert(
                     company_id=shipment.get("company_id"),
                     type="weather",
                     description=f"Vehicle entered {cond} zone at {lat}, {lng}",
                     severity=cell.get("severity", "medium"),
-                    suggestion=f"Heavy {cond} detected. Suggest slowing down or holding position for 30m.",
+                    suggestion=f"AI ACTION REQUIRED: {ai_action}. Please instruct driver accordingly.",
                     shipment_id=shipment["id"],
                     driver_id=shipment.get("assigned_driver_id")
                 )
                 alerts_db.insert(new_alert.model_dump())
+                
+                # Also log to shipment history so it shows up in Tracking
+                from backend.models import ShipmentEvent
+                icon = "🌪️"
+                if cell_type == 'heatwave': icon = "🌡️"
+                elif cell_type == 'earthquake': icon = "🫨"
+                elif cell_type == 'riot': icon = "🔥"
+                elif cell_type == 'hail': icon = "🌨️"
+                elif cell_type == 'flood': icon = "🌊"
+                
+                log_event = ShipmentEvent(
+                    status="weather_delay", 
+                    message=f"{icon} ALERT: Impacted by {cond}. AI Action: {ai_action}.", 
+                    reason="Real-time Weather Intelligence"
+                )
+                shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
+                shipments_db.update(shipment["id"], shipment)
 
 def check_street_intel_alerts(shipment: dict):
     """

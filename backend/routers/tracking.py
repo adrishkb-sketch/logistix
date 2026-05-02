@@ -9,8 +9,10 @@ alerts_db = JSONDatabase("alerts")
 def track_shipment(shipment_id: str):
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
-        all_ships = shipments_db.get_all()
-        shipment = next((s for s in all_ships if s and s.get("id", "").startswith(shipment_id)), None)
+        # Avoid full scan if possible, but keep the prefix search if needed.
+        # However, for a single shipment, we should really just use get_by_id.
+        # If we MUST do a prefix search, let's at least not do it on every track call.
+        return shipment
         
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
@@ -57,10 +59,18 @@ def track_shipment(shipment_id: str):
     all_alerts = alerts_db.get_all()
     active_alerts = [a for a in all_alerts if a and a.get("shipment_id") == shipment_id and a.get("status") == "active"]
     
+    # Fetch legs if it's a split shipment
+    legs = []
+    if shipment.get("status") == "split" or shipment.get("route_type") == "multi-leg":
+        all_ships = shipments_db.get_all()
+        legs = [s for s in all_ships if s and s.get("parent_id") == shipment_id]
+        legs.sort(key=lambda x: x.get("leg_order", 0))
+    
     return {
         "shipment": shipment,
         "alerts": active_alerts,
-        "dynamic_eta": dynamic_eta
+        "dynamic_eta": dynamic_eta,
+        "legs": legs
     }
 
 @router.get("/fleet/weather")
@@ -73,8 +83,8 @@ def get_fleet_weather(company_id: str):
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
     
-    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
-    shipments = [s for s in shipments_db.get_all() if s and s.get("company_id") == company_id]
+    drivers = drivers_db.get_filtered({"company_id": company_id})
+    shipments = shipments_db.get_filtered({"company_id": company_id, "status": "in_transit"})
     
     fleet = []
     for d in drivers:
@@ -93,7 +103,7 @@ def get_fleet_weather(company_id: str):
                 })
     
     weather_db = JSONDatabase("weather_cells")
-    cells = weather_db.get_all()
+    cells = weather_db.get_filtered({"company_id": company_id})
     # For local dev, filter weather cells by company_id if we want multi-tenancy for simulations too
     cells = [c for c in cells if c and (c.get("company_id") == company_id or c.get("company_id") is None)]
 
@@ -118,9 +128,8 @@ def get_fleet_weather(company_id: str):
 @router.get("/messages/{user_id}")
 def get_messages(user_id: str, company_id: str):
     messages_db = JSONDatabase("messages")
-    all_msgs = messages_db.get_all()
-    # Filter by company_id AND then sender/receiver
-    user_msgs = [m for m in all_msgs if m and m.get("company_id") == company_id and (m.get("sender_id") == user_id or m.get("receiver_id") == user_id)]
+    company_msgs = messages_db.get_filtered({"company_id": company_id})
+    user_msgs = [m for m in company_msgs if m and (m.get("sender_id") == user_id or m.get("receiver_id") == user_id)]
     return sorted(user_msgs, key=lambda x: x["created_at"])
 
 @router.post("/messages")
@@ -133,7 +142,7 @@ def send_message(msg: dict):
 @router.get("/alerts/active")
 def get_active_alerts(company_id: str):
     alerts_db = JSONDatabase("alerts")
-    return [a for a in alerts_db.get_all() if a and a.get("company_id") == company_id and a.get("status") == "active"]
+    return alerts_db.get_filtered({"company_id": company_id, "status": "active"})
 
 @router.post("/broadcast")
 def broadcast_message(data: dict):

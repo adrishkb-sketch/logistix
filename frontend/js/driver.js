@@ -75,26 +75,7 @@ function attachSimulationDrag(m) {
     });
 }
 
-async function checkSimulationStatus() {
-    try {
-        const res = await apiCall('/simulation/status');
-        const prev = isSimulationMode;
-        isSimulationMode = res.active;
-        
-        // If simulation state changed, update marker draggability
-        if (prev !== isSimulationMode && marker) {
-            if (isSimulationMode) {
-                marker.dragging.enable();
-                attachSimulationDrag(marker);
-            } else {
-                marker.dragging.disable();
-                marker.off('dragend');
-            }
-        }
-    } catch(e) {}
-}
-setInterval(checkSimulationStatus, 10000);
-checkSimulationStatus();
+// Duplicate checkSimulationStatus removed
 
 let map;
 let marker;
@@ -149,9 +130,21 @@ function getVehicleIcon(bearing = 0) {
 async function checkSimulationStatus() {
     try {
         const status = await apiCall('/simulation/mode/status');
+        const prev = isSimulationMode;
         isSimulationMode = status.active;
         const ctrl = document.getElementById('simulation-ctrl');
         if (ctrl) ctrl.style.display = isSimulationMode ? 'block' : 'none';
+        
+        // If simulation state changed, update marker draggability
+        if (prev !== isSimulationMode && marker) {
+            if (isSimulationMode) {
+                marker.dragging.enable();
+                attachSimulationDrag(marker);
+            } else {
+                marker.dragging.disable();
+                marker.off('dragend');
+            }
+        }
         
         if (isSimulationMode) {
             // Check if this driver is halted
@@ -447,6 +440,33 @@ async function loadMissions(autoStartNext = false) {
                 vNoVehicleBox.style.display = 'block';
                 vUploadBox.style.display = 'none';
                 vPendingBox.style.display = 'none';
+            }
+            return;
+        }
+
+        // Safety & Fitness Block
+        const v_id = me.assigned_vehicle_id;
+        const vehicles = await apiCall(`/manager/vehicles?company_id=${companyId}`);
+        const myVehicle = v_id ? vehicles.find(v => v.id === v_id) : null;
+
+        if (me.is_fit === false || (myVehicle && myVehicle.is_operational === false)) {
+            if (mainContent) mainContent.style.display = 'none';
+            if (vScreen) {
+                vScreen.style.display = 'block';
+                vUploadBox.style.display = 'none';
+                vPendingBox.style.display = 'none';
+                vNoVehicleBox.style.display = 'none';
+                
+                let blockMsg = "";
+                if (me.is_fit === false) blockMsg += "🚨 YOU ARE MARKED AS UNFIT. PLEASE TAKE REST. ";
+                if (myVehicle && myVehicle.is_operational === false) blockMsg += "🛠️ VEHICLE BREAKDOWN REPORTED. MISSION ABORTED.";
+                
+                vScreenMsg.innerHTML = `<div style="padding:40px; text-align:center;">
+                    <div style="font-size:5rem; margin-bottom:20px;">🛑</div>
+                    <h1 style="color:var(--danger); font-size:2.5rem; margin-bottom:20px;">SAFETY BLOCK</h1>
+                    <p style="font-size:1.4rem; line-height:1.6; font-weight:bold;">${blockMsg}</p>
+                    <p style="margin-top:20px; color:var(--text-muted);">Please contact your Hub Manager for clearance once you or your vehicle are ready.</p>
+                </div>`;
             }
             return;
         }
@@ -1178,13 +1198,16 @@ async function loadProfileData() {
     document.getElementById('p-experience').innerText = `${diffDays} ${getTranslation('days_label')}`;
     
     // Health Card Population
-    if (p.health_metrics) {
+    const hStatus = document.getElementById('h-status');
+    if (p.is_fit === false) {
+        hStatus.innerText = getTranslation('status_unfit') || "UNFIT (AUDIT)";
+        hStatus.style.background = "var(--danger)";
+    } else if (p.health_metrics) {
         document.getElementById('h-rate').innerText = `${p.health_metrics.heart_rate} BPM`;
         document.getElementById('h-bp').innerText = p.health_metrics.blood_pressure;
         document.getElementById('h-o2').innerText = `${p.health_metrics.oxygen}%`;
         document.getElementById('h-stress').innerText = p.health_metrics.stress_index;
         
-        const hStatus = document.getElementById('h-status');
         if (p.health_metrics.stress_index > 80 || p.health_metrics.heart_rate > 120) {
             hStatus.innerText = getTranslation('rest_required');
             hStatus.style.background = "var(--danger)";
@@ -1852,5 +1875,90 @@ async function triggerFundRequest(shipmentId, type) {
         if (btn) {
             btn.disabled = false;
         }
+    }
+}
+
+// Duty & Watch Logic
+let watchSyncActive = false;
+let watchSyncInterval = null;
+
+async function toggleDuty() {
+    const btn = document.getElementById('duty-toggle-btn');
+    const isOnDuty = btn.innerText.includes('ON DUTY');
+    const newStatus = !isOnDuty;
+
+    try {
+        const res = await apiCall(`/driver/${dId}/toggle-duty`, 'POST', { is_on_duty: newStatus });
+        btn.innerText = newStatus ? '🟢 ON DUTY' : '🔴 NOT WORKING';
+        btn.style.background = newStatus ? 'var(--success)' : 'var(--danger)';
+        showNotification(res.message, "success");
+    } catch(e) {
+        showNotification("Failed to update status", "error");
+    }
+}
+
+function toggleWatchSync() {
+    const btn = document.getElementById('watch-sync-btn');
+    watchSyncActive = !watchSyncActive;
+
+    if (watchSyncActive) {
+        btn.innerText = '⌚ SYNCING...';
+        btn.style.borderColor = 'var(--success)';
+        btn.style.color = 'var(--success)';
+        showNotification("Smartwatch Sync Enabled", "success");
+        
+        watchSyncInterval = setInterval(simulateWatchData, 5000);
+    } else {
+        btn.innerText = '⌚ SYNC WATCH';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--text)';
+        clearInterval(watchSyncInterval);
+        showNotification("Smartwatch Sync Disabled", "warning");
+    }
+}
+
+async function simulateWatchData() {
+    // Simulate heart rate and oxygen
+    const hr = Math.floor(Math.random() * (130 - 65 + 1)) + 65; // 65-130
+    const o2 = Math.floor(Math.random() * (100 - 88 + 1)) + 88; // 88-100
+    const bp = `${110 + Math.floor(Math.random()*20)}/${70 + Math.floor(Math.random()*15)}`;
+    
+    // Update UI
+    document.getElementById('h-rate').innerText = hr + ' BPM';
+    document.getElementById('h-o2').innerText = o2 + '%';
+    document.getElementById('h-bp').innerText = bp;
+    document.getElementById('h-sync').innerText = 'Just now (Watch)';
+
+    // Abnormal Check
+    if (hr > 125 || o2 < 92) {
+        triggerHealthEmergency(hr, o2);
+    } else {
+        // Normal update to backend
+        apiCall(`/driver/${dId}/update-vitals`, 'POST', {
+            heart_rate: hr,
+            blood_pressure: bp,
+            oxygen_level: o2,
+            stress_index: Math.floor(Math.random() * 40)
+        }).catch(() => {});
+    }
+}
+
+async function triggerHealthEmergency(hr, o2) {
+    if (window.emergencyInProgress) return;
+    window.emergencyInProgress = true;
+    
+    clearInterval(watchSyncInterval);
+    alert(`🚨 HEALTH ALERT: Abnormal vitals detected (HR: ${hr}, SpO2: ${o2}%). Initiating Emergency Docking.`);
+    
+    try {
+        const loc = marker ? marker.getLatLng() : {lat: 28.6139, lng: 77.2090};
+        const res = await apiCall(`/driver/${dId}/health-emergency`, 'POST', { lat: loc.lat, lng: loc.lng });
+        
+        alert(`🚑 ROUTE UPDATED: Nearest warehouse found - ${res.warehouse_name}. Please proceed there immediately and dock the vehicle.`);
+        
+        // Force UI update
+        location.reload();
+    } catch(e) {
+        showNotification("Emergency signal failed. Contact manager immediately!", "error");
     }
 }

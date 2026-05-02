@@ -146,6 +146,15 @@
 
         <!-- Gated Main Content (Visible if verified) -->
         <div id="main-content" style="display:none;">
+            <!-- Duty Toggle & Smartwatch -->
+            <div style="display:flex; gap:12px; margin-bottom:20px; padding: 0 5px;">
+                <button id="duty-toggle-btn" class="btn-primary" style="flex:1; background:var(--success); font-weight:800; border-radius:14px; box-shadow:0 8px 20px rgba(16,185,129,0.2);" onclick="toggleDuty()">
+                    🟢 ON DUTY
+                </button>
+                <button id="watch-sync-btn" class="btn-primary" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--accent); font-weight:800; border-radius:14px;" onclick="toggleWatchSync()">
+                    ⌚ SYNC WATCH
+                </button>
+            </div>
             <div class="tabs" data-layout-container="driver-tabs">
                 <button class="tab-btn active" id="btn-tab-dash" onclick="switchDriverTab('dash')" data-i18n="tab_tasks" data-layout-id="tab-tasks">Tasks</button>
                 <button class="tab-btn" id="btn-tab-active" onclick="switchDriverTab('active')" data-i18n="tab_live_route" data-layout-id="tab-live">Live Route</button>
@@ -400,7 +409,6 @@
                                     <div style="font-size:1.2rem; font-weight:bold;" id="h-stress">--</div>
                                 </div>
                             </div>
-                            <button class="btn-primary" style="margin-top:15px; width:100%; font-size:0.8rem; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);" onclick="openHealthModal()" data-i18n="btn_update_vitals">Update Vitals</button>
                             <p style="margin-top:10px; font-size:0.7rem; color:var(--text-muted); text-align:center;"><span data-i18n="last_sync">Last Sync</span>: <span id="h-sync">Just now</span> <span data-i18n="via_wearable">via Wearable Systems</span></p>
                         </div>
                     </div>

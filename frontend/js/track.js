@@ -136,7 +136,11 @@ async function loadCustomerOrders() {
 
 async function viewOrder(id) {
     try {
-        const s = await apiCall(`/shipments/${id}`);
+        const trackingData = await apiCall(`/tracking/${id}`);
+        const s = trackingData.shipment;
+        const dynamicEta = trackingData.dynamic_eta;
+        const activeAlerts = trackingData.alerts;
+        
         currentShipmentId = s.id;
         
         document.getElementById('det-id').innerText = `${getTranslation('order_hash')} #${s.id.substring(0,8)}`;
@@ -146,10 +150,103 @@ async function viewOrder(id) {
         statusEl.innerText = s.status.toUpperCase();
         statusEl.className = `status-pill status-${s.status}`;
         
-        const eta = new Date(s.expected_delivery);
-        document.getElementById('det-eta').innerText = s.status === 'delivered' ? getTranslation('delivered_label') : eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        document.getElementById('det-loc').innerText = s.current_location ? `${s.current_location.lat.toFixed(2)}, ${s.current_location.lng.toFixed(2)}` : getTranslation('pending_label');
+        // Use dynamic ETA if available
+        let etaText = getTranslation('pending_label');
+        if (s.status === 'delivered') {
+            etaText = getTranslation('delivered_label');
+        } else if (dynamicEta && dynamicEta.estimated_arrival) {
+            const eta = new Date(dynamicEta.estimated_arrival);
+            etaText = eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        } else if (s.expected_delivery) {
+            const eta = new Date(s.expected_delivery);
+            etaText = eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        }
+        document.getElementById('det-eta').innerText = etaText;
+        
+        document.getElementById('det-loc').innerText = s.current_location ? `${s.current_location.lat.toFixed(4)}, ${s.current_location.lng.toFixed(4)}` : getTranslation('pending_label');
         document.getElementById('det-vehicle').innerText = s.assigned_vehicle_id ? getTranslation('vehicle_linked') : getTranslation('awaiting_fleet');
+        
+        // Render Dynamic ETA Factors if available
+        const infoGrid = document.getElementById('track-info-grid');
+        if (dynamicEta && document.getElementById('dynamic-eta-factors') === null) {
+            const factorsHtml = `
+                <div id="dynamic-eta-factors" style="grid-column: 1 / -1; background: rgba(79, 140, 255, 0.05); padding: 15px; border-radius: 12px; border: 1px solid var(--primary); margin-top: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: var(--primary);">Live Transit Insights 📡</h4>
+                    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 0.85rem;">
+                        <div><strong>Weather:</strong> ${dynamicEta.weather_icon} ${dynamicEta.weather}</div>
+                        <div><strong>Delay factors:</strong> +${dynamicEta.delay_mins} mins</div>
+                    </div>
+                </div>
+            `;
+            infoGrid.insertAdjacentHTML('beforeend', factorsHtml);
+        } else if (dynamicEta && document.getElementById('dynamic-eta-factors')) {
+             document.getElementById('dynamic-eta-factors').innerHTML = `
+                    <h4 style="margin: 0 0 10px 0; color: var(--primary);">Live Transit Insights 📡</h4>
+                    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 0.85rem;">
+                        <div><strong>Weather:</strong> ${dynamicEta.weather_icon} ${dynamicEta.weather}</div>
+                        <div><strong>Delay factors:</strong> +${dynamicEta.delay_mins} mins</div>
+                    </div>
+             `;
+        }
+
+        // Render Legs if it's a multi-leg journey
+        const legs = trackingData.legs || [];
+        if (legs.length > 0) {
+            let legsContainer = document.getElementById('track-legs-container');
+            if (!legsContainer) {
+                legsContainer = document.createElement('div');
+                legsContainer.id = 'track-legs-container';
+                legsContainer.style.cssText = 'grid-column: 1 / -1; margin-top: 15px; display: flex; flex-direction: column; gap: 10px;';
+                infoGrid.appendChild(legsContainer);
+            }
+            
+            legsContainer.innerHTML = `
+                <h4 style="margin: 0 0 5px 0; color: var(--primary);">Journey Legs</h4>
+                ${legs.map(leg => {
+                    const legType = leg.leg_type ? leg.leg_type.replace('_', ' ').toUpperCase() : 'JOURNEY';
+                    const icon = leg.leg_type === 'middle_mile' ? '🚛' : (leg.leg_type === 'last_mile' ? '🚁' : '🚲');
+                    const pickup = leg.pickup?.address || leg.pickup?.name || 'Current';
+                    const drop = leg.drop?.address || leg.drop?.name || 'Next';
+                    
+                    let legEta = 'Pending ETA';
+                    if (leg.expected_delivery) {
+                        const ed = new Date(leg.expected_delivery);
+                        legEta = ed.toLocaleDateString() + ' ' + ed.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                    }
+                    
+                    let waitingNote = '';
+                    if (leg.pickup_deadline && leg.leg_type === 'middle_mile') {
+                        const pd = new Date(leg.pickup_deadline);
+                        const now = new Date();
+                        if (pd > now) {
+                            waitingNote = `<span style="color:var(--warning); font-size:0.75rem;"> (Awaiting Consolidation: starts ${pd.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})</span>`;
+                        }
+                    }
+
+                    return \`
+                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                            <span style="font-size:0.8rem; font-weight:800; color:var(--accent);">${icon} \${legType}</span>
+                            <span class="status-pill status-\${leg.status}" style="font-size:0.6rem;">\${leg.status.toUpperCase()}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 5px;">
+                            <strong>Route:</strong> \${pickup} &rarr; \${drop}
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 5px;">
+                            <strong>ETA:</strong> \${legEta} \${waitingNote}
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">
+                            <strong>Allocated Rev:</strong> ₹ \${(leg.finance?.suggested_price || 0).toLocaleString()}
+                        </div>
+                    </div>
+                    \`;
+                }).join('')}
+            `;
+        } else {
+            const existing = document.getElementById('track-legs-container');
+            if (existing) existing.remove();
+        }
+        
         
         // Payment Box
         const payBox = document.getElementById('payment-box');
@@ -232,8 +329,9 @@ async function viewOrder(id) {
         }).join('');
 
         showPanel('detail');
-        initMap(s);
+        initMap(s, dynamicEta);
     } catch (e) {
+        console.error(e);
         alert(getTranslation('failed_load_details'));
     }
 }
@@ -241,7 +339,7 @@ async function viewOrder(id) {
 let trackMap = null;
 let trackMarker = null;
 
-function initMap(shipment) {
+function initMap(shipment, dynamicEta) {
     const loc = shipment.current_location || shipment.pickup;
     if (!trackMap) {
         const mapContainer = document.getElementById('track-map');
@@ -256,7 +354,30 @@ function initMap(shipment) {
         trackMap.setView([loc.lat, loc.lng], 13);
         if (trackMarker) trackMap.removeLayer(trackMarker);
     }
-    trackMarker = L.marker([loc.lat, loc.lng]).addTo(trackMap);
+    
+    // Create a custom icon for the delivery vehicle
+    const vehicleIcon = L.divIcon({
+        html: `<div style="font-size:24px; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.5));">🚚</div>`,
+        className: 'custom-vehicle-icon',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    });
+    
+    trackMarker = L.marker([loc.lat, loc.lng], {icon: vehicleIcon}).addTo(trackMap);
+    
+    // Add destination marker
+    if (shipment.drop) {
+        L.marker([shipment.drop.lat, shipment.drop.lng], {
+            icon: L.divIcon({ html: '🎯', className: 'dest-icon', iconSize: [24,24] })
+        }).addTo(trackMap);
+        
+        // Draw path line
+        L.polyline([
+            [loc.lat, loc.lng],
+            [shipment.drop.lat, shipment.drop.lng]
+        ], {color: 'var(--primary)', weight: 3, dashArray: '5, 10'}).addTo(trackMap);
+    }
+    
     setTimeout(() => trackMap.invalidateSize(), 200);
 }
 

@@ -505,6 +505,11 @@ Logistix brings intelligence to every movement in your supply chain.
 <p data-i18n="platform_manager_desc">Control operations and fleet in real time.</p>
 </div>
 
+<div class="card" onclick="openModal('wh-manager')">
+🏗️ <h3 data-i18n="platform_wh_manager">Warehouse Manager</h3>
+<p data-i18n="platform_wh_manager_desc">Manage inventory and operations for a specific hub.</p>
+</div>
+
 <div class="card" onclick="openModal('driver')">
 🚛 <h3 data-i18n="platform_driver">Driver</h3>
 <p data-i18n="platform_driver_desc">Access tasks and track deliveries.</p>
@@ -550,6 +555,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 <h2 data-i18n="modal_manager_title">🏢 Manager Login</h2>
                 <input id="manager-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required>
                 <input id="manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
+                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
+            </form>
+            `;
+        }
+        else if(type === 'wh-manager'){
+            html += `
+            <form id="wh-manager-login-form">
+                <h2 data-i18n="modal_wh_manager_title">🏗️ Warehouse Manager Login</h2>
+                <input id="wh-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
+                <input id="wh-manager-email" type="email" placeholder="Manager Email" data-i18n-placeholder="placeholder_email" required>
+                <input id="wh-manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
                 <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
             </form>
             `;

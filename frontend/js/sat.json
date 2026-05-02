@@ -645,7 +645,7 @@
     "expense_type": "खर्चाचा प्रकार",
     "amt_requested": "नेह अकाना रकम",
     "est_distance": "अंदाजे सांगी",
-    "action": "Action",
+    "action": "ᱠᱟᱹᱢᱤ",
     "sys_mgmt": "सिस्टम मॅनेजमेंट",
     "sys_mgmt_desc": "डेटाबेस टेबल रीसेट लगित आर अबेन रेनाः कंपनी अकाउंट प्रबंधन लगित नुआ को टूल व्यवहार में।",
     "company_id_label": "अबेन रेनाः कंपनी आईडी",
@@ -828,5 +828,16 @@
     "label_capacity": "Carrying Capacity (kg)",
     "label_radius": "Max Flight Radius (km)",
     "search_drone_placeholder": "Search by license or ID...",
-    "th_license_id": "License / System ID"
+    "th_license_id": "License / System ID",
+    "nav_receivers": "ᱧᱟᱢᱤᱭᱟᱹ 👥",
+    "receivers_title": "ᱧᱟᱢᱤᱭᱟᱹ ᱵᱮᱵᱚᱥᱛᱟ",
+    "receivers_subtitle": "ᱯᱞᱮᱴᱯᱷᱚᱨᱢ ᱨᱮ ᱡᱚᱛᱚ ᱥᱤᱯᱢᱮᱱᱴ ᱧᱟᱢᱤᱭᱟᱹ ᱠᱚ ᱧᱮᱞ ᱟᱨ ᱵᱮᱵᱚᱥᱛᱟ ᱢᱮ ᱾",
+    "receiver_id": "ᱧᱟᱢᱤᱭᱟᱹ ID",
+    "receiver_name": "ᱧᱟᱢᱤᱭᱟᱹ ᱧᱩᱛᱩᱢ",
+    "receiver_email": "ᱤᱢᱮᱞ",
+    "receiver_phone": "ᱯᱷᱚᱱ ᱱᱚᱢᱵᱚᱨ",
+    "label_manager_email": "ᱢᱟᱹᱞᱤᱠ ᱤᱢᱮᱞ",
+    "label_manager_password": "ᱢᱟᱹᱞᱤᱠ ᱫᱟᱱᱟᱝ ᱥᱟᱵᱟᱫᱽ",
+    "th_manager_email": "ᱤᱢᱮᱞ",
+    "th_manager_password": "ᱫᱟᱱᱟᱝ ᱥᱟᱵᱟᱫᱽ"
 }

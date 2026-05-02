@@ -61,9 +61,30 @@ class JSONDatabase:
                 if "Errno 35" in str(e) and attempt < max_retries - 1:
                     time.sleep(0.5 * (attempt + 1))
                     continue
-                print(f"Supabase GET_BY_ID Error on {self.table_name}: {e}")
-                return None
         return None
+
+    def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        self._ensure_client()
+        import time
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                query = supabase.table(self.table_name).select("data")
+                # Using the Postgres JSONB path syntax for Supabase
+                for key, val in filters.items():
+                    query = query.eq(f"data->>{key}", str(val))
+                
+                response = query.execute()
+                if response.data:
+                    return [row["data"] for row in response.data if row.get("data")]
+                return []
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    time.sleep(0.3)
+                    continue
+                print(f"Supabase GET_FILTERED Error on {self.table_name}: {e}")
+                return []
+        return []
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         self._ensure_client()

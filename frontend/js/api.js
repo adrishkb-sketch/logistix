@@ -2,7 +2,7 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
     ? (window.location.port === '8000' ? "/api" : "http://localhost:8000/api")
     : "/api";
 
-async function apiCall(endpoint, method = "GET", body = null) {
+async function apiCall(endpoint, method = "GET", body = null, isSilent = false) {
     // Dynamically retrieve security context (Company ID or Driver ID)
     // Dynamically retrieve security context based on the endpoint type
     let context = "";
@@ -67,7 +67,7 @@ async function apiCall(endpoint, method = "GET", body = null) {
         if (error.message !== "AUTH_REQUIRED") {
             // Provide a cleaner, more diagnostic alert
             const cleanMsg = error.message.length > 100 ? error.message.substring(0, 100) + "..." : error.message;
-            alert(`🚨 API Error [${endpoint}]:\n${cleanMsg}`);
+            if (!isSilent) alert(`🚨 API Error [${endpoint}]:\n${cleanMsg}`);
         }
         throw error;
     }
@@ -358,6 +358,7 @@ if (!document.getElementById('toast-styles')) {
 }
 
 window.showToast = showToast;
+window.showNotification = showToast;
 
 /**
  * Global PIN Box Logic

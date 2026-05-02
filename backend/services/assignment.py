@@ -6,291 +6,172 @@ drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")
 
 def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    # Advanced AI Logic:
-    # 1. Find all available drivers who are assigned to a vehicle
-    # 2. Check current load of vehicle (for multi-shipment)
-    # 3. Apply constraints: short legs (<30km) -> prefer bike/van. Long legs (>50km) -> prefer truck.
-    
+    """
+    World's Strongest Vehicle Assignment Engine.
+    Rules:
+    1. Weight limit: No shipment above 100kg.
+    2. Leg-based vehicle restrictions:
+       - First/Last mile & Direct: EV-Cargo, Bike/Scooty, Delivery Van.
+       - Last mile: Try Drone FIRST.
+       - Middle mile: Large/Small Trucks only.
+    3. Storage rules: Trucks can stay at other warehouses; others return to base.
+    4. Back-haul Preference: Prefer trucks returning to their base warehouse.
+    5. Weather safety: Avoid bikes/scootys in bad weather.
+    6. Rating Priority: Highest driver performance first.
+    7. Capacity Check: Respect vehicle carrying capacity.
+    """
     from backend.services.route_engine import haversine, predict_weather_impact
-    # Ensure coordinates exist
-    p_lat = shipment.get("pickup", {}).get("lat")
-    p_lng = shipment.get("pickup", {}).get("lng")
-    d_lat = shipment.get("drop", {}).get("lat")
-    d_lng = shipment.get("drop", {}).get("lng")
-    
-    if p_lat is None or p_lng is None or d_lat is None or d_lng is None:
-        return None
-        
-    dist = haversine(p_lat, p_lng, d_lat, d_lng)
-    
-    # Predict weather for the route (pickup point)
-    weather = predict_weather_impact(p_lat, p_lng)
-    
-    company_id = shipment.get("company_id")
-    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
-    vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id]
-    warehouses_db = JSONDatabase("warehouses")
-    warehouses = [w for w in warehouses_db.get_all() if w and w.get("company_id") == company_id]
-    
-    # We need to calculate current load for multi-shipment logic
-    shipments_db = JSONDatabase("shipments")
-    all_shipments = shipments_db.get_all()
-    
-    available_pairs = []
-    
     from backend.services.driver_intel import calculate_driver_performance_score, calculate_fatigue
     from backend.services.finance_engine import estimate_delivery_cost
-    
-    # 1. Check for Heatwave in pickup zone
-    weather_cells_db = JSONDatabase("weather_cells")
-    cells = weather_cells_db.get_all()
-    is_heatwave = False
-    for cell in cells:
-        if not cell: continue
-        cond = (cell.get("condition") or cell.get("type") or "").lower()
-        if "heat" in cond or "heatwave" in cond:
-            if haversine(p_lat, p_lng, cell.get("lat", 0), cell.get("lng", 0)) <= cell.get("radius", 50):
-                is_heatwave = True
-                break
+    from backend.database import JSONDatabase
+    import uuid
 
-    # Identify Target Hub and Leg Type
+    # 1. Weight Guard
+    if shipment.get("weight", 0) > 100:
+        return None
+
+    # Identify Legs
     p_wh_id = shipment.get("pickup_warehouse_id")
     d_wh_id = shipment.get("drop_warehouse_id")
     leg_type = shipment.get("leg_type") # first_mile, middle_mile, last_mile
-    
+
     is_first_mile = leg_type == "first_mile" or (d_wh_id and not p_wh_id)
     is_last_mile = leg_type == "last_mile" or (p_wh_id and not d_wh_id)
     is_middle_mile = leg_type == "middle_mile" or (p_wh_id and d_wh_id)
+    is_direct = not p_wh_id and not d_wh_id
 
-    # PRIORITY MAPPING
-    FM_LM_PRIORITY = {
-        "Bike/Scooty": 1000,
-        "Bike": 1000,
-        "Scooty": 1000,
-        "EV-Cargo": 800,
-        "Delivery Van": 600,
-        "Small Truck": 400,
-        "Truck (Heavy)": 200
-    }
+    # 2. Last Leg Drone Check
+    if is_last_mile or is_direct:
+        from backend.services.route_engine import check_drone_viability
+        p_lat, p_lng = shipment["pickup"]["lat"], shipment["pickup"]["lng"]
+        d_lat, d_lng = shipment["drop"]["lat"], shipment["drop"]["lng"]
+        
+        # If it's a last mile from a warehouse, the warehouse must have drones
+        source_wh_id = p_wh_id if is_last_mile else None
+        warehouses_db = JSONDatabase("warehouses")
+        
+        if source_wh_id:
+            wh = warehouses_db.get_by_id(source_wh_id)
+            if wh and wh.get("drone_count", 0) > 0:
+                drone_intel = check_drone_viability(p_lat, p_lng, d_lat, d_lng, shipment.get("weight", 0))
+                if drone_intel.get("viable"):
+                    # Consume drone and assign
+                    warehouses_db.update(source_wh_id, {"drone_count": wh["drone_count"] - 1})
+                    return {
+                        "assigned_driver_id": "DRONE-SYSTEM",
+                        "assigned_vehicle_id": f"DRONE-{source_wh_id[:4]}-{uuid.uuid4().hex[:4]}",
+                        "status": "in_transit",
+                        "stage": "Drone Air Delivery",
+                        "route_type": "drone-leg",
+                        "finance": estimate_delivery_cost(shipment, "drone")
+                    }
 
-    MM_PRIORITY = {
-        "Truck (Heavy)": 1000,
-        "Small Truck": 800,
-        "Delivery Van": 600,
-        "EV-Cargo": 400,
-        "Bike/Scooty": 200,
-        "Bike": 200,
-        "Scooty": 200
-    }
+    # Gather Data
+    company_id = shipment.get("company_id")
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    shipments_db = JSONDatabase("shipments")
+    
+    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
+    vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id]
+    all_shipments = shipments_db.get_all()
+    
+    # Weather Check for bikes
+    weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
+    bad_weather = weather.get("condition") in ["Storm", "Rain"]
 
-    # DRONE PRIORITY: Last Mile (Highest Priority)
-    if is_last_mile:
-        p_wh = next((w for w in warehouses if w["id"] == p_wh_id), None)
-        if p_wh and p_wh.get("drone_count", 0) > 0:
-            from backend.services.route_engine import check_drone_viability
-            drone_intel = check_drone_viability(p_wh["lat"], p_wh["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"], shipment.get("weight", 0))
-            if drone_intel["viable"]:
-                # Check if drone is already in use (mock check: random 20% busy or database check)
-                # In this system, we consume drone count, so it acts as availability
-                
-                # Automated Drone Assignment
-                from backend.services.finance_engine import estimate_delivery_cost
-                finance_data = estimate_delivery_cost(shipment, "drone")
-                
-                # Consume drone
-                p_wh["drone_count"] -= 1
-                warehouses_db.update(p_wh["id"], {"drone_count": p_wh["drone_count"]})
-                
-                return {
-                    "assigned_driver_id": "DRONE-SYSTEM",
-                    "assigned_vehicle_id": f"DRONE-{p_wh['id'][:4]}-{uuid.uuid4().hex[:4]}",
-                    "status": "in_transit",
-                    "stage": "Drone Air Delivery",
-                    "route_type": "drone-leg",
-                    "finance": finance_data
-                }
+    available_pairs = []
 
     for d in drivers:
-        # Recalculate vital stats for real-time accuracy
-        d["fatigue_score"] = calculate_fatigue(d)
-        d["driving_score"] = calculate_driver_performance_score(d)
-        
-        # SOFTEN VERIFICATION: Prefer verified, but accept unverified if no other choice
-        # 1. Driver must be available
-        if d.get("status") != "available":
+        # Eligibility Checks
+        if d.get("status") != "available" or d.get("is_fit") == False:
             continue
-            
-        # 2. Check for Vehicle (Linked or Auto-Linkable)
-        vehicle = None
+        
         v_id = d.get("assigned_vehicle_id")
+        if not v_id: continue
         
-        if v_id:
-            vehicle = next((v for v in vehicles if v.get("id") == v_id), None)
+        vehicle = next((v for v in vehicles if v.get("id") == v_id), None)
+        if not vehicle or vehicle.get("is_operational") == False:
+            continue
         
-        # AUTO-LINK LOGIC: If driver has no vehicle, find one at their base hub
-        if not vehicle and d.get("base_warehouse_id"):
-            base_wh = d.get("base_warehouse_id")
-            # Find an unassigned vehicle of the "right" type for this leg at this hub
-            v_type_pref = "Truck" if is_middle_mile else ("Bike" if dist < 20 else "Van")
-            
-            compatible_v = [
-                v for v in vehicles 
-                if v and v.get("base_warehouse_id") == base_wh 
-                and v.get("status") == "available" 
-                and not v.get("assigned_driver_id")
-            ]
-            
-            if compatible_v:
-                # Prefer the type we want
-                pref_v = next((v for v in compatible_v if v_type_pref in v.get("type", "")), compatible_v[0])
-                vehicle = pref_v
-                # We'll link them in the final assignment step
+        v_type = vehicle.get("type", "")
+        v_base = vehicle.get("base_warehouse_id")
         
-        if vehicle and vehicle.get("status") in ["available", "assigned"]:
-            v_type = vehicle.get("type", "")
-            v_base = vehicle.get("base_warehouse_id")
-            
-            # 3. VERIFICATION WEIGHTING
-            v_status = d.get("verification_status", "unverified")
-            verification_score = 1000 if v_status == "verified" else (500 if v_status == "pending_manual" else 0)
-            
-            # 4. STRICT HUB FILTERING (Relaxed slightly: only for legs, not for direct)
-            if is_first_mile:
-                if v_base and v_base != d_wh_id:
-                    continue # MUST be based at the collection hub for hub-handoff
-            elif is_last_mile:
-                if v_base and v_base != p_wh_id:
-                    continue # MUST be based at the delivery hub for dispatch
-            elif is_middle_mile:
-                if v_base and v_base != p_wh_id and v_base != d_wh_id:
-                    continue # MUST be based at one of the leg's hubs
-            
-            # 5. MIDDLE MILE TRUCK PREFERENCE (Softened to score rather than block)
-            mm_truck_score = 1000 if (is_middle_mile and "Truck" in v_type) else 0
-            
-            # 6. WEATHER/HEATWAVE BLOCK (Strict for safety)
-            if (weather["condition"] in ["Storm", "Rain"] or is_heatwave) and any(x in v_type for x in ["Bike", "Scooty"]):
-                continue 
-            
-            # 7. Check Vehicle Health vs Distance
-            health = vehicle.get("vehicle_health_score", 100)
-            if dist > 50 and health < 40: # Relaxed from 60
-                continue 
-            
-            # 8. Capacity Check
-            curr_v_id = vehicle.get("id")
-            active_for_vehicle = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == curr_v_id and s.get("status") in ["assigned", "in_transit"]]
-            current_weight = sum(s.get("weight", 0) for s in active_for_vehicle)
-            
-            if current_weight + shipment.get("weight", 0) <= vehicle.get("capacity", 0):
-                score_modifier = verification_score + mm_truck_score
-                
-                # GEOSPATIAL PROXIMITY (Rigorously prioritize local fleet)
-                curr_loc = vehicle.get("current_location")
-                if curr_loc:
-                    dist_to_pickup = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), p_lat, p_lng)
-                    if dist_to_pickup < 2: # Within 2km (Already at Hub or very near)
-                        score_modifier += 5000 
-                    elif dist_to_pickup < 15: # Local city area
-                        score_modifier += 2000
-                    elif dist_to_pickup > 100: # Cross-city (e.g. Kolkata to Bhubaneswar)
-                        score_modifier -= 10000 # HEAVY PENALTY
-                    else:
-                        score_modifier -= (dist_to_pickup * 50) # Linear penalty for travel distance
-                else:
-                    # No location data? Assume base warehouse distance
-                    if v_base:
-                        wh = next((w for w in warehouses if w.get("id") == v_base), None)
-                        if wh:
-                            base_dist = haversine(wh["lat"], wh["lng"], p_lat, p_lng)
-                            score_modifier -= (base_dist * 30)
+        # Rule: First/Last/Direct Mile Vehicles
+        L_MILE_TYPES = ["EV-Cargo", "Bike/Scooty", "Delivery Van", "Scooty", "Bike"]
+        # Rule: Middle Mile Vehicles
+        M_MILE_TYPES = ["Large Truck", "Small Truck", "Truck (Heavy)"]
 
-                # BACKHAUL/OUTBOUND BOOSTS
-                if is_middle_mile:
-                    if v_base == d_wh_id: score_modifier += 800 # BACKHAUL
-                    elif v_base == p_wh_id: score_modifier += 500 # OUTBOUND
-                
-                # SOFT BASE LIMITS
-                if v_base:
-                    wh = next((w for w in warehouses if w.get("id") == v_base), None)
-                    if wh:
-                        base_dist = haversine(wh["lat"], wh["lng"], shipment["pickup"]["lat"], shipment["pickup"]["lng"])
-                        # Soft penalty instead of block
-                        if any(x in v_type for x in ["Bike", "Scooty"]) and base_dist > 30: score_modifier -= 500
-                        if "EV" in v_type and base_dist > 60: score_modifier -= 500
-                
-                # Distance Preference
-                if dist < 30 and any(x in v_type for x in ["Bike", "Scooty"]):
-                    score_modifier += 800
-                if dist > 80 and "Truck" in v_type:
-                    score_modifier += 500
-                
-                wait_time_mins = 0
-                # 5. Operational Cost Penalty (Profit Optimization)
-                finance_data = estimate_delivery_cost(shipment, v_type.lower())
-                total_op_cost = finance_data.get("total_cost", 0)
-                score_modifier -= (total_op_cost / 10) # Penalize high cost routes
-                
-                # 6. Segment-Based Priority Boost
-                if is_first_mile or is_last_mile:
-                    score_modifier += FM_LM_PRIORITY.get(v_type, 0)
-                elif is_middle_mile:
-                    score_modifier += MM_PRIORITY.get(v_type, 0)
+        if is_first_mile or is_last_mile or is_direct:
+            if not any(t in v_type for t in L_MILE_TYPES):
+                continue
+            # Rule: Must be at base warehouse (simplified: check v_base)
+            if v_base and is_first_mile and v_base != d_wh_id: continue
+            if v_base and is_last_mile and v_base != p_wh_id: continue
+        
+        if is_middle_mile:
+            if not any(t in v_type for t in M_MILE_TYPES):
+                continue
+            # Middle mile can use trucks stationed at source warehouse even if base is different
+        
+        # Weather Check
+        if bad_weather and any(t in v_type for t in ["Bike", "Scooty"]):
+            continue
 
-                available_pairs.append({
-                    "driver": d, 
-                    "vehicle": vehicle, 
-                    "score_modifier": score_modifier,
-                    "wait_time_mins": wait_time_mins,
-                    "finance_data": finance_data,
-                    "dist_to_pickup": dist_to_pickup if curr_loc else 999
-                })
-                
+        # Capacity Check
+        active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == vehicle["id"] and s.get("status") in ["assigned", "in_transit"]]
+        curr_load = sum(s.get("weight", 0) for s in active_for_v)
+        if curr_load + shipment.get("weight", 0) > vehicle.get("capacity", 0):
+            continue
+
+        # GEOGRAPHIC HARD-FENCING (Preventing Bhubaneswar-to-Kashmir errors)
+        dist_to_pickup = 0
+        if v_base:
+            warehouses_db = JSONDatabase("warehouses")
+            base_wh = warehouses_db.get_by_id(v_base)
+            if base_wh:
+                dist_to_pickup = haversine(base_wh["lat"], base_wh["lng"], p["lat"], p["lng"])
+        else:
+            v_loc = vehicle.get("current_location") or p
+            dist_to_pickup = haversine(v_loc["lat"], v_loc["lng"], p["lat"], p["lng"])
+
+        # Hard Limit: Small vehicles cannot travel across states for a single pickup
+        if (is_direct or is_first_mile or is_last_mile) and any(t in v_type for t in L_MILE_TYPES):
+            if dist_to_pickup > 50: # 50km Hard Fence
+                continue
+
+        # Scoring
+        score = calculate_driver_performance_score(d) + (d.get("safety_rating", 5) * 10)
+        
+        # Proximity Penalty (Aggressive)
+        score -= (dist_to_pickup * 100) # 100 points per KM penalty
+        
+        # Back-haul Preference (Middle Mile)
+        if is_middle_mile and v_base == d_wh_id:
+            score += 10000 # Massive boost for returning home
+
+        available_pairs.append({
+            "driver": d,
+            "vehicle": vehicle,
+            "score": score
+        })
+
     if not available_pairs:
-        return None
-        
-    # Sort pairs by driver performance and score modifier
-    best_pair = sorted(available_pairs, key=lambda p: (
-        -(p["driver"].get("driving_score", 0) + p["score_modifier"] + p["driver"].get("safety_rating", 5) * 5), 
-        p["driver"].get("challan_count", 0),
-        p["driver"].get("fatigue_score", 0)
-    ))[0]
-    
-    # Update expected delivery if there's a wait time
-    from datetime import datetime, timedelta
-    from backend.services.time_utils import snap_eta_to_business_hours
-    
-    # Calculate Dynamic Pickup Deadline
-    v = best_pair["vehicle"]
-    curr_loc = v.get("current_location")
-    pickup_loc = shipment.get("pickup")
-    p_deadline = datetime.utcnow() + timedelta(hours=1)
-    
-    if curr_loc and pickup_loc:
-        dist_to_pickup = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), pickup_loc.get("lat", 0), pickup_loc.get("lng", 0))
-        # Avg speed 30km/h for pickup approach (city/traffic)
-        eta_mins = (dist_to_pickup / 30.0) * 60 + 15
-        p_deadline = datetime.utcnow() + timedelta(minutes=round(eta_mins))
+        # Return a marker so the router knows no vehicles available
+        return {"error": "No suitable vehicles available for this leg configuration."}
 
-    res = {
-        "assigned_driver_id": best_pair["driver"].get("id"),
-        "assigned_vehicle_id": best_pair["vehicle"].get("id"),
+    # Sort by Score
+    available_pairs.sort(key=lambda x: x["score"], reverse=True)
+    best = available_pairs[0]
+
+    return {
+        "assigned_driver_id": best["driver"]["id"],
+        "assigned_vehicle_id": best["vehicle"]["id"],
         "status": "assigned",
         "stage": "Assigned to Driver",
-        "finance": best_pair.get("finance_data"),
-        "pickup_deadline": p_deadline.isoformat() + "Z"
+        "finance": estimate_delivery_cost(shipment, best["vehicle"]["type"].lower()),
+        "pickup_deadline": None # Removing ETA per request
     }
-
-    if best_pair["wait_time_mins"] > 0:
-        current_eta_str = shipment.get("expected_delivery")
-        if current_eta_str:
-            try:
-                curr_eta = datetime.fromisoformat(current_eta_str.replace("Z", ""))
-                new_eta = curr_eta + timedelta(minutes=best_pair["wait_time_mins"])
-                res["expected_delivery"] = snap_eta_to_business_hours(new_eta).isoformat() + "Z"
-            except: pass
-    
-    return res
 
 def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, Any]):
     from backend.database import JSONDatabase

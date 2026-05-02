@@ -70,8 +70,9 @@ document.addEventListener('submit', async (e) => {
     const isManagerForm = target.id === 'manager-login-form';
     const isDriverForm = target.id === 'driver-login-form';
     const isSignupForm = target.id === 'signup-form';
+    const isWhManagerForm = target.id === 'wh-manager-login-form';
 
-    if (!isManagerForm && !isDriverForm && !isSignupForm) return;
+    if (!isManagerForm && !isDriverForm && !isSignupForm && !isWhManagerForm) return;
 
     e.preventDefault();
     console.log("Processing form submission for:", target.id);
@@ -99,6 +100,24 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('manager_name', res.name);
             
             window.location.href = 'pages/manager.html';
+        }
+
+        // Warehouse Manager Login
+        if (target.id === 'wh-manager-login-form') {
+            const company_id = document.getElementById('wh-company-id')?.value;
+            const email = document.getElementById('wh-manager-email')?.value;
+            const password = document.getElementById('wh-manager-password')?.value;
+
+            if (!company_id || !email || !password) throw new Error(getTranslation('auth_error_missing'));
+
+            const res = await apiCall('/auth/warehouse-manager/login', 'POST', { company_id, email, password });
+            
+            localStorage.setItem('warehouse_id', res.warehouse_id);
+            localStorage.setItem('warehouse_name', res.warehouse_name);
+            localStorage.setItem('company_id', res.company_id);
+            localStorage.setItem('manager_name', res.manager_name);
+            
+            window.location.href = 'pages/warehouse_manager.html';
         }
 
         // Driver Login
