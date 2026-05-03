@@ -768,6 +768,7 @@ def auto_assign(shipment_id: str):
         # Scenario 2: Already split or newly split, now assign all legs
         if child_ids and not shipment.get("is_leg"):
             assigned_count = 0
+            leg_errors = []
             for leg_id in child_ids:
                 try:
                     leg = shipments_db.get_by_id(leg_id)
@@ -775,7 +776,7 @@ def auto_assign(shipment_id: str):
                     
                     assigned_data_leg = auto_assign_shipment(leg)
                     if assigned_data_leg and "error" in assigned_data_leg:
-                        print(f"Leg {leg_id} assignment failed: {assigned_data_leg['error']}")
+                        leg_errors.append(f"Leg {leg.get('leg_order', '?')}: {assigned_data_leg['error']}")
                         continue
 
                     if assigned_data_leg:
@@ -806,7 +807,8 @@ def auto_assign(shipment_id: str):
                     print(f"Leg Assignment Error: {str(le)}")
             
             if assigned_count == 0:
-                raise HTTPException(status_code=400, detail="AI could not find any suitable drivers for this journey's segments. Check hub availability.")
+                err_detail = " | ".join(leg_errors) if leg_errors else "No suitable drivers found for any segments."
+                raise HTTPException(status_code=400, detail=f"AI Assignment Failed: {err_detail}")
 
             return {
                 "message": f"Processed {len(child_ids)} journey legs. Total {assigned_count} new assignments confirmed.",
@@ -1514,16 +1516,19 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
         is_local = False
         is_returning = False
         
+        target_wh_id = d_wh_id if is_first_mile else p_wh_id
+        target_wh = next((w for w in warehouses if w["id"] == target_wh_id), None) if target_wh_id else None
+
         curr_loc = v.get("current_location")
-        if curr_loc and p_wh:
-            dist = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), p_wh.get("lat", 0), p_wh.get("lng", 0))
+        if curr_loc and target_wh:
+            dist = haversine(curr_loc.get("lat", 0), curr_loc.get("lng", 0), target_wh.get("lat", 0), target_wh.get("lng", 0))
             if dist < 0.5:
-                loc_status = f"At {p_wh.get('name', 'Warehouse')}"
+                loc_status = f"At {target_wh.get('name', 'Warehouse')}"
                 is_local = True
-            elif v_base == d_wh_id:
+            elif v_base == d_wh_id and not is_first_mile:
                 is_returning = True
                 loc_status = "Back-haul Eligible"
-        elif v_base == p_wh_id:
+        elif v_base == target_wh_id:
             loc_status = "Stationary at Base"
             is_local = True
 
@@ -1546,16 +1551,49 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
     # Check for Drones at pickup warehouse
     if (is_last_mile or is_direct) and p_wh_id:
         wh = next((w for w in warehouses if w["id"] == p_wh_id), None)
-        if wh and wh.get("drone_count", 0) > 0:
+        if wh:
+            # Drones can be registered in vehicles DB with type "Drone" OR in the dedicated "drones" DB
             drone_vehicles = [v for v in vehicles if "drone" in v["type"].lower() and v.get("base_warehouse_id") == p_wh_id]
+            dedicated_drones = [d for d in JSONDatabase("drones").get_all() if d.get("base_warehouse_id") == p_wh_id and d.get("status") == "available"]
+            
+            # Distance/Capacity Check for Drones
+            from backend.services.route_engine import check_drone_viability
+            p_lat, p_lng = shipment["pickup"]["lat"], shipment["pickup"]["lng"]
+            d_lat, d_lng = shipment["drop"]["lat"], shipment["drop"]["lng"]
+            
+            # Evaluate viability
+            drone_intel = check_drone_viability(p_lat, p_lng, d_lat, d_lng, shipment.get("weight", 0))
+            
+            if drone_intel.get("viable"):
+                status_text = f"At {wh.get('name', 'Warehouse')} (Ready)"
+            else:
+                status_text = f"⚠️ Warning: {drone_intel.get('reason')}"
+                
+            # Add drones from vehicles table
             for dv in drone_vehicles:
+                if shipment.get("weight", 0) > dv.get("capacity", 20):
+                    continue
                 eligible["drones"].append({
-                    "driver_id": None,
-                    "driver_name": "Autonomous System",
+                    "driver_id": "DRONE-SYSTEM",
+                    "driver_name": "Autonomous Drone Core",
                     "vehicle_id": dv["id"],
-                    "vehicle_plate": dv["number_plate"],
-                    "vehicle_type": dv["type"],
-                    "location_status": f"At {wh.get('name', 'Warehouse')}",
+                    "vehicle_plate": dv.get("number_plate", "DRONE-SYS"),
+                    "vehicle_type": dv.get("type", "Drone"),
+                    "location_status": status_text,
+                    "is_enroute": False
+                })
+                
+            # Add drones from dedicated drones table
+            for dd in dedicated_drones:
+                if shipment.get("weight", 0) > dd.get("capacity", 20):
+                    continue
+                eligible["drones"].append({
+                    "driver_id": "DRONE-SYSTEM",
+                    "driver_name": "Autonomous Drone Core",
+                    "vehicle_id": dd["id"],
+                    "vehicle_plate": dd.get("license_number", "DRONE-SYS"),
+                    "vehicle_type": "Drone (Dedicated)",
+                    "location_status": status_text,
                     "is_enroute": False
                 })
                 

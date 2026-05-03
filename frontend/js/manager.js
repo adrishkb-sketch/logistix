@@ -445,34 +445,7 @@ async function loadMapData() {
         
         await loadWarehousesList(warehouses);
 
-        const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`);
-        for (const s of shipments) {
-            if (s.status === 'delivered') continue;
 
-            // 1. Source Point
-            const mP = L.marker([s.pickup.lat, s.pickup.lng], {icon: ICON_PICKUP})
-                .addTo(map).bindPopup(`<b>Origin:</b> ${s.id.slice(0,8)}<br>${s.description}`);
-            markers.push(mP);
-
-            // 2. Drop Point
-            const mD = L.marker([s.drop.lat, s.drop.lng], {icon: ICON_DROP})
-                .addTo(map).bindPopup(`<b>Destination:</b> ${s.id.slice(0,8)}`);
-            markers.push(mD);
-
-            // 3. Current Location (if moving)
-            if (s.current_location && s.status === 'in_transit') {
-                const mC = L.circleMarker([s.current_location.lat, s.current_location.lng], {
-                    color: '#fff', fillColor: '#3b82f6', weight: 3, radius: 10, fillOpacity: 1
-                }).addTo(map).bindPopup(`<b>Current Location:</b> ${s.id.slice(0,8)}`);
-                markers.push(mC);
-            }
-            
-            // Draw route line
-            await drawRouteWithTraffic(
-                s.current_location ? s.current_location : s.pickup, 
-                s.drop
-            );
-        }
     } catch(e) {
         console.error("Map Load Error:", e);
     }
@@ -2370,27 +2343,12 @@ window.openShipmentDetailModal = function(id) {
             `;
         }
     } else {
-        // For Legs: Assignment is always available if not already assigned
-        const isAssigned = s.assigned_driver_id || s.status === 'assigned' || s.status === 'in_transit';
-        if (!isAssigned) {
-             actionsHtml += `
-                <button class="btn-action-details" style="background:var(--success);" onclick="autoAssignShipment('${s.id}')">
-                    <span class="icon">🤖</span> <span>Auto Assign (AI)</span>
-                </button>
-                <button class="btn-action-details" style="background:#3182ce;" onclick="openManualAssignModal('${s.id}')">
-                    <span class="icon">👤</span> <span>Manual Assign</span>
-                </button>
-            `;
-        } else {
-            actionsHtml += `
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
-                    <span class="icon">🤖</span> <span>Already Assigned</span>
-                </button>
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
-                    <span class="icon">👤</span> <span>Already Assigned</span>
-                </button>
-            `;
-        }
+        // For Legs: Assignment is managed strictly through the parent shipment
+        actionsHtml += `
+            <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Manage assignments from the Parent Shipment">
+                <span class="icon">🔒</span> <span>Managed by Parent</span>
+            </button>
+        `;
     }
 
     if (s.payment_status?.toLowerCase() === 'paid' && s.status !== 'finalized') {
@@ -2576,7 +2534,7 @@ async function openManualAssignModal(id) {
                     <span style="font-size:0.65rem; color:var(--text-muted); font-family:monospace;">ID: ${leg.id.substring(0,8)}</span>
                 </div>
                 <div style="font-size:0.85rem; margin-bottom:12px; color:var(--text-muted);">
-                    ${leg.pickup.name || 'Current'} → ${leg.drop.name || 'Next'}
+                    ${leg.pickup.address || leg.pickup.name || 'Current'} → ${leg.drop.address || leg.drop.name || 'Next'}
                 </div>
                 <select id="select-leg-${leg.id}" class="polished-glass-input leg-assign-select" data-leg-id="${leg.id}" style="width:100%; padding:10px; font-size:0.85rem;">
                     <option value="">Searching for eligible ${legType} fleet...</option>
@@ -2598,7 +2556,8 @@ async function openManualAssignModal(id) {
                         const opt = document.createElement('option');
                         opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
                         const rating = a.driver_rating ? ` [⭐ ${a.driver_rating.toFixed(1)}]` : '';
-                        opt.textContent = `${icon} ${a.driver_name}${rating} (${a.vehicle_type})`;
+                        const plate = a.vehicle_plate ? ` [${a.vehicle_plate}]` : '';
+                        opt.textContent = `${icon} ${a.driver_name}${rating} (${a.vehicle_type})${plate}`;
                         group.appendChild(opt);
                     });
                     return group;
@@ -2823,13 +2782,15 @@ async function openTrackModal(shipmentId) {
         const mainShipment = target.is_leg ? target : (legs.length > 0 ? (shipments.find(s => s.id === parentId) || target) : target);
         
         // 1. Plot Origin (of the tracked segment)
+        let pName = mainShipment.pickup.address || mainShipment.pickup.name || "Initial Pickup";
         const originMarker = L.marker([mainShipment.pickup.lat, mainShipment.pickup.lng], {icon: ICON_PICKUP})
-            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Pickup</b>` : "<b>Initial Pickup</b>");
+            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Pickup:</b> ${pName}` : `<b>Initial Pickup:</b> ${pName}`);
         trackMarkers.push(originMarker);
 
         // 2. Plot Destination (of the tracked segment)
+        let dName = mainShipment.drop.address || mainShipment.drop.name || "Final Delivery Point";
         const destinationMarker = L.marker([mainShipment.drop.lat, mainShipment.drop.lng], {icon: ICON_DROP})
-            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Drop</b>` : "<b>Final Delivery Point</b>");
+            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Drop:</b> ${dName}` : `<b>Final Delivery Point:</b> ${dName}`);
         trackMarkers.push(destinationMarker);
 
         // 3. Plot Intermediate Hubs (ONLY if it's the Parent view)
@@ -2837,14 +2798,14 @@ async function openTrackModal(shipmentId) {
             legs.forEach((leg, idx) => {
                 if (idx < legs.length - 1) {
                     const hubMarker = L.marker([leg.drop.lat, leg.drop.lng], {icon: ICON_WAREHOUSE})
-                        .addTo(trackMap).bindPopup(`<b>Hub ${idx + 1}:</b> ${leg.drop.address || 'Network Hub'}`);
+                        .addTo(trackMap).bindPopup(`<b>Hub ${idx + 1}:</b> ${leg.drop.address || leg.drop.name || 'Network Hub'}`);
                     trackMarkers.push(hubMarker);
                 }
             });
         }
 
         // 4. Plot Active Location
-        let activeLeg = legs.find(l => l.status === 'in_transit' || l.status === 'assigned') || legs[legs.length - 1] || target;
+        let activeLeg = target.is_leg ? target : (legs.find(l => l.status === 'in_transit' || l.status === 'assigned') || legs[legs.length - 1] || target);
         
         if (activeLeg.current_location) {
             const mC = L.circleMarker([activeLeg.current_location.lat, activeLeg.current_location.lng], {
@@ -2878,7 +2839,12 @@ async function openTrackModal(shipmentId) {
 
         document.getElementById('track-status').innerText = target.status.toUpperCase();
         document.getElementById('track-current').innerText = activeLeg.status === 'in_transit' ? 'In Transit' : activeLeg.status.toUpperCase();
-        document.getElementById('track-next').innerText = activeLeg.drop.address || 'Network Hub';
+        
+        let nextStopStr = activeLeg.drop.address || activeLeg.drop.name || 'Network Hub';
+        if (activeLeg.leg_type === 'last_mile' || (!activeLeg.is_leg && !legs.length)) {
+            nextStopStr = activeLeg.drop.address || activeLeg.drop.name || 'Receiver Address';
+        }
+        document.getElementById('track-next').innerText = nextStopStr;
 
         // 6. Contact Surface
         const allDrivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
