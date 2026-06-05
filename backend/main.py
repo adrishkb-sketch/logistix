@@ -12,10 +12,12 @@ from backend.routers import auth, manager, driver, shipment, tracking, simulatio
 
 app = FastAPI(title="Logistix API", version="1.0.0")
 
-# In Vercel (Serverless), we use Supabase for images, so we skip local folder creation
-if os.environ.get("VERCEL") != "1":
-    os.makedirs("data/images", exist_ok=True)
-    app.mount("/images", StaticFiles(directory="data/images"), name="images")
+try:
+    if os.environ.get("VERCEL") != "1":
+        os.makedirs("data/images", exist_ok=True)
+        app.mount("/images", StaticFiles(directory="data/images"), name="images")
+except Exception as e:
+    print(f"Skipping mounting local images directory: {e}")
 
 # Allow CORS for frontend
 app.add_middleware(

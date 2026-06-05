@@ -1,8 +1,9 @@
 // Auth Logic with Event Delegation for Modal-based forms
-
 async function requestOTP() {
-    const email = document.getElementById('signup-email').value;
-    const company_name = document.getElementById('signup-name').value;
+    const emailInput = document.getElementById('signup-email');
+    const companyInput = document.getElementById('signup-name');
+    const email = emailInput ? emailInput.value.trim() : '';
+    const company_name = companyInput ? companyInput.value.trim() : '';
     const btn = document.getElementById('signup-otp-btn');
 
     if (!email) {
@@ -19,11 +20,26 @@ async function requestOTP() {
 
     try {
         const res = await apiCall('/auth/company/request-otp', 'POST', { email, company_name });
-        showToast(getTranslation('otp_sent_success'), 'success');
+        
         document.getElementById('step-1').style.display = 'none';
         document.getElementById('step-2').style.display = 'block';
         if (typeof updatePageTranslations === 'function') updatePageTranslations();
         startOTPTimer('resend-link', 'timer-val', requestOTP);
+        
+        if (res.otp) {
+            showToast(`${getTranslation('otp_sent_success') || 'OTP Sent'} (Dev Auto-fill: ${res.otp})`, 'success');
+            // Auto fill 6 pin boxes
+            setTimeout(() => {
+                const pinBoxes = document.querySelectorAll('.signup-pin');
+                if (pinBoxes.length === 6) {
+                    res.otp.split('').forEach((char, idx) => {
+                        pinBoxes[idx].value = char;
+                    });
+                }
+            }, 100);
+        } else {
+            showToast(getTranslation('otp_sent_success'), 'success');
+        }
     } catch(e) {
         // Re-enable if failed
         if (btn) {
@@ -87,7 +103,7 @@ document.addEventListener('submit', async (e) => {
     try {
         // Manager Login
         if (isManagerForm) {
-            const email = document.getElementById('manager-email')?.value;
+            const email = document.getElementById('manager-email')?.value?.trim();
             const password = document.getElementById('manager-password')?.value;
             
             if (!email || !password) throw new Error(getTranslation('auth_error_missing'));
@@ -104,8 +120,8 @@ document.addEventListener('submit', async (e) => {
 
         // Warehouse Manager Login
         if (target.id === 'wh-manager-login-form') {
-            const company_id = document.getElementById('wh-company-id')?.value;
-            const email = document.getElementById('wh-manager-email')?.value;
+            const company_id = document.getElementById('wh-company-id')?.value?.trim();
+            const email = document.getElementById('wh-manager-email')?.value?.trim();
             const password = document.getElementById('wh-manager-password')?.value;
 
             if (!company_id || !email || !password) throw new Error(getTranslation('auth_error_missing'));
@@ -122,8 +138,8 @@ document.addEventListener('submit', async (e) => {
 
         // Driver Login
         if (isDriverForm) {
-            const company_id = document.getElementById('driver-company-id')?.value;
-            const login_id = document.getElementById('driver-id')?.value;
+            const company_id = document.getElementById('driver-company-id')?.value?.trim();
+            const login_id = document.getElementById('driver-id')?.value?.trim();
             const password = document.getElementById('driver-password')?.value;
             
             if (!company_id || !login_id || !password) throw new Error(getTranslation('auth_error_missing_driver'));
@@ -145,10 +161,10 @@ document.addEventListener('submit', async (e) => {
                 return;
             }
 
-            const name = document.getElementById('signup-name')?.value;
-            const email = document.getElementById('signup-email')?.value;
+            const name = document.getElementById('signup-name')?.value?.trim();
+            const email = document.getElementById('signup-email')?.value?.trim();
             const password = document.getElementById('signup-password')?.value;
-            const otp = Array.from(document.querySelectorAll('.signup-pin')).map(i => i.value).join('');
+            const otp = Array.from(document.querySelectorAll('.signup-pin')).map(i => i.value?.trim() || '').join('');
             
             const btn = target.querySelector('button[type="submit"]');
             if (btn) btn.disabled = true;
@@ -166,8 +182,7 @@ document.addEventListener('submit', async (e) => {
 
             // Show Welcome Modal
             showWelcomeModal(name);
-        }
-    } catch (err) {
+        }    } catch (err) {
         console.error("Auth Action Failed:", err);
         // Error is already alerted in apiCall, but we handle button reset here
     } finally {

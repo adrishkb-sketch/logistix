@@ -1,7 +1,7 @@
 let currentShipmentId = null;
-
 async function requestCustomerOTP() {
-    let email = document.getElementById('cust-email').value.trim();
+    const emailInput = document.getElementById('cust-email');
+    const email = emailInput ? emailInput.value.trim() : '';
     if (!email) return alert(getTranslation('alert_enter_email'));
     
     const btn = document.querySelector('#step-phone button');
@@ -13,11 +13,25 @@ async function requestCustomerOTP() {
 
     try {
         const res = await apiCall('/auth/customer/request-otp', 'POST', { email });
-        showToast(getTranslation('otp_sent_success'), 'success');
+        
         document.getElementById('step-phone').style.display = 'none';
         document.getElementById('step-otp').style.display = 'block';
         document.getElementById('otp-phone-label').innerText = email;
         startOTPTimer('resend-link', 'timer-val', requestCustomerOTP);
+        
+        if (res.otp) {
+            showToast(`${getTranslation('otp_sent_success') || 'OTP Sent'} (Dev Auto-fill: ${res.otp})`, 'success');
+            setTimeout(() => {
+                const pinBoxes = document.querySelectorAll('.pin-box');
+                if (pinBoxes.length === 6) {
+                    res.otp.split('').forEach((char, idx) => {
+                        pinBoxes[idx].value = char;
+                    });
+                }
+            }, 100);
+        } else {
+            showToast(getTranslation('otp_sent_success'), 'success');
+        }
     } catch (e) {
         if (btn) {
             btn.disabled = false;
@@ -54,10 +68,9 @@ function startOTPTimer(linkId, valId, retryFn) {
         }
     }, 1000);
 }
-
 async function verifyCustomerOTP() {
     const email = document.getElementById('cust-email').value.trim();
-    const otp = Array.from(document.querySelectorAll('.pin-box')).map(i => i.value).join('');
+    const otp = Array.from(document.querySelectorAll('.pin-box')).map(i => i.value?.trim() || '').join('');
     
     if (otp.length < 6) return alert(getTranslation('alert_full_otp'));
     

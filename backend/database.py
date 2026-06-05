@@ -18,11 +18,18 @@ class JSONDatabase:
     """
     def __init__(self, table_name: str):
         self.table_name = table_name
-        if os.environ.get("VERCEL") == "1":
+        self.data_dir = os.path.join(base_dir, "data")
+        try:
+            os.makedirs(self.data_dir, exist_ok=True)
+            # Verify write access by writing a temporary hidden file
+            test_file = os.path.join(self.data_dir, ".write_test")
+            with open(test_file, "w") as f:
+                f.write("test")
+            os.remove(test_file)
+        except (OSError, IOError):
             self.data_dir = "/tmp/data"
-        else:
-            self.data_dir = os.path.join(base_dir, "data")
-        os.makedirs(self.data_dir, exist_ok=True)
+            os.makedirs(self.data_dir, exist_ok=True)
+            
         self.file_path = os.path.join(self.data_dir, f"{table_name}.json")
         self._ensure_local_seeded()
 

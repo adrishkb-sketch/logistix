@@ -14,11 +14,17 @@ def save_and_compress_image(file_bytes: bytes, filename: str) -> str:
     
     # base_dir is the project root
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    if os.environ.get("VERCEL") == "1":
+    target_dir = os.path.join(base_dir, "data", "images")
+    try:
+        os.makedirs(target_dir, exist_ok=True)
+        # Verify write access by writing a temporary hidden file
+        test_file = os.path.join(target_dir, ".write_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+    except (OSError, IOError):
         target_dir = "/tmp/data/images"
-    else:
-        target_dir = os.path.join(base_dir, "data", "images")
-    os.makedirs(target_dir, exist_ok=True)
+        os.makedirs(target_dir, exist_ok=True)
     
     try:
         # Load image from bytes
