@@ -191,9 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (layout && !document.querySelector('.mobile-header')) {
         const header = document.createElement('div');
         header.className = 'mobile-header';
+        const isRoot = !window.location.pathname.includes('/pages/');
+        const logoPathPrefix = isRoot ? '' : '../';
         header.innerHTML = `
             <button class="menu-toggle" id="global-menu-toggle">☰</button>
-            <div style="font-weight:800; font-size:1.1rem;">Logistix</div>
+            <div class="brand-logo" style="width: 100px; height: 30px; cursor: pointer;" onclick="location.href='${logoPathPrefix}index.html'"></div>
             <div id="header-theme-placeholder"></div>
         `;
         document.body.prepend(header);

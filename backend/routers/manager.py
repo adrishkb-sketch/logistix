@@ -1206,12 +1206,15 @@ def request_account_deletion(data: dict):
     otp = str(random.randint(100000, 999999))
     deletion_otp_store[company_id] = otp
     
+    print("\n" + "="*80)
+    print(f"  [OTP] Account Deletion Code for {company['email']}: {otp}")
+    print("="*80 + "\n")
+    
     from backend.services.email_service import EmailService
     success = EmailService.send_otp_email(company["email"], otp, purpose="deletion")
     
     if not success:
-        # Don't proceed if email failed, or return a clear error
-        raise HTTPException(status_code=500, detail="Failed to send verification email. Please check your SMTP settings.")
+        return {"message": "Email delivery failed. Verification code logged in server console."}
         
     return {"message": "OTP sent to your registered email."}
 

@@ -45,6 +45,10 @@ def request_otp(data: OTPRequest):
     otp = str(random.randint(100000, 999999))
     otp_store[data.email] = otp
     
+    print("\n" + "="*80)
+    print(f"  [OTP] Registration Code for {data.email}: {otp}")
+    print("="*80 + "\n")
+    
     from backend.services.email_service import EmailService
     success = EmailService.send_otp_email(data.email, otp, purpose="registration", context=data.company_name)
     
@@ -157,6 +161,10 @@ def customer_request_otp(data: CustomerOTPRequest):
     
     otp = str(random.randint(100000, 999999))
     customer_otp_store[email] = otp
+    
+    print("\n" + "="*80)
+    print(f"  [OTP] Tracking Code for {email}: {otp}")
+    print("="*80 + "\n")
     
     from backend.services.email_service import EmailService
     success = EmailService.send_otp_email(email, otp, purpose="tracking")

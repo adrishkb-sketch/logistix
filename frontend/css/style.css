@@ -1588,4 +1588,91 @@ body.light-mode .brand-logo {
         width: 105px !important;
         height: 26px !important;
     }
+
+    /* Style controls as unified compact rounded pills on mobile */
+    #modify-dash-btn,
+    .top-bar .glass-card,
+    .top-actions .glass-card,
+    .controls-group .glass-card,
+    .lang-card-v3,
+    #voice-trigger {
+        height: 38px !important;
+        padding: 0 12px !important;
+        font-size: 0.8rem !important;
+        border-radius: 99px !important; /* round pills */
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        white-space: nowrap !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: var(--text) !important;
+    }
+    
+    body.light-mode #modify-dash-btn,
+    body.light-mode .top-bar .glass-card,
+    body.light-mode .top-actions .glass-card,
+    body.light-mode .controls-group .glass-card,
+    body.light-mode .lang-card-v3,
+    body.light-mode #voice-trigger {
+        background: rgba(0, 0, 0, 0.04) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        color: var(--text) !important;
+    }
+
+    /* Target select inside the language card wrapper */
+    .top-bar .glass-card select,
+    .top-actions .glass-card select,
+    .controls-group .glass-card select,
+    .lang-card-v3 select {
+        font-size: 0.8rem !important;
+        padding: 0 16px 0 0 !important;
+        height: 100% !important;
+        color: var(--text) !important;
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        appearance: auto !important;
+    }
+
+    /* Help button companion to voice control */
+    #voice-trigger + button,
+    .top-actions .circle-help-btn {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 50% !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 0.85rem !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: var(--text) !important;
+    }
+    
+    body.light-mode #voice-trigger + button,
+    body.light-mode .top-actions .circle-help-btn {
+        background: rgba(0, 0, 0, 0.04) !important;
+        border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Let's layout the control bars cleanly on mobile */
+    .top-bar, .top-actions, .controls-group {
+        display: flex !important;
+        flex-flow: row wrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .top-bar h1, .top-bar h2 {
+        flex: 1 1 100% !important;
+        font-size: 1.3rem !important;
+        margin: 0 0 4px 0 !important;
+    }
 }
