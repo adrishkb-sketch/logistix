@@ -21,6 +21,29 @@ if SUPABASE_URL and SUPABASE_KEY and not SUPABASE_URL.startswith("your-") and no
         print(f"Supabase client initialization failed: {e}. Fallback to local files will be used.")
         supabase = None
 
+_fallback_warning_printed = False
+
+def print_fallback_banner():
+    global _fallback_warning_printed
+    if not _fallback_warning_printed:
+        _fallback_warning_printed = True
+        print("\n" + "="*80)
+        print("  [OFFLINE SANDBOX MODE] Supabase is unreachable or unconfigured.")
+        print("  Using local JSON database fallback.")
+        print("  You can log in using these offline sandbox credentials:")
+        print("  Manager Login:")
+        print("    Email: manager@logistix.com")
+        print("    Password: password123")
+        print("  Driver Login:")
+        print("    Company ID: 557f9b08-30da-4b99-b233-a16c9df5191d")
+        print("    Driver ID: driver_100")
+        print("    Password: password123")
+        print("  Warehouse Manager Login:")
+        print("    Company ID: 557f9b08-30da-4b99-b233-a16c9df5191d")
+        print("    Email: mumbai@logistix.com")
+        print("    Password: password123")
+        print("="*80 + "\n")
+
 class JSONDatabase:
     """
     Supabase Implementation with transparent local file fallback.
@@ -34,6 +57,7 @@ class JSONDatabase:
         
         # If supabase is not configured, ensure data is seeded locally
         if not supabase:
+            print_fallback_banner()
             self._ensure_local_seeded()
 
     def _ensure_local_seeded(self):
@@ -92,6 +116,7 @@ class JSONDatabase:
             print(f"Failed to seed table {self.table_name} from SQL: {e}")
 
     def _load_local_data(self, check_seed: bool = True) -> List[Dict[str, Any]]:
+        print_fallback_banner()
         if check_seed:
             self._ensure_local_seeded()
         if not os.path.exists(self.file_path):
