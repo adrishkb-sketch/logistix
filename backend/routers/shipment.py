@@ -1368,8 +1368,8 @@ def pay_shipment(shipment_id: str):
     shipments_db.update(shipment["id"], {"payment_status": "paid"})
     
     # Update Company Profit (Receiver paid the amount)
-    from backend.services.kv_store import CompaniesKVDatabase
-    comp_kv = CompaniesKVDatabase()
+    from backend.services.turso_db import TursoCompaniesDB
+    comp_kv = TursoCompaniesDB()
     comp = comp_kv.get_by_id(shipment.get("company_id"))
     if comp:
         amount = shipment.get("finance", {}).get("suggested_price", 0)
