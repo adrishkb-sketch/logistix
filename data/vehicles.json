@@ -1,0 +1,362 @@
+[
+    {
+        "id": "06acd4ed-08f6-4416-bef0-6c02420f791b",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Large Truck",
+        "number_plate": "IND-49-CK-5429",
+        "capacity": 15000,
+        "speed": 70,
+        "status": "available",
+        "base_warehouse_id": "3f989b31-1760-46fc-a43e-c2d197dfc4fa",
+        "current_location": {
+            "name": "Srinagar Alpine Station",
+            "lat": 34.0837,
+            "lng": 74.7973
+        },
+        "vehicle_health_score": 86,
+        "total_distance_km": 28717,
+        "assigned_driver_id": "74472a6a-898e-45ee-8fa2-3f1b9512bf59"
+    },
+    {
+        "id": "4dde234f-3a08-4aaa-b6a9-e5ee2e60dc42",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "EV-Cargo",
+        "number_plate": "IND-54-AG-5542",
+        "capacity": 500,
+        "speed": 40,
+        "status": "available",
+        "base_warehouse_id": "2e862906-c16c-4dc4-867a-1369ef92291d",
+        "current_location": {
+            "name": "Indore Malwa Warehouse",
+            "lat": 22.7196,
+            "lng": 75.8577
+        },
+        "vehicle_health_score": 87,
+        "total_distance_km": 11529,
+        "assigned_driver_id": "47659662-19ae-4377-a2f9-e0f87c858bfe"
+    },
+    {
+        "id": "61d6f36c-73fd-4c67-945d-b7a6e6c32315",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-36-DL-7417",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "e7cff6d5-7e60-470b-8587-0b7c10b26caa",
+        "current_location": {
+            "name": "Hyderabad Central Hub",
+            "lat": 17.385,
+            "lng": 78.4867
+        },
+        "vehicle_health_score": 88,
+        "total_distance_km": 30100,
+        "assigned_driver_id": "4254aa7d-5030-48d8-b40e-bceeaeae4527"
+    },
+    {
+        "id": "16c01c56-95b3-4cb4-9a33-1ff25fe8e425",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Small Truck",
+        "number_plate": "IND-89-BJ-7790",
+        "capacity": 5000,
+        "speed": 80,
+        "status": "available",
+        "base_warehouse_id": "e7cff6d5-7e60-470b-8587-0b7c10b26caa",
+        "current_location": {
+            "name": "Hyderabad Central Hub",
+            "lat": 17.385,
+            "lng": 78.4867
+        },
+        "vehicle_health_score": 94,
+        "total_distance_km": 14075,
+        "assigned_driver_id": "61794954-c839-41fe-84f5-bccc32b31c30"
+    },
+    {
+        "id": "c4617e53-9376-44e2-9da6-edf168681fd4",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Drone (Heavy)",
+        "number_plate": "IND-48-CJ-6308",
+        "capacity": 20,
+        "speed": 100,
+        "status": "available",
+        "base_warehouse_id": "a3718817-3c0f-4a49-ae43-78589dd13376",
+        "current_location": {
+            "name": "Kolkata Eastern Port Hub",
+            "lat": 22.5726,
+            "lng": 88.3639
+        },
+        "vehicle_health_score": 94,
+        "total_distance_km": 27413,
+        "assigned_driver_id": "49cb6928-fde6-461a-a177-0d047c3080b3"
+    },
+    {
+        "id": "a2e962eb-8506-4130-b21a-a504ff388a63",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Delivery Van",
+        "number_plate": "IND-36-DL-1330",
+        "capacity": 2000,
+        "speed": 90,
+        "status": "available",
+        "base_warehouse_id": "2e862906-c16c-4dc4-867a-1369ef92291d",
+        "current_location": {
+            "name": "Indore Malwa Warehouse",
+            "lat": 22.7196,
+            "lng": 75.8577
+        },
+        "vehicle_health_score": 86,
+        "total_distance_km": 47635,
+        "assigned_driver_id": "caa144a1-de3f-4cce-a855-d210b47284a3"
+    },
+    {
+        "id": "41875025-8752-48ca-81f1-558e9685af0f",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Delivery Van",
+        "number_plate": "IND-58-EI-8807",
+        "capacity": 2000,
+        "speed": 90,
+        "status": "available",
+        "base_warehouse_id": "f02f2c3d-7f99-4e93-88b1-bb5674e26936",
+        "current_location": {
+            "name": "Guwahati North-East Gate",
+            "lat": 26.1445,
+            "lng": 91.7362
+        },
+        "vehicle_health_score": 97,
+        "total_distance_km": 20378,
+        "assigned_driver_id": "5515ca0c-3c57-4a1e-b0fe-b875c479c937"
+    },
+    {
+        "id": "3661ef04-fa38-4b4d-b303-cdbf80577b93",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-79-EK-6415",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "f02f2c3d-7f99-4e93-88b1-bb5674e26936",
+        "current_location": {
+            "name": "Guwahati North-East Gate",
+            "lat": 26.1445,
+            "lng": 91.7362
+        },
+        "vehicle_health_score": 88,
+        "total_distance_km": 30557,
+        "assigned_driver_id": "48b05d1b-efa7-4394-9c6a-189db33d67d9"
+    },
+    {
+        "id": "1164f8f7-0aa6-4d20-a44d-29daf31b4efd",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Delivery Van",
+        "number_plate": "IND-54-DK-8643",
+        "capacity": 2000,
+        "speed": 90,
+        "status": "available",
+        "base_warehouse_id": "3f989b31-1760-46fc-a43e-c2d197dfc4fa",
+        "current_location": {
+            "name": "Srinagar Alpine Station",
+            "lat": 34.0837,
+            "lng": 74.7973
+        },
+        "vehicle_health_score": 87,
+        "total_distance_km": 42381,
+        "assigned_driver_id": "27938070-c1bb-4fd9-aea8-8f029a874142"
+    },
+    {
+        "id": "7751c1e3-678a-446a-a4e2-d27dec3988b8",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Large Truck",
+        "number_plate": "IND-92-FI-5073",
+        "capacity": 15000,
+        "speed": 70,
+        "status": "available",
+        "base_warehouse_id": "a8593dd4-b32a-4b17-97f6-a7ecc666fdf7",
+        "current_location": {
+            "name": "Chennai Southern Express",
+            "lat": 13.0827,
+            "lng": 80.2707
+        },
+        "vehicle_health_score": 95,
+        "total_distance_km": 22166,
+        "assigned_driver_id": "0b356731-a5bf-4fb9-97a1-1058cfe3d83b"
+    },
+    {
+        "id": "fd6eef2d-c3c3-4eda-96a4-cab839247f86",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-45-AG-1253",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "956ff0fc-14f2-42f7-b604-274b04d96d72",
+        "current_location": {
+            "name": "Delhi Northern Terminal",
+            "lat": 28.6139,
+            "lng": 77.209
+        },
+        "vehicle_health_score": 91,
+        "total_distance_km": 38502,
+        "assigned_driver_id": "161f3c03-8511-4f47-a385-d81350424a4b"
+    },
+    {
+        "id": "52412aff-7c4c-4801-b0dd-3f01ffc32b4a",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-16-DG-9514",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "7337e80b-02f5-45dc-b1c9-72bd534788f6",
+        "current_location": {
+            "name": "Bhubaneswar Kalinga Hub",
+            "lat": 20.2961,
+            "lng": 85.8245
+        },
+        "vehicle_health_score": 100,
+        "total_distance_km": 40408,
+        "assigned_driver_id": "a5fcb715-6eff-45a7-bd02-ab23bfd672e9"
+    },
+    {
+        "id": "9bcd90c9-381f-43f7-8fdb-5d5e94c5f2ab",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-63-FI-1538",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "362dee37-89fe-437b-a9d4-25125660c4a4",
+        "current_location": {
+            "name": "Pune Tech Hub",
+            "lat": 18.5204,
+            "lng": 73.8567
+        },
+        "vehicle_health_score": 99,
+        "total_distance_km": 31504,
+        "assigned_driver_id": "993255fc-1e75-47b8-8d58-6bc0aa096c1f"
+    },
+    {
+        "id": "fe302f0e-6c3e-461f-ada0-760684ede057",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-65-EL-3929",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "a8593dd4-b32a-4b17-97f6-a7ecc666fdf7",
+        "current_location": {
+            "name": "Chennai Southern Express",
+            "lat": 13.0827,
+            "lng": 80.2707
+        },
+        "vehicle_health_score": 91,
+        "total_distance_km": 49681,
+        "assigned_driver_id": "74aa3a2c-c70f-4111-948e-c3ddcf2be91a"
+    },
+    {
+        "id": "df1087ca-aeaf-461d-a71b-78429ceee0e9",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Drone (Heavy)",
+        "number_plate": "IND-85-EL-9553",
+        "capacity": 20,
+        "speed": 100,
+        "status": "available",
+        "base_warehouse_id": "362dee37-89fe-437b-a9d4-25125660c4a4",
+        "current_location": {
+            "name": "Pune Tech Hub",
+            "lat": 18.5204,
+            "lng": 73.8567
+        },
+        "vehicle_health_score": 92,
+        "total_distance_km": 28960,
+        "assigned_driver_id": "b290d6b4-6af4-45d6-82fa-263b93a77e37"
+    },
+    {
+        "id": "ffc5ec00-b1dc-4b5e-b818-97a4033030ed",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-66-CJ-7432",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "a95ad140-20cd-428b-a97b-28e45fa4006c",
+        "current_location": {
+            "name": "Lucknow Heritage Depot",
+            "lat": 26.8467,
+            "lng": 80.9462
+        },
+        "vehicle_health_score": 92,
+        "total_distance_km": 33550,
+        "assigned_driver_id": "0b7b7f3c-7633-4cbb-85ad-292d49e0801c"
+    },
+    {
+        "id": "4ab27796-a84f-45f9-9ad6-3267f504452d",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Small Truck",
+        "number_plate": "IND-16-CL-4019",
+        "capacity": 5000,
+        "speed": 80,
+        "status": "available",
+        "base_warehouse_id": "a8593dd4-b32a-4b17-97f6-a7ecc666fdf7",
+        "current_location": {
+            "name": "Chennai Southern Express",
+            "lat": 13.0827,
+            "lng": 80.2707
+        },
+        "vehicle_health_score": 87,
+        "total_distance_km": 25354,
+        "assigned_driver_id": "6d4d9d42-3fff-498d-9015-747d22b054c6"
+    },
+    {
+        "id": "de2e44a3-93c2-436e-a096-0f6797dbf753",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Bike/Scooty",
+        "number_plate": "IND-74-CH-1776",
+        "capacity": 80,
+        "speed": 50,
+        "status": "available",
+        "base_warehouse_id": "956ff0fc-14f2-42f7-b604-274b04d96d72",
+        "current_location": {
+            "name": "Delhi Northern Terminal",
+            "lat": 28.6139,
+            "lng": 77.209
+        },
+        "vehicle_health_score": 97,
+        "total_distance_km": 46319,
+        "assigned_driver_id": "aa2f1de4-c5d3-4e9d-a84d-9bcf6a20fff9"
+    },
+    {
+        "id": "180351ee-4c54-4ef8-978f-98fb38c1645a",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Drone (Heavy)",
+        "number_plate": "IND-85-AI-6552",
+        "capacity": 20,
+        "speed": 100,
+        "status": "available",
+        "base_warehouse_id": "c7b6daa2-a17b-4ae8-bcfb-f9fb3df277f7",
+        "current_location": {
+            "name": "Mumbai Gateway Hub",
+            "lat": 19.076,
+            "lng": 72.8777
+        },
+        "vehicle_health_score": 94,
+        "total_distance_km": 42025,
+        "assigned_driver_id": "9fdce93a-be79-405e-8782-1ffacca2d810"
+    },
+    {
+        "id": "daae9b37-656e-46d4-bb55-3d09ec611d5e",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "type": "Delivery Van",
+        "number_plate": "IND-24-AK-2020",
+        "capacity": 2000,
+        "speed": 90,
+        "status": "available",
+        "base_warehouse_id": "a8593dd4-b32a-4b17-97f6-a7ecc666fdf7",
+        "current_location": {
+            "name": "Chennai Southern Express",
+            "lat": 13.0827,
+            "lng": 80.2707
+        },
+        "vehicle_health_score": 85,
+        "total_distance_km": 13437,
+        "assigned_driver_id": "dff550e8-ae83-4ac3-bd45-5794d01fb9c2"
+    }
+]

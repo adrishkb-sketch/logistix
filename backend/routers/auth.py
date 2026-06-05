@@ -31,89 +31,7 @@ class WarehouseManagerLogin(BaseModel):
     email: str
     password: str
 
-def clone_demo_data_for_company(new_company_id: str):
-    default_company_id = "557f9b08-30da-4b99-b233-a16c9df5191d"
-    
-    # 1. Clone Warehouses
-    wh_db = JSONDatabase("warehouses")
-    new_whs = []
-    wh_id_map = {}
-    for w in wh_db.get_all():
-        if w and w.get("company_id") == default_company_id:
-            old_id = w.get("id")
-            new_w = dict(w)
-            new_id = str(uuid.uuid4())
-            new_w["id"] = new_id
-            new_w["company_id"] = new_company_id
-            wh_id_map[old_id] = new_id
-            new_whs.append(new_w)
-    for w in new_whs:
-        wh_db.insert(w)
-        
-    # 2. Clone Drivers
-    driver_db = JSONDatabase("drivers")
-    new_drivers = []
-    driver_id_map = {}
-    for d in driver_db.get_all():
-        if d and d.get("company_id") == default_company_id:
-            old_id = d.get("id")
-            new_d = dict(d)
-            new_id = str(uuid.uuid4())
-            new_d["id"] = new_id
-            new_d["company_id"] = new_company_id
-            old_wh = d.get("base_warehouse_id")
-            if old_wh in wh_id_map:
-                new_d["base_warehouse_id"] = wh_id_map[old_wh]
-            driver_id_map[old_id] = new_id
-            new_drivers.append(new_d)
-    for d in new_drivers:
-        driver_db.insert(d)
-        
-    # 3. Clone Vehicles
-    vehicle_db = JSONDatabase("vehicles")
-    new_vehicles = []
-    vehicle_id_map = {}
-    for v in vehicle_db.get_all():
-        if v and v.get("company_id") == default_company_id:
-            old_id = v.get("id")
-            new_v = dict(v)
-            new_id = str(uuid.uuid4())
-            new_v["id"] = new_id
-            new_v["company_id"] = new_company_id
-            old_wh = v.get("base_warehouse_id")
-            if old_wh in wh_id_map:
-                new_v["base_warehouse_id"] = wh_id_map[old_wh]
-            old_drv = v.get("assigned_driver_id")
-            if old_drv in driver_id_map:
-                new_v["assigned_driver_id"] = driver_id_map[old_drv]
-            vehicle_id_map[old_id] = new_id
-            new_vehicles.append(new_v)
-    for v in new_vehicles:
-        vehicle_db.insert(v)
-        
-    # Update driver link to assigned vehicle
-    for d in new_drivers:
-        old_v = d.get("assigned_vehicle_id")
-        if old_v in vehicle_id_map:
-            d["assigned_vehicle_id"] = vehicle_id_map[old_v]
-            driver_db.insert(d)
-            
-    # 4. Clone Shipments
-    shipment_db = JSONDatabase("shipments")
-    for s in shipment_db.get_all():
-        if s and s.get("company_id") == default_company_id:
-            new_s = dict(s)
-            new_s["id"] = str(uuid.uuid4())
-            new_s["company_id"] = new_company_id
-            if s.get("assigned_driver_id") in driver_id_map:
-                new_s["assigned_driver_id"] = driver_id_map[s["assigned_driver_id"]]
-            if s.get("assigned_vehicle_id") in vehicle_id_map:
-                new_s["assigned_vehicle_id"] = vehicle_id_map[s["assigned_vehicle_id"]]
-            if s.get("pickup_warehouse_id") in wh_id_map:
-                new_s["pickup_warehouse_id"] = wh_id_map[s["pickup_warehouse_id"]]
-            if s.get("drop_warehouse_id") in wh_id_map:
-                new_s["drop_warehouse_id"] = wh_id_map[s["drop_warehouse_id"]]
-            shipment_db.insert(new_s)
+
 
 @router.get("/check-email")
 async def check_email(email: str):
@@ -174,11 +92,6 @@ def verify_signup(data: OTPVerify):
     
     if email_clean in otp_store:
         del otp_store[email_clean]
-        
-    try:
-        clone_demo_data_for_company(new_company["id"])
-    except Exception as ex:
-        print(f"Error cloning seed data for new company: {ex}")
         
     from backend.services.email_service import EmailService
     EmailService.send_welcome_email(

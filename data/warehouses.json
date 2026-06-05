@@ -1,0 +1,131 @@
+[
+    {
+        "id": "c7b6daa2-a17b-4ae8-bcfb-f9fb3df277f7",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Mumbai Gateway Hub",
+        "lat": 19.076,
+        "lng": 72.8777,
+        "contact_number": "+91 73778 48864",
+        "drone_count": 4,
+        "manager_name": "Mumbai Manager",
+        "manager_email": "mumbai@logistix.com",
+        "manager_password": "password123"
+    },
+    {
+        "id": "956ff0fc-14f2-42f7-b604-274b04d96d72",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Delhi Northern Terminal",
+        "lat": 28.6139,
+        "lng": 77.209,
+        "contact_number": "+91 88934 93837",
+        "drone_count": 8
+    },
+    {
+        "id": "1cc15626-7c27-4594-a0e0-f20a759dee54",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Bangalore Silicon Warehouse",
+        "lat": 12.9716,
+        "lng": 77.5946,
+        "contact_number": "+91 74402 88416",
+        "drone_count": 2
+    },
+    {
+        "id": "a3718817-3c0f-4a49-ae43-78589dd13376",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Kolkata Eastern Port Hub",
+        "lat": 22.5726,
+        "lng": 88.3639,
+        "contact_number": "+91 78770 95964",
+        "drone_count": 5
+    },
+    {
+        "id": "a8593dd4-b32a-4b17-97f6-a7ecc666fdf7",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Chennai Southern Express",
+        "lat": 13.0827,
+        "lng": 80.2707,
+        "contact_number": "+91 97985 40342",
+        "drone_count": 3
+    },
+    {
+        "id": "e7cff6d5-7e60-470b-8587-0b7c10b26caa",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Hyderabad Central Hub",
+        "lat": 17.385,
+        "lng": 78.4867,
+        "contact_number": "+91 80906 98936",
+        "drone_count": 6
+    },
+    {
+        "id": "7ceacc82-9958-4a81-ac07-51fb0a3c47ab",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Ahmedabad Western Depot",
+        "lat": 23.0225,
+        "lng": 72.5714,
+        "contact_number": "+91 78827 24313",
+        "drone_count": 4
+    },
+    {
+        "id": "3f989b31-1760-46fc-a43e-c2d197dfc4fa",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Srinagar Alpine Station",
+        "lat": 34.0837,
+        "lng": 74.7973,
+        "contact_number": "+91 88475 40068",
+        "drone_count": 7
+    },
+    {
+        "id": "7337e80b-02f5-45dc-b1c9-72bd534788f6",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Bhubaneswar Kalinga Hub",
+        "lat": 20.2961,
+        "lng": 85.8245,
+        "contact_number": "+91 97975 49279",
+        "drone_count": 3
+    },
+    {
+        "id": "f02f2c3d-7f99-4e93-88b1-bb5674e26936",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Guwahati North-East Gate",
+        "lat": 26.1445,
+        "lng": 91.7362,
+        "contact_number": "+91 84018 46644",
+        "drone_count": 3
+    },
+    {
+        "id": "a9997336-c4f3-4d11-8f74-b419b40ec0b4",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Jaipur Desert Terminal",
+        "lat": 26.9124,
+        "lng": 75.7873,
+        "contact_number": "+91 95989 42514",
+        "drone_count": 4
+    },
+    {
+        "id": "362dee37-89fe-437b-a9d4-25125660c4a4",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Pune Tech Hub",
+        "lat": 18.5204,
+        "lng": 73.8567,
+        "contact_number": "+91 73112 88174",
+        "drone_count": 6
+    },
+    {
+        "id": "a95ad140-20cd-428b-a97b-28e45fa4006c",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Lucknow Heritage Depot",
+        "lat": 26.8467,
+        "lng": 80.9462,
+        "contact_number": "+91 73493 98000",
+        "drone_count": 6
+    },
+    {
+        "id": "2e862906-c16c-4dc4-867a-1369ef92291d",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Indore Malwa Warehouse",
+        "lat": 22.7196,
+        "lng": 75.8577,
+        "contact_number": "+91 95550 32581",
+        "drone_count": 6
+    }
+]

@@ -16,20 +16,38 @@ class JSONDatabase:
     Pure Local JSON File Database.
     Acts as a Data Access Object (DAO) mapped to local JSON files.
     """
+    _tmp_seeded = False  # class-level flag so we only copy once per cold start
+
     def __init__(self, table_name: str):
         self.table_name = table_name
-        self.data_dir = os.path.join(base_dir, "data")
+        primary_data_dir = os.path.join(base_dir, "data")
         try:
-            os.makedirs(self.data_dir, exist_ok=True)
+            os.makedirs(primary_data_dir, exist_ok=True)
             # Verify write access by writing a temporary hidden file
-            test_file = os.path.join(self.data_dir, ".write_test")
+            test_file = os.path.join(primary_data_dir, ".write_test")
             with open(test_file, "w") as f:
                 f.write("test")
             os.remove(test_file)
+            self.data_dir = primary_data_dir
         except (OSError, IOError):
-            self.data_dir = "/tmp/data"
-            os.makedirs(self.data_dir, exist_ok=True)
-            
+            # Read-only filesystem (e.g. Vercel) — use /tmp/data
+            tmp_data_dir = "/tmp/data"
+            if not JSONDatabase._tmp_seeded:
+                # Copy bundled JSON seed files from project data/ to /tmp/data
+                os.makedirs(tmp_data_dir, exist_ok=True)
+                if os.path.isdir(primary_data_dir):
+                    import shutil
+                    for fname in os.listdir(primary_data_dir):
+                        if fname.endswith(".json"):
+                            src = os.path.join(primary_data_dir, fname)
+                            dst = os.path.join(tmp_data_dir, fname)
+                            if not os.path.exists(dst):
+                                shutil.copy2(src, dst)
+                                print(f"[DB] Copied bundled {fname} -> /tmp/data/")
+                JSONDatabase._tmp_seeded = True
+            os.makedirs(tmp_data_dir, exist_ok=True)
+            self.data_dir = tmp_data_dir
+
         self.file_path = os.path.join(self.data_dir, f"{table_name}.json")
         self._ensure_local_seeded()
 

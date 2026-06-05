@@ -1,0 +1,184 @@
+[
+    {
+        "id": "390327de-e611-4671-80b9-422e040abf25",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "description": "Pharmaceutical Supplies",
+        "weight": 450,
+        "is_perishable": true,
+        "pickup": {
+            "lat": 19.076,
+            "lng": 72.8777,
+            "address": "Mumbai Gateway Hub"
+        },
+        "drop": {
+            "lat": 28.6139,
+            "lng": 77.209,
+            "address": "Delhi Northern Terminal"
+        },
+        "status": "pending",
+        "stage": "Awaiting Assignment",
+        "created_at": "2026-05-02T15:48:52.596733Z",
+        "vitality": 100.0,
+        "labels": [
+            "Urgent"
+        ],
+        "eway_bill_no": "26148668",
+        "eway_bill_expiry": "2026-05-09T15:48:52.596970Z"
+    },
+    {
+        "id": "bdd7cc39-7ece-4339-9289-3c7a78181c6b",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "description": "Fresh Seafood",
+        "weight": 120,
+        "is_perishable": true,
+        "pickup": {
+            "lat": 13.0827,
+            "lng": 80.2707,
+            "address": "Chennai Southern Express"
+        },
+        "drop": {
+            "lat": 12.9716,
+            "lng": 77.5946,
+            "address": "Bangalore Silicon Warehouse"
+        },
+        "status": "pending",
+        "stage": "Awaiting Assignment",
+        "created_at": "2026-05-02T15:48:52.597023Z",
+        "vitality": 100.0,
+        "labels": [
+            "Urgent"
+        ],
+        "eway_bill_no": "22990791",
+        "eway_bill_expiry": "2026-05-09T15:48:52.597030Z"
+    },
+    {
+        "id": "a14aa603-bcfd-4d0f-84b2-d096225325fc",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "description": "Electronics Consignment",
+        "weight": 1200,
+        "is_perishable": false,
+        "pickup": {
+            "lat": 12.9716,
+            "lng": 77.5946,
+            "address": "Bangalore Silicon Warehouse"
+        },
+        "drop": {
+            "lat": 17.385,
+            "lng": 78.4867,
+            "address": "Hyderabad Central Hub"
+        },
+        "status": "pending",
+        "stage": "Awaiting Assignment",
+        "created_at": "2026-05-02T15:48:52.597058Z",
+        "vitality": 100,
+        "labels": [
+            "Standard"
+        ],
+        "eway_bill_no": "90569475",
+        "eway_bill_expiry": "2026-05-09T15:48:52.597063Z"
+    },
+    {
+        "id": "a1651947-d242-458b-973a-f3c1fe9a6890",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "description": "Textile Bulk",
+        "weight": 3500,
+        "is_perishable": false,
+        "pickup": {
+            "lat": 23.0225,
+            "lng": 72.5714,
+            "address": "Ahmedabad Western Depot"
+        },
+        "drop": {
+            "lat": 22.5726,
+            "lng": 88.3639,
+            "address": "Kolkata Eastern Port Hub"
+        },
+        "status": "pending",
+        "stage": "Awaiting Assignment",
+        "created_at": "2026-05-02T15:48:52.597085Z",
+        "vitality": 100,
+        "labels": [
+            "Standard"
+        ],
+        "eway_bill_no": "63157292",
+        "eway_bill_expiry": "2026-05-09T15:48:52.597089Z"
+    },
+    {
+        "id": "996a00c2-245b-42fd-8f2f-4c20c18a7ba9",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "description": "Apples Batch",
+        "weight": 800,
+        "is_perishable": true,
+        "pickup": {
+            "lat": 34.0837,
+            "lng": 74.7973,
+            "address": "Srinagar Alpine Station"
+        },
+        "drop": {
+            "lat": 19.076,
+            "lng": 72.8777,
+            "address": "Mumbai Gateway Hub"
+        },
+        "status": "pending",
+        "stage": "Awaiting Assignment",
+        "created_at": "2026-05-02T15:48:52.597107Z",
+        "vitality": 100.0,
+        "labels": [
+            "Urgent"
+        ],
+        "eway_bill_no": "10300590",
+        "eway_bill_expiry": "2026-05-09T15:48:52.597111Z"
+    },
+    {
+        "id": "35b97d40-c369-432f-9dbc-93a737d65086",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "description": "Industrial Steel",
+        "weight": 5000,
+        "is_perishable": false,
+        "pickup": {
+            "lat": 20.2961,
+            "lng": 85.8245,
+            "address": "Bhubaneswar Kalinga Hub"
+        },
+        "drop": {
+            "lat": 18.5204,
+            "lng": 73.8567,
+            "address": "Pune Tech Hub"
+        },
+        "status": "pending",
+        "stage": "Awaiting Assignment",
+        "created_at": "2026-05-02T15:48:52.597129Z",
+        "vitality": 100,
+        "labels": [
+            "Standard"
+        ],
+        "eway_bill_no": "29368727",
+        "eway_bill_expiry": "2026-05-09T15:48:52.597133Z"
+    },
+    {
+        "id": "ac19c0be-968e-429d-9be1-9983479d119a",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "description": "Handicrafts",
+        "weight": 200,
+        "is_perishable": false,
+        "pickup": {
+            "lat": 26.9124,
+            "lng": 75.7873,
+            "address": "Jaipur Desert Terminal"
+        },
+        "drop": {
+            "lat": 26.1445,
+            "lng": 91.7362,
+            "address": "Guwahati North-East Gate"
+        },
+        "status": "pending",
+        "stage": "Awaiting Assignment",
+        "created_at": "2026-05-02T15:48:52.597151Z",
+        "vitality": 100,
+        "labels": [
+            "Standard"
+        ],
+        "eway_bill_no": "52323199",
+        "eway_bill_expiry": "2026-05-09T15:48:52.597154Z"
+    }
+]
