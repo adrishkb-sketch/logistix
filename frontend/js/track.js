@@ -250,23 +250,23 @@ async function viewOrder(id) {
                         }
                     }
 
-                    return \`
+                    return `
                     <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
                         <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
-                            <span style="font-size:0.8rem; font-weight:800; color:var(--accent);">${icon} \${legType}</span>
-                            <span class="status-pill status-\${leg.status}" style="font-size:0.6rem;">\${leg.status.toUpperCase()}</span>
+                            <span style="font-size:0.8rem; font-weight:800; color:var(--accent);">${icon} ${legType}</span>
+                            <span class="status-pill status-${leg.status}" style="font-size:0.6rem;">${leg.status.toUpperCase()}</span>
                         </div>
                         <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 5px;">
-                            <strong>Route:</strong> \${pickup} &rarr; \${drop}
+                            <strong>Route:</strong> ${pickup} &rarr; ${drop}
                         </div>
                         <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 5px;">
-                            <strong>ETA:</strong> \${legEta} \${waitingNote}
+                            <strong>ETA:</strong> ${legEta} ${waitingNote}
                         </div>
                         <div style="font-size:0.8rem; color:var(--text-muted);">
-                            <strong>Allocated Rev:</strong> ₹ \${(leg.finance?.suggested_price || 0).toLocaleString()}
+                            <strong>Allocated Rev:</strong> ₹ ${(leg.finance?.suggested_price || 0).toLocaleString()}
                         </div>
                     </div>
-                    \`;
+                    `;
                 }).join('')}
             `;
         } else {
@@ -471,4 +471,3 @@ window.addEventListener('themeChanged', (e) => {
     });
     L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(trackMap);
 });
-
