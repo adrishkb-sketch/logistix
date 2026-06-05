@@ -8,6 +8,43 @@ import uuid
 import random
 from datetime import datetime
 
+def save_and_compress_image(file_bytes: bytes, filename: str) -> str:
+    import io
+    from PIL import Image
+    
+    # base_dir is the project root
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target_dir = os.path.join(base_dir, "data", "images")
+    os.makedirs(target_dir, exist_ok=True)
+    
+    try:
+        # Load image from bytes
+        img = Image.open(io.BytesIO(file_bytes))
+        
+        # Convert RGBA to RGB for optimized JPEG saving
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+            
+        # Resize if width or height exceeds 800px
+        max_size = 800
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            
+        # Enforce JPEG extension for maximum storage efficiency
+        base_name, _ = os.path.splitext(filename)
+        optimized_filename = f"{base_name}.jpg"
+        optimized_path = os.path.join(target_dir, optimized_filename)
+        
+        img.save(optimized_path, "JPEG", quality=60, optimize=True)
+        print(f"[Image Compression] Saved compressed image to: {optimized_path}")
+        return f"/images/{optimized_filename}"
+    except Exception as e:
+        print(f"[Image Compression] Failed: {e}. Saving raw bytes instead.")
+        raw_path = os.path.join(target_dir, filename)
+        with open(raw_path, "wb") as buffer:
+            buffer.write(file_bytes)
+        return f"/images/{filename}"
+
 router = APIRouter()
 shipments_db = JSONDatabase("shipments")
 drivers_db = JSONDatabase("drivers")
@@ -285,23 +322,8 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
             
         print(f"[Verification] Image saved to {filepath}. Processing OCR...")
             
-        # Upload to Supabase Storage
-        from backend.database import supabase
-        public_url = None
-        if supabase:
-            try:
-                supabase.storage.from_("logistix-assets").upload(
-                    file=file_bytes,
-                    path=filename,
-                    file_options={"content-type": file.content_type}
-                )
-                public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
-                print(f"[Verification] Supabase Upload Success: {public_url}")
-            except Exception as e:
-                print(f"[Verification] Supabase Upload Error: {e}")
-                public_url = f"/images/{filename}" # fallback
-        else:
-            public_url = f"/images/{filename}" # fallback
+        # Compress and save image locally
+        public_url = save_and_compress_image(file_bytes, filename)
             
         # Process ML
         try:
@@ -364,17 +386,8 @@ async def scan_cargo(driver_id: str, shipment_id: str, file: UploadFile = File(.
     filename = f"cargo_scan_{uuid.uuid4()}.{ext}"
     file_bytes = await file.read()
     
-    # Upload to Supabase/Fallback
-    from backend.database import supabase
-    public_url = None
-    if supabase:
-        try:
-            supabase.storage.from_("logistix-assets").upload(path=filename, file=file_bytes, file_options={"content-type": file.content_type})
-            public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
-        except: pass
-    
-    if not public_url:
-        public_url = f"https://api.dicebear.com/7.x/identicon/svg?seed={shipment_id}" # placeholder for mock
+    # Compress and save image locally
+    public_url = save_and_compress_image(file_bytes, filename)
 
     from backend.models import ShipmentEvent
     status = "pass"
@@ -453,16 +466,8 @@ async def upload_evidence(driver_id: str, file: UploadFile = File(...)):
     filename = f"evidence_{uuid.uuid4()}.{ext}"
     file_bytes = await file.read()
     
-    from backend.database import supabase
-    public_url = None
-    if supabase:
-        try:
-            supabase.storage.from_("logistix-assets").upload(path=filename, file=file_bytes, file_options={"content-type": file.content_type})
-            public_url = supabase.storage.from_("logistix-assets").get_public_url(filename)
-        except: pass
-    
-    if not public_url:
-        public_url = f"https://api.dicebear.com/7.x/identicon/svg?seed={filename}"
+    # Compress and save image locally
+    public_url = save_and_compress_image(file_bytes, filename)
 
     # 2. Update shipment history if active
     if active:

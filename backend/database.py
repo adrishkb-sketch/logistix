@@ -3,62 +3,25 @@ import json
 import re
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
-from supabase import create_client, Client
 
 # Load environment variables
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(base_dir, ".env"))
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
-
-# Initialize global client safely
-supabase: Client = None
-if SUPABASE_URL and SUPABASE_KEY and not SUPABASE_URL.startswith("your-") and not SUPABASE_KEY.startswith("your-"):
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        print(f"Supabase client initialization failed: {e}. Fallback to local files will be used.")
-        supabase = None
-
-_fallback_warning_printed = False
-
-def print_fallback_banner():
-    global _fallback_warning_printed
-    if not _fallback_warning_printed:
-        _fallback_warning_printed = True
-        print("\n" + "="*80)
-        print("  [OFFLINE SANDBOX MODE] Supabase is unreachable or unconfigured.")
-        print("  Using local JSON database fallback.")
-        print("  You can log in using these offline sandbox credentials:")
-        print("  Manager Login:")
-        print("    Email: manager@logistix.com")
-        print("    Password: password123")
-        print("  Driver Login:")
-        print("    Company ID: 557f9b08-30da-4b99-b233-a16c9df5191d")
-        print("    Driver ID: driver_100")
-        print("    Password: password123")
-        print("  Warehouse Manager Login:")
-        print("    Company ID: 557f9b08-30da-4b99-b233-a16c9df5191d")
-        print("    Email: mumbai@logistix.com")
-        print("    Password: password123")
-        print("="*80 + "\n")
+# Global placeholder for backwards compatibility in driver.py and main.py
+supabase = None
 
 class JSONDatabase:
     """
-    Supabase Implementation with transparent local file fallback.
-    Acts as a Data Access Object (DAO) mapped to Supabase JSONB tables or local JSON files.
+    Pure Local JSON File Database.
+    Acts as a Data Access Object (DAO) mapped to local JSON files.
     """
     def __init__(self, table_name: str):
         self.table_name = table_name
         self.data_dir = os.path.join(base_dir, "data")
         os.makedirs(self.data_dir, exist_ok=True)
         self.file_path = os.path.join(self.data_dir, f"{table_name}.json")
-        
-        # If supabase is not configured, ensure data is seeded locally
-        if not supabase:
-            print_fallback_banner()
-            self._ensure_local_seeded()
+        self._ensure_local_seeded()
 
     def _ensure_local_seeded(self):
         # 1. If file does not exist or is empty, try seeding from SQL
@@ -116,7 +79,6 @@ class JSONDatabase:
             print(f"Failed to seed table {self.table_name} from SQL: {e}")
 
     def _load_local_data(self, check_seed: bool = True) -> List[Dict[str, Any]]:
-        print_fallback_banner()
         if check_seed:
             self._ensure_local_seeded()
         if not os.path.exists(self.file_path):
@@ -141,237 +103,80 @@ class JSONDatabase:
             return False
 
     def _ensure_client(self):
-        # We don't raise exception anymore since we fall back to local files when supabase is None
         pass
 
     def get_all(self) -> List[Dict[str, Any]]:
-        if not supabase:
-            return self._load_local_data()
-            
-        import time
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                response = supabase.table(self.table_name).select("data").execute()
-                if response.data:
-                    return [row["data"] for row in response.data if row.get("data")]
-                return []
-            except Exception as e:
-                if "Errno 35" in str(e) and attempt < max_retries - 1:
-                    time.sleep(0.5 * (attempt + 1))
-                    continue
-                if attempt == max_retries - 1:
-                    print(f"Supabase GET_ALL Error on {self.table_name}: {e}. Falling back to local data.")
-                    return self._load_local_data()
-        return []
+        return self._load_local_data()
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
-        if not supabase:
-            items = self._load_local_data()
-            for item in items:
-                if str(item.get("id")) == str(item_id):
-                    return item
-            return None
-
-        import time
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                response = supabase.table(self.table_name).select("data").eq("id", item_id).execute()
-                if response.data and len(response.data) > 0:
-                    data = response.data[0].get("data")
-                    return data if isinstance(data, dict) else None
-                return None
-            except Exception as e:
-                if "Errno 35" in str(e) and attempt < max_retries - 1:
-                    time.sleep(0.5 * (attempt + 1))
-                    continue
-                if attempt == max_retries - 1:
-                    print(f"Supabase GET_BY_ID Error on {self.table_name}: {e}. Falling back to local data.")
-                    items = self._load_local_data()
-                    for item in items:
-                        if str(item.get("id")) == str(item_id):
-                            return item
-                    return None
+        items = self._load_local_data()
+        for item in items:
+            if str(item.get("id")) == str(item_id):
+                return item
         return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        if not supabase:
-            items = self._load_local_data()
-            filtered = []
-            for item in items:
-                match = True
-                for key, val in filters.items():
-                    if str(item.get(key)) != str(val):
-                        match = False
-                        break
-                if match:
-                    filtered.append(item)
-            return filtered
-
-        import time
-        max_retries = 2
-        for attempt in range(max_retries):
-            try:
-                query = supabase.table(self.table_name).select("data")
-                for key, val in filters.items():
-                    query = query.eq(f"data->>{key}", str(val))
-                
-                response = query.execute()
-                if response.data:
-                    return [row["data"] for row in response.data if row.get("data")]
-                return []
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    time.sleep(0.3)
-                    continue
-                print(f"Supabase GET_FILTERED Error on {self.table_name}: {e}. Falling back to local data.")
-                items = self._load_local_data()
-                filtered = []
-                for item in items:
-                    match = True
-                    for key, val in filters.items():
-                        if str(item.get(key)) != str(val):
-                            match = False
-                            break
-                    if match:
-                        filtered.append(item)
-                return filtered
-        return []
+        items = self._load_local_data()
+        filtered = []
+        for item in items:
+            match = True
+            for key, val in filters.items():
+                if str(item.get(key)) != str(val):
+                    match = False
+                    break
+            if match:
+                filtered.append(item)
+        return filtered
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
-        if not supabase:
-            items = self._load_local_data()
-            items = [i for i in items if str(i.get("id")) != str(item.get("id"))]
-            items.append(item)
-            self._save_local_data(items)
-            return item
-
-        try:
-            record = {"id": str(item["id"]), "data": item}
-            supabase.table(self.table_name).insert(record).execute()
-            return item
-        except Exception as e:
-            print(f"Supabase INSERT Error on {self.table_name}: {e}. Falling back to local insertion.")
-            items = self._load_local_data()
-            items = [i for i in items if str(i.get("id")) != str(item.get("id"))]
-            items.append(item)
-            self._save_local_data(items)
-            return item
+        items = self._load_local_data()
+        items = [i for i in items if str(i.get("id")) != str(item.get("id"))]
+        items.append(item)
+        self._save_local_data(items)
+        return item
 
     def update(self, item_id: str, updated_item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        if not supabase:
-            items = self._load_local_data()
-            for i, item in enumerate(items):
-                if str(item.get("id")) == str(item_id):
-                    items[i].update(updated_item)
-                    self._save_local_data(items)
-                    return items[i]
-            return None
-
-        try:
-            current = self.get_by_id(item_id)
-            if not current:
-                return None
-            current.update(updated_item)
-            record = {"id": str(item_id), "data": current}
-            supabase.table(self.table_name).update(record).eq("id", item_id).execute()
-            return current
-        except Exception as e:
-            print(f"Supabase UPDATE Error on {self.table_name}: {e}. Falling back to local update.")
-            items = self._load_local_data()
-            for i, item in enumerate(items):
-                if str(item.get("id")) == str(item_id):
-                    items[i].update(updated_item)
-                    self._save_local_data(items)
-                    return items[i]
-            return None
+        items = self._load_local_data()
+        for i, item in enumerate(items):
+            if str(item.get("id")) == str(item_id):
+                items[i].update(updated_item)
+                self._save_local_data(items)
+                return items[i]
+        return None
 
     def delete(self, item_id: str) -> bool:
-        if not supabase:
-            items = self._load_local_data()
-            orig_len = len(items)
-            items = [i for i in items if str(i.get("id")) != str(item_id)]
-            self._save_local_data(items)
-            return len(items) < orig_len
-
-        try:
-            response = supabase.table(self.table_name).delete().eq("id", item_id).execute()
-            return True
-        except Exception as e:
-            print(f"Supabase DELETE Error on {self.table_name}: {e}. Falling back to local deletion.")
-            items = self._load_local_data()
-            orig_len = len(items)
-            items = [i for i in items if str(i.get("id")) != str(item_id)]
-            self._save_local_data(items)
-            return len(items) < orig_len
+        items = self._load_local_data()
+        orig_len = len(items)
+        items = [i for i in items if str(i.get("id")) != str(item_id)]
+        self._save_local_data(items)
+        return len(items) < orig_len
 
     def write(self, data: List[Dict[str, Any]]):
-        if not supabase:
-            self._save_local_data(data)
-            return
-
-        try:
-            supabase.table(self.table_name).delete().neq("id", "0").execute()
-            if data:
-                records = [{"id": str(item["id"]), "data": item} for item in data]
-                supabase.table(self.table_name).insert(records).execute()
-        except Exception as e:
-            print(f"Supabase WRITE Error on {self.table_name}: {e}. Falling back to local write.")
-            self._save_local_data(data)
+        self._save_local_data(data)
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
-        if not supabase:
-            items = self._load_local_data()
-            key_to_check = filter_column
-            is_jsonb = False
-            if filter_column.startswith("data->>"):
-                key_to_check = filter_column.replace("data->>", "")
-                is_jsonb = True
+        items = self._load_local_data()
+        key_to_check = filter_column
+        is_jsonb = False
+        if filter_column.startswith("data->>"):
+            key_to_check = filter_column.replace("data->>", "")
+            is_jsonb = True
+        
+        remaining = []
+        deleted_count = 0
+        for item in items:
+            val = item.get(key_to_check)
+            if not is_jsonb and key_to_check == "id":
+                val = item.get("id")
             
-            remaining = []
-            deleted_count = 0
-            for item in items:
-                val = item.get(key_to_check)
-                if not is_jsonb and key_to_check == "id":
-                    val = item.get("id")
-                
-                if str(val) == str(filter_value):
-                    deleted_count += 1
-                else:
-                    remaining.append(item)
-            
-            if deleted_count > 0:
-                self._save_local_data(remaining)
-            return deleted_count
-
-        try:
-            response = supabase.table(self.table_name).delete().eq(filter_column, filter_value).execute()
-            return len(response.data) if response.data else 0
-        except Exception as e:
-            print(f"Supabase DELETE_MANY Error on {self.table_name}: {e}. Falling back to local delete_many.")
-            items = self._load_local_data()
-            key_to_check = filter_column
-            is_jsonb = False
-            if filter_column.startswith("data->>"):
-                key_to_check = filter_column.replace("data->>", "")
-                is_jsonb = True
-            
-            remaining = []
-            deleted_count = 0
-            for item in items:
-                val = item.get(key_to_check)
-                if not is_jsonb and key_to_check == "id":
-                    val = item.get("id")
-                
-                if str(val) == str(filter_value):
-                    deleted_count += 1
-                else:
-                    remaining.append(item)
-            
-            if deleted_count > 0:
-                self._save_local_data(remaining)
-            return deleted_count
+            if str(val) == str(filter_value):
+                deleted_count += 1
+            else:
+                remaining.append(item)
+        
+        if deleted_count > 0:
+            self._save_local_data(remaining)
+        return deleted_count
 
     def clear_all(self):
         self.write([])
