@@ -44,7 +44,7 @@ class JSONDatabase:
             
         # 2. Specifically for companies table, if it is empty, add default company
         if self.table_name == "companies":
-            companies = self._load_local_data()
+            companies = self._load_local_data(check_seed=False)
             if not companies:
                 default_company = {
                     "id": "557f9b08-30da-4b99-b233-a16c9df5191d",
@@ -91,7 +91,9 @@ class JSONDatabase:
         except Exception as e:
             print(f"Failed to seed table {self.table_name} from SQL: {e}")
 
-    def _load_local_data(self) -> List[Dict[str, Any]]:
+    def _load_local_data(self, check_seed: bool = True) -> List[Dict[str, Any]]:
+        if check_seed:
+            self._ensure_local_seeded()
         if not os.path.exists(self.file_path):
             return []
         try:
@@ -133,8 +135,9 @@ class JSONDatabase:
                 if "Errno 35" in str(e) and attempt < max_retries - 1:
                     time.sleep(0.5 * (attempt + 1))
                     continue
-                print(f"Supabase GET_ALL Error on {self.table_name}: {e}")
-                return []
+                if attempt == max_retries - 1:
+                    print(f"Supabase GET_ALL Error on {self.table_name}: {e}. Falling back to local data.")
+                    return self._load_local_data()
         return []
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
@@ -158,6 +161,13 @@ class JSONDatabase:
                 if "Errno 35" in str(e) and attempt < max_retries - 1:
                     time.sleep(0.5 * (attempt + 1))
                     continue
+                if attempt == max_retries - 1:
+                    print(f"Supabase GET_BY_ID Error on {self.table_name}: {e}. Falling back to local data.")
+                    items = self._load_local_data()
+                    for item in items:
+                        if str(item.get("id")) == str(item_id):
+                            return item
+                    return None
         return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -190,8 +200,18 @@ class JSONDatabase:
                 if attempt < max_retries - 1:
                     time.sleep(0.3)
                     continue
-                print(f"Supabase GET_FILTERED Error on {self.table_name}: {e}")
-                return []
+                print(f"Supabase GET_FILTERED Error on {self.table_name}: {e}. Falling back to local data.")
+                items = self._load_local_data()
+                filtered = []
+                for item in items:
+                    match = True
+                    for key, val in filters.items():
+                        if str(item.get(key)) != str(val):
+                            match = False
+                            break
+                    if match:
+                        filtered.append(item)
+                return filtered
         return []
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
@@ -207,7 +227,11 @@ class JSONDatabase:
             supabase.table(self.table_name).insert(record).execute()
             return item
         except Exception as e:
-            print(f"Supabase INSERT Error on {self.table_name}: {e}")
+            print(f"Supabase INSERT Error on {self.table_name}: {e}. Falling back to local insertion.")
+            items = self._load_local_data()
+            items = [i for i in items if str(i.get("id")) != str(item.get("id"))]
+            items.append(item)
+            self._save_local_data(items)
             return item
 
     def update(self, item_id: str, updated_item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -229,7 +253,13 @@ class JSONDatabase:
             supabase.table(self.table_name).update(record).eq("id", item_id).execute()
             return current
         except Exception as e:
-            print(f"Supabase UPDATE Error on {self.table_name}: {e}")
+            print(f"Supabase UPDATE Error on {self.table_name}: {e}. Falling back to local update.")
+            items = self._load_local_data()
+            for i, item in enumerate(items):
+                if str(item.get("id")) == str(item_id):
+                    items[i].update(updated_item)
+                    self._save_local_data(items)
+                    return items[i]
             return None
 
     def delete(self, item_id: str) -> bool:
@@ -244,8 +274,12 @@ class JSONDatabase:
             response = supabase.table(self.table_name).delete().eq("id", item_id).execute()
             return True
         except Exception as e:
-            print(f"Supabase DELETE Error on {self.table_name}: {e}")
-            return False
+            print(f"Supabase DELETE Error on {self.table_name}: {e}. Falling back to local deletion.")
+            items = self._load_local_data()
+            orig_len = len(items)
+            items = [i for i in items if str(i.get("id")) != str(item_id)]
+            self._save_local_data(items)
+            return len(items) < orig_len
 
     def write(self, data: List[Dict[str, Any]]):
         if not supabase:
@@ -258,7 +292,8 @@ class JSONDatabase:
                 records = [{"id": str(item["id"]), "data": item} for item in data]
                 supabase.table(self.table_name).insert(records).execute()
         except Exception as e:
-            print(f"Supabase WRITE Error on {self.table_name}: {e}")
+            print(f"Supabase WRITE Error on {self.table_name}: {e}. Falling back to local write.")
+            self._save_local_data(data)
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
         if not supabase:
@@ -289,8 +324,29 @@ class JSONDatabase:
             response = supabase.table(self.table_name).delete().eq(filter_column, filter_value).execute()
             return len(response.data) if response.data else 0
         except Exception as e:
-            print(f"Supabase DELETE_MANY Error on {self.table_name}: {e}")
-            return 0
+            print(f"Supabase DELETE_MANY Error on {self.table_name}: {e}. Falling back to local delete_many.")
+            items = self._load_local_data()
+            key_to_check = filter_column
+            is_jsonb = False
+            if filter_column.startswith("data->>"):
+                key_to_check = filter_column.replace("data->>", "")
+                is_jsonb = True
+            
+            remaining = []
+            deleted_count = 0
+            for item in items:
+                val = item.get(key_to_check)
+                if not is_jsonb and key_to_check == "id":
+                    val = item.get("id")
+                
+                if str(val) == str(filter_value):
+                    deleted_count += 1
+                else:
+                    remaining.append(item)
+            
+            if deleted_count > 0:
+                self._save_local_data(remaining)
+            return deleted_count
 
     def clear_all(self):
         self.write([])
