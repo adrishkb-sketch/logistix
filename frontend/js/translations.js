@@ -14235,6 +14235,28 @@ function injectBrandingLogo() {
     const isRoot = !window.location.pathname.includes('/pages/');
     const logoPathPrefix = isRoot ? '' : '../';
     
+    // Inject brand-logo CSS rules dynamically to support pages without style.css
+    if (!document.getElementById('dynamic-branding-style')) {
+        const style = document.createElement('style');
+        style.id = 'dynamic-branding-style';
+        style.innerHTML = `
+            .brand-logo {
+                display: inline-block;
+                background-image: url('${logoPathPrefix}logo_dark.png') !important;
+                background-size: contain;
+                background-position: left center;
+                background-repeat: no-repeat;
+                width: 100%;
+                height: 100%;
+                transition: background-image 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            body.light-mode .brand-logo {
+                background-image: url('${logoPathPrefix}logo_light.png') !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
     // Inject dynamic favicon on all pages
     let favicon = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
     if (!favicon) {
