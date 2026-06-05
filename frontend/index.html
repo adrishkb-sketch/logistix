@@ -405,6 +405,33 @@ body.light-mode .pin-box, body.light-mode input, body.light-mode select {
     box-shadow: 0 0 15px rgba(var(--primary-rgb, 79, 140, 255), 0.3) !important;
     transform: translateY(-3px);
 }
+select option {
+    background-color: #0b1220;
+    color: #ffffff;
+}
+body.light-mode select option {
+    background-color: #ffffff;
+    color: #0f172a;
+}
+@media (max-width: 768px) {
+    #theme-toggle {
+        top: 10px !important;
+        right: 10px !important;
+        padding: 6px 12px !important;
+        font-size: 0.75rem !important;
+    }
+    .lang-selector-wrap {
+        top: 10px !important;
+        right: 90px !important;
+        padding: 2px 6px !important;
+    }
+    .hero {
+        padding-top: 60px !important;
+    }
+    .updates-pill {
+        margin-top: 60px !important;
+    }
+}
 </style>
 </head>
 
@@ -414,7 +441,7 @@ body.light-mode .pin-box, body.light-mode input, body.light-mode select {
 <button id="theme-toggle">🌙 Dark</button>
 
 <!-- Language Selector Dropdown -->
-<div class="glass-card" style="position:fixed; top:20px; right:120px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; z-index:9999; backdrop-filter:blur(10px);">
+<div class="glass-card lang-selector-wrap" style="position:fixed; top:20px; right:120px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; z-index:9999; backdrop-filter:blur(10px);">
     <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
     <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
             <option value="en">English (EN)</option>

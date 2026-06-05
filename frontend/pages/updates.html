@@ -227,6 +227,38 @@
         strong {
             color: var(--text);
         }
+
+        select option {
+            background-color: #0b1220;
+            color: #ffffff;
+        }
+        body.light-mode select option {
+            background-color: #ffffff;
+            color: #0f172a;
+        }
+
+        @media (max-width: 768px) {
+            .back-link {
+                top: 10px !important;
+                left: 10px !important;
+                padding: 6px 12px !important;
+                font-size: 0.75rem !important;
+            }
+            #theme-toggle {
+                top: 10px !important;
+                right: 10px !important;
+                padding: 6px 10px !important;
+                font-size: 0.75rem !important;
+            }
+            #lang-selector {
+                top: 10px !important;
+                right: 85px !important;
+                padding: 2px 6px !important;
+            }
+            .container {
+                padding-top: 70px !important;
+            }
+        }
     </style>
 </head>
 <body>

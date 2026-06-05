@@ -262,13 +262,13 @@ body.light-mode input, body.light-mode select, body.light-mode textarea {
 }
 
 option {
-    background-color: #1a202c; /* Dark background for options in dark mode */
-    color: white;
+    background-color: #0b1220 !important; /* Dark background matching --bg */
+    color: white !important;
 }
 
 body.light-mode option {
-    background-color: white;
-    color: #0f172a;
+    background-color: white !important;
+    color: #0f172a !important;
 }
 
 input:focus, select:focus {
