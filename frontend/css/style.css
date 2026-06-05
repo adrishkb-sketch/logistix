@@ -1549,3 +1549,43 @@ body.light-mode .action-btn-pill {
         width: 100% !important;
     }
 }
+
+/* ==========================================================================
+   DYNAMIC RESPONSIVE BRANDING LOGOS
+   ========================================================================== */
+.brand-logo {
+    display: inline-block;
+    background-image: url('../logo_dark.png') !important;
+    background-size: contain;
+    background-position: left center;
+    background-repeat: no-repeat;
+    width: 100%;
+    height: 100%;
+    transition: background-image 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.light-mode .brand-logo {
+    background-image: url('../logo_light.png') !important;
+}
+
+/* Adjust sidebar logo padding / height for a clean fit */
+.sidebar-header {
+    height: auto;
+    padding: 10px 12px;
+}
+
+/* Responsive Landing Page Floating Brand Logo Container */
+#landing-brand-container {
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    #landing-brand-container {
+        top: 10px !important;
+        left: 10px !important;
+    }
+    #landing-brand-container .brand-logo {
+        width: 105px !important;
+        height: 26px !important;
+    }
+}

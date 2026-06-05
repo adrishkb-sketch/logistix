@@ -14210,6 +14210,10 @@ function updatePageTranslations() {
     const elements = document.querySelectorAll('[data-i18n]');
     elements.forEach(el => {
         const key = el.getAttribute('data-i18n');
+        if (key === 'logistix_brand') {
+            el.innerHTML = `<div class="brand-logo" style="width:100%; height:40px;"></div>`;
+            return;
+        }
         el.innerHTML = getTranslation(key);
     });
     
@@ -14227,6 +14231,102 @@ function updatePageTranslations() {
     });
 }
 
+function injectBrandingLogo() {
+    const isRoot = !window.location.pathname.includes('/pages/');
+    const logoPathPrefix = isRoot ? '' : '../';
+    
+    // Inject dynamic favicon on all pages
+    let favicon = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+    if (!favicon) {
+        favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/png';
+        document.head.appendChild(favicon);
+    }
+    favicon.id = 'dynamic-favicon';
+    favicon.href = `${logoPathPrefix}favicon.png`;
+
+    // 1. Target Sidebar Header in Manager pages
+    const sidebarHeaders = document.querySelectorAll('.sidebar-header');
+    sidebarHeaders.forEach(header => {
+        header.innerHTML = `
+            <div class="brand-logo" onclick="location.href='${logoPathPrefix}index.html'" style="cursor:pointer; width: 100%; height: 50px; max-width: 200px; margin: 0 auto; display: block;"></div>
+        `;
+    });
+
+    // 2. Target Sidebar Logo in Warehouse Manager pages
+    const sidebarLogos = document.querySelectorAll('.sidebar-logo');
+    sidebarLogos.forEach(logo => {
+        logo.innerHTML = '';
+        logo.className = 'sidebar-logo-container';
+        logo.style.padding = '20px 0';
+        const logoDiv = document.createElement('div');
+        logoDiv.className = 'brand-logo';
+        logoDiv.style.cssText = `width: 100%; height: 45px; max-width: 180px; margin: 0 auto; display: block; cursor: pointer;`;
+        logoDiv.onclick = () => { window.location.href = `${logoPathPrefix}index.html`; };
+        logo.appendChild(logoDiv);
+    });
+
+    // 3. Target Driver App Top Bar
+    const driverTopBars = document.querySelectorAll('.driver-layout .top-bar h2');
+    driverTopBars.forEach(h2 => {
+        h2.style.display = 'flex';
+        h2.style.alignItems = 'center';
+        h2.style.gap = '8px';
+        h2.style.flexWrap = 'wrap';
+        h2.innerHTML = `
+            <div class="brand-logo" onclick="location.href='${logoPathPrefix}index.html'" style="cursor:pointer; width: 100px; height: 26px;"></div>
+            <span style="font-size: 0.9rem; color: var(--muted); font-weight:700;">| Driver App</span>: <span id="driver-name" style="font-size: 0.9rem; font-weight:700;">Driver</span>
+        `;
+    });
+
+    // 4. Target Track Page Auth Card
+    const trackAuthPanel = document.getElementById('auth-panel');
+    if (trackAuthPanel && !document.getElementById('track-logo-container')) {
+        const logoContainer = document.createElement('div');
+        logoContainer.id = 'track-logo-container';
+        logoContainer.style.cssText = 'display:flex; justify-content:center; margin-bottom: 24px;';
+        logoContainer.innerHTML = `
+            <div class="brand-logo" style="width: 180px; height: 45px;"></div>
+        `;
+        trackAuthPanel.insertBefore(logoContainer, trackAuthPanel.firstChild);
+    }
+
+    // 5. Target index.html Landing Page Hero / Header
+    const isIndexPage = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || !window.location.pathname.includes('/pages/');
+    if (isIndexPage && !document.getElementById('landing-brand-container')) {
+        const brandContainer = document.createElement('div');
+        brandContainer.id = 'landing-brand-container';
+        brandContainer.style.cssText = 'position:fixed; top:20px; left:20px; z-index:10002; display:flex; align-items:center;';
+        brandContainer.innerHTML = `
+            <div class="brand-logo" style="width: 150px; height: 38px; cursor: pointer;" onclick="location.reload()"></div>
+        `;
+        document.body.appendChild(brandContainer);
+    }
+
+    // 6. Target Updates Page Header
+    const updatesHeader = document.querySelector('.container header');
+    if (updatesHeader && !document.getElementById('updates-logo-container')) {
+        const logoContainer = document.createElement('div');
+        logoContainer.id = 'updates-logo-container';
+        logoContainer.style.cssText = 'display:flex; justify-content:center; margin-bottom: 20px;';
+        logoContainer.innerHTML = `
+            <div class="brand-logo" style="width: 160px; height: 40px;"></div>
+        `;
+        updatesHeader.insertBefore(logoContainer, updatesHeader.firstChild);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const currentLang = localStorage.getItem('app_lang') || 'en';
+    const bundledLangs = ['en', 'hi', 'bn', 'te', 'mr', 'ta', 'gu', 'kn', 'or', 'ml', 'pa', 'as', 'mai', 'sat', 'ks'];
+    if (!bundledLangs.includes(currentLang)) {
+        await loadLanguage(currentLang);
+    }
+    updatePageTranslations();
+    injectBrandingLogo();
+});
+
 async function setLanguage(lang) {
     localStorage.setItem('app_lang', lang);
     await loadLanguage(lang);
@@ -14242,11 +14342,4 @@ async function setLanguage(lang) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const currentLang = localStorage.getItem('app_lang') || 'en';
-    const bundledLangs = ['en', 'hi', 'bn', 'te', 'mr', 'ta', 'gu', 'kn', 'or', 'ml', 'pa', 'as', 'mai', 'sat', 'ks'];
-    if (!bundledLangs.includes(currentLang)) {
-        await loadLanguage(currentLang);
-    }
-    updatePageTranslations();
-});
+
