@@ -14,7 +14,10 @@ def save_and_compress_image(file_bytes: bytes, filename: str) -> str:
     
     # base_dir is the project root
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    target_dir = os.path.join(base_dir, "data", "images")
+    if os.environ.get("VERCEL") == "1":
+        target_dir = "/tmp/data/images"
+    else:
+        target_dir = os.path.join(base_dir, "data", "images")
     os.makedirs(target_dir, exist_ok=True)
     
     try:

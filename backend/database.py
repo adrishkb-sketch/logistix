@@ -18,7 +18,10 @@ class JSONDatabase:
     """
     def __init__(self, table_name: str):
         self.table_name = table_name
-        self.data_dir = os.path.join(base_dir, "data")
+        if os.environ.get("VERCEL") == "1":
+            self.data_dir = "/tmp/data"
+        else:
+            self.data_dir = os.path.join(base_dir, "data")
         os.makedirs(self.data_dir, exist_ok=True)
         self.file_path = os.path.join(self.data_dir, f"{table_name}.json")
         self._ensure_local_seeded()
