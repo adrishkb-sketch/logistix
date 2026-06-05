@@ -45,7 +45,6 @@
     <div class="background-animation"></div>
     <!-- Controls Overlay -->
     <div style="position:fixed; top:20px; right:20px; display:flex; align-items:center; gap:12px; z-index:10002; max-width: calc(100% - 40px); flex-wrap: wrap; justify-content: flex-end;">
-        <button id="modify-dash-btn" class="btn-primary btn-outline" style="padding:8px 16px; font-size:0.75rem; white-space:nowrap; margin:0;" onclick="window.logistixLayout.toggleEditMode()" data-i18n="modify_dashboard">📐 Modify Dashboard</button>
         
         <!-- Language Selector Dropdown -->
         <div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:4px;">
@@ -72,14 +71,10 @@
         <div id="theme-toggle" class="theme-switch" style="position:static; margin:0;">🌙</div>
     </div>
     
-
-
-
-
-
-
     <div class="track-layout">
-        <a href="../index.html" style="text-decoration:none; color:var(--muted); font-weight:600; font-size:0.9rem;" data-i18n="back_to_home">← Back to Home</a>
+        <a href="../index.html" class="glass-card" style="text-decoration:none; color:var(--text); font-size:1.2rem; width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.1); transition:all 0.2s; margin-bottom:24px;" onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='var(--primary)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='var(--border)';">
+            🏠
+        </a>
         
         <!-- Auth View -->
         <div id="auth-panel" class="auth-card glass-card" style="margin-top:60px;">
