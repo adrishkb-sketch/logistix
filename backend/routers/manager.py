@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
 from backend.models import Driver, Vehicle, Drone, Warehouse, Shipment, ShipmentEvent, Location
 from backend.database import JSONDatabase
+from backend.services.kv_store import CompaniesKVDatabase
 from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
@@ -12,7 +13,7 @@ import json
 from backend.services.auth_utils import verify_context
 
 router = APIRouter()
-companies_db = JSONDatabase("companies")
+companies_db = CompaniesKVDatabase()   # ← persistent on Vercel via Upstash Redis
 drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")
 warehouses_db = JSONDatabase("warehouses")

@@ -1368,11 +1368,12 @@ def pay_shipment(shipment_id: str):
     shipments_db.update(shipment["id"], {"payment_status": "paid"})
     
     # Update Company Profit (Receiver paid the amount)
-    companies_db = JSONDatabase("companies")
-    comp = companies_db.get_by_id(shipment.get("company_id"))
+    from backend.services.kv_store import CompaniesKVDatabase
+    comp_kv = CompaniesKVDatabase()
+    comp = comp_kv.get_by_id(shipment.get("company_id"))
     if comp:
         amount = shipment.get("finance", {}).get("suggested_price", 0)
-        companies_db.update(comp["id"], {"total_profit": comp.get("total_profit", 0) + amount})
+        comp_kv.update(comp["id"], {"total_profit": comp.get("total_profit", 0) + amount})
         
         # Log to ledger
         from backend.database import JSONDatabase

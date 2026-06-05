@@ -4,11 +4,12 @@ from typing import Optional, List
 import random
 from backend.models import CompanyCreate, CompanyLogin, DriverLogin, Warehouse
 from backend.database import JSONDatabase
+from backend.services.kv_store import CompaniesKVDatabase
 import uuid
 import os
 
 router = APIRouter()
-companies_db = JSONDatabase("companies")
+companies_db = CompaniesKVDatabase()   # ← persistent on Vercel via Upstash Redis
 drivers_db = JSONDatabase("drivers")
 shipments_db = JSONDatabase("shipments")
 
