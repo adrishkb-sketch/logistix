@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Manager Dashboard | Logistix</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="../css/style.css" rel="stylesheet"/>
+<!-- Leaflet CSS & Draw CSS -->
+<link crossorigin="" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+        #map { height: 450px; width: 100%; border-radius: 20px; margin-top: 1rem; border: 1px solid var(--border); z-index: 1; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+
+        .hover-card {
+            position: absolute;
+            z-index: 10002;
+            width: 260px;
+            padding: 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            display: none;
+            pointer-events: none;
+            backdrop-filter: blur(20px);
+        }
+        .driver-name-hover:hover .hover-card { display: block; }
+        .hover-card.low-fatigue { border-top: 4px solid var(--success); }
+        .hover-card.mid-fatigue { border-top: 4px solid var(--warning); }
+        .hover-card.high-fatigue { border-top: 4px solid var(--danger); }
+        
+        /* Specific Table Overrides */
+        .leaderboard-table tr:first-child { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--warning); }
+
+        /* Leaderboard responsive layout */
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .leaderboard-selects {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        /* The table wrapper scrolls horizontally on its own — page stays still */
+        .leaderboard-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+        }
+        .leaderboard-table {
+            min-width: 480px; /* Forces scroll inside the wrapper instead of the page */
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .leaderboard-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .leaderboard-selects {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+            .leaderboard-selects select {
+                width: 100%;
+                font-size: 0.85rem !important;
+                padding: 8px 10px !important;
+            }
+        }
+        /* Dashboard Spacing */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
+        
+        /* Sidebar Logo */
+        .sidebar-header { margin-bottom: 40px; padding: 0 12px; }
+        .nav-links-wrapper { margin-bottom: 32px; }
+        .chat-driver-item:hover { background: rgba(79, 140, 255, 0.05) !important; }
+        .chat-driver-item.active { background: rgba(79, 140, 255, 0.1) !important; border-left: 4px solid var(--primary); }
+        .section-card h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+    line-height: 1.6;
+}
+        .sidebar-header h2 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Animation */
+        .background-animation {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
+                        radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
+        }
+        /* Automated Optimize Button */
+        .ai-optimize-btn {
+            background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
+            color: white !important;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .ai-optimize-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
+            filter: brightness(1.1);
+        }
+        .ai-optimize-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        .ai-optimize-btn:hover::before {
+            left: 100%;
+        }
+        .ai-optimize-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* Simulation Mode Switch */
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2); }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        input:focus + .slider { box-shadow: 0 0 1px #3b82f6; }
+        input:checked + .slider:before { transform: translateX(22px); }
+        
+        #sim-mode-toggle-container.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        #sim-mode-toggle-container.active span { color: #3b82f6 !important; }
+        @media (max-width: 600px) {
+            .glass-card.section-card {
+                padding: 16px !important;
+            }
+            .section-card h2 {
+                font-size: 1.4rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        body.light-mode input, body.light-mode select, body.light-mode textarea, body.light-mode .pin-box {
+            color: #000000 !important;
+        }
+        .btn-action-details {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.85rem;
+        transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: left;
+    }
+    .btn-action-details:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
+        background: rgba(79, 140, 255, 0.1);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .btn-action-details .icon {
+        font-size: 1.2rem;
+    }
+    .btn-action-details:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .intel-block {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        padding: 16px;
+        border-radius: 16px;
+    }
+    .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(12px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 20px;
+    }
+    .modal-box {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+        animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes modalIn {
+        from { transform: scale(0.9) translateY(20px); opacity: 0; }
+        to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        cursor: pointer;
+        font-size: 1.4rem;
+        opacity: 0.5;
+        transition: 0.3s;
+        z-index: 100;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.1);
+    }
+    .modal-close:hover { 
+        opacity: 1; 
+        background: var(--danger);
+        color: white;
+    }
+</style>
+</head>
+<body>
+<div class="background-animation"></div>
+<div class="dashboard-layout">
+<aside class="sidebar">
+<div class="sidebar-header">
+<h2><span data-i18n="logistix_brand">Logistix</span></h2>
+</div>
+<div class="nav-links-wrapper" data-layout-container="sidebar-nav">
+<a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics"><span data-i18n="nav_analytics">Executive Analytics</span></a>
+<a class="nav-link" data-layout-id="nav-hubs" href="manager_warehouses.html">🏗️<span data-i18n="nav_hubs">Infrastructure (Hubs)</span></a>
+<a class="nav-link" data-layout-id="nav-shipments" href="manager_shipments.html" id="btn-nav-shipments"><span data-i18n="nav_shipments">Shipments</span></a>
+<a class="nav-link" data-layout-id="nav-receivers" href="manager_receivers.html"><span data-i18n="nav_receivers">Receivers</span></a>
+<a class="nav-link" data-layout-id="nav-drivers" href="manager_drivers.html"><span data-i18n="nav_fleet">Drivers &amp; Fleet</span></a>
+<a class="nav-link" data-layout-id="nav-weather" href="manager_weather.html">🗺️<span data-i18n="nav_weather">Weather Fleet Map</span></a>
+<a class="nav-link" data-layout-id="nav-leaderboard" href="manager_leaderboard.html">🏆<span data-i18n="nav_leaderboard">Leaderboards</span></a>
+<a class="nav-link" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages">💬<span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span></a>
+<a class="nav-link active" data-layout-id="nav-verifications" href="manager_verifications.html">🛡️<span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span></a>
+<a class="nav-link" data-layout-id="nav-safety" href="manager_safety.html" id="btn-nav-safety">🛡️<span data-i18n="nav_safety">Safety Center</span><span class="badge" id="safety-badge"></span></a>
+<a class="nav-link" data-layout-id="nav-ledger" href="manager_ledger.html">⛓️<span data-i18n="nav_ledger">Smart Contracts</span></a>
+<a class="nav-link" data-layout-id="nav-oracle" href="manager_oracle.html">🧠<span data-i18n="nav_oracle">Strategy Oracle</span></a>
+<a class="nav-link" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">🛢️<span data-i18n="nav_fuel">Bharat-Fuel Oracle</span></a>
+<a class="nav-link" data-layout-id="nav-paisa" href="manager_payments.html" id="nav-link-paisa-fast">💰<span data-i18n="nav_paisa">Payments</span><span class="badge" id="paisa-badge"></span></a>
+<a class="nav-link" data-layout-id="nav-strategy" href="manager_strategy.html">🎯<span data-i18n="nav_strategy">Operational Strategy</span></a>
+<a class="nav-link" data-layout-id="nav-resilience" href="manager_resilience.html">🦋<span data-i18n="nav_resilience">Network Resilience</span></a>
+<a class="nav-link" data-layout-id="nav-settings" href="manager_system.html"><span data-i18n="nav_settings">System Settings</span></a>
+<a class="nav-link" data-layout-id="nav-hub-leaves" href="manager_hub_leaves.html"><span data-i18n="nav_hub_leaves">Hub Leaves</span></a>
+</div>
+<a class="nav-link" href="#" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); font-weight:800; border:1px solid rgba(239, 68, 68, 0.2); margin-top:0;"><span data-i18n="sign_out">Logout 🚪</span></a>
+</aside>
+<main class="main-content" data-layout-container="main-sections">
+<div class="top-bar" style="display:flex; align-items:center; gap:20px;">
+<h1 style="flex:1;"><span data-i18n="dashboard">Dashboard</span> - <span id="manager-name">---</span></h1>
+<button class="btn-primary btn-outline" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()" style="padding:8px 16px; font-size:0.85rem;">📐 Modify Dashboard</button>
+<!-- Language Selector Dropdown -->
+<div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;">
+<span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
+<select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
+<option value="en">English (EN)</option>
+<option value="bn">বাংলা (BN)</option>
+<option value="hi">हिंदी (HI)</option>
+<option value="te">తెలుగు (TE)</option>
+<option value="mr">मराठी (MR)</option>
+<option value="ta">தமிழ் (TA)</option>
+<option value="gu">ગુજરાતી (GU)</option>
+<option value="kn">ಕನ್ನಡ (KN)</option>
+<option value="or">ଓଡ଼ିଆ (OR)</option>
+<option value="ml">മലയാളം (ML)</option>
+<option value="pa">ਪੰਜਾਬੀ (PA)</option>
+<option value="as">অসমীয়া (AS)</option>
+<option value="mai">मैथिলি (MAI)</option>
+<option value="sat">संताली (SAT)</option>
+<option value="ks">کٲشُر (KS)</option>
+</select>
+</div>
+<!-- Voice Control Button & Help -->
+<div style="display:flex; align-items:center; gap:6px;">
+<button class="glass-card" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);">🎙️ Automated Control</button>
+<button onclick="window.logistixVoice.showInstructions()" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;" title="Voice Help">?</button>
+</div>
+<div class="theme-switch" id="theme-toggle" style="margin:0;" title="Toggle Light/Dark Mode">🌙</div>
+</div>
+<!-- Hub Leaves Section -->
+
+<!-- Analytics Section -->
+
+<!-- Warehouses Section -->
+
+<!-- Shipments Section -->
+
+<!-- Receivers Section -->
+
+<!-- Drivers & Vehicles Section -->
+
+<!-- Verifications Section -->
+<section class="section-content" data-layout-id="section-verifications" id="verifications">
+<div data-layout-container="verifications-content">
+<div class="glass-card section-card" data-layout-id="verifications-manual">
+<h2 data-i18n="manual_verifications_title" style="margin:0; font-size:1.6rem; color:var(--accent);">Manual ML Verifications</h2>
+<div style="width:50px; height:4px; background:var(--accent); margin:16px 0; border-radius:2px;"></div>
+<p class="subtitle" data-i18n="manual_verifications_desc" style="margin-bottom:40px; font-size:0.95rem;">Review number plates that the automated system could not confidently read.</p>
+<div class="table-container">
+<table>
+<thead><tr><th data-i18n="platform_driver">Driver</th><th data-i18n="label_number_plate">Vehicle Plate</th><th data-i18n="label_image">Image</th><th data-i18n="th_action">Action</th></tr></thead>
+<tbody id="verifications-table-body"></tbody>
+</table>
+</div>
+</div>
+<div class="glass-card section-card" data-layout-id="verifications-verified" style="margin-top:32px;">
+<h2 data-i18n="verified_vehicles_title" style="margin:0; font-size:1.6rem; color:var(--success);">Verified Vehicles</h2>
+<div style="width:50px; height:4px; background:var(--success); margin:16px 0; border-radius:2px;"></div>
+<p class="subtitle" data-i18n="verified_vehicles_desc" style="margin-bottom:32px; font-size:0.95rem;">List of all vehicles successfully verified automatically or Manual review.</p>
+<div style="margin-top:40px; border-top:1px solid var(--border); padding-top:30px;">
+<h3 data-i18n="title_verified_fleet" style="margin:0 0 10px 0; color:var(--success);">Verified Fleet Registry</h3>
+<p data-i18n="verified_vehicles_desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Master list of all vehicles and drivers who have successfully completed security verification.</p>
+<div class="table-container" style="background:rgba(72, 187, 120, 0.05); border-radius:12px; border:1px solid rgba(72, 187, 120, 0.1);">
+<table style="width:100%;">
+<thead>
+<tr style="text-align:left; border-bottom:1px solid var(--border);">
+<th data-i18n="vehicle_type" style="padding:12px;">Vehicle Type</th>
+<th data-i18n="label_number_plate" style="padding:12px;">Number Plate</th>
+<th data-i18n="th_id" style="padding:12px;">System ID</th>
+<th data-i18n="th_linked_driver" style="padding:12px;">Verified Driver</th>
+<th data-i18n="th_action" style="padding:12px; text-align:right;">Action</th>
+</tr>
+</thead>
+<tbody id="verified-vehicles-table-body">
+<!-- Verified vehicles injected here -->
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Weather Fleet Map Section -->
+
+<!-- Messages Section -->
+
+<!-- Leaderboard Section -->
+
+<!-- Smart Contract Ledger Section -->
+
+<!-- Strategy Oracle Section -->
+
+<!-- Operational Strategy Tracker Section -->
+
+<!-- System Settings Section -->
+<!-- Network Resilience Section -->
+<!-- Bharat-Fuel Oracle Section -->
+
+<!-- Payments Section -->
+
+
+
+<!-- Safety Center Section -->
+
+</main>
+</div>
+<div id="alert-container"></div>
+<!-- Manual Assignment Modal -->
+<div class="glass-card modal-glass" id="manual-assign-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:500px; max-width:90vw; padding:30px; border:1px solid rgba(255,255,255,0.1);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<h3 data-i18n="manual_assignment" style="margin:0;">Manual Assignment</h3>
+<button onclick="document.getElementById('manual-assign-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">×</button>
+</div>
+<p class="subtitle" data-i18n="manual_assignment_desc" style="margin-bottom:25px;">Select a driver and vehicle from your active fleet.</p>
+<div class="input-group span-2" style="margin-bottom:25px;">
+<label data-i18n="available_fleet_pairs" style="display:block; margin-bottom:10px; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted);">Available Fleet Pairs</label>
+<select class="polished-glass-input" id="manual-assign-select" style="width:100%; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; color:white;">
+<option value="">Loading fleet...</option>
+</select>
+</div>
+<button class="btn-primary" onclick="submitManualAssign()" style="width:100%; padding:14px; font-weight:800; letter-spacing:1px;">CONFIRM ASSIGNMENT</button>
+</div>
+<!-- Live Track Modal -->
+<div class="glass-card modal-glass" id="track-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:600px; max-width:90vw; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+<h3 style="margin:0;">Live Tracking: <span id="track-shipment-id"></span></h3>
+<button onclick="document.getElementById('track-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">✖</button>
+</div>
+<div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9rem;">
+<p style="margin-bottom:5px;"><b>Status:</b> <span id="track-status" style="color:var(--success);">In Transit</span></p>
+<p style="margin-bottom:5px;"><b>Current Location:</b> <span id="track-current">Waiting for GPS...</span></p>
+<p style="margin-bottom:5px;"><b>Next Stop:</b> <span id="track-next">Loading...</span></p>
+<p style="margin:0; border-top:1px solid rgba(255,255,255,0.1); padding-top:5px; margin-top:5px;">
+<span id="track-contact-label" style="color:var(--accent); font-weight:bold;">📞 Contact:</span>
+<span id="track-contact-value">--</span>
+</p>
+</div>
+<div id="track-map" style="height: 300px; width: 100%; border-radius: 8px; border: 1px solid var(--card-border);"></div>
+</div>
+<!-- QR Viewer Modal -->
+<div class="glass-card modal-glass" id="qr-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:350px; text-align:center; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
+<h3 style="margin-top:0;">Shipment QR Code</h3>
+<p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px;">Drivers must scan this code for verification at pickup.</p>
+<div id="qrcode-canvas" style="background:white; padding:20px; display:inline-block; border-radius:10px; margin-bottom:20px;"></div>
+<div id="qr-id-text" style="font-size:0.75rem; color:var(--primary); font-family:monospace; margin-bottom:20px;"></div>
+<div style="display:flex; gap:10px;">
+<button class="btn-primary" onclick="downloadQR()">📥 Download</button>
+<button class="btn-primary" onclick="document.getElementById('qr-modal').style.display='none'" style="background:transparent; border:1px solid white;">Close</button>
+</div>
+</div>
+<!-- Cargo Plan Modal -->
+<div class="glass-card modal-glass" id="cargo-plan-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10006; width:500px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid var(--primary);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+<h2 style="margin:0; color:var(--primary);">📦 Vehicle Cargo Blueprint</h2>
+<button onclick="document.getElementById('cargo-plan-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">✖</button>
+</div>
+<div id="cargo-plan-content">
+<!-- Injected -->
+</div>
+<div style="margin-top:20px; text-align:right;">
+<button class="btn-primary" onclick="document.getElementById('cargo-plan-modal').style.display='none'" style="width:auto; padding:8px 20px;">Close Inspection</button>
+</div>
+</div>
+<!-- Edit Modal -->
+<div class="glass-card modal-glass" id="edit-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:440px; max-width:94vw; max-height:90vh; overflow-y:auto; box-shadow: 0 40px 80px rgba(0,0,0,0.3); padding:28px; border:1px solid rgba(255,255,255,0.1);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<h3 style="margin:0;">Edit <span id="edit-type"></span></h3>
+<button onclick="document.getElementById('edit-modal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.3rem;line-height:1;">✕</button>
+</div>
+<form id="edit-form" style="display:flex; flex-direction:column; gap:12px;">
+<div id="edit-fields"></div>
+<div style="display:flex; gap:10px; margin-top:8px;">
+<button class="btn-primary" style="flex:1;" type="submit">Save Changes</button>
+<button class="btn-primary" onclick="document.getElementById('edit-modal').style.display='none'" style="flex:1; background:var(--danger);" type="button">Cancel</button>
+</div>
+</form>
+</div>
+<!-- Split Modal -->
+<div class="glass-card modal-glass" id="split-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:550px; max-width:95vw; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 25px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+<h3 id="split-modal-title" style="margin:0;">Manual Route Split</h3>
+<button onclick="document.getElementById('split-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">✖</button>
+</div>
+<div id="split-step-1">
+<p style="font-size:0.85rem; margin-bottom:15px; color:var(--text-muted);">Select intermediate warehouses to route this shipment through:</p>
+<div class="input-group" style="margin-bottom:15px;">
+<input id="split-wh-search" onkeyup="filterSplitWarehouses()" placeholder="🔍 Search warehouses..." style="width:100%; padding:10px 15px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text);" type="text"/>
+</div>
+<div id="split-wh-container" style="margin-bottom:20px; max-height:250px; overflow-y:auto; padding-right:5px;">
+<!-- Checkboxes injected via JS -->
+</div>
+<button class="btn-primary" onclick="submitManualSplit()" style="width:100%;">CONFIRM &amp; SPLIT JOURNEY</button>
+</div>
+</div>
+<!-- Assign Modal -->
+<div class="glass-card modal-glass" id="assign-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10000; width:400px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
+<h3>Manual Assignment</h3>
+<p style="font-size:0.85rem; margin-bottom:10px;">Select an available driver for this route segment:</p>
+<div class="input-group">
+</div>
+<div class="input-group">
+<button class="btn-primary" onclick="submitManualAssign()">Assign Driver</button>
+<button class="btn-primary" onclick="document.getElementById('assign-modal').style.display='none'" style="background:var(--danger); margin-top:10px;" type="button">Cancel</button>
+</div>
+</div>
+<!-- Automated Suggestion Modal -->
+<div class="glass-card modal-glass" id="suggestion-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10002; width:90%; max-width:450px; max-height:95vh; overflow-y:auto; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border: 1px solid var(--primary); padding: 24px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+<h3 data-i18n="strategy_suggestion_title" style="margin:0; color:var(--primary); font-size: 1.1rem;">🔮 Automated Strategy Suggestion</h3>
+<button onclick="document.getElementById('suggestion-modal').style.display='none'" style="background:none; border:none; color:var(--text); font-size:1.2rem; cursor:pointer; opacity:0.6;">✖</button>
+</div>
+<div style="background:rgba(49, 130, 206, 0.1); padding:15px; border-radius:10px; margin-bottom:20px; border-left:4px solid var(--primary);">
+<p style="margin:0; font-size:0.95rem; line-height:1.5;">
+<span data-i18n="strategy_suggestion_desc1">Our Automated engine has identified a <b>strategically superior</b> location approximately</span>
+<span id="sug-dist" style="color:var(--accent); font-weight:bold;"></span>
+<span data-i18n="strategy_suggestion_desc2">away.</span>
+</p>
+<p data-i18n="strategy_ai_reason" id="sug-reason" style="margin:10px 0 0 0; font-size:0.85rem; color:var(--text-muted);">AI identified this as a high-potential future growth node based on regional logistics density.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; margin-bottom:15px;">
+<div class="responsive-flex-column" style="display:flex; gap:10px;">
+<input data-i18n-placeholder="manager_name_placeholder" id="sug-manager" placeholder="Manager Name" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);" type="text"/>
+<input data-i18n-placeholder="contact_number_placeholder" id="sug-contact" placeholder="Contact Number" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);" type="text"/>
+</div>
+<div class="responsive-flex-column" style="display:flex; gap:10px;">
+<input data-i18n-placeholder="placeholder_email" id="sug-email" placeholder="Manager Email" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);" type="email"/>
+<input data-i18n-placeholder="placeholder_password" id="sug-password" placeholder="Manager Password" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--primary); background:var(--bg); color:var(--text);" type="password"/>
+</div>
+<div class="responsive-flex-column" style="display:flex; gap:10px;">
+<div class="responsive-flex-column" style="flex:2; display:flex; gap:10px; align-items:flex-end;">
+<button class="btn-primary" data-i18n="btn_adopt_location" onclick="adoptStrategicLocation()" style="flex:2; min-height:64px; padding:15px; font-size:1.1rem; font-weight:800; background:var(--accent); color:#000;">Adopt Strategic Location</button>
+<button class="btn-primary" data-i18n="btn_stay_manual" onclick="stayWithManualLocation()" style="flex:1; min-height:48px; background:rgba(var(--primary-rgb), 0.1); border:1px solid var(--primary); color:var(--primary); font-size:0.9rem;">Stay Manual</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Add Warehouse Modal -->
+<div class="glass-card modal-glass" id="wh-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10003; width:400px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border: 1px solid var(--primary); padding: 24px;">
+<h3 style="margin-top:0; color:var(--primary);">🏗️ Add Warehouse</h3>
+<div class="input-group">
+<label>Warehouse Name</label>
+<input id="wh-name-input" placeholder="e.g. North Hub" style="width:100%; padding:10px; border-radius:8px; background:var(--bg); color:var(--text); border:1px solid var(--primary);" type="text"/>
+</div>
+<div style="display:flex; gap:10px; margin-top:15px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;">
+<div style="flex:1;">
+<label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Latitude</label>
+<div id="display-lat" style="font-family:monospace; color:var(--primary); font-weight:700;">-</div>
+</div>
+<div style="flex:1;">
+<label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Longitude</label>
+<div id="display-lng" style="font-family:monospace; color:var(--primary); font-weight:700;">-</div>
+</div>
+</div>
+<div style="display:flex; gap:10px; margin-top:15px;">
+<div class="input-group" style="flex:1;">
+<label data-i18n="manager_name">Manager Name</label>
+<input id="wh-manager-input" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="text"/>
+</div>
+<div class="input-group" style="flex:1;">
+<label data-i18n="contact_number">Contact Number</label>
+<input id="wh-contact-input" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="text"/>
+</div>
+</div>
+<div style="display:flex; gap:10px; margin-top:15px;">
+<div class="input-group" style="flex:1;">
+<label data-i18n="label_manager_email">Manager Email</label>
+<input id="wh-email-input" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="email"/>
+</div>
+<div class="input-group" style="flex:1;">
+<label data-i18n="label_manager_password">Manager Password</label>
+<input id="wh-password-input" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="password"/>
+</div>
+</div>
+<div style="margin-top:15px; padding:12px; background:rgba(79, 140, 255, 0.05); border:1px solid rgba(79, 140, 255, 0.1); border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+<div style="font-size:0.8rem; color:var(--text-muted);">Want an AI-optimized site?</div>
+<button class="btn-primary" onclick="triggerManualAICheck()" style="width:auto; padding:6px 12px; font-size:0.75rem; background:var(--accent);">AI Strategy Audit 🔮</button>
+</div>
+<div style="margin-top:15px; padding:10px; background:rgba(229, 62, 62, 0.1); border-left:3px solid var(--danger); border-radius:4px;">
+<p style="margin:0; font-size:0.75rem; color:var(--danger); line-height:1.4;">
+                ⚠️ <b>Warning:</b> Geographic coordinates are permanent once chosen. To change the location, you must decommission this hub and create a new one.
+            </p>
+</div>
+<div style="margin-top:20px; display:flex; gap:10px;">
+<button class="btn-primary" onclick="submitNewWarehouse()">Create Hub</button>
+<button class="btn-primary" onclick="document.getElementById('wh-modal').style.display='none'" style="background:transparent; border:1px solid white;">Cancel</button>
+</div>
+</div>
+<!-- Edit Warehouse Modal -->
+<div class="glass-card modal-glass" id="wh-edit-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10003; width:480px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border: 1px solid var(--accent); padding:32px;">
+<h3 style="margin-top:0; color:var(--accent);">✏️ Edit Warehouse</h3>
+<input id="edit-wh-id" type="hidden"/>
+<div class="input-group">
+<label data-i18n="warehouse_name">Warehouse Name</label>
+<input id="edit-wh-name" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="text"/>
+</div>
+<div style="display:flex; gap:10px; margin-top:15px;">
+<div class="input-group" style="flex:1;">
+<label data-i18n="manager_name">Manager Name</label>
+<input id="edit-wh-manager" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="text"/>
+</div>
+<div class="input-group" style="flex:1;">
+<label data-i18n="contact_number">Contact Number</label>
+<input id="edit-wh-contact" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="text"/>
+</div>
+</div>
+<div style="display:flex; gap:10px; margin-top:15px;">
+<div class="input-group" style="flex:1;">
+<label data-i18n="label_manager_email">Manager Email</label>
+<input id="edit-wh-email" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="email"/>
+</div>
+<div class="input-group" style="flex:1;">
+<label data-i18n="label_manager_password">Manager Password</label>
+<input id="edit-wh-password" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="password"/>
+</div>
+</div>
+<p style="margin-top:15px; font-size:0.75rem; color:var(--text-muted);">Note: Location coordinates are locked for this hub.</p>
+<div style="margin-top:24px; display:flex; gap:12px; flex-wrap:wrap;">
+<button class="btn-primary btn-accent" data-i18n="save_changes" onclick="submitEditWarehouse()" style="flex:1; min-width:140px; padding:12px;">Save Changes</button>
+<button class="btn-primary btn-danger" data-i18n="decommission_hub" onclick="decommissionWarehouse()" style="flex:1; min-width:140px; padding:12px;">Decommission Hub</button>
+<button class="btn-primary btn-outline" data-i18n="btn_cancel" onclick="document.getElementById('wh-edit-modal').style.display='none'" style="flex:1; min-width:140px; padding:12px;">Cancel</button>
+</div>
+</div>
+<!-- Message Modal -->
+<!-- Old message-modal kept for compatibility (hidden by default) -->
+<div class="glass-card modal-glass" id="message-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:11000; width:400px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 24px;">
+<h3 data-i18n="message_driver_title">Message Driver</h3>
+<p style="font-size:0.85rem; margin-bottom:10px;">To: <span id="msg-driver-name"></span></p>
+<div class="input-group">
+<textarea data-i18n-placeholder="placeholder_message" id="msg-content" placeholder="Type your message here..." style="width:100%; height:80px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:8px; padding:10px;"></textarea>
+</div>
+<div class="input-group">
+<button class="btn-primary" onclick="submitMessage()">Send Message</button>
+<button class="btn-primary" onclick="document.getElementById('message-modal').style.display='none'" style="background:var(--danger); margin-top:10px;" type="button">Cancel</button>
+</div>
+</div>
+<!-- Profile Deep-Dive Modal -->
+<div class="glass-card modal-glass" id="profile-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:700px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 32px;">
+<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+<div style="display:flex; gap:20px; align-items:center;">
+<img id="prof-image" src="" style="width:80px; height:80px; border-radius:50%; border:3px solid var(--primary); object-fit:cover;"/>
+<div>
+<h2 id="prof-name" style="margin:0;"></h2>
+<p id="prof-sub" style="color:var(--text-muted); margin:0;"></p>
+<div id="prof-driving-status" style="margin-top:8px; font-size:0.8rem; display:inline-block; padding:4px 10px; border-radius:12px; font-weight:700;"></div>
+</div>
+</div>
+<button onclick="document.getElementById('profile-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">✖</button>
+</div>
+<div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; margin-bottom:25px;">
+<div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+<small style="color:var(--text-muted)">Safety Index</small>
+<h3 id="prof-stat-1" style="font-size:1.1rem; margin-top:5px;"></h3>
+</div>
+<div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+<small style="color:var(--text-muted)">Punctuality</small>
+<h3 id="prof-stat-2" style="font-size:1.1rem; margin-top:5px;"></h3>
+</div>
+<div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+<small style="color:var(--text-muted)">Experience</small>
+<h3 id="prof-stat-3" style="font-size:1.1rem; margin-top:5px;"></h3>
+</div>
+<div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+<small style="color:var(--text-muted)">Rating</small>
+<h3 id="prof-stat-5" style="font-size:1.1rem; margin-top:5px; color:var(--warning);"></h3>
+</div>
+<div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+<small style="color:var(--text-muted)">Trips</small>
+<h3 id="prof-stat-4" style="font-size:1.1rem; margin-top:5px;"></h3>
+</div>
+<div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+<small style="color:var(--text-muted)">Earnings</small>
+<h3 id="prof-stat-6" style="font-size:1.1rem; margin-top:5px; color:var(--accent);"></h3>
+</div>
+</div>
+<h4>Performance Insights</h4>
+<div style="margin-bottom:20px;">
+<label id="prof-meter-label" style="font-size:0.85rem; color:var(--text-muted)"></label>
+<div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; margin-top:5px; overflow:hidden;">
+<div id="prof-meter-bar" style="width:0%; height:100%; background:var(--primary); transition:width 1s ease;"></div>
+</div>
+</div>
+<h4>Recent Trip History</h4>
+<div class="table-container">
+<table style="font-size:0.85rem;">
+<thead><tr><th data-i18n="th_id">ID</th><th data-i18n="th_route">Route</th><th data-i18n="th_date">Date</th><th data-i18n="hub_status">Status</th></tr></thead>
+<tbody id="prof-trips-body"></tbody>
+</table>
+</div>
+</div>
+<!-- Logs Modal -->
+<div class="glass-card modal-glass" id="logs-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:500px; max-height:80vh; overflow-y:auto; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 24px;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+<h2 style="margin:0;">Shipment Logs</h2>
+<button onclick="document.getElementById('logs-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">✖</button>
+</div>
+<p style="color:var(--text-muted); font-size:0.9rem; margin-top:-10px;">Tracking ID: <span id="logs-shipment-id" style="color:white;"></span></p>
+<div class="timeline" id="manager-timeline" style="margin-top:20px;">
+<!-- Logs injected here -->
+</div>
+<div id="rescue-container" style="display:none; margin-top:15px; text-align:center;">
+<button class="btn-primary" id="rescue-btn" onclick="dispatchRescueVehicle()" style="background:var(--danger); width:100%; font-weight:bold;">🚨 Dispatch Rescue Vehicle</button>
+</div>
+<div id="review-container" style="display:none; margin-top:20px; padding:15px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid var(--card-border);">
+<h3 style="margin-top:0; color:var(--primary);">Automated Journey Scorecard 📋</h3>
+<div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+<span style="color:var(--text-muted);">Punctuality:</span> <strong id="rev-punct"></strong>
+</div>
+<div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+<span style="color:var(--text-muted);">Safety:</span> <strong id="rev-safety"></strong>
+</div>
+<div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+<span style="color:var(--danger);">Challan Penalty:</span> <strong id="rev-challan" style="color:var(--danger);"></strong>
+</div>
+<hr style="border-color:rgba(255,255,255,0.1); margin:10px 0;"/>
+<div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:1.1rem;">
+<span>Total Score:</span> <strong id="rev-total" style="color:var(--success);"></strong>
+</div>
+<p id="rev-feedback" style="font-size:0.85rem; color:var(--text-muted); font-style:italic; margin-top:10px;"></p>
+</div>
+<button class="btn-primary" id="view-review-btn" onclick="fetchJourneyReview()" style="display:none; margin-top:20px;">View Journey Scorecard</button>
+</div>
+<!-- Map Picker Modal -->
+<div class="glass-card map-picker-modal-container" id="map-picker-modal" style="display:none; position:fixed; z-index:20000; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid var(--primary);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+<h3 id="map-picker-title" style="margin:0; font-size:1.2rem;">Select Location on Map</h3>
+<button onclick="closeMapPicker()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
+</div>
+<div class="map-picker-map-container" id="picking-map"></div>
+<div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+<div id="current-pick-display" style="font-size:0.9rem; color:var(--primary); font-weight:600; background:rgba(79, 140, 255, 0.1); padding:8px 14px; border-radius:8px; flex:1;">Click on map to pick a location...</div>
+<button class="btn-primary" onclick="confirmMapPick()" style="width:auto; padding:10px 24px; white-space:nowrap;">Confirm Selection</button>
+</div>
+</div>
+<!-- Bulk Upload Modal -->
+<div class="glass-card" id="bulk-upload-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 30px 60px rgba(0,0,0,0.7); overflow-y:auto; border:1px solid var(--accent); background: #0a0d14;">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+<h2 style="margin:0; font-size:1.8rem; color:var(--accent);">Bulk Shipment Upload</h2>
+<button onclick="closeBulkUploadModal()" style="background:none; border:none; color:white; font-size:1.8rem; cursor:pointer;">✖</button>
+</div>
+<!-- Format Guide -->
+<div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:32px;">
+<h4 style="margin:0 0 12px 0; color:var(--accent); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem;">Smart Spreadsheet Format</h4>
+<p style="font-size:0.85rem; color:var(--muted); margin-bottom:15px;">You can use any column order if you include headers. If no headers are found, we use this standard order:</p>
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:0.8rem; color:var(--text);">
+<div><b>1.</b> Pickup Lat (p_lat)</div>
+<div><b>2.</b> Pickup Lng (p_lng)</div>
+<div><b>3.</b> Drop Lat (d_lat)</div>
+<div><b>4.</b> Drop Lng (d_lng)</div>
+<div><b>5.</b> Weight kg</div>
+<div><b>6.</b> Item Description</div>
+<div><b>7.</b> Receiver Name</div>
+<div><b>8.</b> Receiver Phone</div>
+<div><b>9.</b> Receiver Email</div>
+<div><b>10.</b> Perishable (Y/N)</div>
+<div><b>11.</b> E-Way Bill No</div>
+<div><b>12.</b> E-Way Expiry</div>
+</div>
+<p style="margin-top:15px; font-size:0.75rem; color:var(--primary);">💡 Pro Tip: Use coordinates from Google Maps for highest accuracy.</p>
+</div>
+<!-- Upload Options -->
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+<div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center; background:rgba(255,255,255,0.01);">
+<p style="margin-bottom:15px; font-weight:700;">Option A: Upload File</p>
+<input accept=".xlsx, .xls, .csv" id="bulk-file-input" onchange="handleBulkFileSelect(event)" style="display:none;" type="file"/>
+<button class="btn-primary" onclick="document.getElementById('bulk-file-input').click()" style="width:auto; padding:12px 24px;">📁 Choose Excel/CSV</button>
+<p id="file-name-display" style="margin-top:10px; font-size:0.8rem; color:var(--primary);"></p>
+</div>
+<div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center; background:rgba(255,255,255,0.01);">
+<p style="margin-bottom:15px; font-weight:700;">Option B: Google Sheets</p>
+<input id="sheets-url" placeholder="Paste Public Link..." style="margin-bottom:15px; width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white;" type="text"/>
+<button class="btn-primary" onclick="previewGoogleSheets()" style="width:auto; padding:12px 24px; background:var(--success);">🔗 Fetch Data</button>
+</div>
+</div>
+<!-- Preview Area -->
+<div id="bulk-preview-section" style="display:none;">
+<h4 style="margin:0 0 15px 0; border-top:1px solid var(--border); padding-top:20px;">Review Shipments (<span id="bulk-count">0</span>)</h4>
+<div id="bulk-errors" style="display:none; margin-bottom: 20px;"></div>
+<div class="table-container" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+<table class="wide-table" style="width:100%; border-collapse:collapse;">
+<thead style="position:sticky; top:0; background:var(--bg); z-index:1;">
+<tr style="text-align:left; border-bottom:2px solid var(--border);">
+<th data-i18n="th_pickup" style="padding:12px;">Pickup</th>
+<th data-i18n="th_drop" style="padding:12px;">Drop</th>
+<th data-i18n="th_weight" style="padding:12px;">Weight</th>
+<th data-i18n="th_description" style="padding:12px;">Description</th>
+<th data-i18n="th_receiver" style="padding:12px;">Receiver</th>
+<th data-i18n="th_perish" style="padding:12px;">Perish?</th>
+<th data-i18n="th_eway_bill" style="padding:12px;">E-Way Bill</th>
+</tr>
+</thead>
+<tbody id="bulk-preview-body"></tbody>
+</table>
+</div>
+<div style="margin-top:32px; display:flex; justify-content:flex-end; gap:15px;">
+<button class="btn-primary" onclick="closeBulkUploadModal()" style="background:rgba(255,255,255,0.05); color:var(--text); width:auto; padding:12px 32px;">Cancel</button>
+<button class="btn-primary" id="confirm-bulk-btn" onclick="confirmBulkUpload()" style="width:auto; padding:12px 48px;">Confirm &amp; Create Shipments</button>
+</div>
+</div>
+</div>
+<!-- Bulk Driver Upload Modal -->
+<div class="glass-card modal-glass" id="bulk-driver-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); overflow-y:auto; border:1px solid rgba(255,255,255,0.1);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+<h2 style="margin:0; font-size:1.8rem; color:var(--accent);">Bulk Driver Upload</h2>
+<button class="close-modal-btn" onclick="closeDriverBulkModal()">✖</button>
+</div>
+<div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
+<h4 style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;">📋 Smart Driver Format</h4>
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; font-size:0.85rem; color:var(--text); font-weight:500;">
+<div>1. Full Name</div><div>2. Login ID</div><div>3. Password</div>
+<div>4. License Type</div><div>5. Hub Name/ID</div><div>6. Exp Years</div>
+<div>7. Accidents</div><div>8. Challans</div><div>9. Contact Number</div>
+</div>
+<p style="margin-top:15px; font-size:0.75rem; color:var(--warning);">💡 Note: Headers like "Driver Name", "Username", or "Contact" are automatically recognized. Phone numbers are auto-prefixed with <b>+91</b>.</p>
+</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+<div style="padding:24px; border:2px dashed rgba(var(--accent-rgb), 0.3); border-radius:20px; text-align:center; transition: all 0.3s ease; background: rgba(var(--accent-rgb), 0.02);">
+<input accept=".xlsx, .csv" id="bulk-driver-file" onchange="handleDriverBulkFile(event)" style="display:none;" type="file"/>
+<button class="btn-primary" onclick="document.getElementById('bulk-driver-file').click()" style="width:auto; padding: 12px 24px; border-radius: 12px;">📁 Select Excel/CSV</button>
+</div>
+<div style="padding:24px; border:2px dashed rgba(var(--success-rgb), 0.3); border-radius:20px; text-align:center; background: rgba(var(--success-rgb), 0.02);">
+<input id="driver-sheets-url" placeholder="Paste Google Sheets Link..." style="width:100%; padding:14px; border-radius:12px; background:var(--input-bg); border:1px solid var(--border); color:var(--text); margin-bottom:12px; font-size: 0.9rem;" type="text"/>
+<button class="btn-primary" onclick="previewDriverSheets()" style="width:auto; background:var(--success); padding: 12px 24px; border-radius: 12px;">🔗 Fetch from Cloud</button>
+</div>
+</div>
+<div id="driver-preview-section" style="display:none;">
+<h4>Preview (<span id="driver-bulk-count">0</span>)</h4>
+<div id="driver-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
+<div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+<table><thead><tr><th data-i18n="th_name">Name</th><th data-i18n="th_type">Type</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_contact">Contact</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
+</div>
+<div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-driver-bulk-btn" onclick="confirmDriverBulk()">Confirm Upload</button></div>
+</div>
+</div>
+<!-- Bulk Vehicle Upload Modal -->
+<div class="glass-card modal-glass" id="bulk-vehicle-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); overflow-y:auto; border:1px solid rgba(255,255,255,0.1);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+<h2 style="margin:0; font-size:1.8rem; color:var(--accent);">Bulk Vehicle Upload</h2>
+<button class="close-modal-btn" onclick="closeVehicleBulkModal()">✖</button>
+</div>
+<div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
+<h4 style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;">📋 Smart Vehicle Format</h4>
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; font-size:0.85rem; color:var(--text); font-weight:500;">
+<div>1. Vehicle Type</div><div>2. Hub Name/ID</div><div>3. Plate Number</div>
+<div>4. Capacity (kg)</div><div>5. Efficiency (km/l)</div>
+</div>
+<p style="margin-top:10px; font-size:0.75rem; color:var(--muted);">Headers like "Category", "Warehouse", and "Registration" are also accepted.</p>
+</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+<div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+<input accept=".xlsx, .csv" id="bulk-vehicle-file" onchange="handleVehicleBulkFile(event)" style="display:none;" type="file"/>
+<button class="btn-primary" onclick="document.getElementById('bulk-vehicle-file').click()" style="width:auto;">📁 Excel/CSV</button>
+</div>
+<div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+<input id="vehicle-sheets-url" placeholder="Google Sheets Link..." style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white; margin-bottom:10px;" type="text"/>
+<button class="btn-primary" onclick="previewVehicleSheets()" style="width:auto; background:var(--success);">🔗 Fetch</button>
+</div>
+</div>
+<div id="vehicle-preview-section" style="display:none;">
+<h4>Preview (<span id="vehicle-bulk-count">0</span>)</h4>
+<div id="vehicle-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
+<div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+<table><thead><tr><th data-i18n="th_type">Type</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_plate">Plate</th><th data-i18n="th_cap">Cap</th></tr></thead><tbody id="vehicle-preview-body"></tbody></table>
+</div>
+<div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-vehicle-bulk-btn" onclick="confirmVehicleBulk()">Confirm Upload</button></div>
+</div>
+</div>
+<!-- Bulk Drone Upload Modal -->
+<div class="glass-card modal-glass" id="bulk-drone-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); overflow-y:auto; border:1px solid rgba(255,255,255,0.1);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+<h2 data-i18n="bulk_drone_title" style="margin:0; font-size:1.8rem; color:var(--accent);">Bulk Drone Upload</h2>
+<button class="close-modal-btn" onclick="closeDroneBulkModal()">✖</button>
+</div>
+<div style="background:rgba(var(--accent-rgb), 0.05); border:1px solid rgba(var(--accent-rgb), 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
+<h4 data-i18n="smart_drone_format" style="margin:0 0 16px 0; color:var(--accent); text-transform:uppercase; letter-spacing:2px; font-size:0.75rem; font-weight:800;">📋 Smart Drone Format</h4>
+<div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; font-size:0.85rem; color:var(--text); font-weight:500;">
+<div data-i18n="drone_fmt_1">1. License Number</div><div data-i18n="drone_fmt_2">2. Hub Name/ID</div><div data-i18n="drone_fmt_3">3. Capacity (kg)</div>
+<div data-i18n="drone_fmt_4">4. Radius (km)</div>
+</div>
+<p data-i18n="drone_fmt_desc" style="margin-top:10px; font-size:0.75rem; color:var(--muted);">Headers like "License", "Warehouse", and "Range" are also accepted.</p>
+</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-bottom:32px;">
+<div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+<input accept=".xlsx, .csv" id="bulk-drone-file" onchange="handleDroneBulkFile(event)" style="display:none;" type="file"/>
+<button class="btn-primary" data-i18n="btn_excel_csv" onclick="document.getElementById('bulk-drone-file').click()" style="width:auto;">📁 Excel/CSV</button>
+</div>
+<div style="padding:24px; border:1px dashed var(--border); border-radius:16px; text-align:center;">
+<input data-i18n-placeholder="placeholder_sheets_url" id="drone-sheets-url" placeholder="Google Sheets Link..." style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.2); border:1px solid var(--border); color:white; margin-bottom:10px;" type="text"/>
+<button class="btn-primary" data-i18n="btn_fetch" onclick="previewDroneSheets()" style="width:auto; background:var(--success);">🔗 Fetch</button>
+</div>
+</div>
+<div id="drone-preview-section" style="display:none;">
+<h4>Preview (<span id="drone-bulk-count">0</span>)</h4>
+<div id="drone-bulk-errors" style="display:none; margin-bottom: 20px;"></div>
+<div class="table-container" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
+<table><thead><tr><th data-i18n="th_license">License</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_cap">Cap</th><th data-i18n="th_radius">Radius</th></tr></thead><tbody id="drone-preview-body"></tbody></table>
+</div>
+<div style="margin-top:20px; text-align:right;"><button class="btn-primary" data-i18n="btn_confirm_upload" id="confirm-drone-bulk-btn" onclick="confirmDroneBulk()">Confirm Upload</button></div>
+</div>
+</div>
+<!-- Scripts -->
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="../js/translations.js?v=2.2"></script>
+<script src="../js/voice.js?v=2.2"></script>
+<script src="../js/api.js?v=2.2"></script>
+<script src="../js/custom_layout.js?v=2.2"></script>
+<script src="../js/manager.js?v=2.2"></script>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.logistixLayout.init('manager');
+        });
+    </script>
+<script>
+const btn = document.getElementById('theme-toggle');
+
+function setTheme(mode) {
+    if (mode === 'light') {
+        document.body.classList.add('light-mode');
+        btn.innerText = '☀️';
+    } else {
+        document.body.classList.remove('light-mode');
+        btn.innerText = '🌙';
+    }
+    localStorage.setItem('theme', mode);
+    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
+}
+
+btn.onclick = () => {
+    const isLight = document.body.classList.contains('light-mode');
+    setTheme(isLight ? 'dark' : 'light');
+};
+
+// Initial state
+setTheme(localStorage.getItem('theme') || 'dark');
+</script>
+<!-- Broadcast Modal -->
+<div class="glass-card modal-glass" id="broadcast-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:450px; padding:32px; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid var(--accent);">
+<h3 style="margin:0 0 10px 0; color:var(--accent);">📢 Broadcast Message</h3>
+<p style="font-size:0.85rem; color:var(--muted); margin-bottom:20px;">This message will be sent to <b>ALL</b> drivers in your fleet immediately.</p>
+<textarea id="broadcast-input" placeholder="Type your announcement here..." style="width:100%; height:120px; background:var(--bg); border-radius:10px; border:1px solid var(--border); padding:12px; color:var(--text); font-family:inherit; margin-bottom:20px; resize:none;"></textarea>
+<div style="display:flex; gap:12px;">
+<button class="btn-primary" id="broadcast-confirm-btn" onclick="sendBroadcast()" style="flex:1;">Send Announcement 🚀</button>
+<button class="btn-primary" onclick="closeBroadcastModal()" style="flex:1; background:rgba(var(--primary-rgb), 0.1); color:var(--primary); border:1px solid var(--primary);">Cancel</button>
+</div>
+</div>
+<!-- Merge Suggestions Modal -->
+<div id="merge-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:20000; align-items:center; justify-content:center;">
+<div class="glass-card modal-glass" style="width:600px; max-width:90vw; padding:30px; position:relative;">
+<button class="close-modal-btn" onclick="document.getElementById('merge-modal').style.display='none'" style="position:absolute; top:20px; right:20px;">✖</button>
+<h2 style="margin:0 0 10px 0; color:var(--warning);">🔗 Middle-Mile Merge Suggestions</h2>
+<p style="color:var(--text-muted); margin-bottom:20px;">Review and approve AI-suggested group merges for middle-mile logistics to improve truck utility.</p>
+<div id="merge-suggestions-container" style="max-height:60vh; overflow-y:auto; padding-right:10px;">
+<p style="text-align:center;">Loading suggestions...</p>
+</div>
+</div>
+</div>
+<!-- Smart Bulk Assistant Side Drawer -->
+<div id="smart-assistant-modal" style="display:none; position:fixed; top:0; right:0; height:100vh; width:550px; max-width:100vw; z-index:11000; background:rgba(15, 23, 42, 0.8); backdrop-filter:blur(20px); border-left:1px solid rgba(255,255,255,0.1); box-shadow:-10px 0 30px rgba(0,0,0,0.5); flex-direction:column; animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+<div style="padding:24px; background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+<div style="display:flex; align-items:center; gap:12px;">
+<span style="font-size:1.5rem;">✨</span>
+<div>
+<h3 id="smart-assistant-title" style="margin:0; font-size:1.2rem;">Smart Bulk Assistant</h3>
+<p id="smart-assistant-desc" style="margin:0; font-size:0.75rem; color:var(--muted);">Interactive Shipment Flow</p>
+</div>
+</div>
+<button class="close-modal-btn" onclick="closeSmartAssistant()" style="background:rgba(255,255,255,0.1); width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;">×</button>
+</div>
+<div id="smart-chat-area" style="flex:1; padding:24px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; background:rgba(0,0,0,0.1); scroll-behavior: smooth;">
+<!-- Messages will appear here -->
+</div>
+<div style="padding:24px; background:rgba(255,255,255,0.02); border-top:1px solid var(--border);">
+<div id="smart-queue-preview" style="display:none; margin-bottom:16px; padding:16px; background:linear-gradient(90deg, rgba(16, 185, 129, 0.1), transparent); border:1px solid rgba(16, 185, 129, 0.2); border-radius:16px; animation: fadeIn 0.3s ease;">
+<div style="display:flex; justify-content:space-between; align-items:center;">
+<div>
+<span style="display:block; font-size:0.85rem; font-weight:700; color:var(--success);">Queue Ready</span>
+<span style="font-size:0.75rem; color:var(--muted);"><span id="smart-queue-count">0</span> <span id="smart-queue-text">Shipments</span> pending</span>
+</div>
+<button class="btn-primary btn-success" onclick="confirmSmartQueue()" style="padding:8px 16px; font-size:0.85rem; border-radius:10px;">Confirm &amp; Create</button>
+</div>
+</div>
+<div style="display:flex; gap:12px; align-items:flex-end;">
+<div style="position:relative; flex:1;">
+<textarea id="smart-command-input" placeholder="Type response..." style="width:100%; height:55px; min-height:55px; max-height:150px; padding:15px 45px 15px 16px; border-radius:16px; resize:none; font-size:1rem; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.3); color:white;"></textarea>
+<button id="smart-map-trigger" onclick="pickSmartCoordinates()" onmouseout="this.style.opacity=0.6" onmouseover="this.style.opacity=1" style="position:absolute; right:12px; top:15px; background:none; border:none; font-size:1.4rem; cursor:pointer; opacity:0.6; transition: opacity 0.2s;" title="Select on Map">📍</button>
+</div>
+<button class="btn-primary" id="send-smart-cmd" onclick="processSmartCommand()" style="width:55px; height:55px; border-radius:16px; padding:0; flex-shrink:0; background:var(--primary); display:flex; align-items:center; justify-content:center;">🚀</button>
+</div>
+<div style="display:flex; justify-content:space-between; margin-top:16px;">
+<button class="btn-primary btn-outline" id="smart-new-btn" onclick="startNewSmartEntry()" style="font-size:0.75rem; padding:8px 14px; border-radius:8px;">🔄 New Shipment</button>
+<button class="btn-primary btn-outline" onclick="clearSmartQueue()" style="font-size:0.75rem; padding:8px 14px; border-radius:8px; border-color:rgba(239, 68, 68, 0.3); color:var(--danger);">🗑️ Clear Queue</button>
+</div>
+</div>
+</div>
+<!-- Shipment Detail Modal -->
+<div class="modal" id="shipment-detail-modal" style="z-index:10000;">
+<div class="modal-box" style="max-width: 600px; padding: 0; overflow: hidden; border-radius: 24px;">
+<div id="shipment-detail-header" style="padding: 24px; background: linear-gradient(135deg, rgba(79, 140, 255, 0.2), rgba(99, 102, 241, 0.2)); border-bottom: 1px solid var(--border); position: relative;">
+<div class="modal-close" onclick="closeShipmentDetailModal()">✖</div>
+<h2 id="sd-title" style="margin: 0; font-size: 1.4rem;">Shipment Details</h2>
+<div id="sd-id" style="font-size: 0.8rem; opacity: 0.6; font-family: monospace; margin-top: 4px;">ID: ...</div>
+</div>
+<div id="shipment-detail-body" style="padding: 24px; max-height: 70vh; overflow-y: auto;">
+<!-- Dynamically filled -->
+<div id="sd-content"></div>
+</div>
+<div id="shipment-detail-actions" style="padding: 20px; background: rgba(0,0,0,0.2); border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+<!-- Action buttons with labels -->
+</div>
+</div>
+</div>
+<!-- Driver Profile Modal -->
+<div class="modal" id="driver-profile-modal" style="z-index:10005;">
+<div class="modal-box" style="max-width: 500px; padding: 0; overflow: hidden; border-radius: 24px;">
+<div style="padding: 24px; background: linear-gradient(135deg, rgba(79, 140, 255, 0.1), rgba(16, 185, 129, 0.1)); border-bottom: 1px solid var(--border); position: relative;">
+<div class="modal-close" onclick="document.getElementById('driver-profile-modal').style.display='none'">✖</div>
+<div style="display:flex; align-items:center; gap:15px;">
+<img id="dp-img" src="" style="width:60px; height:60px; border-radius:50%; border:2px solid var(--primary); object-fit:cover;"/>
+<div>
+<h2 id="dp-name" style="margin: 0; font-size: 1.4rem;">Driver Name</h2>
+<div id="dp-id" style="font-size: 0.8rem; opacity: 0.6; font-family: monospace;">ID: ...</div>
+</div>
+</div>
+</div>
+<div style="padding: 24px; max-height: 70vh; overflow-y: auto;">
+<!-- Status Row -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding:15px; background:rgba(255,255,255,0.03); border-radius:16px; border:1px solid var(--border);">
+<div>
+<small style="color:var(--text-muted); display:block; margin-bottom:4px;">Duty Status</small>
+<span class="status-pill" id="dp-duty-badge" style="font-size:0.8rem;">LOADING</span>
+</div>
+<div style="text-align:right;">
+<small style="color:var(--text-muted); display:block; margin-bottom:4px;">Fatigue Level</small>
+<div id="dp-fatigue-meter" style="width:100px; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
+<div id="dp-fatigue-bar" style="width:0%; height:100%; background:var(--primary);"></div>
+</div>
+</div>
+</div>
+<!-- Metrics Grid -->
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:20px;">
+<div class="glass-card" style="padding:15px; border:1px solid var(--border);">
+<small style="color:var(--text-muted)">Punctuality</small>
+<h4 id="dp-punctuality" style="margin:5px 0 0 0;">100%</h4>
+</div>
+<div class="glass-card" style="padding:15px; border:1px solid var(--border);">
+<small style="color:var(--text-muted)">Breaks Taken</small>
+<h4 id="dp-breaks" style="margin:5px 0 0 0;">0</h4>
+</div>
+<div class="glass-card" style="padding:15px; border:1px solid var(--border);">
+<small style="color:var(--text-muted)">Avg Rating</small>
+<h4 id="dp-rating" style="margin:5px 0 0 0;">5.0 ⭐</h4>
+</div>
+<div class="glass-card" style="padding:15px; border:1px solid var(--border);">
+<small style="color:var(--text-muted)">Reward Pts</small>
+<h4 id="dp-points" style="margin:5px 0 0 0;">0</h4>
+</div>
+</div>
+<!-- Last Known Vitals -->
+<div class="glass-card" style="padding:15px; border:1px solid rgba(239, 68, 68, 0.2); background:rgba(239, 68, 68, 0.02);">
+<h4 style="margin:0 0 10px 0; font-size:0.9rem; color:var(--danger);">❤️ Health Telemetry (Live)</h4>
+<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; text-align:center;">
+<div>
+<small style="color:var(--text-muted); font-size:0.6rem;">HEART</small>
+<div id="dp-heart" style="font-weight:800; font-size:0.9rem;">--</div>
+</div>
+<div>
+<small style="color:var(--text-muted); font-size:0.6rem;">SPO2</small>
+<div id="dp-o2" style="font-weight:800; font-size:0.9rem;">--</div>
+</div>
+<div>
+<small style="color:var(--text-muted); font-size:0.6rem;">STRESS</small>
+<div id="dp-stress" style="font-weight:800; font-size:0.9rem;">--</div>
+</div>
+</div>
+</div>
+</div>
+<div style="padding: 20px; background: rgba(0,0,0,0.2); border-top: 1px solid var(--border);">
+<button class="btn-primary" onclick="document.getElementById('driver-profile-modal').style.display='none'" style="width:100%;">Close Profile</button>
+</div>
+</div>
+</div>
+</body>
+</html>

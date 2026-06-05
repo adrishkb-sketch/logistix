@@ -230,6 +230,22 @@ setInterval(async () => {
 }, 5000);
 
 function switchDriverTab(tab) {
+    const tabToPage = {
+        'dash': 'driver_tasks.html',
+        'active': 'driver_live.html',
+        'chat': 'driver_chat.html',
+        'completed': 'driver_history.html',
+        'contracts': 'driver_contracts.html',
+        'wallet': 'driver_wallet.html',
+        'profile': 'driver_account.html'
+    };
+    const currentFilename = window.location.pathname.split('/').pop();
+    const expectedPage = tabToPage[tab];
+    if (expectedPage && expectedPage !== currentFilename && (currentFilename.startsWith('driver_') || currentFilename === 'driver.html')) {
+        window.location.href = expectedPage;
+        return;
+    }
+
     currentActiveTab = tab;
     const tabs = ['dash', 'active', 'chat', 'completed', 'contracts', 'wallet', 'profile'];
     tabs.forEach(t => {

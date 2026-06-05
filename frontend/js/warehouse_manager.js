@@ -989,6 +989,22 @@ function initTheme() {
 }
 
 function switchTab(tab) {
+    const tabToPage = {
+        'dash': 'warehouse_manager_dash.html',
+        'verifications': 'warehouse_manager_verifications.html',
+        'fleet': 'warehouse_manager_fleet.html',
+        'gate': 'warehouse_manager_gate.html',
+        'audit': 'warehouse_manager_audit.html',
+        'leaderboard': 'warehouse_manager_leaderboard.html',
+        'settings': 'warehouse_manager_settings.html'
+    };
+    const currentFilename = window.location.pathname.split('/').pop();
+    const expectedPage = tabToPage[tab];
+    if (expectedPage && expectedPage !== currentFilename && (currentFilename.startsWith('warehouse_manager_') || currentFilename === 'warehouse_manager.html')) {
+        window.location.href = expectedPage;
+        return;
+    }
+
     document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
     document.querySelectorAll('.nav-link-v3').forEach(l => l.classList.remove('active'));
     

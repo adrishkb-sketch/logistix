@@ -693,6 +693,37 @@ async function drawRouteWithTraffic(start, end) {
 }
 
 function showSection(id) {
+    const pageToSection = {
+        'manager_analytics.html': 'analytics',
+        'manager_warehouses.html': 'warehouses',
+        'manager_shipments.html': 'shipments',
+        'manager_receivers.html': 'receivers',
+        'manager_drivers.html': 'drivers',
+        'manager_weather.html': 'weather',
+        'manager_messages.html': 'messages',
+        'manager_leaderboard.html': 'leaderboard',
+        'manager_verifications.html': 'verifications',
+        'manager_safety.html': 'safety',
+        'manager_ledger.html': 'ledger',
+        'manager_oracle.html': 'oracle',
+        'manager_fuel_oracle.html': 'fuel-oracle',
+        'manager_payments.html': 'paisa-fast',
+        'manager_strategy.html': 'strategy-plan',
+        'manager_resilience.html': 'network-resilience',
+        'manager_system.html': 'system',
+        'manager_hub_leaves.html': 'hub-leaves'
+    };
+    const currentFilename = window.location.pathname.split('/').pop();
+    const currentSection = pageToSection[currentFilename] || 'analytics';
+    
+    if (id !== currentSection && pageToSection[currentFilename]) {
+        const targetPage = Object.keys(pageToSection).find(key => pageToSection[key] === id);
+        if (targetPage) {
+            window.location.href = targetPage;
+            return;
+        }
+    }
+    
     currentActiveSection = id;
     const sections = ['analytics', 'warehouses', 'shipments', 'receivers', 'drivers', 'weather', 'leaderboard', 'messages', 'verifications', 'safety', 'ledger', 'oracle', 'fuel-oracle', 'paisa-fast', 'strategy-plan', 'network-resilience', 'system', 'hub-leaves'];
     sections.forEach(s => {
@@ -711,7 +742,7 @@ function showSection(id) {
     // Update nav links
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
-        if (link.getAttribute('onclick')?.includes(`'${id}'`)) {
+        if (link.getAttribute('onclick')?.includes(`'${id}'`) || link.getAttribute('href')?.includes(currentFilename)) {
             link.classList.add('active');
         }
     });
@@ -760,7 +791,29 @@ function loadVerifications() {
     loadDriversAndVehicles();
 }
 
-showSection('analytics');
+const pageToSectionInit = {
+    'manager_analytics.html': 'analytics',
+    'manager_warehouses.html': 'warehouses',
+    'manager_shipments.html': 'shipments',
+    'manager_receivers.html': 'receivers',
+    'manager_drivers.html': 'drivers',
+    'manager_weather.html': 'weather',
+    'manager_messages.html': 'messages',
+    'manager_leaderboard.html': 'leaderboard',
+    'manager_verifications.html': 'verifications',
+    'manager_safety.html': 'safety',
+    'manager_ledger.html': 'ledger',
+    'manager_oracle.html': 'oracle',
+    'manager_fuel_oracle.html': 'fuel-oracle',
+    'manager_payments.html': 'paisa-fast',
+    'manager_strategy.html': 'strategy-plan',
+    'manager_resilience.html': 'network-resilience',
+    'manager_system.html': 'system',
+    'manager_hub_leaves.html': 'hub-leaves'
+};
+const initialFilename = window.location.pathname.split('/').pop();
+const initialSection = pageToSectionInit[initialFilename] || 'analytics';
+showSection(initialSection);
 loadDriversAndVehicles(); // Pre-load fleet data
 
 function logout() {

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>window.location.replace("manager_analytics.html");</script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Manager Dashboard | Logistix</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
@@ -262,23 +263,23 @@
                 <h2><span data-i18n="logistix_brand">Logistix</span></h2>
             </div>
             <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
-                <a href="#" id="btn-nav-analytics" class="nav-link active" onclick="showSection('analytics')" data-layout-id="nav-analytics"><span data-i18n="nav_analytics">Executive Analytics 📊</span></a>
-                <a href="#" class="nav-link" onclick="showSection('warehouses')" data-layout-id="nav-hubs"><span data-i18n="nav_hubs">Infrastructure (Hubs) 🏗️</span></a>
-                <a href="#" id="btn-nav-shipments" class="nav-link" onclick="showSection('shipments')" data-layout-id="nav-shipments"><span data-i18n="nav_shipments">Shipments 📦</span></a>
-                <a href="#" class="nav-link" onclick="showSection('receivers')" data-layout-id="nav-receivers"><span data-i18n="nav_receivers">Receivers 👥</span></a>
-                <a href="#" class="nav-link" onclick="showSection('drivers')" data-layout-id="nav-drivers"><span data-i18n="nav_fleet">Drivers & Fleet 🚛</span></a>
-                <a href="#" class="nav-link" onclick="showSection('weather')" data-layout-id="nav-weather"><span data-i18n="nav_weather">Weather Fleet Map 🗺️</span></a>
-                <a href="#" class="nav-link" onclick="showSection('leaderboard')" data-layout-id="nav-leaderboard"><span data-i18n="nav_leaderboard">Leaderboards 🏆</span></a>
-                <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')" data-layout-id="nav-messages"><span data-i18n="nav_messages">Messages</span> <span id="msg-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('verifications')" data-layout-id="nav-verifications"><span data-i18n="nav_verifications">Verifications 🛡️</span> <span id="verif-badge" class="badge"></span></a>
-                <a href="#" id="btn-nav-safety" class="nav-link" onclick="showSection('safety')" data-layout-id="nav-safety"><span data-i18n="nav_safety">Safety Center 🛡️</span> <span id="safety-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('ledger')" data-layout-id="nav-ledger"><span data-i18n="nav_ledger">Smart Contracts ⛓️</span></a>
-                <a href="#" class="nav-link" onclick="showSection('oracle')" data-layout-id="nav-oracle"><span data-i18n="nav_oracle">Strategy Oracle 🧠</span></a>
-                <a href="#" class="nav-link" onclick="showSection('fuel-oracle')" data-layout-id="nav-fuel"><span data-i18n="nav_fuel">Bharat-Fuel Oracle 🛢️</span></a>
-                <a href="#" id="nav-link-paisa-fast" class="nav-link" onclick="showSection('paisa-fast')" data-layout-id="nav-paisa"><span data-i18n="nav_paisa">💰 Payments</span> <span id="paisa-badge" class="badge"></span></a>
-                <a href="#" class="nav-link" onclick="showSection('strategy-plan')" data-layout-id="nav-strategy"><span data-i18n="nav_strategy">Operational Strategy 🎯</span></a>
-                <a href="#" class="nav-link" onclick="showSection('network-resilience')" data-layout-id="nav-resilience"><span data-i18n="nav_resilience">Network Resilience 🦋</span></a>
-                <a href="#" class="nav-link" onclick="showSection('system')" data-layout-id="nav-settings"><span data-i18n="nav_settings">System Settings ⚙️</span></a>
+                <a href="#" id="btn-nav-analytics" class="nav-link active" onclick="showSection('analytics')" data-layout-id="nav-analytics">📊 <span data-i18n="nav_analytics">Executive Analytics</span></a>
+                <a href="#" class="nav-link" onclick="showSection('warehouses')" data-layout-id="nav-hubs">🏗️ <span data-i18n="nav_hubs">Infrastructure (Hubs)</span></a>
+                <a href="#" id="btn-nav-shipments" class="nav-link" onclick="showSection('shipments')" data-layout-id="nav-shipments">📦 <span data-i18n="nav_shipments">Shipments</span></a>
+                <a href="#" class="nav-link" onclick="showSection('receivers')" data-layout-id="nav-receivers">👥 <span data-i18n="nav_receivers">Receivers</span></a>
+                <a href="#" class="nav-link" onclick="showSection('drivers')" data-layout-id="nav-drivers">🚛 <span data-i18n="nav_fleet">Drivers & Fleet</span></a>
+                <a href="#" class="nav-link" onclick="showSection('weather')" data-layout-id="nav-weather">🗺️ <span data-i18n="nav_weather">Weather Fleet Map</span></a>
+                <a href="#" class="nav-link" onclick="showSection('leaderboard')" data-layout-id="nav-leaderboard">🏆 <span data-i18n="nav_leaderboard">Leaderboards</span></a>
+                <a href="#" id="nav-link-messages" class="nav-link" onclick="showSection('messages')" data-layout-id="nav-messages">💬 <span data-i18n="nav_messages">Messages</span> <span id="msg-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('verifications')" data-layout-id="nav-verifications">🛡️ <span data-i18n="nav_verifications">Verifications</span> <span id="verif-badge" class="badge"></span></a>
+                <a href="#" id="btn-nav-safety" class="nav-link" onclick="showSection('safety')" data-layout-id="nav-safety">🛡️ <span data-i18n="nav_safety">Safety Center</span> <span id="safety-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('ledger')" data-layout-id="nav-ledger">⛓️ <span data-i18n="nav_ledger">Smart Contracts</span></a>
+                <a href="#" class="nav-link" onclick="showSection('oracle')" data-layout-id="nav-oracle">🧠 <span data-i18n="nav_oracle">Strategy Oracle</span></a>
+                <a href="#" class="nav-link" onclick="showSection('fuel-oracle')" data-layout-id="nav-fuel">🛢️ <span data-i18n="nav_fuel">Bharat-Fuel Oracle</span></a>
+                <a href="#" id="nav-link-paisa-fast" class="nav-link" onclick="showSection('paisa-fast')" data-layout-id="nav-paisa">💰 <span data-i18n="nav_paisa">Payments</span> <span id="paisa-badge" class="badge"></span></a>
+                <a href="#" class="nav-link" onclick="showSection('strategy-plan')" data-layout-id="nav-strategy">🎯 <span data-i18n="nav_strategy">Operational Strategy</span></a>
+                <a href="#" class="nav-link" onclick="showSection('network-resilience')" data-layout-id="nav-resilience">🦋 <span data-i18n="nav_resilience">Network Resilience</span></a>
+                <a href="#" class="nav-link" onclick="showSection('system')" data-layout-id="nav-settings">⚙️ <span data-i18n="nav_settings">System Settings</span></a>
                 <a href="#" class="nav-link" onclick="showSection('hub-leaves')" data-layout-id="nav-hub-leaves">📅 <span data-i18n="nav_hub_leaves">Hub Leaves</span></a>
             </div>
             <a href="#" class="nav-link" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); font-weight:800; border:1px solid rgba(239, 68, 68, 0.2); margin-top:0;"><span data-i18n="sign_out">Logout 🚪</span></a>
@@ -621,7 +622,7 @@
                             </div>
                         </div>
                         <div class="table-container">
-                            <table>
+                            <table class="wide-table">
                                 <thead>
                                     <tr>
                                         <th data-i18n="th_id_desc">ID / Desc</th>
@@ -788,7 +789,7 @@
                             <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderDriversTable()">🔍</button>
                         </div>
                         <div class="table-container">
-                            <table>
+                            <table class="ultra-wide-table">
                                 <thead><tr><th data-i18n="th_name_id">Name / System ID</th><th data-i18n="label_login_id">Login ID</th><th data-i18n="label_password">Password</th><th data-i18n="label_license_type">License Type</th><th data-i18n="th_metrics">Metrics</th><th data-i18n="th_score_safety">Driving Score / Safety</th><th data-i18n="label_accidents">Accidents</th><th data-i18n="label_violations">Challans</th><th data-i18n="reward_points">Reward Points</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_linked_vehicle">Linked Vehicle</th><th data-i18n="th_actions">Actions</th></tr></thead>
                                 <tbody id="drivers-table-body"></tbody>
                             </table>
@@ -842,7 +843,7 @@
                             <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderVehiclesTable()">🔍</button>
                         </div>
                         <div class="table-container">
-                            <table>
+                            <table class="wide-table">
                                 <thead><tr><th data-i18n="th_type_id">Type / System ID</th><th data-i18n="label_number_plate">Plate</th><th data-i18n="th_health">Health</th><th data-i18n="capacity">Capacity</th><th data-i18n="label_base_hub">Base Hub</th><th data-i18n="th_loc_heading">Current Location / Heading</th><th data-i18n="hub_status">Status</th><th data-i18n="th_linked_driver">Linked Driver</th><th data-i18n="th_action">Action</th></tr></thead>
                                 <tbody id="vehicles-table-body"></tbody>
                             </table>
@@ -1123,8 +1124,8 @@
                         </div>
                     </div>
                     <!-- Table scrolls horizontally inside this wrapper; page does NOT scroll sideways -->
-                    <div class="leaderboard-table-wrapper">
-                        <table class="leaderboard-table">
+                    <div class="table-container">
+                        <table class="leaderboard-table wide-table">
                             <thead>
                                 <tr>
                                     <th data-i18n="rank">Rank</th>
@@ -1204,7 +1205,7 @@
                         </div>
                     </div>
                     <div class="table-container">
-                        <table>
+                        <table class="wide-table">
                             <thead>
                                 <tr>
                                     <th style="padding:10px;" data-i18n="th_tx_hash">Tx Hash</th>
@@ -1630,8 +1631,8 @@
 
                     <div data-layout-id="resilience-disruptions" style="margin-top:3rem;">
                         <h3 style="margin:0 0 24px 0;" data-i18n="active_disruptions">Active Disruption Chains</h3>
-                        <div class="glass-card" style="overflow-x:auto;">
-                            <table>
+                        <div class="table-container">
+                            <table class="wide-table">
                                 <thead style="background:rgba(255,255,255,0.05);">
                                     <tr>
                                         <th style="padding:12px; text-align:left;" data-i18n="th_source_shipment">Source Shipment</th>
@@ -1719,7 +1720,6 @@
                                 <input class="pin-box delete-pin" maxlength="1" type="text" inputmode="numeric">
                             </div>
                             <button id="confirm-del-btn" class="btn-primary" style="background:var(--danger); width:100%;" onclick="confirmDeleteAccount()" data-i18n="btn_confirm">Confirm Deletion</button>
-                        </div>
                             <p id="resend-timer-container-del" style="margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
                                 Didn't receive code? <span id="resend-link-del" style="color:var(--danger); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val-del">10</span>s)</span>
                             </p>
@@ -2091,10 +2091,12 @@
         </div>
 
         <h4>Recent Trip History</h4>
-        <table style="font-size:0.85rem;">
-            <thead><tr><th data-i18n="th_id">ID</th><th data-i18n="th_route">Route</th><th data-i18n="th_date">Date</th><th data-i18n="hub_status">Status</th></tr></thead>
-            <tbody id="prof-trips-body"></tbody>
-        </table>
+        <div class="table-container">
+            <table style="font-size:0.85rem;">
+                <thead><tr><th data-i18n="th_id">ID</th><th data-i18n="th_route">Route</th><th data-i18n="th_date">Date</th><th data-i18n="hub_status">Status</th></tr></thead>
+                <tbody id="prof-trips-body"></tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Logs Modal -->
@@ -2195,7 +2197,7 @@
             <h4 style="margin:0 0 15px 0; border-top:1px solid var(--border); padding-top:20px;">Review Shipments (<span id="bulk-count">0</span>)</h4>
             <div id="bulk-errors" style="display:none; margin-bottom: 20px;"></div>
             <div class="table-container" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:12px;">
-                <table style="width:100%; border-collapse:collapse;">
+                <table class="wide-table" style="width:100%; border-collapse:collapse;">
                     <thead style="position:sticky; top:0; background:var(--bg); z-index:1;">
                         <tr style="text-align:left; border-bottom:2px solid var(--border);">
                             <th style="padding:12px;" data-i18n="th_pickup">Pickup</th>

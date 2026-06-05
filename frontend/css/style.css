@@ -366,12 +366,51 @@ body.light-mode .polished-glass-input::placeholder {
     border-radius: 16px;
     background: var(--card);
     border: 1px solid var(--border);
+    margin-bottom: 20px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+/* Custom premium horizontal scrollbar */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+    display: block;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+}
+
+body.light-mode .table-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: rgba(var(--primary-rgb), 0.45);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--primary-rgb), 0.75);
 }
 
 /* Ensure tables inside containers have a min-width so they scroll
    inside the container rather than pushing the whole page */
 .table-container table {
-    min-width: 500px;
+    min-width: 700px;
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.table-container table.wide-table {
+    min-width: 950px;
+}
+
+.table-container table.ultra-wide-table {
+    min-width: 1200px;
 }
 
 table {
@@ -391,11 +430,16 @@ th {
     background: rgba(255, 255, 255, 0.02);
 }
 
+body.light-mode th {
+    background: rgba(0, 0, 0, 0.015);
+}
+
 td {
     padding: 18px 20px;
     border-bottom: 1px solid var(--border);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     vertical-align: middle;
+    transition: background 0.2s ease;
 }
 
 tr:last-child td {
@@ -403,11 +447,35 @@ tr:last-child td {
 }
 
 tr:hover td {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.02) !important;
 }
 
 body.light-mode tr:hover td {
-    background: rgba(0, 0, 0, 0.01);
+    background: rgba(0, 0, 0, 0.015) !important;
+}
+
+/* Responsive Table Styling Adjustments */
+@media (max-width: 768px) {
+    .table-container {
+        border-radius: 12px;
+    }
+    th {
+        padding: 12px 14px;
+        font-size: 0.7rem;
+        letter-spacing: 0.06em;
+    }
+    td {
+        padding: 12px 14px;
+        font-size: 0.85rem;
+    }
+    .table-container table button {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+    }
+}
+
+.table-container table button {
+    white-space: nowrap;
 }
 
 /* Status Pills */
@@ -1402,4 +1470,82 @@ body.light-mode .action-btn-pill {
 
 .sidebar-overlay.active {
     display: block;
+}
+
+/* ── RESPONSIVENESS AND MOBILE FIXES ──────────────── */
+
+/* 4-column responsive grid */
+.responsive-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+@media (max-width: 1024px) {
+    .responsive-grid-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 20px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .responsive-grid-4 {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+}
+
+/* Enforce page-level horizontal overflow lock */
+@media (max-width: 1024px) {
+    body:has(.dashboard-layout) {
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+    
+    /* Allow grids to shrink below table minimum widths */
+    .responsive-grid-2 > *,
+    .responsive-grid-3 > *,
+    .responsive-grid-4 > * {
+        min-width: 0 !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Stack stats cards cleanly in one vertical sequence */
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    /* Stack inline grid elements on mobile */
+    div[style*="grid-template-columns"],
+    #cascade-container {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    
+    /* Handle modal/profile stats grid (6 columns -> 2 columns) */
+    div[style*="grid-template-columns: repeat(6, 1fr)"],
+    div[style*="grid-template-columns:repeat(6,1fr)"] {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    /* Handle modal details grid (3 columns -> 1 column) */
+    div[style*="grid-template-columns: repeat(3, 1fr)"],
+    div[style*="grid-template-columns:repeat(3,1fr)"] {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    /* Strategy Oracle results row (stack risk info and button) */
+    #oracle-results div[style*="display:flex; justify-content:space-between"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        text-align: center;
+    }
+    #oracle-results div[style*="display:flex; justify-content:space-between"] button {
+        width: 100% !important;
+    }
 }

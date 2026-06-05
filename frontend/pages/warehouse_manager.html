@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>window.location.replace("warehouse_manager_dash.html");</script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Warehouse Hub | Logistix</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css">
@@ -388,7 +389,7 @@
                     </div>
                     
                     <div class="table-container">
-                        <table class="data-table">
+                        <table class="data-table wide-table">
                             <thead>
                                 <tr>
                                     <th>Shipment ID</th>
@@ -500,7 +501,7 @@
                             <h3 style="margin:0 0 10px 0; color:var(--success);" data-i18n="title_verified_fleet">Verified Fleet Registry</h3>
                             <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="verified_vehicles_desc">Master list of all vehicles and drivers who have successfully completed security verification.</p>
                             <div class="table-container" style="background:rgba(72, 187, 120, 0.05); border-radius:12px; border:1px solid rgba(72, 187, 120, 0.1);">
-                                <table style="width:100%;">
+                                <table class="wide-table" style="width:100%;">
                                     <thead>
                                         <tr style="text-align:left; border-bottom:1px solid var(--border);">
                                             <th style="padding:12px;" data-i18n="vehicle_type">Vehicle Type</th>
@@ -586,7 +587,7 @@
                         <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderDriversTable()">🔍</button>
                     </div>
                     <div class="table-container">
-                        <table>
+                        <table class="ultra-wide-table">
                             <thead><tr><th data-i18n="th_name_id">Name / System ID</th><th data-i18n="label_login_id">Login ID</th><th data-i18n="label_license_type">License Type</th><th data-i18n="th_metrics">Metrics</th><th data-i18n="th_score_safety">Driving Score / Safety</th><th data-i18n="label_accidents">Accidents</th><th data-i18n="label_violations">Challans</th><th data-i18n="reward_points">Reward Points</th><th data-i18n="th_linked_vehicle">Linked Vehicle</th><th data-i18n="th_actions">Actions</th></tr></thead>
                             <tbody id="drivers-table-body"></tbody>
                         </table>
@@ -640,7 +641,7 @@
                         <button class="btn-primary" style="width:auto; padding:0 15px;" onclick="renderVehiclesTable()">🔍</button>
                     </div>
                     <div class="table-container">
-                        <table>
+                        <table class="wide-table">
                             <thead><tr><th data-i18n="th_type_id">Type / System ID</th><th data-i18n="label_number_plate">Plate</th><th data-i18n="th_health">Health</th><th data-i18n="capacity">Capacity</th><th data-i18n="th_loc_heading">Current Location / Heading</th><th data-i18n="hub_status">Status</th><th data-i18n="th_linked_driver">Linked Driver</th><th data-i18n="th_action">Action</th></tr></thead>
                             <tbody id="vehicles-table-body"></tbody>
                         </table>

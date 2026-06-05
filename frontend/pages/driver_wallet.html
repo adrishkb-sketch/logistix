@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Driver App | Logistix</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="../css/style.css" rel="stylesheet"/>
+<link crossorigin="" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+        .driver-layout { max-width: 700px; margin: 0 auto; padding: 15px; padding-bottom: 100px; overflow-x: hidden; }
+        .top-bar { display: flex; flex-direction: column; gap: 15px; margin-bottom: 24px; align-items: flex-start; }
+        @media (min-width: 600px) {
+            .top-bar { flex-direction: row; justify-content: space-between; align-items: center; }
+        }
+        .controls-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; width: 100%; }
+        @media (min-width: 600px) {
+            .controls-group { width: auto; justify-content: flex-end; }
+        }
+        
+        .mission-card { background: rgba(79, 140, 255, 0.05); border-left: 4px solid var(--primary); margin-bottom: 24px; }
+        #route-map { height: 350px; width: 100%; border-radius: 20px; margin-top: 15px; border: 1px solid var(--border); z-index: 1; }
+        
+        .instruction-banner {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            padding: 18px;
+            border-radius: 14px;
+            margin-bottom: 24px;
+            font-weight: 800;
+            display: none;
+            box-shadow: 0 10px 25px rgba(245, 158, 11, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        .timeline { border-left: 2px solid var(--border); padding-left: 24px; margin-left: 12px; margin-top: 24px; }
+        .timeline-node { position: relative; margin-bottom: 24px; }
+        .timeline-dot { position: absolute; left: -33px; top: 0; width: 18px; height: 18px; border-radius: 50%; border: 4px solid var(--bg); background: var(--primary); }
+        
+        .zen-overlay {
+            position: fixed; inset: 0;
+            background: rgba(11, 18, 32, 0.98); backdrop-filter: blur(30px);
+            z-index: 20000; display: none; flex-direction: column; 
+            align-items: center; justify-content: center; text-align: center;
+            color: #fff; padding: 40px;
+        }
+
+        .tabs { display: flex; background: var(--card); border: 1px solid var(--border); padding: 5px; border-radius: 16px; margin-bottom: 24px; gap: 5px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .tab-btn { flex: 0 0 auto; min-width: 80px; padding: 10px 12px; border-radius: 12px; border: none; background: transparent; color: var(--muted); font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        @media (min-width: 600px) {
+            .tab-btn { flex: 1; font-size: 0.85rem; }
+        }
+        .tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 4px 12px rgba(79, 140, 255, 0.25); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+<div class="background-animation"></div>
+<!-- Location Lock Overlay -->
+<div id="location-lock-overlay" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(10, 15, 28, 0.7); backdrop-filter:blur(10px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px;">
+<div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--accent); box-shadow:0 0 50px rgba(0,242,254,0.3);">
+<div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 20px var(--accent));">📍</div>
+<h2 data-i18n="location_required_title" style="color:var(--accent); margin-bottom:15px; font-weight:800; font-size:2rem;">Location Required</h2>
+<p data-i18n="location_required_desc" style="color:var(--text-muted); margin-bottom:30px; font-size:1.1rem; line-height:1.6;">Compulsory location sharing is active. Please allow GPS access to unlock your driver dashboard and begin missions.</p>
+<button class="btn-primary" data-i18n="btn_enable_location" onclick="retryLocation()" style="width:100%; padding:15px; font-size:1.1rem; background:var(--accent); color:#000; font-weight:800;">🚀 Enable Location Access</button>
+</div>
+</div>
+<div class="driver-layout">
+<div class="top-bar">
+<h2 style="font-weight:800; margin:0;"><span data-i18n="nav_driver_app">Driver App</span>: <span id="driver-name">Driver</span></h2>
+<div class="controls-group">
+<!-- Language Selector Dropdown -->
+<div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:4px;">
+<span style="font-size:0.8rem; font-weight:800; color:var(--muted);">🌐</span>
+<select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.75rem; font-weight:800; padding:2px; width:auto; appearance:auto; outline:none;">
+<option value="en">EN</option>
+<option value="bn">BN</option>
+<option value="hi">HI</option>
+<option value="te">TE</option>
+<option value="mr">MR</option>
+<option value="ta">TA</option>
+<option value="gu">GU</option>
+<option value="kn">KN</option>
+<option value="or">OR</option>
+<option value="ml">ML</option>
+<option value="pa">PA</option>
+<option value="as">AS</option>
+<option value="mai">MAI</option>
+<option value="sat">SAT</option>
+<option value="ks">KS</option>
+</select>
+</div>
+<!-- Theme & Exit -->
+<button class="theme-switch" id="theme-toggle" style="margin:0; width:36px; height:36px;">🌙</button>
+<button class="btn-primary" data-i18n="btn_exit" onclick="logout()" style="padding:8px 12px; background:var(--danger); font-size:0.75rem;">Exit 🚪</button>
+</div>
+</div>
+<!-- Secondary Controls (Optional/Collapsible) -->
+<div style="display:flex; gap:8px; margin-bottom:20px; overflow-x:auto; padding-bottom:5px; align-items:center;">
+<div style="display:flex; align-items:center; gap:6px;">
+<button class="glass-card" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 12px; font-size:0.75rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; color:var(--text); white-space:nowrap;">🎙️ Automated Control</button>
+<button onclick="window.logistixVoice.showInstructions()" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; font-size:0.7rem;" title="Voice Help">?</button>
+</div>
+<button class="btn-primary btn-outline" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()" style="padding:8px 12px; font-size:0.75rem; white-space:nowrap;">📐 Modify Dashboard</button>
+</div>
+<!-- Verification Screen (Visible if unverified) -->
+<div id="verification-screen" style="display:none; text-align:center;">
+<div class="glass-card section-card" style="padding:40px 20px;">
+<div style="font-size:4rem; margin-bottom:20px;">🛡️</div>
+<h2 data-i18n="security_verification" style="margin-bottom:10px;">Security Verification</h2>
+<p data-i18n="v_screen_msg" id="v-screen-msg" style="color:var(--text-muted); margin-bottom:30px;">To ensure safety and compliance, please verify your assigned vehicle's number plate.</p>
+<div id="v-upload-box">
+<form id="verify-form-main">
+<input accept="image/*" id="plate-image-main" required="" style="margin-bottom:20px; color:white; background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); width:100%;" type="file"/>
+<button class="btn-primary" id="verify-btn-main" style="padding:15px 30px; font-size:1.1rem; background:var(--accent);" type="submit"><span data-i18n="upload_verify_btn">🚀 Upload &amp; Verify (Automated)</span></button>
+</form>
+<p style="font-size:0.8rem; color:var(--text-muted); margin-top:15px;"><span data-i18n="analyzed_auto_desc">Your photo will be analyzed automatically for automatic approval.</span></p>
+</div>
+<div id="v-pending-box" style="display:none;">
+<div class="pulse-warning" style="color:var(--warning); font-weight:bold; font-size:1.2rem; margin-bottom:15px;"><span data-i18n="awaiting_approval">⏳ Awaiting Approval</span></div>
+<p style="color:var(--text-muted);"><span data-i18n="v_pending_desc">Automated system could not verify the plate automatically. Your manager has been notified for manual review.</span></p>
+<button class="btn-primary" data-i18n="btn_refresh_status" onclick="loadMissions()" style="margin-top:20px; background:rgba(255,255,255,0.1); width:auto; padding:10px 20px;">🔄 Refresh Status</button>
+</div>
+<div id="v-no-vehicle-box" style="display:none; padding:20px;">
+<div style="font-size:4rem; margin-bottom:20px;">🚛</div>
+<h2 data-i18n="v_pending_assignment" style="margin-bottom:10px;">Waiting for Vehicle Assignment...</h2>
+<p style="color:var(--text-muted); margin-bottom:30px;"><span data-i18n="v_ask_manager">Please ask your manager to link you to a vehicle in the fleet management panel to begin verification.</span></p>
+<button class="btn-primary" data-i18n="btn_refresh_status" onclick="loadMissions()" style="background:var(--accent); color:#000; width:auto; padding:12px 24px; font-weight:800;">🔄 Refresh Status</button>
+</div>
+</div>
+</div>
+<!-- Gated Main Content (Visible if verified) -->
+<div id="main-content" style="display:none;">
+<!-- Duty Toggle & Smartwatch -->
+<div style="display:flex; gap:12px; margin-bottom:20px; padding: 0 5px;">
+<button class="btn-primary" id="duty-toggle-btn" onclick="toggleDuty()" style="flex:1; background:var(--success); font-weight:800; border-radius:14px; box-shadow:0 8px 20px rgba(16,185,129,0.2);">
+                    🟢 ON DUTY
+                </button>
+<button class="btn-primary" id="watch-sync-btn" onclick="toggleWatchSync()" style="flex:1; background:rgba(255,255,255,0.05); border:1px solid var(--accent); font-weight:800; border-radius:14px;">
+                    ⌚ SYNC WATCH
+                </button>
+</div>
+<div class="tabs" data-layout-container="driver-tabs">
+<button class="tab-btn" data-layout-id="tab-tasks" id="btn-tab-dash" onclick="switchDriverTab('dash')" style="">📋 <span data-i18n="tab_tasks">Tasks</span></button>
+<button class="tab-btn" data-layout-id="tab-live" id="btn-tab-active" onclick="switchDriverTab('active')" style="">🗺️ <span data-i18n="tab_live_route">Live Route</span></button>
+<button class="tab-btn" data-layout-id="tab-chat" id="btn-tab-chat" onclick="switchDriverTab('chat')" style="">💬 <span data-i18n="tab_chat">Chat</span> <span id="chat-badge" style="display:none; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
+<button class="tab-btn" data-layout-id="tab-history" id="btn-tab-completed" onclick="switchDriverTab('completed')" style="">📜 <span data-i18n="tab_history">History</span></button>
+<button class="tab-btn" id="btn-tab-contracts" onclick="switchDriverTab('contracts')" style="">⛓️ <span data-i18n="tab_contracts">Contracts</span></button>
+<button class="tab-btn active" data-layout-id="tab-wallet" id="btn-tab-wallet" onclick="switchDriverTab('wallet')" style="">💰 <span data-i18n="tab_wallet">Wallet</span></button>
+<button class="tab-btn" data-layout-id="tab-account" id="btn-tab-profile" onclick="switchDriverTab('profile')" style="">👤 <span data-i18n="tab_account">Account</span></button>
+</div>
+<div id="wallet-tab">
+<div class="glass-card" style="padding:24px; background:linear-gradient(135deg, var(--success)22, transparent); border-left:4px solid var(--success); margin-bottom:24px;">
+<div style="display:flex; justify-content:space-between; align-items:center;">
+<div>
+<small data-i18n="withdrawable_balance" style="color:var(--text-muted)">Withdrawable Balance</small>
+<h1 id="w-balance" style="margin:0; color:var(--success);">₹ 0.00</h1>
+</div>
+<button class="btn-primary" onclick="withdrawMoney()" style="width:auto; padding:10px 20px; background:var(--success);"><span data-i18n="withdraw_btn">Withdraw 💸</span></button>
+</div>
+</div>
+<div class="stats-grid" data-layout-container="driver-wallet-stats" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+<div class="glass-card" data-layout-id="stat-monthly-earning" style="padding:1rem; border-top:4px solid var(--primary); text-align:center;">
+<div data-i18n="monthly_earning" style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Monthly Earning</div>
+<div id="w-today" style="font-size:1.2rem; font-weight:bold;">₹ 0.00</div>
+</div>
+<div class="glass-card" data-layout-id="stat-total-earnings" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
+<div data-i18n="total_earnings" style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Total Earnings</div>
+<div id="w-bonus" style="font-size:1.2rem; font-weight:bold;">₹ 0.00</div>
+</div>
+</div>
+<div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);">
+<h4 data-i18n="request_funds_title" style="margin:0 0 15px 0; color:var(--warning);">Request Emergency Funds ⛽🍔</h4>
+<p data-i18n="incident_report_desc" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px;">Requests are sent to the manager for instant approval.</p>
+<div style="display:flex; flex-direction:column; gap:12px;">
+<div style="display:flex; gap:10px;">
+<select id="fund-req-type" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; flex:1;">
+<option data-i18n="fund_type_fuel" value="FUEL">Fuel / Gas ⛽</option>
+<option data-i18n="fund_type_food" value="FOOD">Food / Subsistence 🍔</option>
+<option data-i18n="fund_type_maintenance" value="MAINTENANCE">Emergency Repair 🛠️</option>
+<option data-i18n="fund_type_other" value="OTHER">Other / Misc 📦</option>
+</select>
+<div style="position:relative;">
+<input id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;" type="number"/>
+<button onclick="calculateSuggestedFuel(event)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:var(--primary); color:white; border:none; border-radius:4px; font-size:0.6rem; padding:4px 6px; cursor:pointer;" title="Auto-calculate fuel based on location">Oracle ✨</button>
+</div>
+</div>
+<button class="btn-primary" onclick="handleFundRequest()" style="width:100%; padding:14px; font-weight:700;">
+<span data-i18n="withdraw_btn">Request Funds Now</span>
+</button>
+</div>
+</div>
+<div class="glass-card" style="padding:20px;">
+<h4 data-i18n="transaction_history" style="margin:0 0 15px 0;">Transaction History</h4>
+<div id="wallet-transactions" style="display:flex; flex-direction:column; gap:12px;">
+<!-- Injected via JS -->
+<p style="text-align:center; color:var(--text-muted); font-size:0.8rem;"><span data-i18n="fetching_ledger">Fetching ledger...</span></p>
+</div>
+</div>
+</div>
+
+
+
+
+
+
+<!-- Persistent Report Issue Button -->
+<button data-i18n="btn_report_issue" id="report-issue-btn" onclick="openIncidentModal()" style="display:none; position:fixed; bottom:20px; right:20px; background:var(--danger); color:white; border:none; padding:14px 24px; border-radius:30px; font-weight:bold; font-size:1rem; cursor:pointer; box-shadow:0 10px 25px rgba(229,62,62,0.4); z-index:1000; transition:all 0.2s ease;">
+        🚨 Report Issue
+    </button>
+<!-- Incident Modal -->
+<div class="glass-card" id="incident-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); text-align:center;">
+<h2 data-i18n="incident_report_title" style="color:var(--danger); margin-bottom:10px;">Report an Incident</h2>
+<p data-i18n="incident_report_desc" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">This will instantly notify the manager and update your logs.</p>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+<button class="btn-primary" data-i18n="incident_breakdown" onclick="submitIncident('breakdown')" style="background:#dd6b20;">🛠️ Breakdown</button>
+<button class="btn-primary" data-i18n="incident_challan" onclick="submitIncident('challan')" style="background:#3182ce;">👮 Challan</button>
+<button class="btn-primary" data-i18n="incident_traffic" onclick="submitIncident('traffic')" style="background:#d69e2e;">🚦 Traffic</button>
+<button class="btn-primary" data-i18n="incident_toll" onclick="submitIncident('toll')" style="background:var(--accent);">🎫 Toll Plaza</button>
+<button class="btn-primary" data-i18n="incident_refuel" onclick="submitIncident('refuel')" style="background:#48bb78;">⛽ Refuel</button>
+<button class="btn-primary" data-i18n="incident_weather" onclick="submitIncident('weather')" style="background:#805ad5;">⛈️ Weather</button>
+</div>
+<button class="btn-primary" data-i18n="btn_cancel" onclick="document.getElementById('incident-modal').style.display='none'" style="margin-top:20px; background:transparent; border:1px solid white;">Cancel</button>
+</div>
+<!-- Stationary Warning Modal -->
+<div class="glass-card" id="stationary-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); text-align:center; border:2px solid var(--warning);">
+<h2 data-i18n="are_you_okay" style="color:var(--warning); margin-bottom:10px;">Are you okay?</h2>
+<p data-i18n="stationary_msg" style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">We noticed you haven't moved in a while. Do you need to report an issue?</p>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+<button class="btn-primary" onclick="submitIncident('breakdown', true)" style="background:#dd6b20;">🛠️ Breakdown</button>
+<button class="btn-primary" onclick="submitIncident('toll', true)" style="background:var(--warning); color:#000;">🎫 Toll Plaza</button>
+<button class="btn-primary" onclick="submitIncident('refuel', true)" style="background:var(--accent);">⛽ Refuel</button>
+<button class="btn-primary" data-i18n="btn_im_fine" onclick="document.getElementById('stationary-modal').style.display='none'" style="background:var(--success);">👍 I'm Fine</button>
+</div>
+</div>
+<!-- Zen Mode Overlay -->
+<div class="zen-overlay" id="zen-overlay">
+<div class="zen-breathing"></div>
+<h1 data-i18n="zen_mode_active" style="color:var(--primary); font-size:2.5rem; margin-bottom:10px;">ZEN MODE ACTIVE</h1>
+<p data-i18n="zen_mode_desc" style="font-size:1.2rem; margin-bottom:30px; line-height:1.6;">Automated detected high fatigue or erratic patterns.<br/>Your safety is our priority. Take a deep breath.</p>
+<div class="glass-card" style="width:100%; max-width:400px; border: 1px solid var(--primary);">
+<h3 data-i18n="rerouting_safety" style="color:var(--primary); margin-bottom:15px;">📍 Rerouting to Safety</h3>
+<p id="zen-rest-stop-name" style="font-size:1.1rem; font-weight:bold;"></p>
+<p id="zen-rest-stop-amenities" style="color:var(--text-muted); font-size:0.9rem; margin-top:5px;"></p>
+<div style="margin-top:20px; display:flex; gap:10px;">
+<button class="btn-primary" data-i18n="btn_arrived_resting" onclick="confirmArrival()" style="flex:1;">I have Arrived &amp; Resting</button>
+<button class="btn-primary" data-i18n="btn_resume_route" onclick="deactivateZen()" style="flex:1; background:transparent; border:1px solid white;">I'm Fine, Resume Route</button>
+</div>
+</div>
+</div>
+<!-- Automated Control Guide Modal -->
+<div class="glass-card modal-glass" id="voice-help-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10010; width:90%; max-width:450px; padding:24px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); border:1px solid var(--primary);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+<h3 data-i18n="voice_help_title" style="margin:0; color:var(--primary);">Voice Command Guide</h3>
+<button onclick="document.getElementById('voice-help-modal').style.display='none'" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
+</div>
+<p data-i18n="voice_help_desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Use these hands-free commands to control your dashboard while driving.</p>
+<div style="max-height:60vh; overflow-y:auto; padding-right:10px;">
+<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+<thead style="border-bottom:1px solid var(--border);">
+<tr style="text-align:left;">
+<th data-i18n="voice_command_header" style="padding:10px;">Command</th>
+<th data-i18n="voice_action_header" style="padding:10px;">Action</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+<td style="padding:10px; font-weight:bold; color:var(--accent);">"Go to Active"</td>
+<td data-i18n="voice_instr_map" style="padding:10px;">View live route</td>
+</tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+<td style="padding:10px; font-weight:bold; color:var(--accent);">"Go to Wallet"</td>
+<td data-i18n="voice_instr_wallet" style="padding:10px;">Check earnings</td>
+</tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+<td style="padding:10px; font-weight:bold; color:var(--accent);">"Report Incident"</td>
+<td data-i18n="voice_instr_report" style="padding:10px;">Alert breakdown</td>
+</tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+<td style="padding:10px; font-weight:bold; color:var(--accent);">"Switch Language"</td>
+<td data-i18n="voice_instr_lang" style="padding:10px;">Cycle languages</td>
+</tr>
+<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+<td style="padding:10px; font-weight:bold; color:var(--accent);">"Emergency Halt"</td>
+<td data-i18n="voice_instr_stop_sim" style="padding:10px;">Stop simulation movement</td>
+</tr>
+</tbody>
+</table>
+</div>
+<button class="btn-primary" data-i18n="btn_close" onclick="document.getElementById('voice-help-modal').style.display='none'" style="margin-top:20px; width:100%;">Close Guide</button>
+</div>
+<!-- Verification Modal (QR + Photo) -->
+<div class="glass-card" id="verify-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:95%; max-width:500px; padding:24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); border:1px solid var(--primary);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<h3 data-i18n="security_verification" id="verify-modal-title" style="margin:0; font-weight:800;">Verification Required</h3>
+<button onclick="closeVerifyModal()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
+</div>
+<div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden; border:2px solid var(--primary); background:#000;"></div>
+<div id="qr-success-msg" style="display:none; margin-top:15px; padding:15px; background:rgba(72,187,120,0.1); border:1px solid var(--success); border-radius:10px; text-align:center;">
+<p data-i18n="qr_matched" style="color:var(--success); font-weight:bold; margin:0;">✅ QR Code Verified Successfully!</p>
+</div>
+<div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+<button class="btn-primary" data-i18n="btn_done" id="btn-submit-verify" onclick="closeVerifyModal()" style="width:100%; display:none;">Done</button>
+<button class="btn-primary" data-i18n="btn_manual_verify" id="btn-manual-verify" onclick="manualVerify(currentVerifyId, 'pickup')" style="width:100%; display:none; background:var(--warning); color:#000;">⚠️ Verify Manually (Audit Required)</button>
+</div>
+<p data-i18n="camera_qr_msg" style="margin-top:15px; font-size:0.8rem; color:var(--text-muted); text-align:center;">Point your camera at the shipment's QR code to proceed.</p>
+</div>
+<!-- Health Vitals Modal -->
+<div class="glass-card" id="health-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+<h2 data-i18n="update_health_title" style="margin-bottom:15px; font-size:1.2rem;">❤️ Update Health Vitals</h2>
+<form id="health-form">
+<div style="margin-bottom:15px;">
+<label data-i18n="label_heart_rate" style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Heart Rate (BPM)</label>
+<input id="v-heart-rate" placeholder="e.g. 72" required="" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="number"/>
+</div>
+<div style="margin-bottom:15px;">
+<label data-i18n="label_blood_pressure" style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Blood Pressure (mmHg)</label>
+<input id="v-bp" placeholder="e.g. 120/80" required="" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="text"/>
+</div>
+<div style="margin-bottom:15px;">
+<label data-i18n="label_oxygen" style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Oxygen Level (SpO2 %)</label>
+<input id="v-oxygen" placeholder="e.g. 98" required="" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);" type="number"/>
+</div>
+<div style="margin-bottom:20px;">
+<label data-i18n="label_stress" style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;">Stress Index (0-100)</label>
+<input id="v-stress" max="100" min="0" style="width:100%;" type="range"/>
+<div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-muted);">
+<span data-i18n="label_relaxed">Relaxed</span>
+<span data-i18n="label_stressed">Stressed</span>
+</div>
+</div>
+<div style="display:flex; gap:10px;">
+<button class="btn-primary" data-i18n="btn_update_vitals" style="flex:1;" type="submit">Update Vitals</button>
+<button class="btn-primary" data-i18n="btn_cancel" onclick="closeHealthModal()" style="flex:1; background:transparent; border:1px solid white;" type="button">Cancel</button>
+</div>
+</form>
+</div> <!-- end main-content -->
+</div> <!-- end driver-layout -->
+<!-- Scripts -->
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="../js/translations.js?v=2.2"></script>
+<script src="../js/voice.js?v=2.2"></script>
+<script src="../js/api.js?v=2.2"></script>
+<script src="../js/custom_layout.js?v=2.2"></script>
+<script src="../js/driver.js?v=2.2"></script>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.logistixLayout.init('driver');
+            if (typeof switchDriverTab === 'function') {
+                switchDriverTab('wallet');
+            }
+        });
+    </script>
+<!-- Theme Script -->
+<script>
+    const btn = document.getElementById('theme-toggle');
+    function setTheme(mode) {
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+            btn.innerText = '☀️';
+        } else {
+            document.body.classList.remove('light-mode');
+            btn.innerText = '🌙';
+        }
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
+    }
+    btn.onclick = () => {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
+    setTheme(localStorage.getItem('theme') || 'dark');
+    </script>
+</div></body>
+</html>
