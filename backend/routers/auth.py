@@ -152,12 +152,8 @@ def customer_request_otp(data: CustomerOTPRequest):
     if not email:
         raise HTTPException(status_code=400, detail="Email address is required")
     
-    all_shipments = shipments_db.get_all()
-    matched = [s for s in all_shipments if s and s.get("receiver_email") == email]
-    if not matched:
-        # Fallback to phone search for legacy shipments if needed, 
-        # but user wants email-only for now.
-        raise HTTPException(status_code=404, detail="No orders found for this email address")
+    if "@" not in email or "." not in email:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address")
     
     otp = str(random.randint(100000, 999999))
     customer_otp_store[email] = otp

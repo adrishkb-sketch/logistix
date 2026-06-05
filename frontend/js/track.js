@@ -86,10 +86,37 @@ function showPanel(panelId) {
     document.getElementById('detail-panel').style.display = panelId === 'detail' ? 'block' : 'none';
 }
 
+function renderEmptyOrdersState() {
+    const textNoOrders = getTranslation('no_orders_found') || "No orders found for this email.";
+    return `
+        <div class="glass-card" style="text-align: center; padding: 48px 24px; border: 1px dashed var(--border); border-radius: 24px; background: rgba(255, 255, 255, 0.01); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); margin-top: 20px;">
+            <style>
+                @keyframes float-emoji {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-12px); }
+                }
+                .floating-box-emoji {
+                    animation: float-emoji 3s ease-in-out infinite;
+                    display: inline-block;
+                }
+            </style>
+            <div class="floating-box-emoji" style="font-size: 4.5rem; margin-bottom: 20px;">📦</div>
+            <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 12px; color: var(--text);">No Shipments Found</h3>
+            <p style="color: var(--muted); max-width: 380px; margin: 0 auto 24px auto; font-size: 0.95rem; line-height: 1.6;">
+                ${textNoOrders}
+            </p>
+            <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--primary); font-weight: 600; background: rgba(79, 140, 255, 0.1); padding: 8px 16px; border-radius: 30px;">
+                <span class="pulse-dot" style="width: 8px; height: 8px; background: var(--primary); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--primary);"></span>
+                Successfully Verified
+            </div>
+        </div>
+    `;
+}
+
 function renderOrderList(orders) {
     const list = document.getElementById('orders-list');
     if (!orders || orders.length === 0) {
-        list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found')}</p>`;
+        list.innerHTML = renderEmptyOrdersState();
         return;
     }
     
@@ -114,7 +141,7 @@ async function loadCustomerOrders() {
         const myOrders = await apiCall('/auth/customer/shipments');
         
         if (myOrders.length === 0) {
-            list.innerHTML = `<p style="text-align:center; color:var(--muted);">${getTranslation('no_orders_found')}</p>`;
+            list.innerHTML = renderEmptyOrdersState();
             return;
         }
         
