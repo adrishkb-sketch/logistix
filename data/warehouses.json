@@ -138,5 +138,27 @@
         "manager_name": "Adrish ",
         "manager_email": "dbanerjee.banerjee1983@gmail.com",
         "manager_password": "15062007"
+    },
+    {
+        "id": "d36dcf83-ce43-4179-aa57-c62e8ba7d8be",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Test Warehouse",
+        "lat": 15.0,
+        "lng": 75.0,
+        "contact_number": "+91 99999 99999",
+        "manager_name": "Test Manager",
+        "manager_email": "test_wh_manager@logistix.com",
+        "manager_password": "password123"
+    },
+    {
+        "id": "031ec39e-accd-4c4a-a177-96e331810094",
+        "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
+        "name": "Integration Test Hub",
+        "lat": 12.34,
+        "lng": 56.78,
+        "contact_number": "+91 12345 67890",
+        "manager_name": "Integration Test Mgr",
+        "manager_email": "integration_test_mgr@logistix.com",
+        "manager_password": "password123"
     }
 ]

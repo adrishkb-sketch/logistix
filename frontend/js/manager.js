@@ -417,6 +417,10 @@ async function triggerManualAICheck() {
 
 async function loadMapData() {
     if (!map) return;
+    if (window.tempMarker) {
+        map.removeLayer(window.tempMarker);
+        window.tempMarker = null;
+    }
     // Clear markers
     markers.forEach(m => map.removeLayer(m));
     markers = [];
@@ -623,6 +627,10 @@ async function submitNewWarehouse() {
     const email = document.getElementById('wh-email-input').value;
     const password = document.getElementById('wh-password-input').value;
     
+    if (!pendingWhLoc || isNaN(pendingWhLoc.lat) || isNaN(pendingWhLoc.lng)) {
+        return alert("Error: No location selected on the map. Please click the map first.");
+    }
+    
     if (!name || !manager || !contact || !email || !password) {
         return alert("Error: Warehouse Name, Manager Name, Contact, Email and Password are all required.");
     }
@@ -648,7 +656,9 @@ async function createWarehouse(name, lat, lng, manager = '', contact = '', email
         });
         loadMapData();
         if (typeof loadDriversAndVehicles === 'function') loadDriversAndVehicles();
-    } catch(e) {}
+    } catch(e) {
+        console.error("Create warehouse failed:", e);
+    }
 }
 
 async function adoptStrategicLocation() {

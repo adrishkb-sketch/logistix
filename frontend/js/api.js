@@ -44,8 +44,14 @@ async function apiCall(endpoint, method = "GET", body = null, isSilent = false) 
         options.body = JSON.stringify(body);
     }
     
+    let finalUrl = `${API_BASE}${endpoint}`;
+    if (method === "GET") {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        finalUrl = `${finalUrl}${separator}_t=${Date.now()}`;
+    }
+
     try {
-        const response = await fetch(`${API_BASE}${endpoint}`, options);
+        const response = await fetch(finalUrl, options);
         
         // Handle non-JSON responses (like Internal Server Errors from server)
         const contentType = response.headers.get("content-type");
