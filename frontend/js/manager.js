@@ -840,6 +840,7 @@ async function loadInsights() {
     try {
         const company_id = localStorage.getItem('manager_id');
         const container = document.getElementById('alerts-container');
+        if (!container) return;
         
         // Load data in parallel but handle errors individually
         const [alerts, stats, cascade, pl] = await Promise.all([
