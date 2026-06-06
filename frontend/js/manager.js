@@ -3904,25 +3904,37 @@ let drawnItems;
 let baseLayers;
 
 function initWeatherMapOnMap(mapInstance) {
+    // Remove the anonymous base tile layer added by updateMapTheme() so we
+    // exclusively manage layers through baseLayers.
+    mapInstance.eachLayer(layer => {
+        if (layer instanceof L.TileLayer && !layer.options.isOverlay) {
+            mapInstance.removeLayer(layer);
+        }
+    });
+
     // Define Map Layers
     const theme = localStorage.getItem('theme') || 'dark';
-    const standardUrl = theme === 'dark' 
+    const standardUrl = theme === 'dark'
         ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
         : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
     const standard = L.tileLayer(standardUrl, { attribution: '&copy; CARTO' });
     const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
         attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)'
     });
     const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri'
     });
-    
+
     baseLayers = {
-        "standard": standard,
-        "terrain": terrain,
-        "satellite": satellite
+        'standard':  standard,
+        'terrain':   terrain,
+        'satellite': satellite
     };
+
+    // Add standard as the active base layer immediately
+    standard.addTo(mapInstance);
 
     // Initialize Draw FeatureGroup
     drawnItems = new L.FeatureGroup();
@@ -4019,32 +4031,41 @@ function makeDraggable(el) {
 }
 
 function changeMapLayer() {
+    if (!map) return;
     const layerType = document.getElementById('map-layer').value;
     if (!baseLayers || !baseLayers[layerType]) return;
 
-    // Remove any base tile layers currently on the map (excluding overlays and rainviewer)
+    // Remove every base tile layer (not rainviewer overlay, not SOI border)
     map.eachLayer(layer => {
-        if (layer instanceof L.TileLayer && !layer.options.isOverlay && layer._url && !layer._url.includes('rainviewer')) {
+        if (layer instanceof L.TileLayer && !layer.options.isOverlay) {
             map.removeLayer(layer);
         }
     });
 
-    // Add selected layer
+    // Add the chosen layer
     baseLayers[layerType].addTo(map);
 }
 
 let currentDrawHandler = null;
 function toggleDrawMode() {
-    const type = document.getElementById('disaster-type').value;
-    if (currentDrawHandler) {
-        currentDrawHandler.disable();
-    }
-    
-    // Safely check drawControl options
-    const circleOptions = (drawControl && drawControl.options && drawControl.options.draw && typeof drawControl.options.draw.circle === 'object') ? drawControl.options.draw.circle : {};
-    const polylineOptions = (drawControl && drawControl.options && drawControl.options.draw && typeof drawControl.options.draw.polyline === 'object') ? drawControl.options.draw.polyline : {};
+    if (!map) { console.warn('toggleDrawMode: map not ready'); return; }
+    if (!drawControl) { console.warn('toggleDrawMode: drawControl not initialised'); return; }
 
-    if (type === 'cyclone' || type === 'flood' || type === 'heatwave' || type === 'earthquake' || type === 'riot' || type === 'hail') {
+    const type = document.getElementById('disaster-type').value;
+
+    // Disable any previous handler
+    if (currentDrawHandler) {
+        try { currentDrawHandler.disable(); } catch(e) {}
+        currentDrawHandler = null;
+    }
+
+    // L.Draw options may be true (boolean) or an options object
+    const drawOpts = drawControl.options && drawControl.options.draw ? drawControl.options.draw : {};
+    const circleOptions   = (drawOpts.circle   && typeof drawOpts.circle   === 'object') ? drawOpts.circle   : {};
+    const polylineOptions = (drawOpts.polyline  && typeof drawOpts.polyline === 'object') ? drawOpts.polyline : {};
+
+    const circleTypes = ['cyclone', 'flood', 'heatwave', 'earthquake', 'riot', 'hail', 'storm', 'snow', 'fog', 'rain', 'cloud'];
+    if (circleTypes.includes(type)) {
         currentDrawHandler = new L.Draw.Circle(map, circleOptions);
     } else {
         currentDrawHandler = new L.Draw.Polyline(map, polylineOptions);
@@ -4191,7 +4212,7 @@ async function loadWeatherFleetData() {
             const m = L.marker([v.lat, v.lng], {icon: icon}).addTo(map)
                 .bindPopup(`
                     <b>Driver:</b> ${v.driver}<br>
-                    <b>Local Weather:</b> ${v.weather.icon} ${v.weather.condition}<br>
+                    <b>Local Weather:</b> ${v.weather.icon} ${v.weather.condition}${v.weather.temp != null ? ' · ' + v.weather.temp + '°C' : ''}<br>
                     <b>Fatigue:</b> ${v.fatigue}%
                 `);
             weatherMarkers.push(m);
@@ -4216,7 +4237,7 @@ async function loadWeatherFleetData() {
                                 <div style="margin:4px 0; color:var(--text-muted);">
                                     Driver: ${s.driver_name} [${s.vehicle_plate}]
                                 </div>
-                                <div style="color:var(--success); font-weight:600;">AI Solution: ${s.ai_action}</div>
+                                <div style="color:var(--success); font-weight:600;">AI Solution: ${s.ai_action}${s.condition ? ' <span style="font-weight:400;color:var(--text-muted);">[' + s.condition + ']</span>' : ''}</div>
                                 <div style="font-style:italic; font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.driver_instruction}</div>
                                 <div style="margin-top:5px; display:flex; gap:5px;">
                                     <button style="padding:2px 6px; font-size:0.7rem; background:var(--primary); border:none; color:white; border-radius:3px; cursor:pointer;" onclick="executeAIAction('${s.id}')">Apply AI Solution</button>

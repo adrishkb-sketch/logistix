@@ -78,9 +78,12 @@ def custom_disaster(data: dict):
     from backend.services.route_engine import haversine
     from backend.models import ShipmentEvent
     
+    company_id = data.get("company_id")
+
     # data: {type, shapeType, lat, lng, radius} OR {type, shapeType, coordinates: [{lat,lng}]}
     new_cell = {
         "id": str(uuid.uuid4()),
+        "company_id": company_id,   # ← CRITICAL: required for tracking.py filter
         "type": data.get("type"),
         "shapeType": data.get("shapeType"),
         "severity": "critical",
@@ -188,12 +191,20 @@ def custom_disaster(data: dict):
     }
 
 @router.post("/disaster/clear")
-def clear_disasters():
-    weather_db.write([])
-    # Revert all shipments
+def clear_disasters(data: dict = {}):
+    company_id = data.get("company_id") if data else None
+    all_cells = weather_db.get_all()
+    if company_id:
+        # Only clear cells belonging to this company
+        remaining = [c for c in all_cells if c and c.get("company_id") != company_id]
+        weather_db.write(remaining)
+    else:
+        weather_db.write([])
+    # Revert simulated_delay log entries
     all_shipments = shipments_db.get_all()
     for s in all_shipments:
         if not s: continue
+        if company_id and s.get("company_id") != company_id: continue
         original_len = len(s.get("logs", []))
         s["logs"] = [l for l in s.get("logs", []) if l and l.get("status") != "simulated_delay"]
         if len(s["logs"]) != original_len:

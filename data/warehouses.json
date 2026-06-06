@@ -127,5 +127,16 @@
         "lng": 75.8577,
         "contact_number": "+91 95550 32581",
         "drone_count": 6
+    },
+    {
+        "id": "03d0174f-81d1-4c75-a517-0e6792d933b8",
+        "company_id": "4f8c0112-4306-4c83-8f04-9ec40a23fcf3",
+        "name": "Odisha",
+        "lat": 20.92973454266482,
+        "lng": 85.40293692788147,
+        "contact_number": "8240783578",
+        "manager_name": "Adrish ",
+        "manager_email": "dbanerjee.banerjee1983@gmail.com",
+        "manager_password": "15062007"
     }
 ]
