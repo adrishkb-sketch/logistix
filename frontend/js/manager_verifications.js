@@ -31,10 +31,12 @@ async function loadDriversAndVehicles() {
         const drHubSelect = document.getElementById('drone-base-hub');
         if (drHubSelect) drHubSelect.innerHTML = baseHubsHtml;
 
-        renderDriversTable();
-        renderVehiclesTable();
-        renderDronesTable();
-        renderLinkedPairs();
+        // Only call these render functions if they exist (they live in manager_drivers.js,
+        // not on this standalone verifications page)
+        if (typeof renderDriversTable === 'function') renderDriversTable();
+        if (typeof renderVehiclesTable === 'function') renderVehiclesTable();
+        if (typeof renderDronesTable === 'function') renderDronesTable();
+        if (typeof renderLinkedPairs === 'function') renderLinkedPairs();
 
         const verifTbody = document.getElementById('verifications-table-body');
         if (verifTbody) {
