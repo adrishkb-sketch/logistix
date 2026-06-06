@@ -399,7 +399,7 @@
 <div class="draggable-panel" id="simulation-panel" style="display:none; position:absolute; top:20px; right:20px; width:300px; max-width:calc(100% - 32px); background:rgba(20,25,35,0.92); backdrop-filter:blur(12px); border:1px solid var(--border); border-radius:14px; padding:16px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
 <div class="drag-handle" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; cursor:grab; user-select:none;">
 <h3 data-i18n="ai_results" style="margin:0; color:var(--warning); font-size:1rem;">Automated Results</h3>
-<button onclick="document.getElementById('simulation-panel').style.display='none'" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:1.2rem; line-height:1;">✖</button>
+<button onclick="closeSimulationPanel()" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:1.2rem; line-height:1;">✖</button>
 </div>
 <p style="margin:0 0 10px 0; font-size:0.85rem; color:var(--text-muted);">
 <strong data-i18n="affected_shipments">Affected Shipments:</strong> <span id="sim-affected-count" style="color:var(--text); font-weight:bold;">0</span>

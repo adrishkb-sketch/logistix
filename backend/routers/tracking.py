@@ -76,12 +76,13 @@ def track_shipment(shipment_id: str):
 @router.get("/fleet/weather")
 def get_fleet_weather(company_id: str):
     """
-    Returns simulated weather cells and active vehicle locations for the manager map.
+    Returns simulated and real weather cells and active vehicle locations for the manager map.
     """
     from backend.database import JSONDatabase
-    from backend.services.route_engine import predict_weather_impact
+    from backend.services.route_engine import predict_weather_impact, haversine
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
+    vehicles_db = JSONDatabase("vehicles")
     
     drivers = drivers_db.get_filtered({"company_id": company_id})
     shipments = shipments_db.get_filtered({"company_id": company_id, "status": "in_transit"})
@@ -102,28 +103,96 @@ def get_fleet_weather(company_id: str):
                     "fatigue": d.get("fatigue_score", 0)
                 })
     
+    # Define real-time/default weather conditions (always present)
+    real_cells = [
+        {"id": "real-1", "lat": 28.6, "lng": 77.2, "radius": 150, "condition": "Storm", "type": "cyclone", "is_simulation": False, "severity": "critical", "icon": "⛈️", "color": "#e53e3e"},
+        {"id": "real-2", "lat": 19.1, "lng": 72.9, "radius": 200, "condition": "Rain", "type": "flood", "is_simulation": False, "severity": "high", "icon": "🌧️", "color": "#3182ce"},
+        {"id": "real-3", "lat": 13.0, "lng": 80.2, "radius": 180, "condition": "Rain", "type": "rain", "is_simulation": False, "severity": "medium", "icon": "🌧️", "color": "#3182ce"}
+    ]
+    
     weather_db = JSONDatabase("weather_cells")
-    cells = weather_db.get_filtered({"company_id": company_id})
-    # For local dev, filter weather cells by company_id if we want multi-tenancy for simulations too
-    cells = [c for c in cells if c and (c.get("company_id") == company_id or c.get("company_id") is None)]
-
-    if not cells:
-        cells = [
-            {"lat": 28.6, "lng": 77.2, "radius": 50, "condition": "Storm", "color": "#e53e3e"},
-            {"lat": 19.1, "lng": 72.9, "radius": 80, "condition": "Rain", "color": "#3182ce"},
-            {"lat": 13.0, "lng": 80.2, "radius": 60, "condition": "Rain", "color": "#3182ce"}
-        ]
-    else:
-        for c in cells:
+    db_cells = weather_db.get_filtered({"company_id": company_id})
+    db_cells = [c for c in db_cells if c and (c.get("company_id") == company_id or c.get("company_id") is None)]
+    for c in db_cells:
+        c["is_simulation"] = True
+        
+    cells = real_cells + db_cells
+    for c in cells:
+        c["shapeType"] = c.get("shapeType", "circle")
+        if "color" not in c:
             c["color"] = "#e53e3e" if c.get("severity") == "critical" else "#3182ce"
-            # Add dynamic weather icon based on condition
+        if "icon" not in c:
             cond = c.get("condition", "").lower()
             if "storm" in cond: c["icon"] = "⛈️"
             elif "rain" in cond: c["icon"] = "🌧️"
             elif "cloud" in cond: c["icon"] = "☁️"
             else: c["icon"] = "🌦️"
+        if "type" not in c:
+            c["type"] = c.get("condition", "Rain")
             
-    return {"fleet": fleet, "cells": cells}
+    # Calculate affected shipments
+    affected_count = 0
+    affected_list = []
+    
+    for s in shipments:
+        curr_loc = s.get("current_location") or s.get("pickup")
+        if not curr_loc or not curr_loc.get("lat"):
+            continue
+            
+        for cell in cells:
+            intersects = False
+            if cell.get("shapeType") == "polyline":
+                for pt in cell.get("coordinates", []):
+                    if haversine(curr_loc["lat"], curr_loc["lng"], pt["lat"], pt["lng"]) <= 5:
+                        intersects = True
+                        break
+            else:
+                dist = haversine(curr_loc["lat"], curr_loc["lng"], cell.get("lat", 0), cell.get("lng", 0))
+                if dist <= cell.get("radius", 50):
+                    intersects = True
+                    
+            if intersects:
+                affected_count += 1
+                driver = drivers_db.get_by_id(s.get("assigned_driver_id", ""))
+                vehicle = vehicles_db.get_by_id(s.get("assigned_vehicle_id", ""))
+                
+                cell_type = str(cell.get('type', '')).lower()
+                ai_action = "Reroute"
+                if cell_type in ['cyclone', 'flood']:
+                    ai_action = "Emergency Halt & Seek High Ground"
+                elif cell_type == 'heatwave':
+                    ai_action = "Mandatory Stop (Vulnerable Vehicles) / Reroute"
+                elif cell_type == 'earthquake':
+                    ai_action = "Emergency Halt & Open Area Check"
+                elif cell_type == 'riot':
+                    ai_action = "Immediate Diversion (Avoid Zone)"
+                elif cell_type == 'hail':
+                    ai_action = "Shelter Search / Underpass Parking"
+                elif cell_type == 'blockade':
+                    ai_action = "Recalculate Route (OSRM Bypass)"
+                    
+                affected_list.append({
+                    "id": s["id"],
+                    "description": s["description"],
+                    "driver_name": driver.get("name", "Unknown") if driver else "Unassigned",
+                    "vehicle_plate": vehicle.get("number_plate", "N/A") if vehicle else "N/A",
+                    "location": curr_loc,
+                    "ai_action": ai_action,
+                    "driver_instruction": f"PROPOSED: Move to nearest safe zone. Awaiting Manager Approval."
+                })
+                break
+                
+    recommendation = "No shipments affected."
+    if affected_count > 0:
+        recommendation = f"AI suggests monitoring/halting {affected_count} vehicles immediately. Ensure active safety rerouting protocols."
+        
+    return {
+        "fleet": fleet,
+        "cells": cells,
+        "affected_count": affected_count,
+        "affected_list": affected_list,
+        "recommendation": recommendation
+    }
 
 @router.get("/messages/{user_id}")
 def get_messages(user_id: str, company_id: str):

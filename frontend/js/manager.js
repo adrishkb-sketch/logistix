@@ -78,6 +78,7 @@ let globalRisks = [];
 let globalVehicles = [];
 let volumeChart, fleetChart;
 let weatherMarkers = [];
+window.simulationPanelClosedByUser = false;
 let currentMarkers = [];
 let warehouses = [];
 let globalDrones = [];
@@ -3958,7 +3959,8 @@ function initWeatherMapOnMap(mapInstance) {
                 const latest = past[past.length - 1].path;
                 L.tileLayer(`https://tilecache.rainviewer.com${latest}/256/{z}/{x}/{y}/2/1_1.png`, {
                     opacity: 0.6,
-                    zIndex: 10
+                    zIndex: 10,
+                    isOverlay: true
                 }).addTo(mapInstance);
             }
         })
@@ -4018,8 +4020,15 @@ function makeDraggable(el) {
 
 function changeMapLayer() {
     const layerType = document.getElementById('map-layer').value;
-    // Remove existing layers
-    Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
+    if (!baseLayers || !baseLayers[layerType]) return;
+
+    // Remove any base tile layers currently on the map (excluding overlays and rainviewer)
+    map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer && !layer.options.isOverlay && layer._url && !layer._url.includes('rainviewer')) {
+            map.removeLayer(layer);
+        }
+    });
+
     // Add selected layer
     baseLayers[layerType].addTo(map);
 }
@@ -4031,12 +4040,14 @@ function toggleDrawMode() {
         currentDrawHandler.disable();
     }
     
+    // Safely check drawControl options
+    const circleOptions = (drawControl && drawControl.options && drawControl.options.draw && typeof drawControl.options.draw.circle === 'object') ? drawControl.options.draw.circle : {};
+    const polylineOptions = (drawControl && drawControl.options && drawControl.options.draw && typeof drawControl.options.draw.polyline === 'object') ? drawControl.options.draw.polyline : {};
+
     if (type === 'cyclone' || type === 'flood' || type === 'heatwave' || type === 'earthquake' || type === 'riot' || type === 'hail') {
-        const options = typeof drawControl.options.draw.circle === 'object' ? drawControl.options.draw.circle : {};
-        currentDrawHandler = new L.Draw.Circle(map, options);
+        currentDrawHandler = new L.Draw.Circle(map, circleOptions);
     } else {
-        const options = typeof drawControl.options.draw.polyline === 'object' ? drawControl.options.draw.polyline : {};
-        currentDrawHandler = new L.Draw.Polyline(map, options);
+        currentDrawHandler = new L.Draw.Polyline(map, polylineOptions);
     }
     currentDrawHandler.enable();
 }
@@ -4054,47 +4065,23 @@ async function handleCustomDisaster(shapeType, layer) {
     }
     
     try {
-        const res = await apiCall('/simulation/disaster/custom', 'POST', payload);
-        
-        // Show Simulation Panel
-        const panel = document.getElementById('simulation-panel');
-        document.getElementById('sim-affected-count').innerText = res.affected_count || 0;
-        document.getElementById('sim-ai-recommendation').innerText = res.recommendation || "No action needed.";
-        
-        const listContainer = document.getElementById('sim-affected-list');
-        if (res.affected_list && res.affected_list.length > 0) {
-            listContainer.innerHTML = res.affected_list.map(s => `
-                <div style="font-size:0.75rem; margin-bottom:10px; padding:8px; background:rgba(255,255,255,0.05); border-radius:4px; border-left:3px solid var(--warning);">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <strong>${s.description}</strong>
-                        <span style="color:var(--accent);">${s.id.substring(0,8)}</span>
-                    </div>
-                    <div style="margin:4px 0; color:var(--text-muted);">
-                        Driver: ${s.driver_name} [${s.vehicle_plate}]
-                    </div>
-                    <div style="color:var(--success); font-weight:600;">AI Solution: ${s.ai_action}</div>
-                    <div style="font-style:italic; font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.driver_instruction}</div>
-                    <div style="margin-top:5px; display:flex; gap:5px;">
-                        <button style="padding:2px 6px; font-size:0.7rem; background:var(--primary); border:none; color:white; border-radius:3px; cursor:pointer;" onclick="executeAIAction('${s.id}')">Apply AI Solution</button>
-                        <button style="padding:2px 6px; font-size:0.7rem; background:rgba(255,255,255,0.1); border:1px solid white; color:white; border-radius:3px; cursor:pointer;" onclick="manualDivert('${s.id}')">Manual Divert</button>
-                    </div>
-                </div>
-            `).join('');
-        } else {
-            listContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.75rem;">No active shipments in path.</p>';
-        }
-        
-        panel.style.display = 'block';
-        
+        await apiCall('/simulation/disaster/custom', 'POST', payload);
+        window.simulationPanelClosedByUser = false;
         loadWeatherFleetData();
     } catch(err) {
         alert("Failed to create custom disaster.");
     }
 }
 
+function closeSimulationPanel() {
+    const panel = document.getElementById('simulation-panel');
+    if (panel) panel.style.display = 'none';
+    window.simulationPanelClosedByUser = true;
+}
+
 function applySimulationFixes() {
     alert("Executing AI contingency protocols for all affected shipments. Rerouting in progress...");
-    document.getElementById('simulation-panel').style.display = 'none';
+    closeSimulationPanel();
 }
 
 function executeAIAction(shipmentId) {
@@ -4209,6 +4196,45 @@ async function loadWeatherFleetData() {
                 `);
             weatherMarkers.push(m);
         });
+
+        // Update Simulation / Automated Results Panel dynamically (real and simulation weather)
+        const panel = document.getElementById('simulation-panel');
+        if (panel) {
+            if (data.affected_count > 0) {
+                document.getElementById('sim-affected-count').innerText = data.affected_count;
+                document.getElementById('sim-ai-recommendation').innerText = data.recommendation || "No action needed.";
+                
+                const listContainer = document.getElementById('sim-affected-list');
+                if (listContainer) {
+                    if (data.affected_list && data.affected_list.length > 0) {
+                        listContainer.innerHTML = data.affected_list.map(s => `
+                            <div style="font-size:0.75rem; margin-bottom:10px; padding:8px; background:rgba(255,255,255,0.05); border-radius:4px; border-left:3px solid var(--warning);">
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                    <strong>${s.description}</strong>
+                                    <span style="color:var(--accent);">${s.id.substring(0,8)}</span>
+                                </div>
+                                <div style="margin:4px 0; color:var(--text-muted);">
+                                    Driver: ${s.driver_name} [${s.vehicle_plate}]
+                                </div>
+                                <div style="color:var(--success); font-weight:600;">AI Solution: ${s.ai_action}</div>
+                                <div style="font-style:italic; font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.driver_instruction}</div>
+                                <div style="margin-top:5px; display:flex; gap:5px;">
+                                    <button style="padding:2px 6px; font-size:0.7rem; background:var(--primary); border:none; color:white; border-radius:3px; cursor:pointer;" onclick="executeAIAction('${s.id}')">Apply AI Solution</button>
+                                    <button style="padding:2px 6px; font-size:0.7rem; background:rgba(255,255,255,0.1); border:1px solid white; color:white; border-radius:3px; cursor:pointer;" onclick="manualDivert('${s.id}')">Manual Divert</button>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        listContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.75rem;">No active shipments in path.</p>';
+                    }
+                }
+                if (!window.simulationPanelClosedByUser) {
+                    panel.style.display = 'block';
+                }
+            } else {
+                panel.style.display = 'none';
+            }
+        }
         
     } catch(e) {
         console.error("Fleet fetch error", e);
