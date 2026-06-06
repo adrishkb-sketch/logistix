@@ -77,7 +77,6 @@ let globalDrivers = [];
 let globalRisks = [];
 let globalVehicles = [];
 let volumeChart, fleetChart;
-let weatherMap;
 let weatherMarkers = [];
 let currentMarkers = [];
 let warehouses = [];
@@ -253,12 +252,20 @@ function updateMapTheme(mapInstance) {
 
 function initMap() {
     if (!document.getElementById('map')) return;
+    if (map) return; // Prevent double initialization
+    
     // Default to a central location (e.g., India center)
     map = L.map('map').setView([20.5937, 78.9629], 5);
     updateMapTheme(map);
 
     // Apply Official Indian Boundaries (SOI Compliant Overlay)
     applyOfficialBorders(map);
+
+    const isWeatherPage = window.location.pathname.includes('manager_weather.html') || (typeof currentActiveSection !== 'undefined' && currentActiveSection === 'weather');
+    if (isWeatherPage) {
+        initWeatherMapOnMap(map);
+        return;
+    }
 
     // Map click to add warehouse
     map.on('click', e => processLocationDeployment(e.latlng.lat, e.latlng.lng));
@@ -776,7 +783,10 @@ function showSection(id) {
     if (id === 'shipments') loadShipments();
     if (id === 'receivers') loadReceivers();
     if (id === 'drivers') loadDriversAndVehicles();
-    if (id === 'weather') initWeatherMap();
+    if (id === 'weather') {
+        if (!map) initMap();
+        else setTimeout(() => map.invalidateSize(true), 200);
+    }
     if (id === 'leaderboard') loadLeaderboard();
     if (id === 'messages') loadMessages();
     if (id === 'verifications') loadVerifications();
@@ -3892,11 +3902,7 @@ let drawControl;
 let drawnItems;
 let baseLayers;
 
-function initWeatherMap() {
-    if (weatherMap) {
-        weatherMap.remove();
-    }
-    
+function initWeatherMapOnMap(mapInstance) {
     // Define Map Layers
     const theme = localStorage.getItem('theme') || 'dark';
     const standardUrl = theme === 'dark' 
@@ -3917,13 +3923,9 @@ function initWeatherMap() {
         "satellite": satellite
     };
 
-    weatherMap = L.map('weather-map', {
-        layers: [standard]
-    }).setView([20.5937, 78.9629], 5);
-    
     // Initialize Draw FeatureGroup
     drawnItems = new L.FeatureGroup();
-    weatherMap.addLayer(drawnItems);
+    mapInstance.addLayer(drawnItems);
     
     // Setup Draw Control but don't add it globally visible
     drawControl = new L.Control.Draw({
@@ -3937,9 +3939,9 @@ function initWeatherMap() {
             polyline: true
         }
     });
-    weatherMap.addControl(drawControl);
+    mapInstance.addControl(drawControl);
 
-    weatherMap.on(L.Draw.Event.CREATED, function (e) {
+    mapInstance.on(L.Draw.Event.CREATED, function (e) {
         const type = e.layerType;
         const layer = e.layer;
         drawnItems.addLayer(layer);
@@ -3957,7 +3959,7 @@ function initWeatherMap() {
                 L.tileLayer(`https://tilecache.rainviewer.com${latest}/256/{z}/{x}/{y}/2/1_1.png`, {
                     opacity: 0.6,
                     zIndex: 10
-                }).addTo(weatherMap);
+                }).addTo(mapInstance);
             }
         })
         .catch(e => console.log("Radar not loaded", e));
@@ -3970,8 +3972,8 @@ function initWeatherMap() {
     makeDraggable(document.getElementById('simulation-panel'));
 
     setTimeout(() => {
-        if (weatherMap) {
-            weatherMap.invalidateSize(true);
+        if (mapInstance) {
+            mapInstance.invalidateSize(true);
         }
     }, 300);
 }
@@ -4017,9 +4019,9 @@ function makeDraggable(el) {
 function changeMapLayer() {
     const layerType = document.getElementById('map-layer').value;
     // Remove existing layers
-    Object.values(baseLayers).forEach(layer => weatherMap.removeLayer(layer));
+    Object.values(baseLayers).forEach(layer => map.removeLayer(layer));
     // Add selected layer
-    baseLayers[layerType].addTo(weatherMap);
+    baseLayers[layerType].addTo(map);
 }
 
 let currentDrawHandler = null;
@@ -4031,10 +4033,10 @@ function toggleDrawMode() {
     
     if (type === 'cyclone' || type === 'flood' || type === 'heatwave' || type === 'earthquake' || type === 'riot' || type === 'hail') {
         const options = typeof drawControl.options.draw.circle === 'object' ? drawControl.options.draw.circle : {};
-        currentDrawHandler = new L.Draw.Circle(weatherMap, options);
+        currentDrawHandler = new L.Draw.Circle(map, options);
     } else {
         const options = typeof drawControl.options.draw.polyline === 'object' ? drawControl.options.draw.polyline : {};
-        currentDrawHandler = new L.Draw.Polyline(weatherMap, options);
+        currentDrawHandler = new L.Draw.Polyline(map, options);
     }
     currentDrawHandler.enable();
 }
@@ -4132,7 +4134,7 @@ async function loadWeatherFleetData() {
         const data = await apiCall('/tracking/fleet/weather?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
         
         // Clear old markers
-        weatherMarkers.forEach(m => weatherMap.removeLayer(m));
+        weatherMarkers.forEach(m => map.removeLayer(m));
         weatherMarkers = [];
         
         // Render Active Simulations Table
@@ -4168,7 +4170,7 @@ async function loadWeatherFleetData() {
             if (cell.shapeType === 'polyline') {
                 const polyline = L.polyline(cell.coordinates, {
                     color: cell.color || '#dd6b20', weight: 8, opacity: 0.8, className: animClass
-                }).addTo(weatherMap).bindPopup(`<b>${cell.icon || '🌡️'} ${cell.type} System</b>`);
+                }).addTo(map).bindPopup(`<b>${cell.icon || '🌡️'} ${cell.type} System</b>`);
                 weatherMarkers.push(polyline);
             } else {
                 const circle = L.circle([cell.lat, cell.lng], {
@@ -4177,7 +4179,7 @@ async function loadWeatherFleetData() {
                     fillColor: cell.color, 
                     fillOpacity: 0.2,
                     className: animClass
-                }).addTo(weatherMap).bindPopup(`<b>${cell.icon || '🌩️'} ${cell.type} System</b><br>Severity: ${cell.severity}`);
+                }).addTo(map).bindPopup(`<b>${cell.icon || '🌩️'} ${cell.type} System</b><br>Severity: ${cell.severity}`);
                 weatherMarkers.push(circle);
                 
                 // Add an icon in the center of the weather cell
@@ -4188,7 +4190,7 @@ async function loadWeatherFleetData() {
                         iconSize: [30, 30],
                         iconAnchor: [15, 15]
                     })
-                }).addTo(weatherMap);
+                }).addTo(map);
                 weatherMarkers.push(iconMarker);
             }
         });
@@ -4199,7 +4201,7 @@ async function loadWeatherFleetData() {
                 html: `<div style="background:var(--primary); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 10px var(--primary);"></div>`,
                 className: 'fleet-dot'
             });
-            const m = L.marker([v.lat, v.lng], {icon: icon}).addTo(weatherMap)
+            const m = L.marker([v.lat, v.lng], {icon: icon}).addTo(map)
                 .bindPopup(`
                     <b>Driver:</b> ${v.driver}<br>
                     <b>Local Weather:</b> ${v.weather.icon} ${v.weather.condition}<br>
@@ -4607,7 +4609,6 @@ window.onload = () => {
     loadInsights();
     setTimeout(() => {
         if(map) map.invalidateSize(true);
-        if(weatherMap) weatherMap.invalidateSize(true);
     }, 500);
 };
 
@@ -6175,20 +6176,23 @@ function initDraggablePanels() {
 // Run after the DOM and weather section are ready
 document.addEventListener('DOMContentLoaded', initDraggablePanels);
 window.addEventListener('themeChanged', () => {
-    updateMapTheme(map);
-    if (weatherMap) {
-        // For weather map, we might need to update the base layer if it's the standard one
+    const isWeatherPage = window.location.pathname.includes('manager_weather.html') || (typeof currentActiveSection !== 'undefined' && currentActiveSection === 'weather');
+    if (isWeatherPage) {
         const theme = localStorage.getItem('theme') || 'dark';
         const standardUrl = theme === 'dark' 
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
             : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
         
-        weatherMap.eachLayer(layer => {
-            if (layer instanceof L.TileLayer && !layer.options.isOverlay && !layer._url.includes('arcgisonline') && !layer._url.includes('opentopomap')) {
-                weatherMap.removeLayer(layer);
-            }
-        });
-        L.tileLayer(standardUrl, { attribution: '&copy; CARTO' }).addTo(weatherMap);
+        if (map) {
+            map.eachLayer(layer => {
+                if (layer instanceof L.TileLayer && !layer.options.isOverlay && layer._url && !layer._url.includes('arcgisonline') && !layer._url.includes('opentopomap') && !layer._url.includes('rainviewer')) {
+                    map.removeLayer(layer);
+                }
+            });
+            L.tileLayer(standardUrl, { attribution: '&copy; CARTO' }).addTo(map);
+        }
+    } else {
+        updateMapTheme(map);
     }
 });
 async function validateVehiclePlate(plate) {

@@ -379,7 +379,7 @@
                         </div>
 </div>
 <div class="weather-map-wrapper">
-<div id="weather-map" style="flex:1; min-height:350px; border-radius:12px; border:1px solid var(--border); overflow:hidden; z-index:1;"></div>
+<div id="map" style="flex:1; min-height:350px; border-radius:12px; border:1px solid var(--border); overflow:hidden; z-index:1;"></div>
 <!-- Floating Active Simulation Control -->
 <div class="glass-card draggable-panel" id="active-sims-container" style="position:absolute; top:20px; left:20px; z-index:1000; padding:16px; border:1px solid var(--warning); width:300px; max-width:calc(100% - 32px); background:rgba(20,25,35,0.92); backdrop-filter:blur(12px); box-shadow:0 10px 30px rgba(0,0,0,0.5); border-radius:14px;">
 <h4 class="drag-handle" data-i18n="active_sim_control" style="margin:0 0 12px 0; color:var(--warning); font-size:0.85rem; text-transform:uppercase; letter-spacing:0.1em; cursor:grab; user-select:none; display:flex; align-items:center; gap:8px;">📡 Active Simulation Control <span style="opacity:0.4; font-size:0.7rem;">⠿</span></h4>
@@ -452,23 +452,7 @@
 </div>
 <button class="btn-primary" onclick="submitManualAssign()" style="width:100%; padding:14px; font-weight:800; letter-spacing:1px;">CONFIRM ASSIGNMENT</button>
 </div>
-<!-- Live Track Modal -->
-<div class="glass-card modal-glass" id="track-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:600px; max-width:90vw; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-<h3 style="margin:0;">Live Tracking: <span id="track-shipment-id"></span></h3>
-<button onclick="document.getElementById('track-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">✖</button>
-</div>
-<div style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-bottom:15px; font-size:0.9rem;">
-<p style="margin-bottom:5px;"><b>Status:</b> <span id="track-status" style="color:var(--success);">In Transit</span></p>
-<p style="margin-bottom:5px;"><b>Current Location:</b> <span id="track-current">Waiting for GPS...</span></p>
-<p style="margin-bottom:5px;"><b>Next Stop:</b> <span id="track-next">Loading...</span></p>
-<p style="margin:0; border-top:1px solid rgba(255,255,255,0.1); padding-top:5px; margin-top:5px;">
-<span id="track-contact-label" style="color:var(--accent); font-weight:bold;">📞 Contact:</span>
-<span id="track-contact-value">--</span>
-</p>
-</div>
-<div id="track-map" style="height: 300px; width: 100%; border-radius: 8px; border: 1px solid var(--card-border);"></div>
-</div>
+
 <!-- QR Viewer Modal -->
 <div class="glass-card modal-glass" id="qr-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:350px; text-align:center; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1);">
 <h3 style="margin-top:0;">Shipment QR Code</h3>
@@ -751,18 +735,7 @@
 </div>
 <button class="btn-primary" id="view-review-btn" onclick="fetchJourneyReview()" style="display:none; margin-top:20px;">View Journey Scorecard</button>
 </div>
-<!-- Map Picker Modal -->
-<div class="glass-card map-picker-modal-container" id="map-picker-modal" style="display:none; position:fixed; z-index:20000; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 1px solid var(--primary);">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-<h3 id="map-picker-title" style="margin:0; font-size:1.2rem;">Select Location on Map</h3>
-<button onclick="closeMapPicker()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
-</div>
-<div class="map-picker-map-container" id="picking-map"></div>
-<div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-<div id="current-pick-display" style="font-size:0.9rem; color:var(--primary); font-weight:600; background:rgba(79, 140, 255, 0.1); padding:8px 14px; border-radius:8px; flex:1;">Click on map to pick a location...</div>
-<button class="btn-primary" onclick="confirmMapPick()" style="width:auto; padding:10px 24px; white-space:nowrap;">Confirm Selection</button>
-</div>
-</div>
+
 <!-- Bulk Upload Modal -->
 <div class="glass-card" id="bulk-upload-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95%; max-height:90vh; padding:32px; box-shadow: 0 30px 60px rgba(0,0,0,0.7); overflow-y:auto; border:1px solid var(--accent); background: #0a0d14;">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
