@@ -448,9 +448,12 @@ async function loadMissions(autoStartNext = false) {
         const vScreenMsg = document.getElementById('v-screen-msg');
         const reportBtn = document.getElementById('report-issue-btn');
 
+        const secControls = document.getElementById('secondary-controls-bar');
+
         if (!me) {
             console.error("[Bootstrap] Driver profile not found in company list");
             if (mainContent) mainContent.style.display = 'none';
+            if (secControls) secControls.style.display = 'none';
             if (vScreen) {
                 vScreen.style.display = 'block';
                 vNoVehicleBox.style.display = 'block';
@@ -467,6 +470,7 @@ async function loadMissions(autoStartNext = false) {
 
         if (me.is_fit === false || (myVehicle && myVehicle.is_operational === false)) {
             if (mainContent) mainContent.style.display = 'none';
+            if (secControls) secControls.style.display = 'none';
             if (vScreen) {
                 vScreen.style.display = 'block';
                 vUploadBox.style.display = 'none';
@@ -484,47 +488,101 @@ async function loadMissions(autoStartNext = false) {
                     <p style="margin-top:20px; color:var(--text-muted);">Please contact your Hub Manager for clearance once you or your vehicle are ready.</p>
                 </div>`;
             }
+            if (reportBtn) reportBtn.style.display = 'none';
             return;
         }
 
-        const vStatus = me ? (me.verification_status || "unverified") : "unverified";
+        // 1. VEHICLE ASSIGNMENT CHECK
+        if (!me.assigned_vehicle_id) {
+            if (mainContent) mainContent.style.display = 'none';
+            if (secControls) secControls.style.display = 'none';
+            if (vScreen) {
+                vScreen.style.display = 'block';
+                vUploadBox.style.display = 'none';
+                vPendingBox.style.display = 'none';
+                vNoVehicleBox.style.display = 'block';
+                
+                vNoVehicleBox.innerHTML = `
+                    <style>
+                        @keyframes floatIcon {
+                            0% { transform: translateY(0px) scale(1); }
+                            50% { transform: translateY(-10px) scale(1.05); }
+                            100% { transform: translateY(0px) scale(1); }
+                        }
+                        @keyframes glowWarning {
+                            0% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
+                            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.3); }
+                            100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
+                        }
+                        .premium-warn-card {
+                            background: rgba(15, 23, 42, 0.6);
+                            backdrop-filter: blur(20px);
+                            border: 1px solid rgba(245, 158, 11, 0.2);
+                            border-radius: 24px;
+                            padding: 40px 30px;
+                            max-width: 450px;
+                            margin: 20px auto;
+                            animation: glowWarning 4s infinite ease-in-out;
+                        }
+                        .floating-truck {
+                            font-size: 5rem;
+                            margin-bottom: 25px;
+                            display: inline-block;
+                            animation: floatIcon 3s infinite ease-in-out;
+                            filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.3));
+                        }
+                    </style>
+                    <div class="premium-warn-card">
+                        <div class="floating-truck">🚛</div>
+                        <h2 style="color: var(--warning); font-size: 1.8rem; font-weight: 800; margin-bottom: 12px;">No Vehicle Assigned</h2>
+                        <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.6; margin-bottom: 30px;">
+                            Your profile has not been assigned a vehicle yet. Please check back later once your manager links you to a vehicle.
+                        </p>
+                        <button class="btn-primary" onclick="loadMissions()" style="background: linear-gradient(135deg, var(--warning) 0%, var(--accent) 100%); color: #000; font-weight: 800; border: none; border-radius: 12px; padding: 12px 30px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); cursor: pointer;">
+                            🔄 Refresh Status
+                        </button>
+                    </div>
+                `;
+            }
+            if (reportBtn) reportBtn.style.display = 'none';
+            return;
+        }
+
+        // 2. SECURITY VERIFICATION CHECK
+        const vStatus = me.verification_status || "unverified";
         
         if (vStatus === "unverified") {
-            mainContent.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'none';
+            if (secControls) secControls.style.display = 'none';
             if (reportBtn) reportBtn.style.display = 'none';
-            vScreen.style.display = 'block';
-            vUploadBox.style.display = 'block';
-            vPendingBox.style.display = 'none';
-            vNoVehicleBox.style.display = 'none';
-            vScreenMsg.innerText = getTranslation('v_verify_desc');
-        } else if (me) {
-            // Verified driver logic
-            if (me.verification_status === "pending_manual") {
-                mainContent.style.display = 'none';
-                if (vScreen) {
-                    vScreen.style.display = 'block';
-                    vUploadBox.style.display = 'none';
-                    vPendingBox.style.display = 'block';
-                    vNoVehicleBox.style.display = 'none';
-                }
-            } else {
-                // Driver is verified!
-                mainContent.style.display = 'block';
-                if (vScreen) vScreen.style.display = 'none';
-                if (reportBtn) reportBtn.style.display = 'block';
-                
-                if (!me.assigned_vehicle_id) {
-                    // Show a warning in the dashboard rather than hiding it
-                    const vehicleCard = document.getElementById('vehicle-status-card');
-                    if (vehicleCard) {
-                        vehicleCard.style.borderLeftColor = 'var(--warning)';
-                        document.getElementById('vehicle-status-badge').innerText = "PENDING ASSIGNMENT";
-                        document.getElementById('vehicle-mini-details').innerText = "Waiting for manager to assign a vehicle...";
-                    }
-                }
-                loadDashStats();
+            if (vScreen) {
+                vScreen.style.display = 'block';
+                vUploadBox.style.display = 'block';
+                vPendingBox.style.display = 'none';
+                vNoVehicleBox.style.display = 'none';
+                vScreenMsg.innerText = getTranslation('v_verify_desc');
             }
+            return;
+        } else if (vStatus === "pending_manual") {
+            if (mainContent) mainContent.style.display = 'none';
+            if (secControls) secControls.style.display = 'none';
+            if (reportBtn) reportBtn.style.display = 'none';
+            if (vScreen) {
+                vScreen.style.display = 'block';
+                vUploadBox.style.display = 'none';
+                vPendingBox.style.display = 'block';
+                vNoVehicleBox.style.display = 'none';
+            }
+            return;
         }
+
+        // 3. Driver is verified!
+        if (mainContent) mainContent.style.display = 'block';
+        if (secControls) secControls.style.display = 'flex';
+        if (vScreen) vScreen.style.display = 'none';
+        if (reportBtn) reportBtn.style.display = 'block';
+        
+        loadDashStats();
 
         const shipments = await apiCall(`/driver/${dId}/shipments`);
         const container = document.getElementById('mission-container');

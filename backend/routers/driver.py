@@ -364,7 +364,7 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
                 print(f"[Verification] Auto-link Error: {e}")
 
         # Update status
-        new_status = "verified" if ml_result["verified"] else "pending_manual"
+        new_status = "pending_manual"
         drivers_db.update(driver_id, {
             "verification_status": new_status,
             "verification_image": public_url,

@@ -4,6 +4,9 @@ let map, fleetMap;
 let markers = [];
 let currentMarkers = [];
 let warehouses = [];
+let pendingWhLoc = null;
+let suggestedWhLoc = null;
+let highlightCircle = null;
 
 function initMap() {
     if (!document.getElementById('map')) return;
@@ -576,3 +579,25 @@ window.addEventListener('themeChanged', () => {
         updateMapTheme(map);
     }
 });
+
+// Expose functions to global window scope for inline HTML event handlers
+window.loadMapData = loadMapData;
+window.deployByPincode = deployByPincode;
+window.deployByCoords = deployByCoords;
+window.triggerManualAICheck = triggerManualAICheck;
+window.locateWarehouse = locateWarehouse;
+window.openEditWarehouse = openEditWarehouse;
+window.submitEditWarehouse = submitEditWarehouse;
+window.decommissionWarehouse = decommissionWarehouse;
+window.submitNewWarehouse = submitNewWarehouse;
+window.adoptStrategicLocation = adoptStrategicLocation;
+window.stayWithManualLocation = stayWithManualLocation;
+window.toggleWhPass = function(id) {
+    const input = document.getElementById(`wh-pass-${id}`);
+    if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+};
+window.refreshWarehousesTable = function() {
+    loadWarehousesList(globalWarehouses || globalHubs || []);
+};
