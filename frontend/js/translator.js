@@ -225,6 +225,8 @@
      * Returns the key translated into the selected language, falling back to English.
      */
     window.getTranslation = function (key) {
+        if (key === 'btn_show_more') return currentTranslations[key] || enTranslations[key] || 'Show More';
+        if (key === 'btn_show_less') return currentTranslations[key] || enTranslations[key] || 'Show Less';
         return currentTranslations[key] || enTranslations[key] || key;
     };
 

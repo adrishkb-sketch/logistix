@@ -844,5 +844,7 @@
     "voice_instr_sync_watch": "ପରିଧାନ ଯୋଗ୍ୟ ସ୍ମାର୍ଟ ୱାଚ୍ ରୁ ସ୍ୱାସ୍ଥ୍ୟ ମେଟ୍ରିକ୍ ସିଙ୍କ୍ରୋନାଇଜ୍ କରନ୍ତୁ |",
     "voice_instr_toggle_duty": "ଆକ୍ଟିଭ୍ ଏବଂ ଅଫ୍ ଡ୍ୟୁଟି ମଧ୍ୟରେ ତୁମର ଡ୍ୟୁଟି ସ୍ଥିତି ପରିବର୍ତ୍ତନ କର |",
     "voice_instr_verifications": "ମାନୁଆଲ୍ ସମୀକ୍ଷା ପାଇଁ ML ଯାଞ୍ଚ ହବ୍ ଖୋଲନ୍ତୁ |",
-    "voice_instr_weather": "ବାସ୍ତବ ସମୟର ପାଣିପାଗ ଏବଂ ମାର୍ଗ ବୁଦ୍ଧି ମାନଚିତ୍ର ଖୋଲ |"
+    "voice_instr_weather": "ବାସ୍ତବ ସମୟର ପାଣିପାଗ ଏବଂ ମାର୍ଗ ବୁଦ୍ଧି ମାନଚିତ୍ର ଖୋଲ |",
+    "btn_show_more": "Show More",
+    "btn_show_less": "Show Less"
 }

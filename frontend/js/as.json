@@ -844,5 +844,7 @@
     "voice_instr_sync_watch": "পিন্ধিব পৰা স্মাৰ্টৱাচৰ পৰা স্বাস্থ্য মেট্ৰিক্স সমন্বয় কৰক",
     "voice_instr_toggle_duty": "সক্ৰিয় আৰু অফ-ডিউটিৰ মাজত আপোনাৰ কৰ্তব্যৰ অৱস্থা সলনি কৰক",
     "voice_instr_verifications": "হাতৰ পৰ্যালোচনাৰ বাবে ML সত্যাপন হাব খোলক",
-    "voice_instr_weather": "বাস্তৱ সময়ৰ বতৰ আৰু পথৰ চোৰাংচোৱাৰ মানচিত্ৰ খোলক"
+    "voice_instr_weather": "বাস্তৱ সময়ৰ বতৰ আৰু পথৰ চোৰাংচোৱাৰ মানচিত্ৰ খোলক",
+    "btn_show_more": "Show More",
+    "btn_show_less": "Show Less"
 }

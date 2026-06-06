@@ -400,9 +400,9 @@ window.renderDronesTable = function() {
         
         dtbody.innerHTML += `<tr>
             <td><b style="font-family:monospace;">${d.license_number}</b><br><small style="color:var(--accent);">${d.system_id || 'ID: ' + d.id.substring(0,8)}</small></td>
+            <td><small>${wh ? wh.name : 'N/A'}</small></td>
             <td><b>${d.capacity} kg</b></td>
             <td><b>${d.radius} km</b></td>
-            <td><small>${wh ? wh.name : 'N/A'}</small></td>
             <td>${statusBadge}</td>
             <td>
                 <div style="display:flex; align-items:center; gap:8px;">
@@ -930,7 +930,7 @@ window.confirmDroneBulk = async function() {
         alert(msg); 
         closeDroneBulkModal(); 
         loadDriversAndVehicles();
-    } catch(err) { alert("Bulk upload failed."); }
+    } catch(err) { alert("Bulk upload failed: " + (err.message || err)); }
 };
 
 // ── Smart Assistant Logic ───────────────────────────────────────────────────
@@ -1143,35 +1143,14 @@ window.processSmartCommand = async function() {
                     input.focus();
                 }
             };
-            if (smartType === 'drone') {
-                const dronePayload = {
-                    license_number: currentSmartShipment.license_number,
-                    base_warehouse_id: globalWarehouses.find(w => w.name === currentSmartShipment.base_warehouse_id || w.name === currentSmartShipment.base_hub)?.id || currentSmartShipment.base_warehouse_id || currentSmartShipment.base_hub,
-                    capacity: parseFloat(currentSmartShipment.capacity),
-                    radius: parseFloat(currentSmartShipment.radius),
-                    company_id: companyId,
-                    status: 'available'
-                };
-                apiCall('/manager/drones', 'POST', dronePayload).then(() => {
-                    addAiMessage(getTranslation('msg_drone_registered', 'en'));
-                    loadDriversAndVehicles();
-                    addAiMessage(getTranslation('msg_type_more', 'en'));
-                    smartStepIndex = 99; 
-                    enableSmartInputForMore();
-                }).catch(() => {
-                    addAiMessage(getTranslation('error_drone_failed', 'en'));
-                    smartStepIndex = 99;
-                    enableSmartInputForMore();
-                });
-            } else {
-                smartQueue.push({ ...currentSmartShipment });
-                updateSmartUI();
-                
-                addAiMessage(getTranslation('msg_added_to_queue', 'en'));
-                addAiMessage(getTranslation('msg_type_more', 'en'));
-                smartStepIndex = 99; 
-                enableSmartInputForMore();
-            }
+            
+            smartQueue.push({ ...currentSmartShipment });
+            updateSmartUI();
+            
+            addAiMessage(getTranslation('msg_added_to_queue', 'en'));
+            addAiMessage(getTranslation('msg_type_more', 'en'));
+            smartStepIndex = 99; 
+            enableSmartInputForMore();
         } else {
             startNewSmartEntry();
         }
@@ -1225,6 +1204,17 @@ window.confirmSmartQueue = async function() {
                     status: 'available',
                     vehicle_health_score: 100.0
                 };
+            } else if (smartType === 'drone') {
+                endpoint = '/manager/drones';
+                const hub = globalHubs.find(h => h.name === s.base_warehouse_id || h.name === s.base_hub);
+                data = {
+                    license_number: s.license_number,
+                    base_warehouse_id: hub ? hub.id : s.base_warehouse_id || s.base_hub,
+                    capacity: parseFloat(s.capacity),
+                    radius: parseFloat(s.radius),
+                    company_id: companyId,
+                    status: 'available'
+                };
             }
             
             await apiCall(endpoint, 'POST', data);
@@ -1247,6 +1237,7 @@ window.updateSmartUI = function() {
     if (label) {
         if (smartType === 'driver') label.innerText = count === 1 ? 'Driver' : 'Drivers';
         else if (smartType === 'vehicle') label.innerText = count === 1 ? 'Vehicle' : 'Vehicles';
+        else if (smartType === 'drone') label.innerText = count === 1 ? 'Drone' : 'Drones';
         else label.innerText = count === 1 ? 'Shipment' : 'Shipments';
     }
     

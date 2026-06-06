@@ -844,5 +844,7 @@
     "voice_instr_sync_watch": "پہننے کے قابل سمارٹ واچ سے ہیلتھ میٹرکس کو سنکرونائز کریں۔",
     "voice_instr_toggle_duty": "ایکٹو اور آف ڈیوٹی کے درمیان اپنی ڈیوٹی کی حیثیت کو تبدیل کریں۔",
     "voice_instr_verifications": "دستی جائزوں کے لیے ML تصدیقی مرکز کھولیں۔",
-    "voice_instr_weather": "ریئل ٹائم موسم اور راستے کا انٹیلی جنس نقشہ کھولیں۔"
+    "voice_instr_weather": "ریئل ٹائم موسم اور راستے کا انٹیلی جنس نقشہ کھولیں۔",
+    "btn_show_more": "Show More",
+    "btn_show_less": "Show Less"
 }

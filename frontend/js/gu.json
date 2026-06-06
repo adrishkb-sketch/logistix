@@ -844,5 +844,7 @@
     "voice_instr_sync_watch": "પહેરી શકાય તેવી સ્માર્ટવોચમાંથી હેલ્થ મેટ્રિક્સને સિંક્રનાઇઝ કરો",
     "voice_instr_toggle_duty": "સક્રિય અને ઑફ-ડ્યુટી વચ્ચે તમારી ફરજની સ્થિતિ બદલો",
     "voice_instr_verifications": "મેન્યુઅલ સમીક્ષાઓ માટે ML વેરિફિકેશન હબ ખોલો",
-    "voice_instr_weather": "રીઅલ-ટાઇમ હવામાન અને રૂટ ઇન્ટેલિજન્સ નકશો ખોલો"
+    "voice_instr_weather": "રીઅલ-ટાઇમ હવામાન અને રૂટ ઇન્ટેલિજન્સ નકશો ખોલો",
+    "btn_show_more": "Show More",
+    "btn_show_less": "Show Less"
 }

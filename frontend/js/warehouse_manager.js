@@ -384,8 +384,8 @@ window.renderTableControls = function(tableKey, dataLength, currentLimit, update
             Showing ${Math.min(currentLimit, dataLength)} of ${dataLength}
         </div>
         <div style="display:flex; gap:8px;">
-            ${currentLimit > 5 ? `<button class="btn-primary" style="padding:4px 12px; font-size:0.7rem; background:rgba(255,255,255,0.1);" onclick="tableLimits['${tableKey}'] -= 5; ${updateFn}()">Show Less</button>` : ''}
-            ${currentLimit < dataLength ? `<button class="btn-primary" style="padding:4px 12px; font-size:0.7rem;" onclick="tableLimits['${tableKey}'] += 5; ${updateFn}()">Load More</button>` : ''}
+            ${currentLimit > 5 ? `<button class="btn-primary" style="padding:6px 14px; font-size:0.75rem; background:rgba(var(--primary-rgb), 0.1); color:var(--primary); border:1px solid rgba(var(--primary-rgb), 0.4); font-weight:600; border-radius:6px; cursor:pointer;" onclick="tableLimits['${tableKey}'] -= 5; ${updateFn}()">${getTranslation('btn_show_less')}</button>` : ''}
+            ${currentLimit < dataLength ? `<button class="btn-primary" style="padding:6px 14px; font-size:0.75rem; background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:white; border:none; font-weight:600; border-radius:6px; cursor:pointer; box-shadow:0 4px 12px rgba(var(--primary-rgb),0.3);" onclick="tableLimits['${tableKey}'] += 5; ${updateFn}()">${getTranslation('btn_show_more')}</button>` : ''}
         </div>
     `;
 };

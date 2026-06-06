@@ -856,5 +856,7 @@
     "voice_instr_sync_watch": "पहनय योग्य स्मार्टवॉच सं स्वास्थ्य मेट्रिक्स कें समन्वयन करनाय",
     "voice_instr_toggle_duty": "सक्रिय आ ऑफ ड्यूटी के बीच अपन ड्यूटी स्टेटस बदलू",
     "voice_instr_verifications": "मैनुअल समीक्षा कें लेल एमएल सत्यापन हब खोलूं",
-    "voice_instr_weather": "वास्तविक समय मौसम आ मार्ग खुफिया नक्शा खोलू"
+    "voice_instr_weather": "वास्तविक समय मौसम आ मार्ग खुफिया नक्शा खोलू",
+    "btn_show_more": "Show More",
+    "btn_show_less": "Show Less"
 }

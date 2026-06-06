@@ -844,5 +844,7 @@
     "voice_instr_sync_watch": "ਪਹਿਨਣਯੋਗ ਸਮਾਰਟਵਾਚ ਤੋਂ ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ ਨੂੰ ਸਿੰਕ੍ਰੋਨਾਈਜ਼ ਕਰੋ",
     "voice_instr_toggle_duty": "ਐਕਟਿਵ ਅਤੇ ਆਫ-ਡਿਊਟੀ ਵਿਚਕਾਰ ਆਪਣੀ ਡਿਊਟੀ ਸਥਿਤੀ ਨੂੰ ਬਦਲੋ",
     "voice_instr_verifications": "ਮੈਨੁਅਲ ਸਮੀਖਿਆਵਾਂ ਲਈ ML ਪੁਸ਼ਟੀਕਰਨ ਹੱਬ ਖੋਲ੍ਹੋ",
-    "voice_instr_weather": "ਰੀਅਲ-ਟਾਈਮ ਮੌਸਮ ਅਤੇ ਰੂਟ ਇੰਟੈਲੀਜੈਂਸ ਮੈਪ ਖੋਲ੍ਹੋ"
+    "voice_instr_weather": "ਰੀਅਲ-ਟਾਈਮ ਮੌਸਮ ਅਤੇ ਰੂਟ ਇੰਟੈਲੀਜੈਂਸ ਮੈਪ ਖੋਲ੍ਹੋ",
+    "btn_show_more": "Show More",
+    "btn_show_less": "Show Less"
 }

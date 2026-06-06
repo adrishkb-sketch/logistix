@@ -840,7 +840,7 @@
     "add_drone_title": "Add Drone",
     "label_drone_license": "Drone License Number",
     "label_capacity": "Carrying Capacity (kg)",
-    "label_radius": "Max Flight Radius (km)",
+    "label_radius": "Radius",
     "search_drone_placeholder": "Search by license or ID...",
     "th_license_id": "License / System ID",
     "drone_bulk_title": "Bulk Drone Upload",
@@ -958,6 +958,7 @@
     "label_viol": "Violations",
     "label_plate": "Plate",
     "label_cap": "Capacity",
-    "label_radius": "Radius",
-    "label_license": "License No."
+    "label_license": "License No.",
+    "btn_show_more": "Show More",
+    "btn_show_less": "Show Less"
 }
