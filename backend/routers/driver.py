@@ -9,65 +9,29 @@ import random
 from datetime import datetime
 
 def save_and_compress_image(file_bytes: bytes, filename: str) -> str:
+    """Compress image and return a base64 data URL stored directly in Turso."""
     import io
+    import base64
     from PIL import Image
 
-    # Compress image in memory first
     try:
         img = Image.open(io.BytesIO(file_bytes))
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        max_size = 800
+        max_size = 600
         if img.width > max_size or img.height > max_size:
             img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-        base_name, _ = os.path.splitext(filename)
-        optimized_filename = f"{base_name}.jpg"
         buf = io.BytesIO()
-        img.save(buf, "JPEG", quality=60, optimize=True)
+        img.save(buf, "JPEG", quality=45, optimize=True)
         compressed_bytes = buf.getvalue()
     except Exception as e:
         print(f"[Image Compression] Failed: {e}. Using raw bytes.")
-        optimized_filename = filename
         compressed_bytes = file_bytes
 
-    # PRIMARY: Upload to Supabase Storage (returns a real public HTTPS URL)
-    supabase_url = os.environ.get("SUPABASE_URL", "")
-    supabase_key = os.environ.get("SUPABASE_KEY", "")
-    if supabase_url and supabase_key:
-        try:
-            from supabase import create_client
-            sb = create_client(supabase_url, supabase_key)
-            object_path = f"verification-images/{optimized_filename}"
-            # upsert=True avoids errors on re-upload of same filename
-            sb.storage.from_("logistix-assets").upload(
-                object_path,
-                compressed_bytes,
-                {"content-type": "image/jpeg", "upsert": "true"}
-            )
-            public_url = sb.storage.from_("logistix-assets").get_public_url(object_path)
-            print(f"[Image Upload] Supabase Storage OK: {public_url}")
-            return public_url
-        except Exception as e:
-            print(f"[Image Upload] Supabase Storage failed: {e}. Falling back to local.")
-
-    # FALLBACK: Save locally (dev/offline mode only — not accessible on Vercel)
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    target_dir = os.path.join(base_dir, "data", "images")
-    try:
-        os.makedirs(target_dir, exist_ok=True)
-        test_file = os.path.join(target_dir, ".write_test")
-        with open(test_file, "w") as f:
-            f.write("test")
-        os.remove(test_file)
-    except (OSError, IOError):
-        target_dir = "/tmp/data/images"
-        os.makedirs(target_dir, exist_ok=True)
-
-    out_path = os.path.join(target_dir, optimized_filename)
-    with open(out_path, "wb") as f:
-        f.write(compressed_bytes)
-    print(f"[Image Compression] Saved locally to: {out_path}")
-    return f"/images/{optimized_filename}"
+    b64 = base64.b64encode(compressed_bytes).decode("ascii")
+    data_url = f"data:image/jpeg;base64,{b64}"
+    print(f"[Image Upload] Stored as base64 data URL ({len(compressed_bytes)} bytes)")
+    return data_url
 
 router = APIRouter()
 shipments_db = JSONDatabase("shipments")

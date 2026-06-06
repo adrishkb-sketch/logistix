@@ -3420,14 +3420,29 @@ async function loadDriversAndVehicles() {
                         `;
                     }
 
-                    const imgUrl = d.verification_image || '#';
+                    const imgUrl = d.verification_image || null;
+                    const isBrokenRelative = imgUrl && 
+                        (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/'));
+                    
                     let fullImgUrl = imgUrl;
                     if (imgUrl && (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/'))) {
                         const cleanPath = imgUrl.startsWith('/') ? imgUrl : '/' + imgUrl;
                         const backendHost = typeof API_BASE !== 'undefined' && API_BASE.endsWith('/api') ? API_BASE.slice(0, -4) : '';
                         fullImgUrl = backendHost + cleanPath;
                     }
-                    const imgHtml = imgUrl !== '#' ? `<img src="${fullImgUrl}" style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:pointer;" onclick="window.open('${fullImgUrl}', '_blank')" onerror="this.outerHTML='<span style=\\'color:var(--danger); font-size:0.75rem;\\'>⚠️ Failed to load</span>'">` : '<span style="color:var(--text-muted);">No Image</span>';
+
+                    let imgHtml;
+                    if (!imgUrl) {
+                        imgHtml = '<span style="color:var(--text-muted); font-size:0.8rem;">No Image</span>';
+                    } else if (isBrokenRelative) {
+                        imgHtml = `<div style="padding:8px; background:rgba(239,68,68,0.1); border:1px solid var(--danger); border-radius:8px; font-size:0.75rem; color:var(--danger);">⚠️ Image unavailable<br><small style="opacity:0.7;">Driver must re-upload</small></div>`;
+                    } else {
+                        imgHtml = `<img src="${fullImgUrl}" 
+                            style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:pointer;" 
+                            onclick="window.open('${fullImgUrl}', '_blank')"
+                            onerror="this.outerHTML='<div style=\\'padding:8px; background:rgba(239,68,68,0.1); border:1px solid var(--danger); border-radius:8px; font-size:0.75rem; color:var(--danger);\\'>⚠️ Image failed to load<br><small style=\\'opacity:0.7;\\'>Driver must re-upload</small></div>'"
+                        >`;
+                    }
                     
                     verifTbody.innerHTML += `<tr>
                         <td style="padding:15px 20px;"><b>${d.name}</b><br><small>${d.system_id || d.id.slice(0,8)}</small></td>

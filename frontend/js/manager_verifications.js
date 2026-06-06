@@ -64,10 +64,9 @@ async function loadDriversAndVehicles() {
                     }
 
                     const imgUrl = d.verification_image || null;
-                    // Old images saved as /images/... are broken on Vercel — detect and warn
+                    // Old images saved as /images/... are broken — detect and warn
                     const isBrokenRelative = imgUrl && 
-                        (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/')) && 
-                        (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+                        (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/'));
                     
                     let fullImgUrl = imgUrl;
                     if (imgUrl && (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/'))) {
