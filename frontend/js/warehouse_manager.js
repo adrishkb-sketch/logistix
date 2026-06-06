@@ -1207,10 +1207,13 @@ function updateAuditTimer() {
 }
 
 window.loadLeaderboard = async function() {
-    const category = document.getElementById('leader-type').value;
-    const sortBy = document.getElementById('leader-sort').value;
+    const categoryEl = document.getElementById('leader-type');
+    const sortByEl = document.getElementById('leader-sort');
     const tbody = document.getElementById('leaderboard-body');
-    if (!tbody) return;
+    if (!tbody || !categoryEl || !sortByEl) return;
+
+    const category = categoryEl.value;
+    const sortBy = sortByEl.value;
 
     try {
         const data = await apiCall(`/manager/leaderboard?category=${category}&sort_by=${sortBy}&company_id=${companyId}&warehouse_id=${whId}`);
