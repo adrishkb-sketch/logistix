@@ -1134,6 +1134,15 @@ window.processSmartCommand = async function() {
 
     if (step.field === 'confirm') {
         if (text.toLowerCase() === 'save') {
+            const enableSmartInputForMore = () => {
+                const input = document.getElementById('smart-command-input');
+                if (input) {
+                    input.disabled = false;
+                    input.placeholder = "Type 'More' to add another...";
+                    input.style.opacity = "1";
+                    input.focus();
+                }
+            };
             if (smartType === 'drone') {
                 const dronePayload = {
                     license_number: currentSmartShipment.license_number,
@@ -1148,9 +1157,11 @@ window.processSmartCommand = async function() {
                     loadDriversAndVehicles();
                     addAiMessage(getTranslation('msg_type_more', 'en'));
                     smartStepIndex = 99; 
+                    enableSmartInputForMore();
                 }).catch(() => {
                     addAiMessage(getTranslation('error_drone_failed', 'en'));
                     smartStepIndex = 99;
+                    enableSmartInputForMore();
                 });
             } else {
                 smartQueue.push({ ...currentSmartShipment });
@@ -1159,6 +1170,7 @@ window.processSmartCommand = async function() {
                 addAiMessage(getTranslation('msg_added_to_queue', 'en'));
                 addAiMessage(getTranslation('msg_type_more', 'en'));
                 smartStepIndex = 99; 
+                enableSmartInputForMore();
             }
         } else {
             startNewSmartEntry();
