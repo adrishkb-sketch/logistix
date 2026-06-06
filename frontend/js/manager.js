@@ -415,15 +415,8 @@ async function triggerManualAICheck() {
     processLocationDeployment(pendingWhLoc.lat, pendingWhLoc.lng);
 }
 
-async function loadMapData() {
+async function loadMapData(retryCount = 0) {
     if (!map) return;
-    if (window.tempMarker) {
-        map.removeLayer(window.tempMarker);
-        window.tempMarker = null;
-    }
-    // Clear markers
-    markers.forEach(m => map.removeLayer(m));
-    markers = [];
 
     try {
         const companyId = localStorage.getItem('manager_id');
@@ -432,6 +425,15 @@ async function loadMapData() {
             apiCall(`/manager/warehouses/leave-requests?company_id=${companyId}`).catch(() => [])
         ]);
         
+        // Clear temp marker only after successful fetch
+        if (window.tempMarker) {
+            map.removeLayer(window.tempMarker);
+            window.tempMarker = null;
+        }
+        // Clear old markers only after successful fetch
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
         globalHubs = warehouses;
         globalWarehouses = warehouses;
         const activeLeaves = allLeaves.filter(l => l.status === 'approved');
@@ -460,9 +462,13 @@ async function loadMapData() {
         
         await loadWarehousesList(warehouses);
 
-
     } catch(e) {
         console.error("Map Load Error:", e);
+        // Retry logic: if the server is reloading, try again in 1 second (up to 3 times)
+        if (typeof retryCount === 'number' && retryCount < 3) {
+            console.log(`Retrying loadMapData in 1s (attempt ${retryCount + 1})...`);
+            setTimeout(() => loadMapData(retryCount + 1), 1000);
+        }
     }
 }
 

@@ -125,6 +125,8 @@ class JSONDatabase:
         try:
             with open(self.file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
             return True
         except Exception as e:
             print(f"Error saving local database file {self.file_path}: {e}")
