@@ -150,7 +150,7 @@ class TursoCompaniesDB:
 
     def _fallback(self):
         from backend.database import JSONDatabase
-        return JSONDatabase("companies")
+        return JSONDatabase("companies", force_local=True)
 
     def get_all(self) -> List[Dict[str, Any]]:
         if not _is_configured():
@@ -253,7 +253,7 @@ class TursoGenericDB:
 
     def _fallback(self):
         from backend.database import JSONDatabase
-        return JSONDatabase(self.table_name)
+        return JSONDatabase(self.table_name, force_local=True)
 
     def _seed_if_empty(self):
         """One-time seed from bundled local JSON when Turso table is brand new."""
@@ -268,7 +268,7 @@ class TursoGenericDB:
                         return  # Already has data
             # Empty - seed from local JSON
             from backend.database import JSONDatabase
-            local_items = JSONDatabase(self.table_name).get_all()
+            local_items = JSONDatabase(self.table_name, force_local=True).get_all()
             if local_items:
                 print(f"[TursoGenericDB:{self.table_name}] Seeding {len(local_items)} records...")
                 for item in local_items:
@@ -369,8 +369,9 @@ class TursoGenericDB:
         if not _is_configured():
             return self._fallback().delete_many(filter_column, filter_value)
         try:
+            key_to_check = filter_column.replace("data->>", "") if filter_column.startswith("data->>") else filter_column
             all_items = self.get_all()
-            to_delete = [i for i in all_items if str(i.get(filter_column)) == str(filter_value)]
+            to_delete = [i for i in all_items if str(i.get(key_to_check)) == str(filter_value)]
             for item in to_delete:
                 self.delete(str(item.get("id", "")))
             return len(to_delete)

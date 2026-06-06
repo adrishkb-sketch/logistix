@@ -18,8 +18,18 @@ class JSONDatabase:
     """
     _tmp_seeded = False  # class-level flag so we only copy once per cold start
 
-    def __init__(self, table_name: str):
+    def __init__(self, table_name: str, force_local: bool = False):
         self.table_name = table_name
+        self.use_turso = False
+        if not force_local:
+            raw_url = os.environ.get("TURSO_DATABASE_URL", "")
+            token = os.environ.get("TURSO_AUTH_TOKEN", "")
+            if raw_url and token:
+                self.use_turso = True
+                from backend.services.turso_db import TursoGenericDB
+                self.turso_db = TursoGenericDB(table_name)
+                return
+
         primary_data_dir = os.path.join(base_dir, "data")
         try:
             os.makedirs(primary_data_dir, exist_ok=True)
@@ -147,9 +157,13 @@ class JSONDatabase:
         pass
 
     def get_all(self) -> List[Dict[str, Any]]:
+        if self.use_turso:
+            return self.turso_db.get_all()
         return self._load_local_data()
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
+        if self.use_turso:
+            return self.turso_db.get_by_id(item_id)
         items = self._load_local_data()
         for item in items:
             if str(item.get("id")) == str(item_id):
@@ -157,6 +171,8 @@ class JSONDatabase:
         return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        if self.use_turso:
+            return self.turso_db.get_filtered(filters)
         items = self._load_local_data()
         filtered = []
         for item in items:
@@ -170,6 +186,8 @@ class JSONDatabase:
         return filtered
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        if self.use_turso:
+            return self.turso_db.insert(item)
         items = self._load_local_data()
         items = [i for i in items if str(i.get("id")) != str(item.get("id"))]
         items.append(item)
@@ -177,6 +195,8 @@ class JSONDatabase:
         return item
 
     def update(self, item_id: str, updated_item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if self.use_turso:
+            return self.turso_db.update(item_id, updated_item)
         items = self._load_local_data()
         for i, item in enumerate(items):
             if str(item.get("id")) == str(item_id):
@@ -186,6 +206,8 @@ class JSONDatabase:
         return None
 
     def delete(self, item_id: str) -> bool:
+        if self.use_turso:
+            return self.turso_db.delete(item_id)
         items = self._load_local_data()
         orig_len = len(items)
         items = [i for i in items if str(i.get("id")) != str(item_id)]
@@ -193,9 +215,13 @@ class JSONDatabase:
         return len(items) < orig_len
 
     def write(self, data: List[Dict[str, Any]]):
+        if self.use_turso:
+            return self.turso_db.write(data)
         self._save_local_data(data)
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
+        if self.use_turso:
+            return self.turso_db.delete_many(filter_column, filter_value)
         items = self._load_local_data()
         key_to_check = filter_column
         is_jsonb = False
@@ -220,6 +246,8 @@ class JSONDatabase:
         return deleted_count
 
     def clear_all(self):
+        if self.use_turso:
+            return self.turso_db.clear_all()
         self.write([])
 
     @staticmethod
