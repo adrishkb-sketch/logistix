@@ -120,6 +120,7 @@ def _ensure_companies_table():
 
 # --- Generic blob table bootstrap ---
 _GENERIC_TABLES_CREATED: set = set()
+_SEEDED_TABLES: set = set()
 
 
 def _ensure_generic_table(table_name: str):
@@ -245,7 +246,10 @@ class TursoGenericDB:
         if _is_configured():
             try:
                 _ensure_generic_table(table_name)
-                self._seed_if_empty()
+                global _SEEDED_TABLES
+                if table_name not in _SEEDED_TABLES:
+                    self._seed_if_empty()
+                    _SEEDED_TABLES.add(table_name)
             except Exception as e:
                 print(f"[TursoGenericDB:{table_name}] init error: {e}")
         else:
@@ -270,18 +274,18 @@ class TursoGenericDB:
             from backend.database import JSONDatabase
             local_items = JSONDatabase(self.table_name, force_local=True).get_all()
             if local_items:
-                print(f"[TursoGenericDB:{self.table_name}] Seeding {len(local_items)} records...")
+                print(f"[TursoGenericDB:{self.table_name}] Seeding {len(local_items)} records in batch...")
+                insert_stmts = []
                 for item in local_items:
-                    try:
-                        _execute([{
-                            "sql": f"INSERT OR IGNORE INTO {self.table_name} (id, data) VALUES (:id, :data)",
-                            "args": {
-                                "id": str(item.get("id", "")),
-                                "data": json.dumps(item, ensure_ascii=False)
-                            }
-                        }])
-                    except Exception as se:
-                        print(f"[TursoGenericDB:{self.table_name}] seed row error: {se}")
+                    insert_stmts.append({
+                        "sql": f"INSERT OR IGNORE INTO {self.table_name} (id, data) VALUES (:id, :data)",
+                        "args": {
+                            "id": str(item.get("id", "")),
+                            "data": json.dumps(item, ensure_ascii=False)
+                        }
+                    })
+                if insert_stmts:
+                    _execute(insert_stmts)
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] seed_if_empty error: {e}")
 
