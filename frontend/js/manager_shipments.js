@@ -11,6 +11,12 @@ let smartQueue = [];
 let currentSmartShipment = {};
 let smartStepIndex = -1;
 let smartType = 'shipment';
+let currentLookedUpReceiverId = null;
+
+const ICON_PICKER = L.divIcon({
+    html: `<div style="background:var(--accent); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px var(--accent); font-size:12px; color:black;">📍</div>`,
+    className: 'custom-marker', iconSize: [24, 24], iconAnchor: [12, 12]
+});
 
 const smartConfig = {
     shipment: [
@@ -940,44 +946,49 @@ function openMapPicker(targetId, callback) {
     document.getElementById('current-pick-display').innerText = 'Click on map to pick a location...';
     pickedCoords = null;
 
-    if (!pickingMap) {
-        setTimeout(() => {
-            pickingMap = L.map('picking-map').setView([20.5937, 78.9629], 5);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(pickingMap);
-            applyOfficialBorders(pickingMap);
-
-            pickingMap.on('click', function(e) {
-                const { lat, lng } = e.latlng;
-                pickedCoords = { lat, lng };
-                if (pickingMarker) pickingMarker.setLatLng(e.latlng);
-                else pickingMarker = L.marker(e.latlng).addTo(pickingMap);
-                document.getElementById('current-pick-display').innerText = `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            });
-            setTimeout(() => pickingMap.invalidateSize(), 50);
-        }, 50);
-    } else {
-        setTimeout(() => {
-            pickingMap.invalidateSize();
-            if (pickingMarker) {
-                pickingMap.removeLayer(pickingMarker);
-                pickingMarker = null;
-            }
-        }, 50);
-    }
-
-    if (targetId) {
-        const currentVal = document.getElementById(targetId).value;
-        if (currentVal && currentVal.includes(',')) {
-            const [lat, lng] = currentVal.split(',').map(s => parseFloat(s.trim()));
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const ll = L.latLng(lat, lng);
-                pickingMap.setView(ll, 12);
-                pickingMarker = L.marker(ll).addTo(pickingMap);
-                pickedCoords = { lat, lng };
-                document.getElementById('current-pick-display').innerText = `Current: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    const setupMarker = () => {
+        if (targetId) {
+            const el = document.getElementById(targetId);
+            const currentVal = el ? el.value : '';
+            if (currentVal && currentVal.includes(',')) {
+                const [lat, lng] = currentVal.split(',').map(s => parseFloat(s.trim()));
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    const ll = L.latLng(lat, lng);
+                    pickingMap.setView(ll, 12);
+                    pickingMarker = L.marker(ll, { icon: ICON_PICKER }).addTo(pickingMap);
+                    pickedCoords = { lat, lng };
+                    document.getElementById('current-pick-display').innerText = `Current: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                }
             }
         }
+    };
+
+    if (!pickingMap) {
+        pickingMap = L.map('picking-map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png').addTo(pickingMap);
+        applyOfficialBorders(pickingMap);
     }
+
+    pickingMap.off('click');
+    pickingMap.on('click', function(e) {
+        const { lat, lng } = e.latlng;
+        pickedCoords = { lat, lng };
+        if (pickingMarker) {
+            pickingMarker.setLatLng(e.latlng);
+        } else {
+            pickingMarker = L.marker(e.latlng, { icon: ICON_PICKER }).addTo(pickingMap);
+        }
+        document.getElementById('current-pick-display').innerText = `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    });
+
+    setTimeout(() => {
+        pickingMap.invalidateSize();
+        if (pickingMarker) {
+            pickingMap.removeLayer(pickingMarker);
+            pickingMarker = null;
+        }
+        setupMarker();
+    }, 100);
 }
 
 function confirmMapPick() {
@@ -1450,6 +1461,830 @@ window.pickSmartCoordinates = function() {
         // Don't auto-process, let user see it first
     });
 }
+
+// Variables for Shipment Forms, Chat, and Tracking
+let miniChatShipmentId = null;
+let miniChatDriverId = null;
+let miniChatMsgs = [];
+let miniChatMediaData = null; 
+let miniChatMediaRecorder = null;
+let miniChatRecording = false;
+let trackMap = null;
+let trackMarkers = [];
+
+// Form submission handler for manual shipment creation
+document.getElementById('create-shipment-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pickupVal = document.getElementById('pickup-loc').value.trim();
+    const dropVal = document.getElementById('drop-loc').value.trim();
+    
+    if (!pickupVal.includes(',') || !dropVal.includes(',')) {
+        return showNotification("Please enter coordinates in 'Lat, Lng' format.", "danger");
+    }
+
+    const [plat, plng] = pickupVal.split(',').map(n => parseFloat(n.trim()));
+    const [dlat, dlng] = dropVal.split(',').map(n => parseFloat(n.trim()));
+    
+    if (isNaN(plat) || isNaN(plng) || isNaN(dlat) || isNaN(dlng)) {
+        return showNotification("Invalid coordinates. Numeric Lat/Lng required.", "danger");
+    }
+
+    const phone = document.getElementById('receiver-phone').value.trim();
+    if (!/^\d{10}$/.test(phone)) {
+        return showNotification("Receiver Phone must be exactly 10 digits.", "danger");
+    }
+
+    const email = document.getElementById('receiver-email').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return showNotification("Invalid email address format.", "danger");
+    }
+
+    const weight = parseFloat(document.getElementById('weight').value);
+    if (isNaN(weight) || weight <= 0) {
+        return showNotification("Weight must be a positive number.", "danger");
+    }
+    
+    const data = {
+        pickup: {lat: plat, lng: plng},
+        drop: {lat: dlat, lng: dlng},
+        weight: weight,
+        description: document.getElementById('description').value,
+        is_perishable: document.getElementById('is-perishable').checked,
+        receiver_name: document.getElementById('receiver-name').value,
+        receiver_phone: "+91" + phone,
+        receiver_email: email,
+        eway_bill_no: document.getElementById('eway-no').value || null,
+        eway_bill_expiry: document.getElementById('eway-expiry').value || null,
+        company_id: localStorage.getItem('manager_id'),
+        receiver_id: currentLookedUpReceiverId,
+        labels: []
+    };
+    
+    try {
+        await apiCall('/shipments/', 'POST', data);
+        showNotification('Shipment Created Successfully!', 'success');
+        document.getElementById('create-shipment-form').reset();
+        
+        // Reset receiver lookup UI
+        const nameInput = document.getElementById('receiver-name');
+        const phoneInput = document.getElementById('receiver-phone');
+        const statusDiv = document.getElementById('receiver-lookup-status');
+        if (nameInput) {
+            nameInput.disabled = false;
+            nameInput.style.opacity = '1';
+        }
+        if (phoneInput) {
+            phoneInput.disabled = false;
+            phoneInput.style.opacity = '1';
+        }
+        if (statusDiv) {
+            statusDiv.style.display = 'none';
+        }
+
+        currentLookedUpReceiverId = null;
+        loadShipments();
+    } catch(e) {
+        console.error("Creation failed:", e);
+        showNotification("Failed to create shipment: " + (e.detail || "Server error"), "danger");
+    }
+});
+
+// Receiver auto-lookup logic
+window.lookupReceiverByEmail = async function(email) {
+    const statusDiv = document.getElementById('receiver-lookup-status');
+    const nameInput = document.getElementById('receiver-name');
+    const phoneInput = document.getElementById('receiver-phone');
+    
+    if (!email || !email.includes('@')) {
+        if (statusDiv) statusDiv.style.display = 'none';
+        return;
+    }
+
+    try {
+        const company_id = localStorage.getItem('manager_id');
+        const receivers = await apiCall(`/manager/receivers?company_id=${company_id}`);
+        const found = receivers.find(r => r.email.toLowerCase() === email.toLowerCase());
+
+        if (found) {
+            currentLookedUpReceiverId = found.id;
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color:var(--success); font-weight:700;">✅ Found: ${found.name} (${found.id})</span>`;
+                statusDiv.style.display = 'block';
+            }
+            if (nameInput) {
+                nameInput.value = found.name;
+                nameInput.disabled = true;
+                nameInput.style.opacity = '0.5';
+            }
+            if (phoneInput) {
+                phoneInput.value = found.phone.replace("+91", "");
+                phoneInput.disabled = true;
+                phoneInput.style.opacity = '0.5';
+            }
+        } else {
+            currentLookedUpReceiverId = null;
+            if (statusDiv) {
+                statusDiv.innerHTML = `<span style="color:var(--primary); font-weight:700;">🆕 New Receiver Record</span>`;
+                statusDiv.style.display = 'block';
+            }
+            if (nameInput) {
+                nameInput.disabled = false;
+                nameInput.style.opacity = '1';
+            }
+            if (phoneInput) {
+                phoneInput.disabled = false;
+                phoneInput.style.opacity = '1';
+            }
+        }
+    } catch (err) {
+        console.error("Receiver lookup failed", err);
+    }
+};
+
+// Open details modal
+window.openShipmentDetailModal = function(id) {
+    const s = globalShipments.find(ship => ship.id === id);
+    if (!s) return;
+
+    const modal = document.getElementById('shipment-detail-modal');
+    document.getElementById('sd-title').innerText = s.description;
+    document.getElementById('sd-id').innerText = `ID: ${s.id}`;
+    
+    const d = globalDrivers.find(drv => drv.id === s.assigned_driver_id);
+    const v = globalVehicles.find(vh => vh.id === s.assigned_vehicle_id);
+    const driverName = d ? d.name : getTranslation('unassigned');
+    const vitality = s.is_perishable ? (s.vitality || 100) : 100;
+
+    let contentHtml = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="intel-block">
+                <label style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Vitality & Health</label>
+                <div style="width:100%; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; margin:8px 0;">
+                    <div style="width:${vitality}%; height:100%; background:${vitality < 40 ? 'var(--danger)' : (vitality < 80 ? 'var(--warning)' : 'var(--success)')};"></div>
+                </div>
+                <div style="font-weight:700; color:${vitality < 40 ? 'var(--danger)' : (vitality < 80 ? 'var(--warning)' : 'var(--success)')};">
+                    ${s.is_perishable ? `${getTranslation('vitality')}: ${vitality}%` : getTranslation('stable')}
+                </div>
+            </div>
+            <div class="intel-block">
+                <label style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Compliance Status</label>
+                <div style="margin-top:8px; font-weight:700;">${getTranslation('eway_label')}: ${s.eway_bill_no || getTranslation('na')}</div>
+                <div style="font-size:0.7rem; opacity:0.7;">Expires: ${s.eway_bill_expiry ? new Date(s.eway_bill_expiry).toLocaleString() : 'N/A'}</div>
+            </div>
+        </div>
+
+        <div class="intel-block" style="background:rgba(255,255,255,0.03); padding:15px; border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">
+            <label style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Assigned Fleet Intel</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                <div>
+                    <div style="font-weight:800; color:var(--primary);">${driverName}</div>
+                    <div style="font-size:0.8rem; opacity:0.8;">${v ? v.number_plate : (s.assigned_driver_id === 'DRONE-SYSTEM' ? '🚁 Autonomous Drone' : 'No Vehicle')}</div>
+                </div>
+                ${s.loading_blueprint ? `<button class="btn-action-pill" onclick="viewCargoPlan('${s.id}')">📦 View Cargo Plan</button>` : ''}
+            </div>
+        </div>
+    `;
+
+    if (s.route_type === 'multi-leg' || s.status === 'split') {
+        const sLegs = globalShipments.filter(l => l.parent_id === s.id).sort((a,b) => a.leg_order - b.leg_order);
+        if (sLegs.length > 0) {
+            contentHtml += `<div style="margin-top:20px;">
+                <label style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Journey Legs (Hub Route)</label>
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                    ${sLegs.map(leg => `
+                        <div style="padding:10px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:0.8rem;">Leg ${leg.leg_order}: ${getTranslation(leg.leg_type || 'leg')}</span>
+                            <span class="status-pill status-${leg.status}" style="font-size:0.6rem;">${leg.status}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+    }
+
+    document.getElementById('sd-content').innerHTML = contentHtml;
+
+    const isMultiLegParent = !s.is_leg && (s.status === 'split' || s.route_type === 'multi-leg');
+    
+    let actionsHtml = `
+        <button class="btn-action-details" onclick="openLogsModal('${s.id}')">
+            <span class="icon">📜</span> <span data-i18n="btn_timeline">Timeline</span>
+        </button>
+        <button class="btn-action-details" style="background:var(--accent);" onclick="openTrackModal('${s.id}')">
+            <span class="icon">📍</span> <span data-i18n="btn_track">Live Track</span>
+        </button>
+    `;
+
+    // QR: Only for Main Shipment (not legs)
+    if (!s.is_leg) {
+        actionsHtml += `
+            <button class="btn-action-details" onclick="openQRModal('${s.id}')">
+                <span class="icon">🖼️</span> <span data-i18n="btn_qr">Generate QR</span>
+            </button>
+        `;
+    }
+
+    // Message: strictly for splits OR direct main shipments
+    if (s.is_leg || !isMultiLegParent) {
+        actionsHtml += `
+            <button class="btn-action-details" style="background:rgba(255,255,255,0.05);" onclick="openMessageModal('${s.id}', '${s.assigned_driver_id}')" ${!s.assigned_driver_id ? 'disabled' : ''}>
+                <span class="icon">💬</span> <span data-i18n="btn_message">Message</span>
+            </button>
+        `;
+    }
+
+    if (!s.is_leg) {
+        const isRoutePlanned = s.status === 'split' || s.route_type === 'multi-leg' || s.stage === 'Route Optimized';
+        const isAssigned = s.assigned_driver_id || s.status === 'assigned' || s.status === 'in_transit';
+
+        // 1. SPLIT CONTROLS
+        if (s.status === 'pending' && !isRoutePlanned) {
+            actionsHtml += `
+                <button class="btn-action-details" style="background:var(--accent);" onclick="autoSplit('${s.id}')">
+                    <span class="icon">🤖</span> <span>Route Splitter</span>
+                </button>
+                <button class="btn-action-details" style="background:#3182ce;" onclick="openManualSplit('${s.id}')">
+                    <span class="icon">⛓️</span> <span data-i18n="btn_manual_split">Manual Split</span>
+                </button>
+            `;
+        } else {
+            actionsHtml += `
+                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
+                    <span class="icon">🤖</span> <span>Route Finalized</span>
+                </button>
+                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
+                    <span class="icon">⛓️</span> <span>Route Finalized</span>
+                </button>
+            `;
+        }
+
+        // 2. ASSIGN CONTROLS (Only visible after split)
+        if (isRoutePlanned && !isAssigned) {
+            actionsHtml += `
+                <button class="btn-action-details" style="background:var(--success);" onclick="autoAssignShipment('${s.id}')">
+                    <span class="icon">🤖</span> <span>Auto Assign (AI)</span>
+                </button>
+                <button class="btn-action-details" style="background:#3182ce;" onclick="openManualAssignModal('${s.id}')">
+                    <span class="icon">👤</span> <span>Manual Assign</span>
+                </button>
+            `;
+        } else if (isAssigned) {
+            actionsHtml += `
+                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
+                    <span class="icon">🤖</span> <span>Already Assigned</span>
+                </button>
+                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
+                    <span class="icon">👤</span> <span>Already Assigned</span>
+                </button>
+            `;
+        } else {
+            // Not yet planned
+            actionsHtml += `
+                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Split route first">
+                    <span class="icon">🤖</span> <span>Assign (Locked)</span>
+                </button>
+                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Split route first">
+                    <span class="icon">👤</span> <span>Assign (Locked)</span>
+                </button>
+            `;
+        }
+    } else {
+        // For Legs: Assignment is managed strictly through the parent shipment
+        actionsHtml += `
+            <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Manage assignments from the Parent Shipment">
+                <span class="icon">🔒</span> <span>Managed by Parent</span>
+            </button>
+        `;
+    }
+
+    if (s.payment_status?.toLowerCase() === 'paid' && s.status !== 'finalized') {
+        actionsHtml += `
+            <button class="btn-action-details" style="background:var(--success);" onclick="finalizeShipment('${s.id}')">
+                <span class="icon">✅</span> <span data-i18n="btn_finalize">Finalize</span>
+            </button>
+        `;
+    }
+
+    // Manual Verify: strictly for splits OR direct main shipments
+    if (s.is_leg || !isMultiLegParent) {
+        actionsHtml += `
+            <button class="btn-action-details" style="background:var(--warning); color:#000;" onclick="managerManualVerify('${s.id}')">
+                <span class="icon">🛡️</span> <span data-i18n="btn_override">Manual Verify</span>
+            </button>
+        `;
+    }
+
+    actionsHtml += `
+        <button class="btn-action-details" style="background:var(--danger);" onclick="deleteItem('shipments', '${s.id}')">
+            <span class="icon">🗑️</span> <span data-i18n="btn_delete">Delete</span>
+        </button>
+    `;
+
+    document.getElementById('shipment-detail-actions').innerHTML = actionsHtml;
+    if (typeof updatePageTranslations === 'function') updatePageTranslations();
+    modal.style.display = 'flex';
+}
+
+window.closeShipmentDetailModal = function() {
+    document.getElementById('shipment-detail-modal').style.display = 'none';
+}
+
+// Live Tracking Map Modal logic
+window.openTrackModal = async function(shipmentId) {
+    document.getElementById('track-shipment-id').innerText = shipmentId.substring(0,8);
+    document.getElementById('track-modal').style.display = 'block';
+    
+    if (!trackMap) {
+        trackMap = L.map('track-map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+    }
+    
+    // Invalidate size in case modal was hidden
+    setTimeout(() => { if (trackMap) trackMap.invalidateSize(true); }, 200);
+    
+    // Clear old markers/routes
+    trackMarkers.forEach(m => trackMap.removeLayer(m));
+    trackMarkers = [];
+    
+    document.getElementById('track-status').innerText = 'Loading...';
+    document.getElementById('track-current').innerText = '...';
+    document.getElementById('track-next').innerText = '...';
+    
+    try {
+        const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`);
+        const target = shipments.find(s => s.id === shipmentId);
+        if (!target) return;
+        
+        let parentId = target.is_leg ? target.parent_id : target.id;
+        const legs = shipments.filter(s => s.parent_id === parentId).sort((a,b) => a.leg_order - b.leg_order);
+        const mainShipment = target.is_leg ? target : (legs.length > 0 ? (shipments.find(s => s.id === parentId) || target) : target);
+        
+        const localIconPickup = window.ICON_PICKUP || L.divIcon({className: 'custom-marker'});
+        const localIconDrop = window.ICON_DROP || L.divIcon({className: 'custom-marker'});
+        const localIconWarehouse = window.ICON_WAREHOUSE || L.divIcon({className: 'custom-marker'});
+
+        // 1. Plot Origin (of the tracked segment)
+        let pName = mainShipment.pickup.address || mainShipment.pickup.name || "Initial Pickup";
+        const originMarker = L.marker([mainShipment.pickup.lat, mainShipment.pickup.lng], {icon: localIconPickup})
+            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Pickup:</b> ${pName}` : `<b>Initial Pickup:</b> ${pName}`);
+        trackMarkers.push(originMarker);
+
+        // 2. Plot Destination (of the tracked segment)
+        let dName = mainShipment.drop.address || mainShipment.drop.name || "Final Delivery Point";
+        const destinationMarker = L.marker([mainShipment.drop.lat, mainShipment.drop.lng], {icon: localIconDrop})
+            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Drop:</b> ${dName}` : `<b>Final Delivery Point:</b> ${dName}`);
+        trackMarkers.push(destinationMarker);
+
+        // 3. Plot Intermediate Hubs (ONLY if it's the Parent view)
+        if (!target.is_leg && legs.length > 1) {
+            legs.forEach((leg, idx) => {
+                if (idx < legs.length - 1) {
+                    const hubMarker = L.marker([leg.drop.lat, leg.drop.lng], {icon: localIconWarehouse})
+                        .addTo(trackMap).bindPopup(`<b>Hub ${idx + 1}:</b> ${leg.drop.address || leg.drop.name || 'Network Hub'}`);
+                    trackMarkers.push(hubMarker);
+                }
+            });
+        }
+
+        // 4. Plot Active Location
+        let activeLeg = target.is_leg ? target : (legs.find(l => l.status === 'in_transit' || l.status === 'assigned') || legs[legs.length - 1] || target);
+        
+        if (activeLeg.current_location) {
+            const mC = L.circleMarker([activeLeg.current_location.lat, activeLeg.current_location.lng], {
+                color: '#fff', fillColor: '#3b82f6', weight: 3, radius: 10, fillOpacity: 1
+            }).addTo(trackMap).bindPopup("Current Unit Location");
+            trackMarkers.push(mC);
+            trackMap.setView([activeLeg.current_location.lat, activeLeg.current_location.lng], 8);
+        } else {
+            trackMap.setView([activeLeg.pickup.lat, activeLeg.pickup.lng], 8);
+        }
+
+        // 5. Draw Routes (OSRM)
+        const segments = legs.length > 0 ? legs : [target];
+        for (const seg of segments) {
+            if (seg.route_type === 'drone-leg') {
+                const dronePath = L.polyline([[seg.pickup.lat, seg.pickup.lng], [seg.drop.lat, seg.drop.lng]], {color: '#f6ad55', weight: 3, dashArray: '5, 10'}).addTo(trackMap);
+                trackMarkers.push(dronePath);
+            } else {
+                try {
+                    const rRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${seg.pickup.lng},${seg.pickup.lat};${seg.drop.lng},${seg.drop.lat}?overview=full&geometries=geojson`);
+                    const rData = await rRes.json();
+                    if(rData.routes && rData.routes[0]) {
+                        const coords = rData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+                        const color = seg.status === 'delivered' ? '#a0aec0' : '#3182ce';
+                        const pline = L.polyline(coords, {color, weight: 6, opacity: 0.85}).addTo(trackMap);
+                        trackMarkers.push(pline);
+                    }
+                } catch(e) {}
+            }
+        }
+
+        document.getElementById('track-status').innerText = target.status.toUpperCase();
+        document.getElementById('track-current').innerText = activeLeg.status === 'in_transit' ? 'In Transit' : activeLeg.status.toUpperCase();
+        
+        let nextStopStr = activeLeg.drop.address || activeLeg.drop.name || 'Network Hub';
+        if (activeLeg.leg_type === 'last_mile' || (!activeLeg.is_leg && !legs.length)) {
+            nextStopStr = activeLeg.drop.address || activeLeg.drop.name || 'Receiver Address';
+        }
+        document.getElementById('track-next').innerText = nextStopStr;
+
+        // 6. Contact Surface
+        const allDrivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
+        const allWh = await apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`);
+        
+        let cLabel = "📞 Contact Driver:";
+        let cVal = "N/A";
+
+        if (activeLeg.route_type === 'drone-leg') {
+            const wh = allWh.find(w => w.id === (activeLeg.at_warehouse_id || activeLeg.pickup_warehouse_id));
+            cLabel = "🛰️ Drone Support (Hub):";
+            cVal = wh ? `${wh.manager_name} | ${wh.contact_number}` : "Drone Dispatch Center";
+        } else {
+            const d = allDrivers.find(drv => drv.id === activeLeg.assigned_driver_id);
+            cVal = d ? `${d.name} | ${d.phone_number || 'No Phone'}` : "Unassigned";
+            if (activeLeg.is_leg) cLabel = "📞 Leg Driver:";
+        }
+
+        document.getElementById('track-contact-label').innerText = cLabel;
+        document.getElementById('track-contact-value').innerText = cVal;
+
+    } catch(err) {
+        console.error("Track Modal Error:", err);
+    }
+};
+
+// Manual routing split functions
+window.openManualSplit = async function(id) {
+    currentSplitId = id;
+    goToSplitStep1();
+    try {
+        const warehouses = await apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`);
+        const container = document.getElementById('split-wh-container');
+        const searchInput = document.getElementById('split-wh-search');
+        if (searchInput) searchInput.value = '';
+        
+        container.innerHTML = '';
+        warehouses.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'wh-split-item';
+            item.style.display = 'flex';
+            item.style.alignItems = 'center';
+            item.style.gap = '12px';
+            item.style.padding = '10px 15px';
+            item.style.marginBottom = '8px';
+            item.style.background = 'rgba(255,255,255,0.03)';
+            item.style.borderRadius = '12px';
+            item.style.transition = 'all 0.2s ease';
+            item.style.cursor = 'pointer';
+            
+            item.innerHTML = `
+                <input type="checkbox" value="${w.id}" data-wh-name="${w.name}" class="wh-checkbox" id="wh-split-${w.id}" style="width:18px; height:18px; cursor:pointer; accent-color:var(--primary);">
+                <label for="wh-split-${w.id}" style="flex:1; cursor:pointer; font-weight:600; font-size:0.9rem; color:var(--text);">${w.name}</label>
+            `;
+            
+            item.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    const cb = item.querySelector('input');
+                    cb.checked = !cb.checked;
+                }
+            });
+
+            container.appendChild(item);
+        });
+        document.getElementById('split-modal').style.display = 'block';
+    } catch(e) {
+        console.error("Failed to load warehouses for split:", e);
+    }
+};
+
+window.goToSplitStep1 = function() {
+    document.getElementById('split-step-1').style.display = 'block';
+    document.getElementById('split-modal-title').innerText = "Manual Route Split";
+};
+
+window.filterSplitWarehouses = function() {
+    const q = document.getElementById('split-wh-search').value.toLowerCase();
+    const items = document.querySelectorAll('.wh-split-item');
+    items.forEach(item => {
+        const name = item.querySelector('label').innerText.toLowerCase();
+        item.style.display = name.includes(q) ? 'flex' : 'none';
+    });
+};
+
+window.submitManualSplit = async function() {
+    const checkboxes = document.querySelectorAll('.wh-checkbox:checked');
+    if (checkboxes.length === 0) {
+        showNotification("Please select at least one warehouse.", "warning");
+        return;
+    }
+    
+    const warehouseIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    try {
+        const res = await apiCall(`/shipments/${currentSplitId}/split/manual`, 'POST', {
+            warehouse_ids: warehouseIds,
+            assignments: [],
+            company_id: localStorage.getItem('manager_id')
+        });
+        
+        showNotification(res.message, "success");
+        document.getElementById('split-modal').style.display = 'none';
+        closeShipmentDetailModal();
+        loadShipments();
+    } catch(e) {
+        showNotification("Manual split failed.", "error");
+    }
+};
+
+// Auto assign segment call
+window.autoAssignShipment = async function(id) {
+    try {
+        await apiCall(`/shipments/${id}/auto-assign`, 'POST');
+        showNotification("Assignment successful! 🤖", "success");
+        loadShipments();
+        closeShipmentDetailModal();
+    } catch(e) {
+        const errorMsg = e.detail || "No suitable vehicles found for this journey configuration.";
+        showNotification(`Assignment Failed: ${errorMsg}`, "danger");
+    }
+};
+
+// Delete shipments
+window.deleteItem = async function(type, id) {
+    if (!confirm(`Are you sure you want to delete this ${type.slice(0,-1)}?`)) return;
+    
+    let endpoint = `/${type}/${id}?company_id=${localStorage.getItem('manager_id')}`;
+    if (type === 'drivers' || type === 'vehicles') {
+        endpoint = `/manager/${type}/${id}?company_id=${localStorage.getItem('manager_id')}`;
+    } else if (type === 'shipments') {
+        endpoint = `/shipments/${id}?company_id=${localStorage.getItem('manager_id')}`;
+    } else if (type === 'drones') {
+        endpoint = `/manager/drones/${id}?company_id=${localStorage.getItem('manager_id')}`;
+    }
+    
+    try {
+        await apiCall(endpoint, 'DELETE');
+        alert("Deleted successfully!");
+        if (type === 'shipments') {
+            closeShipmentDetailModal();
+            loadShipments();
+        }
+    } catch(err) {
+        alert("Failed to delete.");
+    }
+};
+
+// Messaging logic
+window.openMessageModal = async function(shipmentId, driverId) {
+    if (!driverId || driverId === 'null' || driverId === 'undefined') {
+        alert("Cannot message: No driver assigned to this shipment/leg.");
+        return;
+    }
+    miniChatShipmentId = shipmentId === 'null' ? null : shipmentId;
+    miniChatDriverId = driverId;
+
+    if (!globalDrivers.length) {
+        const mId = localStorage.getItem('manager_id');
+        try {
+            globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
+        } catch(e) { console.error("Failed to load global drivers for chat", e); }
+    }
+    const driver = globalDrivers.find(d => d.id === driverId) || { name: 'Driver' };
+
+    let popup = document.getElementById('mini-chat-popup');
+    if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'mini-chat-popup';
+        popup.innerHTML = `
+            <div id="mini-chat-header" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(79,140,255,0.15);border-bottom:1px solid var(--border);cursor:move;border-radius:18px 18px 0 0;">
+                <img id="mini-chat-avatar" src="" style="width:34px;height:34px;border-radius:50%;border:2px solid var(--primary);object-fit:cover;">
+                <div style="flex:1;">
+                    <div id="mini-chat-name" style="font-weight:700;font-size:0.95rem;color:var(--primary);"></div>
+                    <div style="font-size:0.7rem;color:var(--muted);">Direct Line</div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="closeMiniChat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;">✕</button>
+                </div>
+            </div>
+            <div id="mini-chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;"></div>
+            <div id="mini-chat-media-preview" style="display:none;padding:8px 16px;background:rgba(0,0,0,0.2);border-top:1px solid var(--border);align-items:center;gap:10px;"></div>
+            <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button onclick="miniChatPickPhoto()" title="Send Photo" class="chat-icon-btn" style="padding:8px 10px;font-size:1rem;">📷</button>
+                    <button id="mini-chat-voice-btn" onclick="miniChatToggleRecording()" title="Voice Note" class="chat-icon-btn" style="padding:8px 10px;font-size:1rem;">🎙️</button>
+                    <input id="mini-chat-photo-input" type="file" accept="image/*" style="display:none;" onchange="miniChatHandlePhoto(this)">
+                    <input id="mini-chat-input" type="text" placeholder="Message..." class="chat-text-input" style="flex:1;min-width:100px;font-size:0.9rem;" onkeydown="if(event.key==='Enter')miniChatSend()">
+                    <button onclick="miniChatSend()" class="btn-primary" style="padding:8px 16px;border-radius:10px;font-weight:700;">Send</button>
+                </div>
+            </div>
+        `;
+        popup.style.cssText = `
+            position: fixed; bottom: 20px; right: 24px; width: 360px; height: 520px;
+            background: rgba(15,23,42,0.96); backdrop-filter: blur(24px);
+            border: 1px solid var(--border); border-radius: 18px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            z-index: 99999; animation: slideUp 0.3s ease;
+        `;
+        document.body.appendChild(popup);
+        makeDraggable(popup, document.getElementById('mini-chat-header'));
+    }
+
+    popup.style.display = 'flex';
+    document.getElementById('mini-chat-name').innerText = driver.name;
+    document.getElementById('mini-chat-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
+    miniChatMediaData = null;
+    document.getElementById('mini-chat-media-preview').style.display = 'none';
+    document.getElementById('mini-chat-media-preview').innerHTML = '';
+    
+    const input = document.getElementById('mini-chat-input');
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 100);
+    }
+
+    await miniChatLoadHistory();
+};
+
+window.closeMiniChat = function() {
+    const popup = document.getElementById('mini-chat-popup');
+    if (popup) popup.style.display = 'none';
+    if (miniChatMediaRecorder && miniChatRecording) {
+        miniChatMediaRecorder.stop();
+    }
+};
+
+window.makeDraggable = function(el, handle) {
+    let ox=0,oy=0,cx=0,cy=0;
+    handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        cx=e.clientX; cy=e.clientY;
+        document.onmouseup = () => { document.onmouseup=null; document.onmousemove=null; };
+        document.onmousemove = (ev) => {
+            ox=cx-ev.clientX; oy=cy-ev.clientY; cx=ev.clientX; cy=ev.clientY;
+            el.style.top=(el.offsetTop-oy)+'px'; el.style.left=(el.offsetLeft-ox)+'px';
+            el.style.bottom='auto'; el.style.right='auto';
+        };
+    });
+};
+
+window.submitMessage = async function() {
+    const content = document.getElementById('msg-content')?.value;
+    if (!content) return;
+    try {
+        await apiCall('/tracking/messages', 'POST', {
+            shipment_id: miniChatShipmentId,
+            company_id: localStorage.getItem('manager_id'),
+            sender_id: localStorage.getItem('manager_id'),
+            receiver_id: miniChatDriverId,
+            content: content,
+            sender_type: 'manager'
+        });
+        document.getElementById('message-modal').style.display = 'none';
+        showNotification(getTranslation('msg_sent', 'en'), "success");
+    } catch (e) {
+        alert("Failed to send message to driver.");
+    }
+};
+
+async function miniChatLoadHistory() {
+    const mId = localStorage.getItem('manager_id');
+    const allMsgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`);
+    miniChatMsgs = allMsgs.filter(m => m.sender_id === miniChatDriverId || m.receiver_id === miniChatDriverId)
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    miniChatRender();
+}
+
+function miniChatRender() {
+    const container = document.getElementById('mini-chat-messages');
+    if (!container) return;
+    container.innerHTML = miniChatMsgs.length === 0
+        ? '<div style="text-align:center;color:var(--muted);font-size:0.85rem;padding:30px;">No messages yet. Say hello! 👋</div>'
+        : miniChatMsgs.map(m => {
+            const isMe = m.sender_type === 'manager';
+            let mediaHtml = '';
+            if (m.media_type === 'image' && m.media_url) {
+                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:8px;margin-top:6px;display:block;" alt="photo">`;
+            } else if (m.media_type === 'audio' && m.media_url) {
+                mediaHtml = `<div class="audio-placeholder" data-src="${m.media_url}" data-accent="${isMe ? 'rgba(255,255,255,0.25)' : 'rgba(79,140,255,0.4)'}"></div>`;
+            }
+            return `
+                <div style="display:flex;justify-content:${isMe ? 'flex-end' : 'flex-start'};">
+                    <div style="max-width:80%;padding:10px 14px;border-radius:14px;
+                                background:${isMe ? 'var(--primary)' : 'rgba(255,255,255,0.07)'};
+                                color:${isMe ? '#fff' : 'var(--text)'};
+                                border-bottom-${isMe ? 'right' : 'left'}-radius:2px;
+                                border:1px solid ${isMe ? 'transparent' : 'var(--border)'};
+                                box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                        ${m.content ? `<div style="font-size:0.9rem;line-height:1.4;">${m.content}</div>` : ''}
+                        ${mediaHtml}
+                        <div style="font-size:0.6rem;margin-top:4px;text-align:right;opacity:0.65;">
+                            ${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    container.scrollTop = container.scrollHeight;
+    container.querySelectorAll('.audio-placeholder').forEach(ph => {
+        ph.replaceWith(buildAudioPlayer(ph.dataset.src, ph.dataset.accent));
+    });
+}
+
+async function miniChatSend() {
+    const input = document.getElementById('mini-chat-input');
+    const content = (input.value || '').trim();
+    if (!content && !miniChatMediaData) return;
+
+    const mId = localStorage.getItem('manager_id');
+    const payload = {
+        company_id: mId,
+        shipment_id: miniChatShipmentId,
+        sender_id: mId,
+        receiver_id: miniChatDriverId,
+        content: content || (miniChatMediaData ? '[Media]' : ''),
+        sender_type: 'manager',
+        media_url: miniChatMediaData ? miniChatMediaData.url : null,
+        media_type: miniChatMediaData ? miniChatMediaData.type : null
+    };
+
+    try {
+        await apiCall('/tracking/messages', 'POST', payload);
+        input.value = '';
+        miniChatMediaData = null;
+        document.getElementById('mini-chat-media-preview').style.display = 'none';
+        document.getElementById('mini-chat-media-preview').innerHTML = '';
+        await miniChatLoadHistory();
+    } catch(e) {
+        showNotification(getTranslation('msg_failed', 'en'), 'error');
+    }
+}
+
+window.miniChatPickPhoto = function() {
+    document.getElementById('mini-chat-photo-input').click();
+};
+
+window.miniChatHandlePhoto = function(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        miniChatMediaData = { type: 'image', url: e.target.result };
+        const preview = document.getElementById('mini-chat-media-preview');
+        preview.style.display = 'flex';
+        preview.innerHTML = `<img src="${e.target.result}" style="height:60px;border-radius:8px;border:1px solid var(--border);"><span style="font-size:0.75rem;color:var(--muted);flex:1;">Photo ready to send</span><button onclick="miniChatClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;">✕</button>`;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+};
+
+window.miniChatClearMedia = function() {
+    miniChatMediaData = null;
+    const preview = document.getElementById('mini-chat-media-preview');
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+};
+
+window.miniChatToggleRecording = async function() {
+    const btn = document.getElementById('mini-chat-voice-btn');
+    if (!miniChatRecording) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const chunks = [];
+            miniChatMediaRecorder = new MediaRecorder(stream);
+            miniChatMediaRecorder.ondataavailable = e => chunks.push(e.data);
+            miniChatMediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    miniChatMediaData = { type: 'audio', url: ev.target.result };
+                    const preview = document.getElementById('mini-chat-media-preview');
+                    preview.style.display = 'flex';
+                    preview.innerHTML = `<button onclick="miniChatClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>`;
+                    const player = buildAudioPlayer(ev.target.result, 'rgba(79,140,255,0.4)');
+                    preview.insertBefore(player, preview.firstChild);
+                };
+                reader.readAsDataURL(blob);
+                stream.getTracks().forEach(t => t.stop());
+            };
+            miniChatMediaRecorder.start();
+            miniChatRecording = true;
+            btn.innerText = '⏹️';
+            btn.style.background = 'rgba(229,62,62,0.2)';
+            btn.style.color = 'var(--danger)';
+            btn.title = 'Stop Recording';
+        } catch(e) {
+            alert('Microphone access denied. Please allow microphone permission.');
+        }
+    } else {
+        miniChatMediaRecorder.stop();
+        miniChatRecording = false;
+        btn.innerText = '🎙️';
+        btn.style.background = 'rgba(255,255,255,0.08)';
+        btn.style.color = 'var(--text)';
+        btn.title = 'Voice Note';
+    }
+};
 
 async function initPage() {
     loadShipments();

@@ -363,5 +363,24 @@ if (typeof L !== 'undefined') {
         html: `<div style="background:#ef4444; width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px rgba(239,68,68,0.6); font-size:18px; color:white;">💤</div>`,
         className: 'custom-marker', iconSize: [34, 34], iconAnchor: [17, 17]
     });
+
+    window.applyOfficialBorders = async function(mapInstance) {
+        const boundaryUrl = 'https://raw.githubusercontent.com/datameet/maps/master/Country/india-osm.geojson';
+        try {
+            const response = await fetch(boundaryUrl);
+            const data = await response.json();
+            L.geoJSON(data, {
+                style: { 
+                    color: '#3182ce', 
+                    weight: 3, 
+                    fillOpacity: 0,
+                    dashArray: '5, 5'
+                },
+                interactive: false
+            }).addTo(mapInstance);
+        } catch(e) {
+            console.warn("Sovereignty overlay failed to load");
+        }
+    };
 }
 
