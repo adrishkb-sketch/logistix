@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Header
 from backend.models import Driver, Vehicle, Drone, Warehouse, Shipment, ShipmentEvent, Location
 from backend.database import JSONDatabase
-from backend.services.turso_db import TursoCompaniesDB
+from backend.services.turso_db import TursoCompaniesDB, TursoGenericDB
 from datetime import datetime, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
@@ -16,7 +16,7 @@ router = APIRouter()
 companies_db = TursoCompaniesDB()          # ← Turso (persistent on Vercel)
 drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")
-warehouses_db = JSONDatabase("warehouses")
+warehouses_db = TursoGenericDB("warehouses")  # ← Turso: persists across Vercel invocations
 ledger_db = JSONDatabase("ledger")
 reviews_db = JSONDatabase("journey_reviews")
 shipments_db = JSONDatabase("shipments")
