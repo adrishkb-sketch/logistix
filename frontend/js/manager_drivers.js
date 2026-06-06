@@ -32,7 +32,18 @@ const smartConfig = {
         {
             field: 'login_id',
             promptKey: 'prompt_driver_login',
-            validate: val => val.length >= 4,
+            validate: val => {
+                if (val.length < 4) {
+                    smartConfig.driver[1].error = 'Login ID must be at least 4 characters long.';
+                    return false;
+                }
+                const taken = globalDrivers.some(d => (d.login_id || '').toLowerCase() === val.toLowerCase());
+                if (taken) {
+                    smartConfig.driver[1].error = `Login ID "${val}" is already taken. Please enter a unique Login ID.`;
+                    return false;
+                }
+                return true;
+            },
             error: 'Login ID must be at least 4 characters long.'
         },
         {
@@ -97,7 +108,16 @@ const smartConfig = {
             promptKey: 'prompt_vehicle_plate',
             validate: val => {
                 const formatted = val.toUpperCase().replace(/\s/g, '');
-                return /^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/.test(formatted);
+                if (!/^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/.test(formatted)) {
+                    smartConfig.vehicle[1].error = 'Plate must match format: e.g. MH 12 AB 1234';
+                    return false;
+                }
+                const taken = globalVehicles.some(v => (v.number_plate || '').toUpperCase().replace(/\s/g, '') === formatted);
+                if (taken) {
+                    smartConfig.vehicle[1].error = `Vehicle with number plate "${val}" is already registered. Please enter a unique number plate.`;
+                    return false;
+                }
+                return true;
             },
             error: 'Plate must match format: e.g. MH 12 AB 1234'
         },
@@ -1136,8 +1156,9 @@ window.processSmartCommand = async function() {
                 smartQueue.push({ ...currentSmartShipment });
                 updateSmartUI();
                 
-                // Confirm Smart Queue Immediately for Drivers & Vehicles
-                await confirmSmartQueue();
+                addAiMessage(getTranslation('msg_added_to_queue', 'en'));
+                addAiMessage(getTranslation('msg_type_more', 'en'));
+                smartStepIndex = 99; 
             }
         } else {
             startNewSmartEntry();

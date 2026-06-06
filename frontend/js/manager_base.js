@@ -327,15 +327,19 @@ window.updateMapTheme = function(mapInstance) {
     if (!mapInstance) return;
     const theme = localStorage.getItem('theme') || 'dark';
     const tileUrl = theme === 'dark' 
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
     
-    // Find tile layer and update URL
+    // Find and remove existing tile layer
     mapInstance.eachLayer(layer => {
-        if (layer instanceof L.TileLayer) {
-            layer.setUrl(tileUrl);
+        if (layer instanceof L.TileLayer && !layer.options.isOverlay) {
+            mapInstance.removeLayer(layer);
         }
     });
+
+    L.tileLayer(tileUrl, {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(mapInstance);
 };
 
 // Global map icons if Leaflet is loaded

@@ -570,3 +570,9 @@ async function initPage() {
 }
 
 document.addEventListener('DOMContentLoaded', initPage);
+
+window.addEventListener('themeChanged', () => {
+    if (map) {
+        updateMapTheme(map);
+    }
+});
