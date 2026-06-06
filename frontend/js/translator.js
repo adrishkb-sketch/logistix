@@ -13,6 +13,27 @@
 (function () {
     'use strict';
 
+    // Load English translations dictionary for getTranslation shim
+    let enTranslations = {};
+    const isRootFolder = !window.location.pathname.includes('/pages/');
+    const pathPrefix = isRootFolder ? '' : '../';
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', `${pathPrefix}js/en.json`, false);
+        xhr.send(null);
+        if (xhr.status === 200) {
+            enTranslations = JSON.parse(xhr.responseText);
+        }
+    } catch (e) {
+        console.warn("Failed to load en.json synchronously, falling back to async fetch", e);
+    }
+    if (Object.keys(enTranslations).length === 0) {
+        fetch(`${pathPrefix}js/en.json`)
+            .then(res => res.json())
+            .then(data => { enTranslations = data; })
+            .catch(err => console.error("Async load of en.json failed", err));
+    }
+
     // ── Google Translate language code map ──────────────────────────────────
     // Maps our internal app_lang codes to Google Translate codes
     const LANG_MAP = {
@@ -32,6 +53,12 @@
         'sat': 'sat',
         'ks':  'ur',    // Kashmiri — closest Google supports
         'ur':  'ur',
+        'ne':  'ne',
+        'sa':  'sa',
+        'sd':  'sd',
+        'gom': 'gom',
+        'doi': 'doi',
+        'mni': 'mni-Mtei',
         'fr':  'fr',
         'de':  'de',
         'es':  'es',
@@ -148,15 +175,14 @@
         if (typeof loadShipments  === 'function') loadShipments();
         if (typeof loadMissions   === 'function') loadMissions();
     };
+    window.changeLanguage = window.setLanguage;
 
     /**
      * getTranslation — compatibility shim so any remaining JS calls don't break.
      * Returns the English key text as-is; Google Translate handles rendering.
      */
     window.getTranslation = function (key) {
-        // Return the key itself — English text is already hardcoded in the DOM/JS.
-        // Google Translate will translate it in the rendered DOM.
-        return key;
+        return enTranslations[key] || key;
     };
 
     /**
