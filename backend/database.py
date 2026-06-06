@@ -113,23 +113,34 @@ class JSONDatabase:
             return []
         try:
             with open(self.file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+                content = f.read().strip()
+                if not content:
+                    return []
+                data = json.loads(content)
                 if isinstance(data, list):
                     return data
                 return []
         except Exception as e:
             print(f"Error loading local database file {self.file_path}: {e}")
-            return []
+            # Raise RuntimeError to prevent calling code from writing [] and wiping data
+            raise RuntimeError(f"Database file {self.file_path} is corrupted: {e}")
 
     def _save_local_data(self, data: List[Dict[str, Any]]) -> bool:
+        temp_file_path = self.file_path + ".tmp"
         try:
-            with open(self.file_path, "w", encoding="utf-8") as f:
+            with open(temp_file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
                 f.flush()
                 os.fsync(f.fileno())
+            os.replace(temp_file_path, self.file_path)
             return True
         except Exception as e:
             print(f"Error saving local database file {self.file_path}: {e}")
+            if os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                except:
+                    pass
             return False
 
     def _ensure_client(self):

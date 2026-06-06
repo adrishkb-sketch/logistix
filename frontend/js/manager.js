@@ -290,26 +290,42 @@ async function processLocationDeployment(lat, lng) {
         processLocationDeployment(newPos.lat, newPos.lng);
     });
 
-    // 2. WATER CHECK: Hardened detection for Oceans and Seas
+    // 2. WATER CHECK: Hardened detection for Oceans and Seas with timeout
     try {
-        const terrain = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`).then(r => r.json());
-        const dName = (terrain.display_name || "").toLowerCase();
-        const isWater = terrain.type === 'water' || 
-                        terrain.type === 'river' ||
-                        terrain.category === 'natural' || 
-                        dName.includes('ocean') || 
-                        dName.includes('sea') || 
-                        dName.includes('bay') ||
-                        dName.includes('river') ||
-                        dName.includes('canal') ||
-                        dName.includes('waterway') ||
-                        !terrain.address;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'LogistixLogisticsApp/1.0 (contact@logistix.com)'
+            }
+        });
+        clearTimeout(timeoutId);
+        
+        const terrain = await response.json();
+        
+        if (terrain && !terrain.error) {
+            const dName = (terrain.display_name || "").toLowerCase();
+            const type = (terrain.type || "").toLowerCase();
+            const category = (terrain.category || "").toLowerCase();
+            
+            const isWater = type === 'water' || 
+                            type === 'river' ||
+                            category === 'natural' || 
+                            dName.includes('ocean') || 
+                            dName.includes('sea') || 
+                            dName.includes('bay') ||
+                            dName.includes('river') ||
+                            dName.includes('canal') ||
+                            dName.includes('waterway');
 
-        if (isWater) {
-            return alert("🚨 Invalid Deployment Zone: Warehouse cannot be created in the middle of a water body.");
+            if (isWater) {
+                return alert("🚨 Invalid Deployment Zone: Warehouse cannot be created in the middle of a water body.");
+            }
         }
     } catch(e) {
-        console.warn("Terrain check skipped due to API timeout");
+        console.warn("Terrain check skipped due to API timeout or error:", e);
     }
 
     pendingWhLoc = { lat, lng };
@@ -344,7 +360,18 @@ async function deployByPincode() {
     if (!pin) return alert("Please enter a valid pincode");
     
     try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${pin}&country=India`).then(r => r.json());
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&postalcode=${pin}&country=India`, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'LogistixLogisticsApp/1.0 (contact@logistix.com)'
+            }
+        });
+        clearTimeout(timeoutId);
+        
+        const res = await response.json();
         if (res && res.length > 0) {
             const { lat, lon } = res[0];
             processLocationDeployment(parseFloat(lat), parseFloat(lon));
@@ -352,7 +379,8 @@ async function deployByPincode() {
             alert("Pincode not found. Please try manual coordinates.");
         }
     } catch(e) {
-        alert("Search failed. Check your connection.");
+        console.warn("Pincode search failed or timed out:", e);
+        alert("Search failed or timed out. Check your connection.");
     }
 }
 
@@ -641,13 +669,15 @@ async function submitNewWarehouse() {
         return alert("Error: Warehouse Name, Manager Name, Contact, Email and Password are all required.");
     }
     
-    await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
-    document.getElementById('wh-modal').style.display = 'none';
-    document.getElementById('wh-name-input').value = '';
-    document.getElementById('wh-manager-input').value = '';
-    document.getElementById('wh-contact-input').value = '';
-    document.getElementById('wh-email-input').value = '';
-    document.getElementById('wh-password-input').value = '';
+    const success = await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
+    if (success) {
+        document.getElementById('wh-modal').style.display = 'none';
+        document.getElementById('wh-name-input').value = '';
+        document.getElementById('wh-manager-input').value = '';
+        document.getElementById('wh-contact-input').value = '';
+        document.getElementById('wh-email-input').value = '';
+        document.getElementById('wh-password-input').value = '';
+    }
 }
 
 async function createWarehouse(name, lat, lng, manager = '', contact = '', email = '', password = '') {
@@ -662,8 +692,10 @@ async function createWarehouse(name, lat, lng, manager = '', contact = '', email
         });
         loadMapData();
         if (typeof loadDriversAndVehicles === 'function') loadDriversAndVehicles();
+        return true;
     } catch(e) {
         console.error("Create warehouse failed:", e);
+        return false;
     }
 }
 
@@ -678,12 +710,14 @@ async function adoptStrategicLocation() {
     }
     const name = prompt("Enter Warehouse Name for Strategic Hub:");
     if (name) {
-        await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, manager, contact, email, password);
-        document.getElementById('suggestion-modal').style.display = 'none';
-        document.getElementById('sug-manager').value = '';
-        document.getElementById('sug-contact').value = '';
-        document.getElementById('sug-email').value = '';
-        document.getElementById('sug-password').value = '';
+        const success = await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, manager, contact, email, password);
+        if (success) {
+            document.getElementById('suggestion-modal').style.display = 'none';
+            document.getElementById('sug-manager').value = '';
+            document.getElementById('sug-contact').value = '';
+            document.getElementById('sug-email').value = '';
+            document.getElementById('sug-password').value = '';
+        }
     }
 }
 
@@ -699,12 +733,14 @@ async function stayWithManualLocation() {
 
     const name = prompt("Enter Warehouse Name for Manual Hub:");
     if (name) {
-        await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
-        document.getElementById('suggestion-modal').style.display = 'none';
-        document.getElementById('sug-manager').value = '';
-        document.getElementById('sug-contact').value = '';
-        document.getElementById('sug-email').value = '';
-        document.getElementById('sug-password').value = '';
+        const success = await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
+        if (success) {
+            document.getElementById('suggestion-modal').style.display = 'none';
+            document.getElementById('sug-manager').value = '';
+            document.getElementById('sug-contact').value = '';
+            document.getElementById('sug-email').value = '';
+            document.getElementById('sug-password').value = '';
+        }
     }
 }
 
