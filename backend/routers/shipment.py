@@ -444,6 +444,7 @@ def get_shipment_qr_data(shipment_id: str):
         
     return {"qr_code_data": qr_data, "shipment_id": shipment_id}
 
+@router.get("")
 @router.get("/")
 def get_shipments(company_id: str):
     from backend.services.cold_chain import calculate_shipment_vitality

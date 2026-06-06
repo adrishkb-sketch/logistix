@@ -6,7 +6,7 @@ async function loadSafetyCenter() {
         const [drivers, alerts, shipments] = await Promise.all([
             apiCall(`/manager/drivers?company_id=${mId}`),
             apiCall(`/tracking/alerts/active?company_id=${mId}`),
-            apiCall(`/shipments?company_id=${mId}`)
+            apiCall(`/shipments/?company_id=${mId}`)
         ]);
 
         // Calculate Fleet Safety Index
@@ -109,7 +109,7 @@ async function loadSafetyCenter() {
 }
 
 async function liveTrackByDriver(driverId) {
-    const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`);
+    const shipments = await apiCall(`/shipments/?company_id=${localStorage.getItem('manager_id')}`);
     const active = shipments.find(s => s.assigned_driver_id === driverId && s.status !== 'delivered');
     if (active) openTrackModal(active.id);
     else alert("No active shipment for this driver.");

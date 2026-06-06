@@ -6,7 +6,7 @@ async function loadDriversAndVehicles() {
             apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/warehouses?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`),
+            apiCall(`/shipments/?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/drones?company_id=${localStorage.getItem('manager_id')}`).catch(() => [])
         ]);
         globalDrivers = drivers;

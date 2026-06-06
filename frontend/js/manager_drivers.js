@@ -168,7 +168,7 @@ async function loadDriversAndVehicles() {
             apiCall(`/manager/drivers?company_id=${companyId}`),
             apiCall(`/manager/vehicles?company_id=${companyId}`),
             apiCall(`/manager/warehouses?company_id=${companyId}`),
-            apiCall(`/shipments?company_id=${companyId}`),
+            apiCall(`/shipments/?company_id=${companyId}`),
             apiCall(`/manager/drones?company_id=${companyId}`).catch(() => [])
         ]);
 

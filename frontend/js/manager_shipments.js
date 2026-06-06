@@ -128,7 +128,7 @@ const smartConfig = {
 async function loadShipments() {
     try {
         const [shipments, drivers, vehicles] = await Promise.all([
-            apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`),
+            apiCall(`/shipments/?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`),
             apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`)
         ]);
@@ -558,7 +558,7 @@ function downloadQR() {
 
 async function viewCargoPlan(shipmentId) {
     try {
-        const shipments = await apiCall(`/shipments?company_id=${localStorage.getItem('manager_id')}`);
+        const shipments = await apiCall(`/shipments/?company_id=${localStorage.getItem('manager_id')}`);
         const s = shipments.find(item => item.id === shipmentId);
         
         if (!s || !s.loading_blueprint) {
