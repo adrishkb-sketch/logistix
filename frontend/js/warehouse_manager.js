@@ -46,7 +46,7 @@ async function loadWarehouseData() {
     try {
         const wh = await apiCall(`/manager/warehouses?company_id=${companyId}&id=${whId}`, 'GET');
         globalWarehouses = Array.isArray(wh) ? wh : [wh];
-        const myWh = globalWarehouses.find(w => w.id === whId);
+        const myWh = globalWarehouses.find(w => w && w.id === whId);
         if (myWh) {
             const shortLabel = document.getElementById('wh-location-label-short');
             if (shortLabel) shortLabel.innerText = myWh.name.toUpperCase();
@@ -59,6 +59,10 @@ async function loadWarehouseData() {
                     el.disabled = true;
                 }
             });
+        } else {
+            alert("This warehouse has been decommissioned or deleted. You will be logged out.");
+            logout();
+            return;
         }
     } catch(e) {
         console.error("Failed to load warehouse data", e);

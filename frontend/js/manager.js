@@ -35,7 +35,7 @@ window.tableLimits = {
     vehicles: 5,
     drones: 5,
     'linked-pairs': 5,
-    warehouses: 5,
+    warehouses: 100,
     nr: 5
 };
 
@@ -416,6 +416,7 @@ async function triggerManualAICheck() {
 }
 
 async function loadMapData() {
+    if (!map) return;
     // Clear markers
     markers.forEach(m => map.removeLayer(m));
     markers = [];
@@ -428,6 +429,7 @@ async function loadMapData() {
         ]);
         
         globalHubs = warehouses;
+        globalWarehouses = warehouses;
         const activeLeaves = allLeaves.filter(l => l.status === 'approved');
 
         warehouses.forEach(w => {
@@ -585,6 +587,7 @@ async function submitEditWarehouse() {
         });
         document.getElementById('wh-edit-modal').style.display = 'none';
         loadMapData();
+        if (typeof loadDriversAndVehicles === 'function') loadDriversAndVehicles();
     } catch(e) {
         alert("Failed to update warehouse.");
     }
@@ -600,6 +603,7 @@ async function decommissionWarehouse() {
         await apiCall(`/manager/warehouses/${id}?company_id=${localStorage.getItem('manager_id')}`, 'DELETE');
         document.getElementById('wh-edit-modal').style.display = 'none';
         loadMapData();
+        if (typeof loadDriversAndVehicles === 'function') loadDriversAndVehicles();
     } catch(e) {
         alert("Failed to decommission warehouse.");
     }
@@ -626,6 +630,10 @@ async function submitNewWarehouse() {
     await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
     document.getElementById('wh-modal').style.display = 'none';
     document.getElementById('wh-name-input').value = '';
+    document.getElementById('wh-manager-input').value = '';
+    document.getElementById('wh-contact-input').value = '';
+    document.getElementById('wh-email-input').value = '';
+    document.getElementById('wh-password-input').value = '';
 }
 
 async function createWarehouse(name, lat, lng, manager = '', contact = '', email = '', password = '') {
@@ -639,6 +647,7 @@ async function createWarehouse(name, lat, lng, manager = '', contact = '', email
             manager_password: password
         });
         loadMapData();
+        if (typeof loadDriversAndVehicles === 'function') loadDriversAndVehicles();
     } catch(e) {}
 }
 
@@ -655,6 +664,10 @@ async function adoptStrategicLocation() {
     if (name) {
         await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, manager, contact, email, password);
         document.getElementById('suggestion-modal').style.display = 'none';
+        document.getElementById('sug-manager').value = '';
+        document.getElementById('sug-contact').value = '';
+        document.getElementById('sug-email').value = '';
+        document.getElementById('sug-password').value = '';
     }
 }
 
@@ -672,6 +685,10 @@ async function stayWithManualLocation() {
     if (name) {
         await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
         document.getElementById('suggestion-modal').style.display = 'none';
+        document.getElementById('sug-manager').value = '';
+        document.getElementById('sug-contact').value = '';
+        document.getElementById('sug-email').value = '';
+        document.getElementById('sug-password').value = '';
     }
 }
 

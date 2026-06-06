@@ -616,11 +616,7 @@ def get_warehouses(company_id: Optional[str] = None, id: Optional[str] = None, x
         
     return warehouses_db.get_filtered({"company_id": target_company})
 
-@router.delete("/warehouses/{warehouse_id}")
-def delete_warehouse(warehouse_id: str):
-    if warehouses_db.delete(warehouse_id):
-        return {"message": "Warehouse deleted successfully"}
-    raise HTTPException(status_code=404, detail="Warehouse not found")
+
 
 @router.post("/alerts/{alert_id}/resolve")
 def resolve_alert(alert_id: str):
