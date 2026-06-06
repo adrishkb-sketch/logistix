@@ -1326,7 +1326,7 @@ class AutomatedControl {
         const registryKeys = Object.keys(this.registry);
         
         let html = `
-            <div id="voice-help-modal" class="glass-card notranslate" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:500px; max-width:95vw; padding:32px; box-shadow:0 25px 60px rgba(0,0,0,0.25); border:1px solid var(--primary); background:var(--card); color:var(--text);">
+            <div id="voice-help-modal" class="glass-card" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:500px; max-width:95vw; padding:32px; box-shadow:0 25px 60px rgba(0,0,0,0.25); border:1px solid var(--primary); background:var(--card); color:var(--text);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
                     <h2 style="margin:0; font-weight:800; color:var(--text);">${getTranslation('voice_help_title')}</h2>
                     <button onclick="window.logistixVoice.closeInstructions()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer; opacity:0.6;">✕</button>
@@ -1366,7 +1366,7 @@ class AutomatedControl {
                     const descKey = `voice_instr_${regEntry.desc}`;
                     html += `
                         <tr style="border-bottom:1px solid var(--border);">
-                            <td style="padding:12px; font-weight:bold; color:var(--primary); font-family:inherit;">${kwList.join(' / ')}</td>
+                            <td class="notranslate" style="padding:12px; font-weight:bold; color:var(--primary); font-family:inherit;">${kwList.join(' / ')}</td>
                             <td style="padding:12px; font-size:0.85rem; color:var(--muted);">${getTranslation(descKey)}</td>
                         </tr>
                     `;
