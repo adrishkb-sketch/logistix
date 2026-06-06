@@ -11,13 +11,50 @@ from datetime import datetime
 def save_and_compress_image(file_bytes: bytes, filename: str) -> str:
     import io
     from PIL import Image
-    
-    # base_dir is the project root
+
+    # Compress image in memory first
+    try:
+        img = Image.open(io.BytesIO(file_bytes))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        max_size = 800
+        if img.width > max_size or img.height > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        base_name, _ = os.path.splitext(filename)
+        optimized_filename = f"{base_name}.jpg"
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=60, optimize=True)
+        compressed_bytes = buf.getvalue()
+    except Exception as e:
+        print(f"[Image Compression] Failed: {e}. Using raw bytes.")
+        optimized_filename = filename
+        compressed_bytes = file_bytes
+
+    # PRIMARY: Upload to Supabase Storage (returns a real public HTTPS URL)
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    supabase_key = os.environ.get("SUPABASE_KEY", "")
+    if supabase_url and supabase_key:
+        try:
+            from supabase import create_client
+            sb = create_client(supabase_url, supabase_key)
+            object_path = f"verification-images/{optimized_filename}"
+            # upsert=True avoids errors on re-upload of same filename
+            sb.storage.from_("logistix-assets").upload(
+                object_path,
+                compressed_bytes,
+                {"content-type": "image/jpeg", "upsert": "true"}
+            )
+            public_url = sb.storage.from_("logistix-assets").get_public_url(object_path)
+            print(f"[Image Upload] Supabase Storage OK: {public_url}")
+            return public_url
+        except Exception as e:
+            print(f"[Image Upload] Supabase Storage failed: {e}. Falling back to local.")
+
+    # FALLBACK: Save locally (dev/offline mode only — not accessible on Vercel)
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     target_dir = os.path.join(base_dir, "data", "images")
     try:
         os.makedirs(target_dir, exist_ok=True)
-        # Verify write access by writing a temporary hidden file
         test_file = os.path.join(target_dir, ".write_test")
         with open(test_file, "w") as f:
             f.write("test")
@@ -25,34 +62,12 @@ def save_and_compress_image(file_bytes: bytes, filename: str) -> str:
     except (OSError, IOError):
         target_dir = "/tmp/data/images"
         os.makedirs(target_dir, exist_ok=True)
-    
-    try:
-        # Load image from bytes
-        img = Image.open(io.BytesIO(file_bytes))
-        
-        # Convert RGBA to RGB for optimized JPEG saving
-        if img.mode in ("RGBA", "P"):
-            img = img.convert("RGB")
-            
-        # Resize if width or height exceeds 800px
-        max_size = 800
-        if img.width > max_size or img.height > max_size:
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-            
-        # Enforce JPEG extension for maximum storage efficiency
-        base_name, _ = os.path.splitext(filename)
-        optimized_filename = f"{base_name}.jpg"
-        optimized_path = os.path.join(target_dir, optimized_filename)
-        
-        img.save(optimized_path, "JPEG", quality=60, optimize=True)
-        print(f"[Image Compression] Saved compressed image to: {optimized_path}")
-        return f"/images/{optimized_filename}"
-    except Exception as e:
-        print(f"[Image Compression] Failed: {e}. Saving raw bytes instead.")
-        raw_path = os.path.join(target_dir, filename)
-        with open(raw_path, "wb") as buffer:
-            buffer.write(file_bytes)
-        return f"/images/{filename}"
+
+    out_path = os.path.join(target_dir, optimized_filename)
+    with open(out_path, "wb") as f:
+        f.write(compressed_bytes)
+    print(f"[Image Compression] Saved locally to: {out_path}")
+    return f"/images/{optimized_filename}"
 
 router = APIRouter()
 shipments_db = JSONDatabase("shipments")
