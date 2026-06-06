@@ -186,6 +186,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (compIdDisplay && managerId) {
         compIdDisplay.innerText = managerId;
     }
+
+    // Display manager/company name
+    const mName = localStorage.getItem('manager_name') || (typeof getTranslation === 'function' ? getTranslation('manager') : 'Manager');
+    const nameEl = document.getElementById('manager-name');
+    if (nameEl) {
+        nameEl.innerText = mName;
+    }
 });
 
 // Shared simulation mode status
