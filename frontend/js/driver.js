@@ -551,7 +551,9 @@ async function loadMissions(autoStartNext = false) {
         // 2. SECURITY VERIFICATION CHECK
         const vStatus = me.verification_status || "unverified";
         const imgUrl = me.verification_image;
-        const isBrokenRelative = imgUrl && (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/'));
+        const isBrokenRelative = imgUrl && 
+            (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/')) && 
+            (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
         
         if (vStatus === "unverified" || (vStatus === "pending_manual" && (!imgUrl || isBrokenRelative))) {
             if (mainContent) mainContent.style.display = 'none';
