@@ -15,23 +15,47 @@
 
     // Load English translations dictionary for getTranslation shim
     let enTranslations = {};
+    let currentTranslations = {};
     const isRootFolder = !window.location.pathname.includes('/pages/');
     const pathPrefix = isRootFolder ? '' : '../';
-    try {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', `${pathPrefix}js/en.json`, false);
-        xhr.send(null);
-        if (xhr.status === 200) {
-            enTranslations = JSON.parse(xhr.responseText);
+
+    function loadTranslationsSync(lang) {
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `${pathPrefix}js/${lang}.json`, false);
+            xhr.send(null);
+            if (xhr.status === 200) {
+                return JSON.parse(xhr.responseText);
+            }
+        } catch (e) {
+            console.warn(`Failed to load ${lang}.json synchronously`, e);
         }
-    } catch (e) {
-        console.warn("Failed to load en.json synchronously, falling back to async fetch", e);
+        return null;
     }
-    if (Object.keys(enTranslations).length === 0) {
+
+    // Load English first
+    const loadedEn = loadTranslationsSync('en');
+    if (loadedEn) {
+        enTranslations = loadedEn;
+    } else {
         fetch(`${pathPrefix}js/en.json`)
             .then(res => res.json())
             .then(data => { enTranslations = data; })
             .catch(err => console.error("Async load of en.json failed", err));
+    }
+
+    // Load active language if not English
+    const savedLang = localStorage.getItem('app_lang') || 'en';
+    if (savedLang !== 'en') {
+        const loadedCurrent = loadTranslationsSync(savedLang);
+        if (loadedCurrent) {
+            currentTranslations = loadedCurrent;
+        } else {
+            fetch(`${pathPrefix}js/${savedLang}.json`)
+                .then(res => res.json())
+                .then(data => { currentTranslations = data; })
+                .catch(err => console.warn(`Async load of ${savedLang}.json failed`, err));
+        }
     }
 
     // ── Google Translate language code map ──────────────────────────────────
@@ -167,6 +191,25 @@
     window.setLanguage = function (lang) {
         localStorage.setItem('app_lang', lang);
         _applyGoogleTranslate(lang);
+        
+        // Dynamically load translation dictionary for getTranslation shim
+        if (lang !== 'en') {
+            const loadedCurrent = loadTranslationsSync(lang);
+            if (loadedCurrent) {
+                currentTranslations = loadedCurrent;
+            } else {
+                fetch(`${pathPrefix}js/${lang}.json`)
+                    .then(res => res.json())
+                    .then(data => { currentTranslations = data; })
+                    .catch(err => {
+                        currentTranslations = {};
+                        console.warn(`Async load of ${lang}.json failed`, err);
+                    });
+            }
+        } else {
+            currentTranslations = {};
+        }
+
         // Sync voice engine language if active
         if (window.logistixVoice && typeof window.logistixVoice.updateLanguage === 'function') {
             window.logistixVoice.updateLanguage();
@@ -179,10 +222,10 @@
 
     /**
      * getTranslation — compatibility shim so any remaining JS calls don't break.
-     * Returns the English key text as-is; Google Translate handles rendering.
+     * Returns the key translated into the selected language, falling back to English.
      */
     window.getTranslation = function (key) {
-        return enTranslations[key] || key;
+        return currentTranslations[key] || enTranslations[key] || key;
     };
 
     /**
