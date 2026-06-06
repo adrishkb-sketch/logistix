@@ -550,8 +550,10 @@ async function loadMissions(autoStartNext = false) {
 
         // 2. SECURITY VERIFICATION CHECK
         const vStatus = me.verification_status || "unverified";
+        const imgUrl = me.verification_image;
+        const isBrokenRelative = imgUrl && (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/'));
         
-        if (vStatus === "unverified") {
+        if (vStatus === "unverified" || (vStatus === "pending_manual" && (!imgUrl || isBrokenRelative))) {
             if (mainContent) mainContent.style.display = 'none';
             if (secControls) secControls.style.display = 'none';
             if (reportBtn) reportBtn.style.display = 'none';
@@ -560,7 +562,14 @@ async function loadMissions(autoStartNext = false) {
                 vUploadBox.style.display = 'block';
                 vPendingBox.style.display = 'none';
                 vNoVehicleBox.style.display = 'none';
-                vScreenMsg.innerText = getTranslation('v_verify_desc');
+                
+                if (vStatus === "pending_manual" && (!imgUrl || isBrokenRelative)) {
+                    vScreenMsg.innerHTML = `<span style="color:var(--danger); font-weight:bold;">⚠️ Previous upload was incomplete or invalid (image unavailable). Please re-upload your vehicle's number plate.</span>`;
+                } else if (me.verification_message) {
+                    vScreenMsg.innerHTML = `<span style="color:var(--warning); font-weight:bold;">❌ Verification failed: ${me.verification_message}. Please try again.</span>`;
+                } else {
+                    vScreenMsg.innerText = getTranslation('v_verify_desc');
+                }
             }
             return;
         } else if (vStatus === "pending_manual") {
@@ -1368,6 +1377,11 @@ function logout() {
 }
 
 window.onload = loadMissions;
+window.loadMissions = loadMissions;
+window.logout = logout;
+window.switchDriverTab = switchDriverTab;
+window.toggleDuty = typeof toggleDuty !== 'undefined' ? toggleDuty : undefined;
+window.toggleWatchSync = typeof toggleWatchSync !== 'undefined' ? toggleWatchSync : undefined;
 
 
 function openIncidentModal() {
