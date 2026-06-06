@@ -230,7 +230,7 @@ async function openLogsModal(shipmentId) {
                             ${log.reason ? `<div style="margin-top:5px; font-size:0.75rem; color:var(--text-muted); font-style:italic; border-top:1px solid rgba(255,255,255,0.03); padding-top:5px;">Note: ${log.reason}</div>` : ''}
                             ${log.photo_url ? `
                                 <div style="margin-top:10px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
-                                    <img src="${log.photo_url}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open('${log.photo_url}')">
+                                    <img src="${log.photo_url}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.zoomImage('${log.photo_url}')">
                                 </div>
                             ` : ''}
                         </div>

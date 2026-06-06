@@ -83,7 +83,7 @@ async function loadDriversAndVehicles() {
                     } else {
                         imgHtml = `<img src="${fullImgUrl}" 
                             style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:pointer;" 
-                            onclick="window.open('${fullImgUrl}', '_blank')"
+                            onclick="window.zoomImage('${fullImgUrl}')"
                             onerror="this.outerHTML='<div style=\\'padding:8px; background:rgba(239,68,68,0.1); border:1px solid var(--danger); border-radius:8px; font-size:0.75rem; color:var(--danger);\\'>⚠️ Image failed to load<br><small style=\\'opacity:0.7;\\'>Driver must re-upload</small></div>'"
                         >`;
                     }

@@ -36,6 +36,61 @@ function showStatusOverlay(message, duration = 4000) {
     }, duration);
 }
 
+window.zoomImage = function(src) {
+    if (!src || src === '#') return;
+    
+    let modal = document.getElementById('image-zoom-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'image-zoom-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+        `;
+        
+        modal.innerHTML = `
+            <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; justify-content: center; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                <img id="zoom-modal-img" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; border-radius: 12px;" />
+                <button style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onclick="window.closeZoomModal()">✕</button>
+            </div>
+        `;
+        
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal || e.target.tagName === 'BUTTON') {
+                window.closeZoomModal();
+            }
+        });
+        
+        document.body.appendChild(modal);
+    }
+    
+    const img = document.getElementById('zoom-modal-img');
+    img.src = src;
+    
+    modal.style.pointerEvents = 'auto';
+    modal.style.opacity = '1';
+};
+
+window.closeZoomModal = function() {
+    const modal = document.getElementById('image-zoom-modal');
+    if (modal) {
+        modal.style.opacity = '0';
+        modal.style.pointerEvents = 'none';
+    }
+};
+
 function showNotification(message, type = 'info') {
     const toast = document.createElement('div');
     toast.style.position = 'fixed';
@@ -1128,7 +1183,7 @@ function renderDriverMessages(msgs) {
             const isMe = m.sender_type === 'driver';
             let mediaHtml = '';
             if (m.media_type === 'image' && m.media_url) {
-                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:6px;display:block;cursor:pointer;" onclick="window.open('${m.media_url}')" alt="photo">`;
+                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:6px;display:block;cursor:pointer;" onclick="window.zoomImage('${m.media_url}')" alt="photo">`;
             } else if (m.media_type === 'audio' && m.media_url) {
                 mediaHtml = `<div class="audio-placeholder" data-src="${m.media_url}" data-accent="${isMe ? 'rgba(255,255,255,0.25)' : 'rgba(79,140,255,0.4)'}"></div>`;
             }

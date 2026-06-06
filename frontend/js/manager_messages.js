@@ -108,7 +108,7 @@ function renderChatWindow(conv) {
             const isMe = m.sender_type === 'manager';
             let mediaHtml = '';
             if (m.media_type === 'image' && m.media_url) {
-                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:8px;display:block;cursor:pointer;" onclick="window.open('${m.media_url}')" alt="photo">`;
+                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:8px;display:block;cursor:pointer;" onclick="window.zoomImage('${m.media_url}')" alt="photo">`;
             } else if (m.media_type === 'audio' && m.media_url) {
                 mediaHtml = `<div class="audio-placeholder" data-src="${m.media_url}" data-accent="${isMe ? 'rgba(255,255,255,0.25)' : 'rgba(79,140,255,0.4)'}"></div>`;
             }

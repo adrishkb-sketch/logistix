@@ -3439,7 +3439,7 @@ async function loadDriversAndVehicles() {
                     } else {
                         imgHtml = `<img src="${fullImgUrl}" 
                             style="max-height:80px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:pointer;" 
-                            onclick="window.open('${fullImgUrl}', '_blank')"
+                            onclick="window.zoomImage('${fullImgUrl}')"
                             onerror="this.outerHTML='<div style=\\'padding:8px; background:rgba(239,68,68,0.1); border:1px solid var(--danger); border-radius:8px; font-size:0.75rem; color:var(--danger);\\'>⚠️ Image failed to load<br><small style=\\'opacity:0.7;\\'>Driver must re-upload</small></div>'"
                         >`;
                     }
@@ -4458,7 +4458,7 @@ function renderChatWindow(conv) {
             const isMe = m.sender_type === 'manager';
             let mediaHtml = '';
             if (m.media_type === 'image' && m.media_url) {
-                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:8px;display:block;cursor:pointer;" onclick="window.open('${m.media_url}')" alt="photo">`;
+                mediaHtml = `<img src="${m.media_url}" style="max-width:100%;border-radius:10px;margin-top:8px;display:block;cursor:pointer;" onclick="window.zoomImage('${m.media_url}')" alt="photo">`;
             } else if (m.media_type === 'audio' && m.media_url) {
                 mediaHtml = `<div class="audio-placeholder" data-src="${m.media_url}" data-accent="${isMe ? 'rgba(255,255,255,0.25)' : 'rgba(79,140,255,0.4)'}"></div>`;
             }
@@ -4822,7 +4822,7 @@ async function openLogsModal(shipmentId) {
                             ${log.reason ? `<div style="margin-top:5px; font-size:0.75rem; color:var(--text-muted); font-style:italic; border-top:1px solid rgba(255,255,255,0.03); padding-top:5px;">Note: ${log.reason}</div>` : ''}
                             ${log.photo_url ? `
                                 <div style="margin-top:10px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
-                                    <img src="${log.photo_url}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.open('${log.photo_url}')">
+                                    <img src="${log.photo_url}" style="width:100%; display:block; cursor:zoom-in;" onclick="window.zoomImage('${log.photo_url}')">
                                 </div>
                             ` : ''}
                         </div>
