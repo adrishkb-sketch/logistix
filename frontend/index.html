@@ -3,10 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Logistix — Intelligent Logistics Platform</title>
+<meta name="description" content="Logistix brings AI-powered precision to every shipment. Predict delays, optimize routes, and eliminate chaos in your supply chain.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-<title>Logistix</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
 <style>
 :root {
@@ -17,7 +21,6 @@
     --card: rgba(255,255,255,0.05);
     --border: rgba(255,255,255,0.08);
 }
-
 body.light-mode {
     --bg: #f6f8fc;
     --text: #0f172a;
@@ -26,35 +29,22 @@ body.light-mode {
     --card: #ffffff;
     --border: rgba(0,0,0,0.08);
 }
-
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body, input, select, button, textarea {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
 body {
-    margin: 0;
-    font-family: 'Manrope', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     color: var(--text);
-    transition: 0.3s ease;
-
-    /* DARK MODE GRADIENT */
-    background: linear-gradient(
-        110deg,
-        #080d1a 0%,
-        #0f172a 45%,
-        #1e1b4b 100%
-    );
+    transition: background 0.4s ease, color 0.3s ease;
+    background: linear-gradient(110deg, #080d1a 0%, #0f172a 45%, #1e1b4b 100%);
     background-attachment: fixed;
+    overflow-x: hidden;
 }
-
-/* LIGHT MODE GRADIENT */
 body.light-mode {
-    background: linear-gradient(
-        110deg,
-        #f8fafc 0%,
-        #f1f5ff 45%,
-        #e0e7ff 100%
-    );
+    background: linear-gradient(110deg, #f8fafc 0%, #f1f5ff 45%, #e0e7ff 100%);
     background-attachment: fixed;
 }
-
-/* ===== BACKGROUND GLOW (KEEP SUBTLE) ===== */
 body::before {
     content: "";
     position: fixed;
@@ -63,348 +53,444 @@ body::before {
         radial-gradient(circle at 20% 20%, rgba(79,140,255,0.12), transparent),
         radial-gradient(circle at 80% 60%, rgba(99,102,241,0.08), transparent);
     z-index: -1;
+    pointer-events: none;
 }
 
-/* ===== HERO WITH YOUR IMAGES ===== */
+/* ── FLOATING CONTROLS ──────────────────────────────── */
+#landing-brand-container {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 38px;
+    width: 150px;
+}
+
+.lang-selector-wrap {
+    position: fixed;
+    top: 20px;
+    right: 120px;
+    z-index: 10002;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10002;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.light-mode #theme-toggle {
+    background: rgba(255,255,255,0.7);
+}
+#theme-toggle:hover {
+    border-color: var(--primary);
+    background: rgba(79,140,255,0.1);
+}
+
+/* Scroll effect - shrink and fade slightly when page is scrolled */
+body.scrolled #landing-brand-container {
+    top: 10px;
+    transform: scale(0.9);
+    opacity: 0.95;
+}
+body.scrolled .lang-selector-wrap {
+    top: 10px;
+    transform: scale(0.9);
+    opacity: 0.95;
+}
+body.scrolled #theme-toggle {
+    top: 10px;
+    transform: scale(0.9);
+    opacity: 0.95;
+}
+
+/* ── HERO ───────────────────────────────────────────── */
 .hero {
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-
-    /* DARK MODE IMAGE */
     background: url('dark_mode_bg.png') no-repeat center/cover;
     position: relative;
+    padding-top: 80px;
 }
-
-/* LIGHT MODE IMAGE */
 body.light-mode .hero {
     background: url('light_mode_bg.png') no-repeat center/cover;
 }
-
-/* SOFT OVERLAY (NOT GLOOMY) */
 .hero::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: rgba(10,15,30,0.35); /* lighter than before */
+    background: rgba(8, 13, 26, 0.42);
 }
-
 body.light-mode .hero::after {
-    background: rgba(255,255,255,0.55);
+    background: rgba(255,255,255,0.52);
 }
-
 .hero-content {
     text-align: center;
-    max-width: 720px;
+    max-width: 760px;
+    padding: 0 24px;
     position: relative;
     z-index: 2;
 }
 
-/* ===== HERO TEXT ===== */
-.hero h1 {
-    font-size: 3.8rem;
-    font-weight: 800;
-    margin-bottom: 20px;
-
-    background: linear-gradient(90deg, #ffffff, #4f8cff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-
-    text-shadow: 0 8px 30px rgba(0,0,0,0.4);
-}
-
-body.light-mode .hero h1 {
-    background: linear-gradient(90deg, #0f172a, #2563eb);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: none;
-}
-
-.hero p {
-    font-size: 1.15rem;
-    color: var(--muted);
-    line-height: 1.7;
-}
-
-/* ===== BUTTONS (FIXED VISIBILITY) ===== */
-.btn {
-    padding: 14px 28px;
-    border-radius: 12px;
-    font-weight: 600;
+/* Updates pill */
+.updates-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(79,140,255,0.1);
+    border: 1px solid rgba(79,140,255,0.2);
+    padding: 6px 16px;
+    border-radius: 30px;
+    margin-bottom: 28px;
     text-decoration: none;
-    display: inline-block;
-    margin: 10px;
-    transition: 0.25s ease;
+    transition: 0.3s;
+    animation: lx-fade-up 0.6s ease both;
+}
+.updates-pill:hover {
+    background: rgba(79,140,255,0.18);
+    border-color: rgba(79,140,255,0.4);
+    transform: translateY(-2px);
 }
 
-/* PRIMARY */
+/* Hero headline */
+.hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2.6rem, 7vw, 4.8rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    margin-bottom: 22px;
+    animation: lx-fade-up 0.7s ease 0.1s both;
+
+    background: linear-gradient(
+        135deg,
+        #ffffff 0%,
+        #c4d9ff 35%,
+        #818cf8 65%,
+        #c084fc 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+body.light-mode .hero h1 {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 40%, #4f46e5 80%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Hero subtitle */
+.hero-sub {
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+    margin-bottom: 36px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    animation: lx-fade-up 0.8s ease 0.2s both;
+}
+body.light-mode .hero-sub {
+    color: var(--muted);
+}
+
+/* Tagline row */
+.hero-tagline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+    animation: lx-fade-up 0.8s ease 0.25s both;
+}
+.hero-tagline-pill {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.04);
+}
+body.light-mode .hero-tagline-pill {
+    color: var(--muted);
+    border-color: rgba(0,0,0,0.1);
+    background: rgba(0,0,0,0.03);
+}
+
+/* CTA buttons */
+.hero-ctas {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: lx-fade-up 0.9s ease 0.3s both;
+}
+.btn {
+    padding: 14px 30px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    font-family: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.25s ease;
+    cursor: pointer;
+    border: none;
+    letter-spacing: -0.01em;
+}
 .btn-primary {
     background: linear-gradient(135deg, #4f8cff, #6366f1);
     color: #fff;
-    border: none;
-    box-shadow: 0 10px 25px rgba(79,140,255,0.3);
+    box-shadow: 0 10px 30px rgba(79,140,255,0.35);
 }
-
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 18px 40px rgba(79,140,255,0.45);
+    transform: translateY(-3px);
+    box-shadow: 0 18px 45px rgba(79,140,255,0.5);
 }
-
-/* OUTLINE */
 .btn-outline {
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.04);
+}
+body.light-mode .btn-outline {
+    border-color: rgba(0,0,0,0.12);
     color: var(--text);
-    background: rgba(255,255,255,0.02);
+    background: rgba(0,0,0,0.02);
 }
-
 .btn-outline:hover {
-    background: var(--card);
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(79,140,255,0.4);
+    transform: translateY(-2px);
 }
 
-/* ===== SECTIONS ===== */
+/* Scroll fade-up animation */
+@keyframes lx-fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SECTIONS ────────────────────────────────────────── */
 section {
     padding: 100px 6%;
 }
-
-/* ===== STATS ===== */
-.stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
-    text-align: center;
-}
-
-.stat h2 {
-    font-size: 2.6rem;
-    color: var(--primary);
-}
-
-/* ===== FEATURES ===== */
-.features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
-    gap: 30px;
-}
-
-.card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 30px;
-    transition: 0.3s;
-    backdrop-filter: blur(10px);
-}
-
-.card:hover {
-    transform: translateY(-8px);
-    border-color: var(--primary);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-}
-
-.card h3 {
-    margin: 10px 0;
-}
-
-.card p {
-    color: var(--muted);
-    line-height: 1.6;
-}
-
-/* ===== PLATFORM ===== */
-.platform-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
-    gap: 25px;
-}
-
-/* ===== MODAL ===== */
-/* ===== MODAL (PREMIUM GLASS) ===== */
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(8px);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    animation: fadeIn 0.25s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0 }
-    to { opacity: 1 }
-}
-
-.modal-box {
-    position: relative;
-
-    background: var(--card);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(20px);
-
-    padding: 32px;
-    border-radius: 18px;
-    width: 90%;
-    max-width: 420px;
-
-    box-shadow: 0 25px 60px rgba(0,0,0,0.4);
-
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* Title */
-.modal-box h2 {
-    margin-bottom: 20px;
-    font-size: 1.5rem;
-}
-
-/* Inputs */
-.modal-box input {
-    width: 100%;
-    padding: 12px 14px;
-    margin: 10px 0;
-
-    border-radius: 10px;
-    border: 1px solid var(--border);
-
-    background: rgba(255,255,255,0.05);
-    color: var(--text);
-
-    font-size: 0.95rem;
-    transition: 0.2s;
-}
-
-.modal-box input:focus {
-    border-color: var(--primary);
-    outline: none;
-}
-
-/* Light mode inputs */
-body.light-mode .modal-box input {
-    background: rgba(255,255,255,0.8);
-    color: #000000 !important;
-}
-
-/* Button spacing */
-.modal-box button {
-    width: 100%;
-    margin-top: 14px;
-}
-
-/* Close button */
-.modal-close {
-    position: absolute;
-    top: 14px;
-    right: 16px;
-    font-size: 1.1rem;
-    cursor: pointer;
-    opacity: 0.6;
-    transition: 0.2s;
-}
-
-.modal-close:hover {
-    opacity: 1;
-}
-}
-
-/* ===== INPUTS ===== */
-input {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-}
-
-/* ===== SCROLL ANIMATION ===== */
 .reveal {
     opacity: 0;
     transform: translateY(30px);
     transition: 0.6s ease;
 }
-
 .reveal.active {
     opacity: 1;
     transform: translateY(0);
 }
 
-/* ===== THEME BUTTON ===== */
-#theme-toggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 8px 14px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--card);
-    cursor: pointer;
-    z-index: 9999; /* 🔥 THIS FIXES EVERYTHING */
+/* ── STATS ────────────────────────────────────────────── */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    text-align: center;
+    gap: 20px;
 }
-.modal-close {
-    cursor: pointer;
-    font-size: 1.2rem;
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    opacity: 0.7;
-    transition: 0.2s;
+.stat h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.04em;
 }
-.modal-close:hover {
-    opacity: 1;
-    transform: scale(1.1);
-}
-    /* Fix theme toggle text visibility */
-#theme-toggle {
-    color: var(--text);
+.stat p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 4px;
 }
 
-    /* PIN Box System (OTP) */
+/* ── SECTION HEADINGS ─────────────────────────────────── */
+section h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    margin-bottom: 48px;
+    background: linear-gradient(135deg, var(--text), var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ── FEATURE CARDS ───────────────────────────────────── */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+}
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    font-size: 1.4rem;
+}
+.card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(79,140,255,0.3);
+    box-shadow: 0 24px 50px rgba(79,140,255,0.12);
+}
+.card h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    margin: 10px 0 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+}
+.card p {
+    color: var(--muted);
+    line-height: 1.65;
+    font-size: 0.9rem;
+}
+
+/* ── PLATFORM GRID ───────────────────────────────────── */
+.platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+.platform-grid .card {
+    cursor: pointer;
+}
+.platform-grid .card:hover h3 {
+    color: var(--primary);
+}
+
+/* ── MODAL ───────────────────────────────────────────── */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: lx-fade-up 0.2s ease;
+}
+.modal-box {
+    position: relative;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(24px);
+    padding: 36px;
+    border-radius: 22px;
+    width: 92%;
+    max-width: 420px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+}
+body.light-mode .modal-box {
+    background: rgba(255,255,255,0.96);
+    border-color: rgba(0,0,0,0.08);
+}
+.modal-box h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: none;
+    -webkit-text-fill-color: var(--text);
+}
+.modal-box input {
+    width: 100%;
+    padding: 12px 14px;
+    margin: 8px 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s;
+    outline: none;
+}
+.modal-box input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79,140,255,0.12);
+}
+body.light-mode .modal-box input {
+    background: rgba(0,0,0,0.03);
+    color: #0f172a;
+}
+.modal-box .btn {
+    width: 100%;
+    margin-top: 12px;
+    justify-content: center;
+}
+.modal-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: 0.2s;
+    color: var(--text);
+}
+.modal-close:hover { opacity: 1; transform: scale(1.1); }
+
+/* PIN row */
 .pin-row {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 12px !important;
-    justify-content: center !important;
-    align-items: center !important;
-    margin: 24px 0 !important;
-    width: 100% !important;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin: 20px 0;
 }
 .pin-box {
-    width: 52px !important;
-    height: 52px !important; /* Square */
-    border-radius: 12px !important; /* Curved edges */
-    border: 2px solid var(--border) !important;
-    background: rgba(255,255,255,0.05) !important;
-    color: var(--text) !important;
-    font-size: 1.5rem !important;
-    font-weight: 800 !important;
-    text-align: center !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    margin: 0 !important; /* IMPORTANT: Overrides .modal-box input margin */
-    padding: 0 !important;
-    display: inline-block !important;
-    outline: none !important;
-}
-body.light-mode .pin-box, body.light-mode input, body.light-mode select {
-    color: #000000 !important;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    font-size: 1.4rem;
+    font-weight: 800;
+    text-align: center;
+    outline: none;
+    transition: all 0.2s ease;
+    padding: 0;
+    font-family: inherit;
 }
 .pin-box:focus {
-    border-color: var(--primary) !important;
-    background: rgba(var(--primary-rgb, 79, 140, 255), 0.1) !important;
-    box-shadow: 0 0 15px rgba(var(--primary-rgb, 79, 140, 255), 0.3) !important;
-    transform: translateY(-3px);
+    border-color: var(--primary);
+    box-shadow: 0 0 12px rgba(79,140,255,0.25);
 }
+body.light-mode .pin-box { color: #0f172a; }
+
 select option {
     background-color: #0b1220;
     color: #ffffff;
@@ -413,23 +499,37 @@ body.light-mode select option {
     background-color: #ffffff;
     color: #0f172a;
 }
-@media (max-width: 768px) {
-    #theme-toggle {
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+    section { padding: 70px 5%; }
+    .hero-ctas { flex-direction: column; align-items: center; }
+    .btn { width: 100%; max-width: 320px; justify-content: center; }
+}
+@media (max-width: 480px) {
+    #landing-brand-container {
         top: 10px !important;
-        right: 10px !important;
-        padding: 6px 12px !important;
-        font-size: 0.75rem !important;
+        left: 10px !important;
+    }
+    #landing-brand-container .brand-logo {
+        width: 110px !important;
+        height: 28px !important;
     }
     .lang-selector-wrap {
         top: 10px !important;
-        right: 90px !important;
-        padding: 2px 6px !important;
+        right: 85px !important;
     }
-    .hero {
-        padding-top: 60px !important;
+    #theme-toggle {
+        top: 10px !important;
+        right: 10px !important;
+        padding: 6px 10px !important;
+        font-size: 0.75rem !important;
     }
-    .updates-pill {
-        margin-top: 60px !important;
+    
+    body.scrolled #landing-brand-container,
+    body.scrolled .lang-selector-wrap,
+    body.scrolled #theme-toggle {
+        transform: scale(0.85);
     }
 }
 </style>
@@ -437,197 +537,162 @@ body.light-mode select option {
 
 <body>
 
-<script src="js/translator.js"></script>
-<button id="theme-toggle" class="notranslate">🌙 Dark</button>
+<!-- Fixed Controls -->
+<button id="theme-toggle" style="position:fixed; top:20px; right:20px; z-index:9999; padding:8px 16px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); cursor:pointer; backdrop-filter:blur(10px);">🌙 Dark</button>
 
-<!-- Language Selector Dropdown -->
-<div class="glass-card lang-selector-wrap" style="position:fixed; top:20px; right:120px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; z-index:9999; backdrop-filter:blur(10px);">
+<div class="glass-card lang-selector-wrap" id="lang-selector" style="position:fixed; top:20px; right:120px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; z-index:9999; backdrop-filter:blur(10px);">
     <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
-    <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
-            <option value="en">English (EN)</option>
-            <option value="bn">বাংলা (BN)</option>
-            <option value="hi">हिंदी (HI)</option>
-            <option value="te">తెలుగు (TE)</option>
-            <option value="mr">मराठी (MR)</option>
-            <option value="ta">தமிழ் (TA)</option>
-            <option value="gu">ગુજરાતી (GU)</option>
-            <option value="kn">ಕನ್ನಡ (KN)</option>
-            <option value="or">ଓଡ଼ିଆ (OR)</option>
-            <option value="ml">മലയാളം (ML)</option>
-            <option value="pa">ਪੰਜਾਬੀ (PA)</option>
-            <option value="as">অসমীয়া (AS)</option>
-            <option value="mai">मैथिली (MAI)</option>
-            <option value="sat">संताली (SAT)</option>
-            <option value="ks">کٲشُر (KS)</option>
-                        <option value="ur">اردو (UR)</option>
-                        <option value="ne">नेपाली (NE)</option>
-                        <option value="sa">संस्कृतम् (SA)</option>
-                        <option value="sd">سنڌي (SD)</option>
-                        <option value="gom">कोंकणी (GOM)</option>
-                        <option value="doi">डोगरी (DOI)</option>
-                        <option value="mni">মৈতৈলোন (MNI)</option>
-        </select>
+    <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;" aria-label="Language">
+        <option value="en">English (EN)</option>
+        <option value="bn">বাংলা (BN)</option>
+        <option value="hi">हिंदी (HI)</option>
+        <option value="te">తెలుగు (TE)</option>
+        <option value="mr">मराठी (MR)</option>
+        <option value="ta">தமிழ் (TA)</option>
+        <option value="gu">ગુજરાતી (GU)</option>
+        <option value="kn">ಕನ್ನಡ (KN)</option>
+        <option value="or">ଓଡ଼ିଆ (OR)</option>
+        <option value="ml">മലയാളം (ML)</option>
+        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+        <option value="as">অসমীয়া (AS)</option>
+        <option value="mai">मैथिली (MAI)</option>
+        <option value="sat">संताली (SAT)</option>
+        <option value="ks">کٲشُر (KS)</option>
+        <option value="ur">اردو (UR)</option>
+        <option value="ne">नेपाली (NE)</option>
+        <option value="sa">संस्कृतम् (SA)</option>
+        <option value="sd">سنڌي (SD)</option>
+        <option value="gom">कोंकणी (GOM)</option>
+        <option value="doi">डोगरी (DOI)</option>
+        <option value="mni">মৈতৈলোন (MNI)</option>
+    </select>
 </div>
 
-<!-- HERO -->
+<script src="js/translator.js"></script>
+<script src="js/logo.js"></script>
+
+
+<!-- ── HERO ───────────────────────────────────────────── -->
 <div class="hero">
-<div class="hero-content reveal">
-<a href="pages/updates.html" style="display:inline-flex; align-items:center; background:rgba(79,140,255,0.1); border:1px solid rgba(79,140,255,0.2); padding:6px 16px; border-radius:30px; margin-bottom:25px; text-decoration:none; transition:0.3s;" class="updates-pill">
-    <span style="background:var(--primary); color:#fff; font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:10px; margin-right:10px; text-transform:uppercase;">New</span>
-    <span style="color:var(--primary); font-size:0.85rem; font-weight:700;" data-i18n="nav_updates">Updates History 📜</span>
-</a>
-<h1 data-i18n="hero_title">🚚 Logistics, finally working.</h1>
-<p data-i18n="hero_subtitle">
-Predict delays. Optimize routes. Eliminate chaos.
-Logistix brings intelligence to every movement in your supply chain.
-</p>
+    <div class="hero-content reveal">
 
-<a href="#platform" class="btn btn-primary" data-i18n="btn_get_started">Get Started →</a>
-<a href="#features" class="btn btn-outline" data-i18n="btn_explore">Explore Features</a>
-</div>
+        <a href="pages/updates.html" class="updates-pill">
+            <span style="background:var(--primary); color:#fff; font-size:0.6rem; font-weight:800; padding:3px 9px; border-radius:10px; margin-right:10px; text-transform:uppercase; letter-spacing:0.05em;">New</span>
+            <span style="color:var(--primary); font-size:0.82rem; font-weight:700;" data-i18n="nav_updates">Update History 📜</span>
+        </a>
+
+        <h1 data-i18n="hero_title">Logistics with<br>Automated Precision</h1>
+
+        <div class="hero-tagline">
+            <span class="hero-tagline-pill">Predict Delays</span>
+            <span style="color:rgba(255,255,255,0.25); font-size:0.75rem;">•</span>
+            <span class="hero-tagline-pill">Optimize Routes</span>
+            <span style="color:rgba(255,255,255,0.25); font-size:0.75rem;">•</span>
+            <span class="hero-tagline-pill">Prevent Chaos</span>
+        </div>
+
+        <p class="hero-sub" data-i18n="hero_subtitle">
+            Logistix brings intelligence to every movement in your supply chain.
+        </p>
+
+        <div class="hero-ctas">
+            <a href="#platform" class="btn btn-primary" data-i18n="btn_get_started">Get Started →</a>
+            <a href="#features" class="btn btn-outline" data-i18n="btn_explore">Explore Features</a>
+        </div>
+    </div>
 </div>
 
-<!-- STATS -->
+<!-- ── STATS ───────────────────────────────────────────── -->
 <section class="stats reveal">
-<div class="stat"><h2>1500+</h2><p data-i18n="stat_companies">Companies</p></div>
-<div class="stat"><h2>12400+</h2><p data-i18n="stat_drivers">Drivers</p></div>
-<div class="stat"><h2>98%</h2><p data-i18n="stat_ontime">On-Time</p></div>
-<div class="stat"><h2>50K+</h2><p data-i18n="stat_trips">Trips</p></div>
+    <div class="stat"><h2>1500+</h2><p data-i18n="stat_companies">Companies</p></div>
+    <div class="stat"><h2>12400+</h2><p data-i18n="stat_drivers">Drivers</p></div>
+    <div class="stat"><h2>98%</h2><p data-i18n="stat_ontime">On-Time</p></div>
+    <div class="stat"><h2>50K+</h2><p data-i18n="stat_trips">Trips</p></div>
 </section>
 
-<!-- FEATURES -->
+<!-- ── FEATURES ─────────────────────────────────────────── -->
 <section id="features" class="reveal">
-<h2 style="text-align:center;" data-i18n="why_logistix">Why Logistix?</h2>
-
-<div class="features-grid">
-
-<div class="card">
-❄️
-<h3 data-i18n="feature_cold_title">Cold Chain Intelligence</h3>
-<p data-i18n="feature_cold_desc">Prevent spoilage with automated systems predicting decay using real-time environmental data.</p>
-</div>
-
-<div class="card">
-🤖
-<h3 data-i18n="feature_dispatch_title">Smart Dispatch</h3>
-<p data-i18n="feature_dispatch_desc">Auto-assign drivers using fatigue, performance, and proximity intelligence.</p>
-</div>
-
-<div class="card">
-📦
-<h3 data-i18n="feature_load_title">Load Optimization</h3>
-<p data-i18n="feature_load_desc">Reduce trips and maximize space with intelligent cargo planning.</p>
-</div>
-
-<div class="card">
-🔐
-<h3 data-i18n="feature_secure_title">Secure Delivery</h3>
-<p data-i18n="feature_secure_desc">OTP-based verification ensures safe, fraud-proof deliveries.</p>
-</div>
-
-</div>
+    <h2 style="text-align:center;" data-i18n="why_logistix">Why Logistix?</h2>
+    <div class="features-grid">
+        <div class="card">❄️<h3 data-i18n="feature_cold_title">Cold Chain Intelligence</h3><p data-i18n="feature_cold_desc">Prevent spoilage with automated systems predicting decay using real-time environmental data.</p></div>
+        <div class="card">🤖<h3 data-i18n="feature_dispatch_title">Smart Dispatch</h3><p data-i18n="feature_dispatch_desc">Auto-assign drivers using fatigue, performance, and proximity intelligence.</p></div>
+        <div class="card">📦<h3 data-i18n="feature_load_title">Load Optimization</h3><p data-i18n="feature_load_desc">Reduce trips and maximize space with intelligent cargo planning.</p></div>
+        <div class="card">🔐<h3 data-i18n="feature_secure_title">Secure Delivery</h3><p data-i18n="feature_secure_desc">OTP-based verification ensures safe, fraud-proof deliveries.</p></div>
+    </div>
 </section>
 
-<!-- PLATFORM -->
+<!-- ── PLATFORM ──────────────────────────────────────────── -->
 <section id="platform" class="reveal">
-<h2 style="text-align:center;" data-i18n="enter_platform">Enter Platform</h2>
-
-<div class="platform-grid">
-
-<div class="card" onclick="openModal('manager')">
-🏢 <h3 data-i18n="platform_manager">Manager</h3>
-<p data-i18n="platform_manager_desc">Control operations and fleet in real time.</p>
-</div>
-
-<div class="card" onclick="openModal('wh-manager')">
-🏗️ <h3 data-i18n="platform_wh_manager">Warehouse Manager</h3>
-<p data-i18n="platform_wh_manager_desc">Manage inventory and operations for a specific hub.</p>
-</div>
-
-<div class="card" onclick="openModal('driver')">
-🚛 <h3 data-i18n="platform_driver">Driver</h3>
-<p data-i18n="platform_driver_desc">Access tasks and track deliveries.</p>
-</div>
-
-<a href="pages/track.html" style="text-decoration:none;color:inherit;">
-<div class="card">
-📦 <h3 data-i18n="platform_track">Track Order</h3>
-<p data-i18n="platform_track_desc">Track shipments securely using OTP login.</p>
-</div>
-</a>
-
-<div class="card" onclick="openModal('signup')">
-🚀 <h3 data-i18n="platform_join">Join</h3>
-<p data-i18n="platform_join_desc">Register your logistics company.</p>
-</div>
-
-</div>
+    <h2 style="text-align:center;" data-i18n="enter_platform">Enter Platform</h2>
+    <div class="platform-grid">
+        <div class="card" onclick="openModal('manager')">🏢<h3 data-i18n="platform_manager">Manager</h3><p data-i18n="platform_manager_desc">Control operations and fleet in real time.</p></div>
+        <div class="card" onclick="openModal('wh-manager')">🏗️<h3 data-i18n="platform_wh_manager">Warehouse Manager</h3><p data-i18n="platform_wh_manager_desc">Manage inventory and operations for a specific hub.</p></div>
+        <div class="card" onclick="openModal('driver')">🚛<h3 data-i18n="platform_driver">Driver</h3><p data-i18n="platform_driver_desc">Access tasks and track deliveries.</p></div>
+        <a href="pages/track.html" style="text-decoration:none;color:inherit;">
+            <div class="card">📦<h3 data-i18n="platform_track">Track Order</h3><p data-i18n="platform_track_desc">Track shipments securely using OTP login.</p></div>
+        </a>
+        <div class="card" onclick="openModal('signup')">🚀<h3 data-i18n="platform_join">Join</h3><p data-i18n="platform_join_desc">Register your logistics company.</p></div>
+    </div>
 </section>
 
-<!-- MODAL -->
+<!-- ── MODAL ─────────────────────────────────────────────── -->
 <div id="modal" class="modal">
-<div class="modal-box" id="modal-content"></div>
+    <div class="modal-box" id="modal-content"></div>
 </div>
 
-<!-- SCRIPTS -->
+<!-- ── SCRIPTS ───────────────────────────────────────────── -->
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-    /* ===== MODAL ===== */
-    function openModal(type){
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+        document.body.classList.toggle('scrolled', window.scrollY > 40);
+    }, { passive: true });
+
+    // Modal
+    function openModal(type) {
         const modal = document.getElementById('modal');
         const content = document.getElementById('modal-content');
+        let html = `<span class="modal-close" id="modal-close-btn">✖</span>`;
 
-        let html = `<div class="modal-close" id="modal-close-btn">✖</div>`;
-
-        if(type === 'manager'){
-            html += `
-            <form id="manager-login-form">
+        if (type === 'manager') {
+            html += `<form id="manager-login-form">
                 <h2 data-i18n="modal_manager_title">🏢 Manager Login</h2>
                 <input id="manager-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required>
                 <input id="manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
                 <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
-            </form>
-            `;
-        }
-        else if(type === 'wh-manager'){
-            html += `
-            <form id="wh-manager-login-form">
+            </form>`;
+        } else if (type === 'wh-manager') {
+            html += `<form id="wh-manager-login-form">
                 <h2 data-i18n="modal_wh_manager_title">🏗️ Warehouse Manager Login</h2>
                 <input id="wh-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
                 <input id="wh-manager-email" type="email" placeholder="Manager Email" data-i18n-placeholder="placeholder_email" required>
                 <input id="wh-manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
                 <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
-            </form>
-            `;
-        }
-        else if(type === 'driver'){
-            html += `
-            <form id="driver-login-form">
+            </form>`;
+        } else if (type === 'driver') {
+            html += `<form id="driver-login-form">
                 <h2 data-i18n="modal_driver_title">🚛 Driver Login</h2>
                 <input id="driver-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
                 <input id="driver-id" type="text" placeholder="Driver ID" data-i18n-placeholder="placeholder_driver_id" required>
                 <input id="driver-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
                 <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
-            </form>
-            `;
-        }
-        else {
-            html += `
-            <form id="signup-form">
+            </form>`;
+        } else {
+            html += `<form id="signup-form">
                 <h2 data-i18n="modal_register_title">🚀 Register Company</h2>
                 <div id="step-1">
                     <input id="signup-name" type="text" placeholder="Company Name" data-i18n-placeholder="placeholder_company_name" required>
                     <input id="signup-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required oninput="validateSignupEmail(this.value)">
-                    <small id="email-warning" style="color:#ff4f4f; display:none; margin-top:-5px; font-size:0.75rem;" data-i18n="error_email_registered">🚨 Email already registered!</small>
+                    <small id="email-warning" style="color:#ff4f4f;display:none;font-size:0.75rem;" data-i18n="error_email_registered">🚨 Email already registered!</small>
                     <input id="signup-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
                     <button id="signup-otp-btn" type="button" class="btn btn-primary" onclick="requestOTP()" data-i18n="btn_request_otp">Request OTP</button>
                 </div>
                 <div id="step-2" style="display:none;">
-                    <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
+                    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
                     <div class="pin-row" id="signup-pin-row">
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
@@ -637,81 +702,54 @@ document.addEventListener("DOMContentLoaded", () => {
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                     </div>
                     <button type="submit" class="btn btn-primary" data-i18n="btn_verify_register">Verify & Register</button>
-                    <p id="resend-timer-container" style="text-align:center; margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
-                        <span data-i18n="didnt_receive_code">Didn't receive code?</span> <span id="resend-link" style="color:var(--primary); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
+                    <p id="resend-timer-container" style="text-align:center;margin-top:15px;font-size:0.85rem;color:var(--muted);">
+                        <span data-i18n="didnt_receive_code">Didn't receive code?</span>
+                        <span id="resend-link" style="color:var(--primary);cursor:pointer;font-weight:bold;opacity:0.5;pointer-events:none;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
                     </p>
                 </div>
-            </form>
-            `;
+            </form>`;
         }
 
         content.innerHTML = html;
         modal.style.display = 'flex';
-        
-        // 🔥 Update translations for the newly injected HTML
-        if(typeof updatePageTranslations === 'function') updatePageTranslations();
-
-        /* 🔥 attach close button AFTER render */
-        const closeBtn = document.getElementById('modal-close-btn');
-        if(closeBtn){
-            closeBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // prevents conflict with overlay click
-                closeModal();
-            });
-        }
+        if (typeof updatePageTranslations === 'function') updatePageTranslations();
+        document.getElementById('modal-close-btn')?.addEventListener('click', e => { e.stopPropagation(); closeModal(); });
     }
 
-    function closeModal(){
+    function closeModal() {
         document.getElementById('modal').style.display = 'none';
     }
 
     window.openModal = openModal;
 
-    /* ===== CLICK OUTSIDE TO CLOSE (FIXED) ===== */
-    window.addEventListener('click', (e) => {
-        const modal = document.getElementById('modal');
-        if(e.target === modal){
-            closeModal();
-        }
+    window.addEventListener('click', e => {
+        if (e.target === document.getElementById('modal')) closeModal();
     });
 
-    /* ===== SCROLL REVEAL ===== */
+    // Scroll reveal
     const reveals = document.querySelectorAll('.reveal');
-
-    function revealOnScroll(){
+    function revealOnScroll() {
         reveals.forEach(el => {
-            const top = el.getBoundingClientRect().top;
-            if(top < window.innerHeight - 100){
-                el.classList.add('active');
-            }
+            if (el.getBoundingClientRect().top < window.innerHeight - 80) el.classList.add('active');
         });
     }
-
-    window.addEventListener('scroll', revealOnScroll);
+    window.addEventListener('scroll', revealOnScroll, { passive: true });
     revealOnScroll();
 
-    /* ===== THEME ===== */
+    // Theme
     const btn = document.getElementById('theme-toggle');
-
-    if(localStorage.getItem('theme') === 'light'){
+    if (localStorage.getItem('theme') === 'light') {
         document.body.classList.add('light-mode');
         btn.innerText = '☀️ Light';
     } else {
         btn.innerText = '🌙 Dark';
     }
-
     btn.addEventListener('click', () => {
         document.body.classList.toggle('light-mode');
-
-        if(document.body.classList.contains('light-mode')){
-            localStorage.setItem('theme','light');
-            btn.innerText = '☀️ Light';
-        } else {
-            localStorage.setItem('theme','dark');
-            btn.innerText = '🌙 Dark';
-        }
+        const isLight = document.body.classList.contains('light-mode');
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        btn.innerText = isLight ? '☀️ Light' : '🌙 Dark';
     });
-
 });
 </script>
 </body>

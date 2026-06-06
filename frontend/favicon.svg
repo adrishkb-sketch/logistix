@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <!-- Rounded Square with Gradient -->
+  <rect x="2" y="2" width="36" height="36" rx="9" fill="url(#lx-fav-grad)"/>
+
+  <!-- Truck Icon Group -->
+  <g>
+    <!-- Cabin -->
+    <path d="M25 15H29.5C30.3284 15 31 15.6716 31 16.5V23.5C31 24.0523 30.5523 24.5 30 24.5H24V16C24 15.4477 24.4477 15 25 15Z" fill="#ffffff"/>
+    <!-- Windshield -->
+    <rect x="26.5" y="16.5" width="3" height="4" rx="0.5" fill="rgba(180,220,255,0.45)"/>
+    <!-- Truck body / cargo box -->
+    <rect x="8" y="11" width="15" height="13.5" rx="2" fill="#ffffff"/>
+    <!-- Package cross lines on cargo box -->
+    <path d="M11 17.5H20M15.5 13V22" stroke="url(#lx-fav-grad)" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
+    <!-- Wheels -->
+    <circle cx="13" cy="25.5" r="3" fill="#1e293b" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="13" cy="25.5" r="1" fill="#ffffff"/>
+    <circle cx="26" cy="25.5" r="3" fill="#1e293b" stroke="#ffffff" stroke-width="1"/>
+    <circle cx="26" cy="25.5" r="1" fill="#ffffff"/>
+    <!-- Headlight -->
+    <circle cx="31.5" cy="20" r="1" fill="#fde68a"/>
+  </g>
+
+  <defs>
+    <linearGradient id="lx-fav-grad" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4f8cff"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1676,3 +1676,153 @@ body.light-mode .brand-logo {
         margin: 0 0 4px 0 !important;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGISTIX BRAND LOGO SYSTEM — applies to every page via logo.js
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Google Fonts — Space Grotesk for premium branding */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* Override global font to Plus Jakarta Sans — modern, clean, premium */
+* {
+    font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+}
+
+/* ── Logo wrapper ───────────────────────────────── */
+.lx-logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    cursor: default;
+    user-select: none;
+}
+
+/* ── Animated SVG icon ──────────────────────────── */
+.lx-logo-icon {
+    width: 40px;
+    height: 28px;
+    flex-shrink: 0;
+    animation: lx-truck-float 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(79, 140, 255, 0.4));
+    transition: filter 0.3s ease, width 0.3s cubic-bezier(0.4, 0, 0.2, 1), height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lx-logo-wrap:hover .lx-logo-icon {
+    filter: drop-shadow(0 0 14px rgba(99, 102, 241, 0.7));
+}
+
+@keyframes lx-truck-float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-3px); }
+}
+
+/* Speed lines animation */
+.lx-speed-line {
+    animation: lx-speed 1.8s ease-in-out infinite;
+    transform-origin: right center;
+}
+
+@keyframes lx-speed {
+    0%, 100% { opacity: 0.3; transform: scaleX(0.4); }
+    50%       { opacity: 0.9; transform: scaleX(1); }
+}
+
+/* ── Wordmark ────────────────────────────────────── */
+.lx-wordmark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    position: relative;
+    transition: font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Animated gradient text */
+    background: linear-gradient(
+        110deg,
+        #4f8cff 0%,
+        #818cf8 40%,
+        #c4b5fd 60%,
+        #4f8cff 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: lx-shimmer 4s linear infinite;
+}
+
+@keyframes lx-shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+/* Light mode wordmark */
+body.light-mode .lx-wordmark {
+    background: linear-gradient(
+        110deg,
+        #2563eb 0%,
+        #4f46e5 40%,
+        #7c3aed 60%,
+        #2563eb 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: lx-shimmer 4s linear infinite;
+}
+
+/* ── Sidebar-specific sizing ─────────────────────── */
+.sidebar .lx-logo-icon {
+    width: 36px;
+    height: 25px;
+}
+
+.sidebar .lx-wordmark {
+    font-size: 1.15rem;
+}
+
+.sidebar-logo .lx-logo-icon {
+    width: 34px;
+    height: 23px;
+}
+
+.sidebar-logo .lx-wordmark {
+    font-size: 1.1rem;
+}
+
+/* Remove legacy gradient from sidebar h2 */
+.sidebar h2 {
+    background: none !important;
+    -webkit-background-clip: unset !important;
+    -webkit-text-fill-color: unset !important;
+    background-clip: unset !important;
+    padding-left: 0 !important;
+}
+
+/* ── Animated SVG Logo Styles ─────────────────────── */
+.lx-logo-svg {
+    overflow: visible;
+}
+
+.lx-svg-text {
+    fill: url(#lx-grad-text-dark);
+    transition: fill 0.3s ease;
+}
+
+body.light-mode .lx-svg-text {
+    fill: url(#lx-grad-text-light);
+}
+
+.lx-svg-truck {
+    animation: lx-truck-bounce 1.5s ease-in-out infinite;
+    transform-origin: 19px 19px;
+}
+
+@keyframes lx-truck-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-1px); }
+}
+
