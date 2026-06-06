@@ -252,6 +252,7 @@ function updateMapTheme(mapInstance) {
 }
 
 function initMap() {
+    if (!document.getElementById('map')) return;
     // Default to a central location (e.g., India center)
     map = L.map('map').setView([20.5937, 78.9629], 5);
     updateMapTheme(map);
@@ -3966,6 +3967,12 @@ function initWeatherMap() {
     // Make simulation panels draggable
     makeDraggable(document.getElementById('active-sims-container'));
     makeDraggable(document.getElementById('simulation-panel'));
+
+    setTimeout(() => {
+        if (weatherMap) {
+            weatherMap.invalidateSize(true);
+        }
+    }, 300);
 }
 
 function makeDraggable(el) {
@@ -4599,6 +4606,7 @@ window.onload = () => {
     loadInsights();
     setTimeout(() => {
         if(map) map.invalidateSize(true);
+        if(weatherMap) weatherMap.invalidateSize(true);
     }, 500);
 };
 
