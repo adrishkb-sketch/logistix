@@ -155,8 +155,7 @@ window.showSection = function(id) {
     });
 };
 
-// Highlight sidebar link on load
-document.addEventListener('DOMContentLoaded', () => {
+function initBase() {
     const currentFilename = window.location.pathname.split('/').pop();
     const pageToSection = {
         'manager_analytics.html': 'analytics',
@@ -193,7 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nameEl) {
         nameEl.innerText = mName;
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBase);
+} else {
+    initBase();
+}
 
 // Shared simulation mode status
 window.isSimulationMode = false;

@@ -4371,7 +4371,7 @@ async function loadMessages() {
         
         // Only verified drivers should appear in the messages list
         const verifiedDrivers = globalDrivers.filter(d => d.verification_status === "verified");
-        const filteredDrivers = verifiedDrivers.filter(d => d.name.toLowerCase().includes(searchQuery));
+        const filteredDrivers = verifiedDrivers.filter(d => d.name && typeof d.name === 'string' && d.name.toLowerCase().includes(searchQuery));
         
         const driverListContainer = document.getElementById('chat-driver-list');
         if (!driverListContainer) return;
@@ -4391,35 +4391,58 @@ async function loadMessages() {
         });
 
         // Render Sidebar (filtered)
-        driverListContainer.innerHTML = filteredDrivers.map(d => {
-            const conv = conversations[d.id] || { messages: [], lastMessage: null };
-            const isSelected = selectedDriverChatId === d.id;
-            const lastText = conv.lastMessage ? (conv.lastMessage.content || "[Media]") : "No messages yet";
-            const lastTime = conv.lastMessage ? new Date(conv.lastMessage.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
-            
-            return `
-                <div class="chat-driver-item ${isSelected ? 'active' : ''}" 
-                     onclick="selectDriverChat('${d.id}')"
-                     style="padding:16px 24px; cursor:pointer; border-bottom:1px solid var(--border); transition:0.2s; background:${isSelected ? 'rgba(79, 140, 255, 0.1)' : 'transparent'};">
-                    <div style="display:flex; gap:12px; align-items:center;">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
-                        <div style="flex:1; overflow:hidden;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                                <b style="font-size:0.9rem; color:${isSelected ? 'var(--primary)' : 'var(--text)'}">${d.name}</b>
-                                <span style="font-size:0.65rem; color:var(--muted);">${lastTime}</span>
+        if (filteredDrivers.length === 0) {
+            if (verifiedDrivers.length === 0) {
+                driverListContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">No verified drivers found.</div>`;
+            } else {
+                driverListContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">No drivers match the search query.</div>`;
+            }
+        } else {
+            driverListContainer.innerHTML = filteredDrivers.map(d => {
+                const conv = conversations[d.id] || { messages: [], lastMessage: null };
+                const isSelected = selectedDriverChatId === d.id;
+                const lastText = conv.lastMessage ? (conv.lastMessage.content || "[Media]") : "No messages yet";
+                
+                let lastTime = "";
+                if (conv.lastMessage && conv.lastMessage.created_at) {
+                    try {
+                        const parsedDate = new Date(conv.lastMessage.created_at);
+                        if (!isNaN(parsedDate.getTime())) {
+                            lastTime = parsedDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        }
+                    } catch (timeErr) {
+                        console.warn("Error parsing message timestamp:", timeErr);
+                    }
+                }
+                
+                return `
+                    <div class="chat-driver-item ${isSelected ? 'active' : ''}" 
+                         onclick="selectDriverChat('${d.id}')"
+                         style="padding:16px 24px; cursor:pointer; border-bottom:1px solid var(--border); transition:0.2s; background:${isSelected ? 'rgba(79, 140, 255, 0.1)' : 'transparent'};">
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <b style="font-size:0.9rem; color:${isSelected ? 'var(--primary)' : 'var(--text)'}">${d.name}</b>
+                                    <span style="font-size:0.65rem; color:var(--muted);">${lastTime}</span>
+                                </div>
+                                <p style="margin:0; font-size:0.75rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lastText}</p>
                             </div>
-                            <p style="margin:0; font-size:0.75rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lastText}</p>
                         </div>
                     </div>
-                </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
+        }
 
         if (selectedDriverChatId) {
             renderChatWindow(conversations[selectedDriverChatId]);
         }
     } catch(e) {
         console.error("Error loading messages:", e);
+        const driverListContainer = document.getElementById('chat-driver-list');
+        if (driverListContainer) {
+            driverListContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger); font-size:0.85rem;">⚠️ Failed to load drivers: ${e.message || e}</div>`;
+        }
     }
 }
 
