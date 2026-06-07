@@ -1663,6 +1663,81 @@ window.toggleManualOverride = function() {
     }
 };
 
+window.renderEslLedger = async function(s) {
+    const lockAnim = document.getElementById('escrow-lock-anim');
+    const statusText = document.getElementById('escrow-status-text');
+    const blocksContainer = document.getElementById('escrow-blocks');
+    if (!lockAnim || !statusText || !blocksContainer) return;
+
+    // SLA Heuristics: SLA violated if delay > 30 minutes
+    const delay = s.performance_stats?.delay_mins || 0;
+    const isDelayed = delay > 30;
+    const isDelivered = s.status === 'delivered';
+    const isSlaViolated = isDelayed;
+
+    if (isDelivered) {
+        if (isSlaViolated) {
+            lockAnim.innerHTML = '🔒';
+            lockAnim.style.color = 'var(--danger)';
+            statusText.innerHTML = `<span style="color:var(--danger)">🚨 SLA VIOLATED (Delay: ${delay}m). Escrow Locked (Payout Frozen).</span>`;
+        } else {
+            lockAnim.innerHTML = '🔓';
+            lockAnim.style.color = '#10b981';
+            statusText.innerHTML = `<span style="color:#10b981">✅ SLA MET. Cryptographic Escrow Released (Payout Settled).</span>`;
+        }
+    } else {
+        lockAnim.innerHTML = '🔒';
+        lockAnim.style.color = '#3b82f6';
+        statusText.innerHTML = `<span style="color:#3b82f6">⏳ Shipment In Transit. Escrow Funds Safely Locked.</span>`;
+    }
+
+    // Helper function for SHA-256
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    const genesisText = `GenesisBlock-${s.id}-${s.created_at || ''}`;
+    const h0 = await sha256(genesisText);
+    
+    const dispatchText = `DispatchBlock-${s.assigned_driver_id || 'unassigned'}-${h0}`;
+    const h1 = await sha256(dispatchText);
+
+    const telemetryText = `TelemetryBlock-${s.current_location?.lat || '0'}-${s.current_location?.lng || '0'}-${h1}`;
+    const h2 = await sha256(telemetryText);
+
+    const settlementText = `SettlementBlock-${s.payment_status || 'unpaid'}-${h2}`;
+    const h3 = await sha256(settlementText);
+
+    const blocks = [
+        { name: '0. Genesis', desc: 'Created & Logged', hash: h0, time: s.created_at ? new Date(s.created_at).toLocaleString() : 'N/A' },
+        { name: '1. Dispatch', desc: `Assigned Driver ID: ${s.assigned_driver_id ? s.assigned_driver_id.substring(0,8) : 'None'}`, hash: h1, time: s.created_at ? new Date(s.created_at).toLocaleString() : 'N/A' },
+        { name: '2. Telemetry', desc: 'Route Trajectory Checkpoint', hash: h2, time: 'Live Updates Active' }
+    ];
+
+    if (isDelivered) {
+        blocks.push({
+            name: '3. Settlement',
+            desc: isSlaViolated ? 'Escrow Held (SLA breach)' : 'Funds Disbursed to Driver Wallet',
+            hash: h3,
+            time: 'Finalized'
+        });
+    }
+
+    blocksContainer.innerHTML = blocks.map(b => `
+        <div style="font-family:monospace; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.05); padding:8px; border-radius:6px; font-size:0.75rem; display:flex; flex-direction:column; gap:2px;">
+            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                <span style="color:var(--primary);">${b.name}</span>
+                <span style="color:var(--text-muted); font-size:0.7rem;">${b.time}</span>
+            </div>
+            <div style="color:var(--text); font-size:0.75rem;">${b.desc}</div>
+            <div style="color:var(--accent); font-size:0.65rem; word-break:break-all; opacity:0.8;">Hash: ${b.hash}</div>
+        </div>
+    `).join('');
+};
+
 // Open details modal
 window.openShipmentDetailModal = function(id) {
     const s = globalShipments.find(ship => ship.id === id);
@@ -1817,10 +1892,36 @@ window.openShipmentDetailModal = function(id) {
                     `).join('')}
                 </div>
             </div>`;
-        }
     }
 
+    // Add SLA Escrow Ledger Section
+    contentHtml += `
+        <div class="intel-block" style="margin-top:20px; border-top:4px solid #3b82f6; background:rgba(59, 130, 246, 0.02); padding: 15px; border-radius: 12px; border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <label style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase;">🔒 SLA Cryptographic Escrow Ledger</label>
+                <div id="escrow-lock-anim" style="font-size:1.5rem; filter: drop-shadow(0 0 8px currentColor);"></div>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:15px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                <div id="escrow-status-text" style="font-size:0.85rem; font-weight:bold;">Generating Ledger blocks...</div>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:800; text-transform:uppercase;">Ledger Chain Blocks (Tamper-Proof SHA-256)</div>
+                <div id="escrow-blocks" style="display:flex; flex-direction:column; gap:6px;">
+                    <!-- Blocks injected here -->
+                </div>
+            </div>
+        </div>
+    `;
+
     document.getElementById('sd-content').innerHTML = contentHtml;
+
+    setTimeout(() => {
+        if (window.renderEslLedger) {
+            window.renderEslLedger(s);
+        }
+    }, 100);
 
     // Check for calamity weather safety alert conditions
     const affectedAlert = (window.globalActiveAlerts || []).find(al => al.shipment_id === s.id);

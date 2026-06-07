@@ -192,8 +192,284 @@ async function resolveAlert(id) {
     loadInsights();
 }
 
+let esgMapInstance = null;
+let esgDataGlobal = null;
+
+async function loadEsgData() {
+    try {
+        const companyId = localStorage.getItem('manager_id');
+        const data = await apiCall(`/manager/analytics/esg?company_id=${companyId}`);
+        esgDataGlobal = data;
+
+        // Update elements
+        document.getElementById('esg-offset-weight').innerText = `${data.offsets_accumulated_kg.toLocaleString()} kg`;
+        document.getElementById('esg-fuel-saved').innerText = `${data.fuel_saved_liters.toLocaleString()} L`;
+        document.getElementById('esg-green-pct').innerText = `${data.green_fleet_pct}%`;
+
+        // Render ESG Map
+        if (document.getElementById('esg-map')) {
+            if (!esgMapInstance) {
+                esgMapInstance = L.map('esg-map', { zoomControl: false }).setView([22.59, 88.40], 12);
+                updateMapTheme(esgMapInstance);
+            } else {
+                esgMapInstance.eachLayer(layer => {
+                    if (layer instanceof L.Polyline) {
+                        esgMapInstance.removeLayer(layer);
+                    }
+                });
+            }
+
+            // Draw standard route (solid orange)
+            const standardPoly = L.polyline(data.standard_route, {
+                color: '#ff9a00',
+                weight: 5,
+                opacity: 0.85
+            }).addTo(esgMapInstance);
+
+            // Draw eco-optimized route (glowing green line)
+            const ecoPoly = L.polyline(data.eco_route, {
+                color: '#10b981',
+                weight: 6,
+                opacity: 0.95,
+                dashArray: '10, 10'
+            }).addTo(esgMapInstance);
+
+            // Fit map boundaries
+            const group = new L.featureGroup([standardPoly, ecoPoly]);
+            esgMapInstance.fitBounds(group.getBounds(), { padding: [20, 20] });
+        }
+    } catch(err) {
+        console.error("ESG Load failed:", err);
+    }
+}
+
+function downloadGreenCertificate() {
+    if (!esgDataGlobal) {
+        alert("ESG analytics data not loaded yet.");
+        return;
+    }
+
+    const companyName = localStorage.getItem('company_name') || "Logistix Partner";
+    const integrityHash = esgDataGlobal.cryptographic_hash;
+    const offsetWeight = esgDataGlobal.offsets_accumulated_kg;
+    const fuelSaved = esgDataGlobal.fuel_saved_liters;
+    const greenPct = esgDataGlobal.green_fleet_pct;
+    const printDate = new Date().toLocaleDateString('en-IN', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    const certWindow = window.open('', '_blank', 'width=800,height=600');
+    certWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Green Logistics Certificate - ${companyName}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+                body {
+                    font-family: 'Outfit', sans-serif;
+                    background: #090d16;
+                    color: #e2e8f0;
+                    margin: 0;
+                    padding: 40px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                }
+                .certificate {
+                    background: radial-gradient(circle at 50% 50%, #111827, #030712);
+                    border: 8px double #10b981;
+                    border-radius: 24px;
+                    padding: 50px;
+                    max-width: 700px;
+                    width: 100%;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    text-align: center;
+                    position: relative;
+                }
+                .header {
+                    font-size: 2.5rem;
+                    font-weight: 800;
+                    color: #10b981;
+                    margin-bottom: 5px;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                }
+                .subtitle {
+                    font-size: 1.1rem;
+                    color: #94a3b8;
+                    margin-bottom: 30px;
+                    letter-spacing: 1px;
+                }
+                .recipient-title {
+                    font-size: 1rem;
+                    color: #64748b;
+                    text-transform: uppercase;
+                    margin-bottom: 5px;
+                }
+                .recipient-name {
+                    font-size: 1.8rem;
+                    font-weight: 600;
+                    color: #ffffff;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid rgba(16, 185, 129, 0.2);
+                    display: inline-block;
+                    padding-bottom: 10px;
+                    min-width: 300px;
+                }
+                .description {
+                    font-size: 1.05rem;
+                    line-height: 1.8;
+                    color: #cbd5e1;
+                    margin-bottom: 40px;
+                    max-width: 550px;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 20px;
+                    margin-bottom: 40px;
+                }
+                .stat-box {
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(16, 185, 129, 0.2);
+                    border-radius: 16px;
+                    padding: 15px;
+                }
+                .stat-val {
+                    font-size: 1.4rem;
+                    font-weight: 800;
+                    color: #10b981;
+                }
+                .stat-lbl {
+                    font-size: 0.75rem;
+                    color: #94a3b8;
+                    margin-top: 5px;
+                    text-transform: uppercase;
+                }
+                .footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
+                    margin-top: 50px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.05);
+                    padding-top: 20px;
+                    font-size: 0.8rem;
+                    color: #64748b;
+                }
+                .signature {
+                    text-align: left;
+                }
+                .hash-box {
+                    font-family: monospace;
+                    background: rgba(0, 0, 0, 0.4);
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                    max-width: 250px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-size: 0.7rem;
+                }
+                @media print {
+                    body {
+                        background: #ffffff;
+                        color: #000000;
+                    }
+                    .certificate {
+                        background: #ffffff;
+                        border-color: #047857;
+                        color: #000000;
+                        box-shadow: none;
+                    }
+                    .recipient-name {
+                        color: #000000;
+                        border-bottom-color: #047857;
+                    }
+                    .stat-box {
+                        background: #f0fdf4;
+                        border-color: #a7f3d0;
+                    }
+                    .stat-val {
+                        color: #047857;
+                    }
+                    .stat-lbl {
+                        color: #374151;
+                    }
+                    .description {
+                        color: #1f2937;
+                    }
+                    .hash-box {
+                        background: #f3f4f6;
+                        color: #4b5563;
+                        border-color: #e5e7eb;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="certificate">
+                <div style="font-size: 3rem; margin-bottom: 15px;">🌳</div>
+                <div class="header">Eco-Offset Certificate</div>
+                <div class="subtitle">Green Logistics Verification Ledger</div>
+                
+                <div class="recipient-title">Honoring</div>
+                <div class="recipient-name">${companyName}</div>
+                
+                <div class="description">
+                    This document verifies that standard logistical freight lanes have been optimized using 
+                    <b>Logistix Green Routing Heuristics</b> to bypass high-congestion, steep-gradient, and high-idle sectors, 
+                    resulting in measurable reduction of atmospheric greenhouse gas emissions.
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-val">${offsetWeight} kg</div>
+                        <div class="stat-lbl">CO2 Offset</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val">${fuelSaved} L</div>
+                        <div class="stat-lbl">Fuel Saved</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val">${greenPct}%</div>
+                        <div class="stat-lbl">Eco Route Share</div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <div class="signature">
+                        <b>LOGISTIX GREEN AUDIT</b><br>
+                        Verification Date: ${printDate}
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 5px; text-transform:uppercase; font-size: 0.65rem;">Cryptographic Ledger Hash</div>
+                        <div class="hash-box" title="${integrityHash}">${integrityHash}</div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `);
+    certWindow.document.close();
+}
+window.downloadGreenCertificate = downloadGreenCertificate;
+window.loadEsgData = loadEsgData;
+
 async function initPage() {
     loadInsights();
+    loadEsgData();
 }
 
 document.addEventListener('DOMContentLoaded', initPage);

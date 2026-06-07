@@ -376,12 +376,14 @@
 <th data-i18n="manager_contact">Manager / Contact</th>
 <th data-i18n="th_manager_email">Email</th>
 <th data-i18n="th_manager_password">Password</th>
+<th>Congestion Level</th>
+<th>Diurnal Forecast</th>
 <th data-i18n="th_location">Location</th>
 <th data-i18n="th_action">Action</th>
 </tr>
 </thead>
 <tbody id="warehouses-table-body">
-<tr><td colspan="7" data-i18n="no_warehouses" style="text-align:center;">No warehouses deployed yet.</td></tr>
+<tr><td colspan="9" data-i18n="no_warehouses" style="text-align:center;">No warehouses deployed yet.</td></tr>
 </tbody>
 </table>
 </div>
@@ -421,6 +423,26 @@
 </main>
 </div>
 <div id="alert-container"></div>
+
+<!-- Diurnal Congestion Forecast Modal -->
+<div class="glass-card modal-glass" id="congestion-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:550px; max-width:90vw; padding:30px; border:1px solid var(--primary); box-shadow: 0 40px 80px rgba(0,0,0,0.3);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="margin:0; color:var(--primary);">📈 24h Diurnal Load Forecast: <span id="congestion-wh-name"></span></h3>
+        <button onclick="document.getElementById('congestion-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">×</button>
+    </div>
+    <p class="subtitle" style="margin-bottom:15px; font-size:0.85rem;">Heuristic Diurnal Peak Projection + Live Inbound ETA routing factors (₹0 Cost calculation).</p>
+    <div style="background:rgba(255,255,255,0.03); padding:15px; border-radius:12px; margin-bottom:20px; font-size:0.85rem; border: 1px solid var(--border);">
+        <p style="margin-bottom:8px;"><b>Mitigation / Advice:</b> <span id="congestion-advice" style="color:var(--warning); font-weight:bold;">None</span></p>
+        <p style="margin:0;"><b>Active Inbound Segments:</b> <span id="congestion-incoming-count" style="font-weight:bold;">0</span></p>
+    </div>
+    <div style="height: 250px; width: 100%; position: relative; margin-bottom: 10px;">
+        <canvas id="congestion-chart"></canvas>
+    </div>
+    <div style="margin-top:20px; text-align:right;">
+        <button class="btn-primary" onclick="document.getElementById('congestion-modal').style.display='none'" style="width:auto; padding:8px 20px;">Close Chart</button>
+    </div>
+</div>
+
 <!-- Manual Assignment Modal -->
 <div class="glass-card modal-glass" id="manual-assign-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:500px; max-width:90vw; padding:30px; border:1px solid rgba(255,255,255,0.1);">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">

@@ -205,7 +205,7 @@ async function loadMapData(retryCount = 0) {
     try {
         const companyId = localStorage.getItem('manager_id');
         const [warehouses, allLeaves] = await Promise.all([
-            apiCall(`/manager/warehouses?company_id=${companyId}`),
+            apiCall(`/manager/warehouses/congestion?company_id=${companyId}`),
             apiCall(`/manager/warehouses/leave-requests?company_id=${companyId}`).catch(() => [])
         ]);
         
@@ -248,7 +248,6 @@ async function loadMapData(retryCount = 0) {
 
     } catch(e) {
         console.error("Map Load Error:", e);
-        // Retry logic: if the server is reloading, try again in 1 second (up to 3 times)
         if (typeof retryCount === 'number' && retryCount < 3) {
             console.log(`Retrying loadMapData in 1s (attempt ${retryCount + 1})...`);
             setTimeout(() => loadMapData(retryCount + 1), 1000);
@@ -261,7 +260,7 @@ async function loadWarehousesList(warehouses) {
     if (!tbody) return;
     
     if (warehouses.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${getTranslation('no_warehouses')}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">${getTranslation('no_warehouses')}</td></tr>`;
         return;
     }
     
@@ -276,6 +275,13 @@ async function loadWarehousesList(warehouses) {
     tbody.innerHTML = limited.map(w => {
         const isOnLeave = activeLeaves.find(l => l.warehouse_id === w.id);
         const rowStyle = isOnLeave ? 'background:rgba(239, 68, 68, 0.05); border-left:4px solid var(--danger);' : '';
+        
+        // Extract congestion parameters
+        const incomingCount = w.incoming_count || 0;
+        const capacity = w.capacity || 5;
+        const congestionPercentage = w.congestion_percentage || 0;
+        const barColor = congestionPercentage > 90 ? '#ef4444' : (congestionPercentage > 70 ? '#f59e0b' : '#10b981');
+        
         return `
         <tr id="row-wh-${w.id}" style="${rowStyle}">
             <td style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${w.id.substring(0,8)}</td>
@@ -295,6 +301,22 @@ async function loadWarehousesList(warehouses) {
                     <button onclick="toggleWhPass('${w.id}')" style="background:none; border:none; cursor:pointer; padding:0; font-size:1rem;">👁️</button>
                 </div>
             </td>
+            <td>
+                <div style="display:flex; flex-direction:column; gap:4px; min-width:120px; padding-top:4px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
+                        <span style="color:var(--text-muted);">${incomingCount}/${capacity} inbound</span>
+                        <span style="font-weight:bold; color:${barColor};">${congestionPercentage}%</span>
+                    </div>
+                    <div style="width:100%; height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; border: 1px solid rgba(255,255,255,0.04);">
+                        <div style="width:${congestionPercentage}%; height:100%; background:linear-gradient(90deg, ${barColor} 0%, #3b82f6 100%); transition:width 0.5s ease;"></div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <button class="btn-primary btn-outline" style="padding:6px 12px; font-size:0.75rem; display:flex; align-items:center; gap:4px; width:auto;" onclick="showCongestionForecast('${w.id}')">
+                    📊 <span>Forecast</span>
+                </button>
+            </td>
             <td>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}</td>
             <td>
                 <div style="display:flex; gap:8px;">
@@ -308,6 +330,91 @@ async function loadWarehousesList(warehouses) {
 
     renderTableControls('warehouses', warehouses.length, limit, 'refreshWarehousesTable');
 }
+
+let congestionChartInstance = null;
+
+function showCongestionForecast(whId) {
+    const wh = (globalWarehouses || []).find(w => w.id === whId);
+    if (!wh) return;
+
+    document.getElementById('congestion-wh-name').innerText = wh.name;
+    document.getElementById('congestion-incoming-count').innerText = wh.incoming_count || 0;
+    
+    const adviceEl = document.getElementById('congestion-advice');
+    adviceEl.innerText = wh.mitigation_advice || "Operations Normal (Optimal Capacity)";
+    adviceEl.style.color = wh.needs_mitigation ? "var(--danger)" : "var(--success)";
+
+    document.getElementById('congestion-modal').style.display = 'block';
+
+    const ctx = document.getElementById('congestion-chart').getContext('2d');
+    if (congestionChartInstance) {
+        congestionChartInstance.destroy();
+    }
+
+    const labels = wh.forecast.map(f => f.hour);
+    const dataLoads = wh.forecast.map(f => f.predicted_load);
+    const dataCongestion = wh.forecast.map(f => f.predicted_congestion);
+
+    congestionChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Predicted Congestion',
+                data: dataCongestion,
+                borderColor: '#4f8cff',
+                backgroundColor: 'rgba(79, 140, 255, 0.15)',
+                borderWidth: 2.5,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 2,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.parsed.y;
+                            const idx = context.dataIndex;
+                            const load = dataLoads[idx];
+                            return ` Congestion: ${val}% (Load: ${load}/${wh.capacity || 5})`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        callback: function(value) { return value + '%'; }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        maxTicksLimit: 8
+                    }
+                }
+            }
+        }
+    });
+}
+window.showCongestionForecast = showCongestionForecast;
 
 function locateWarehouse(id) {
     const marker = markers.find(m => m.whId === id);

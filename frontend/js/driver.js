@@ -998,6 +998,7 @@ async function loadMissions(autoStartNext = false) {
         const v_id = me.assigned_vehicle_id;
         const vehicles = await apiCall(`/manager/vehicles?company_id=${companyId}`);
         const myVehicle = v_id ? vehicles.find(v => v.id === v_id) : null;
+        window.currentVehicleObj = myVehicle;
 
         if (me.is_fit === false || (myVehicle && myVehicle.is_operational === false)) {
             if (mainContent) mainContent.style.display = 'none';
@@ -3454,3 +3455,34 @@ function updateWeatherStrip(stops) {
     else if (weather === 'Fog') tempEl.innerText = '15°C';
     else tempEl.innerText = '25°C';
 }
+
+window.toggleHUDMirror = function() {
+    const activeTab = document.getElementById('active-tab');
+    if (!activeTab) return;
+    activeTab.classList.toggle('hud-mirrored');
+    
+    if (!document.getElementById('hud-mirror-style')) {
+        const style = document.createElement('style');
+        style.id = 'hud-mirror-style';
+        style.innerHTML = `
+            .hud-mirrored {
+                transform: scaleX(-1) !important;
+                filter: FlipH;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    const btn = document.getElementById('hud-mirror-btn');
+    if (btn) {
+        if (activeTab.classList.contains('hud-mirrored')) {
+            btn.style.background = 'var(--accent)';
+            btn.style.color = '#000';
+            btn.innerText = '📺 HUD Mirrored';
+        } else {
+            btn.style.background = 'transparent';
+            btn.style.color = 'var(--text)';
+            btn.innerText = '📺 HUD Mirror';
+        }
+    }
+};

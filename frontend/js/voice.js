@@ -180,6 +180,16 @@ class AutomatedControl {
                 role: "driver",
                 desc: "sync_watch",
                 action: () => { if (typeof toggleWatchSync === 'function') toggleWatchSync(); }
+            },
+            "status_check": {
+                role: "driver",
+                desc: "status_check",
+                action: () => this.announceDriverStatus()
+            },
+            "food_check": {
+                role: "driver",
+                desc: "food_check",
+                action: () => this.triggerDhabaSearch()
             }
         };
 
@@ -229,7 +239,13 @@ class AutomatedControl {
                 "stop": "stop_listening",
                 "halt": "stop_listening",
                 "duty": "toggle_duty",
-                "watch": "sync_watch"
+                "watch": "sync_watch",
+                "report status": "status_check",
+                "status report": "status_check",
+                "telemetry status": "status_check",
+                "find dhabas": "food_check",
+                "find food": "food_check",
+                "food points": "food_check"
             },
             hi: {
                 "समस्या": "report_issue",
@@ -284,7 +300,13 @@ class AutomatedControl {
                 "रुक": "stop_listening",
                 "ड्यूटी": "toggle_duty",
                 "घड़ी": "sync_watch",
-                "सिंक": "sync_watch"
+                "सिंक": "sync_watch",
+                "स्थिति रिपोर्ट": "status_check",
+                "स्थिति कैसी है": "status_check",
+                "रिपोर्ट बताओ": "status_check",
+                "ढाबा खोजें": "food_check",
+                "खाना कहां है": "food_check",
+                "भोजन गृह": "food_check"
             },
             bn: {
                 "সমস্যা": "report_issue",
@@ -331,7 +353,12 @@ class AutomatedControl {
                 "থাম": "stop_listening",
                 "ডিউটি": "toggle_duty",
                 "ঘড়ি": "sync_watch",
-                "সিঙ্ক": "sync_watch"
+                "সিঙ্ক": "sync_watch",
+                "অবস্থা কেমন": "status_check",
+                "স্ট্যাটাস রিপোর্ট": "status_check",
+                "রিপোর্ট করো": "status_check",
+                "খাবার জায়গা": "food_check",
+                "খাবার কোথায়": "food_check"
             },
             ur: {
                 "مسئلہ": "report_issue",
@@ -1134,6 +1161,63 @@ class AutomatedControl {
 
         this.recognition.onend = () => { if (this.isListening) this.recognition.start(); };
         this.recognition.onerror = () => { this.isListening = false; this.updateUI(); };
+    }
+
+    speak(enText, hiText, bnText) {
+        window.speechSynthesis.cancel();
+        const lang = this.currentLang;
+        let text = enText;
+        if (lang === 'hi') text = hiText;
+        else if (lang === 'bn') text = bnText;
+
+        const langMap = { 'en': 'en-IN', 'hi': 'hi-IN', 'bn': 'bn-IN' };
+        const voiceLang = langMap[lang] || 'en-US';
+
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.lang = voiceLang;
+        msg.rate = 0.95;
+
+        let voices = window.speechSynthesis.getVoices();
+        let bestVoice = voices.find(v => v.lang === voiceLang);
+        if (bestVoice) msg.voice = bestVoice;
+
+        window.speechSynthesis.speak(msg);
+    }
+
+    announceDriverStatus() {
+        const driver = window.currentDriverObj;
+        const vehicle = window.currentVehicleObj;
+        
+        if (!driver) {
+            this.speak("Driver profile not loaded yet.", "ड्राइवर प्रोफाइल लोड नहीं हुआ है।", "ड्राइवर প্রোফাইল লোড হয়নি।");
+            return;
+        }
+        
+        const fatigue = Math.round(driver.fatigue_score || 0);
+        const safety = Math.round(driver.safety_rating || 5);
+        const health = vehicle ? Math.round(vehicle.vehicle_health_score || 100) : 100;
+        
+        const enText = `Driver status report: Your fatigue score is ${fatigue} percent. Safety rating is ${safety} stars. Vehicle health is ${health} percent.`;
+        const hiText = `ड्राइवर स्थिति रिपोर्ट: आपकी थकान का स्कोर ${fatigue} प्रतिशत है। सुरक्षा रेटिंग ${safety} स्टार है। वाहन का स्वास्थ्य ${health} प्रतिशत है।`;
+        const bnText = `ড্রাইভার স্ট্যাটাস রিপোর্ট: আপনার ক্লান্তি স্কোর ${fatigue} শতাংশ। নিরাপত্তা রেটিং ${safety} স্টার। গাড়ির স্বাস্থ্য ${health} শতাংশ।`;
+        
+        this.speak(enText, hiText, bnText);
+    }
+
+    triggerDhabaSearch() {
+        const btn = document.getElementById('poi-btn-food');
+        if (btn) {
+            if (typeof togglePOILayer === 'function') {
+                togglePOILayer('food');
+                const isFoodActive = activePoiTypes.has('food');
+                const enText = isFoodActive ? "Dhabas and food points are now highlighted on your map." : "Food layer hidden.";
+                const hiText = isFoodActive ? "ढाबा और भोजन स्थान आपके नक्शे पर चिह्नित कर दिए गए हैं।" : "भोजन स्तर हटा दिया गया है।";
+                const bnText = isFoodActive ? "খাবারের জায়গা এবং ধাবাগুলো ম্যাপে চিহ্নিত করা হয়েছে।" : "খাবারের লেয়ার লুকানো হয়েছে।";
+                this.speak(enText, hiText, bnText);
+            }
+        } else {
+            this.speak("Food search controls are not available on this screen.", "इस स्क्रीन पर भोजन खोज नियंत्रण उपलब्ध नहीं हैं।", "এই স্ক্রিনে খাবারের জায়গা খোঁজার বোতাম পাওয়া যায়নি।");
+        }
     }
 
     updateLanguage() {

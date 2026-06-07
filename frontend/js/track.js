@@ -393,7 +393,7 @@ async function viewOrder(id) {
         }).join('');
 
         showPanel('detail');
-        initMap(s, dynamicEta, trackingData.vehicle_type);
+        initMap(s, dynamicEta, trackingData.vehicle_type, trackingData.legs || []);
     } catch (e) {
         console.error(e);
         alert(getTranslation('failed_load_details'));
@@ -404,13 +404,21 @@ let trackMap = null;
 let trackMarker = null;
 let vehicleAnimationInterval = null;
 
-async function initMap(shipment, dynamicEta, vehicleType) {
+async function initMap(shipment, dynamicEta, vehicleType, legs = []) {
     if (vehicleAnimationInterval) {
         clearInterval(vehicleAnimationInterval);
         vehicleAnimationInterval = null;
     }
 
-    const loc = shipment.current_location || shipment.pickup;
+    let loc = shipment.current_location || shipment.pickup;
+    let activeLeg = null;
+    if (legs && legs.length > 0) {
+        activeLeg = legs.find(l => l.status === 'in_transit' || l.status === 'assigned') || legs.find(l => l.status !== 'delivered');
+        if (activeLeg) {
+            loc = activeLeg.current_location || activeLeg.pickup;
+        }
+    }
+
     if (!trackMap) {
         const mapContainer = document.getElementById('track-map');
         if (!mapContainer) return;
@@ -464,7 +472,19 @@ async function initMap(shipment, dynamicEta, vehicleType) {
         // Fetch OSRM route path
         let routeCoords = [];
         try {
-            const url = `https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${shipment.drop.lng},${shipment.drop.lat}?overview=full&geometries=geojson`;
+            let coordString = `${loc.lng},${loc.lat}`;
+            if (legs && legs.length > 0 && activeLeg) {
+                const remainingLegs = legs.filter(l => l.leg_order >= activeLeg.leg_order).sort((a,b) => a.leg_order - b.leg_order);
+                remainingLegs.forEach(l => {
+                    if (l.drop && l.drop.lng) {
+                        coordString += `;${l.drop.lng},${l.drop.lat}`;
+                    }
+                });
+            } else {
+                coordString += `;${shipment.drop.lng},${shipment.drop.lat}`;
+            }
+            
+            const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
             const res = await fetch(url);
             const json = await res.json();
             if (json.routes && json.routes[0]) {
@@ -475,7 +495,20 @@ async function initMap(shipment, dynamicEta, vehicleType) {
         }
 
         // Draw path line (using OSRM path or fallback straight line)
-        const pathLine = routeCoords.length > 0 ? routeCoords : [[loc.lat, loc.lng], [shipment.drop.lat, shipment.drop.lng]];
+        let pathLine;
+        if (routeCoords.length > 0) {
+            pathLine = routeCoords;
+        } else {
+            pathLine = [[loc.lat, loc.lng]];
+            if (legs && legs.length > 0 && activeLeg) {
+                const remainingLegs = legs.filter(l => l.leg_order >= activeLeg.leg_order).sort((a,b) => a.leg_order - b.leg_order);
+                remainingLegs.forEach(l => {
+                    pathLine.push([l.drop.lat, l.drop.lng]);
+                });
+            } else {
+                pathLine.push([shipment.drop.lat, shipment.drop.lng]);
+            }
+        }
         L.polyline(pathLine, {color: 'var(--primary)', weight: 3, opacity: 0.8}).addTo(trackMap);
 
         // Animate marker along the path if in transit

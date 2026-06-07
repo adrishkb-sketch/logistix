@@ -123,7 +123,18 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
             continue
         calamities = ["cyclone", "flood", "heatwave", "earthquake", "hail", "riot", "storm"]
         c_type = str(cell.get("type", "")).lower()
-        if not any(c in c_type for c in calamities):
+        c_severity = str(cell.get("severity", "")).lower()
+        is_simulation = cell.get("is_simulation", False)
+        
+        # Don't divert randomly; only trigger if it is an actual disaster or critical event
+        is_actual_calamity = False
+        if any(c in c_type for c in ["cyclone", "flood", "earthquake", "riot"]):
+            is_actual_calamity = True
+        elif c_severity == "critical" or is_simulation:
+            if any(c in c_type for c in ["storm", "hail", "heatwave"]):
+                is_actual_calamity = True
+                
+        if not is_actual_calamity:
             continue
             
         intersects = False
@@ -322,7 +333,19 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
                 
         # Attempt assignment
         assignment_failed = False
+        orig_vehicle_id = shipment.get("assigned_vehicle_id")
         for leg in new_legs:
+            if leg["leg_order"] == 1:
+                leg["assigned_driver_id"] = orig_driver_id
+                leg["assigned_vehicle_id"] = orig_vehicle_id
+                leg["status"] = "in_transit"
+                leg["stage"] = "Diverting to Safe Hub"
+                leg["pickup_code"] = shipment.get("pickup_code")
+                leg["delivery_code"] = shipment.get("delivery_code")
+                leg["delivery_otp"] = shipment.get("delivery_otp")
+                leg["current_location"] = curr_loc
+                continue
+                
             assign = auto_assign_shipment(leg)
             if not assign or "error" in assign:
                 assignment_failed = True
@@ -353,6 +376,8 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
         parent["route_type"] = "multi-leg"
         parent["status"] = "split"
         parent["stage"] = f"Diverted: Safe Hub ({safe_wh['name']})"
+        parent["assigned_driver_id"] = None
+        parent["assigned_vehicle_id"] = None
         
         log_msg = (
             f"🚨 AI CALAMITY DIVERT: Deadline endangered by {calamity_type}. Shipment automatically diverted "
