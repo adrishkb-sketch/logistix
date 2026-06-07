@@ -253,6 +253,20 @@ setTimeout(window.checkSimulationStatus, 1000);
 // Global background intervals for message notifications
 let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count') || '-1');
 
+// Initialize lastMsgCount if not set to prevent showing old messages as new
+if (lastMsgCount === -1) {
+    (async () => {
+        try {
+            const mId = localStorage.getItem('manager_id');
+            if (mId && mId !== "null") {
+                const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`, 'GET', null, true);
+                lastMsgCount = msgs.length;
+                localStorage.setItem('last_seen_msg_count', lastMsgCount);
+            }
+        } catch (e) {}
+    })();
+}
+
 setInterval(async () => {
     const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
     // If we have page specific refreshes
@@ -268,26 +282,46 @@ setInterval(async () => {
         const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`, 'GET', null, true);
         
         const currentFilename = window.location.pathname.split('/').pop();
-        if (msgs.length > lastMsgCount) {
-            if (currentFilename !== 'manager_messages.html') {
-                const badge = document.getElementById('msg-badge');
-                if (badge) {
-                    badge.style.display = 'inline-block';
-                    badge.style.background = 'var(--danger)';
-                    badge.style.width = '8px';
-                    badge.style.height = '8px';
-                    badge.style.borderRadius = '50%';
-                    badge.style.border = '2px solid var(--bg)';
-                }
-                const link = document.getElementById('nav-link-messages');
-                if (link) {
-                    link.style.fontWeight = '900';
-                    link.style.color = 'var(--text)';
-                }
-            } else {
-                lastMsgCount = msgs.length;
-                localStorage.setItem('last_seen_msg_count', lastMsgCount);
-                if (typeof window.loadMessages === 'function') window.loadMessages();
+        if (currentFilename === 'manager_messages.html') {
+            // Always keep cleared on the messages page
+            lastMsgCount = msgs.length;
+            localStorage.setItem('last_seen_msg_count', lastMsgCount);
+            const badge = document.getElementById('msg-badge');
+            if (badge) badge.style.display = 'none';
+            const link = document.getElementById('nav-link-messages');
+            if (link) {
+                link.classList.remove('has-notif');
+                link.style.fontWeight = '';
+                link.style.color = '';
+            }
+            if (typeof window.loadMessages === 'function') window.loadMessages();
+        } else if (msgs.length > lastMsgCount) {
+            const badge = document.getElementById('msg-badge');
+            if (badge) {
+                badge.style.display = 'inline-block';
+                badge.style.background = 'var(--danger)';
+                badge.style.width = '8px';
+                badge.style.height = '8px';
+                badge.style.borderRadius = '50%';
+                badge.style.border = '2px solid var(--bg)';
+            }
+            const link = document.getElementById('nav-link-messages');
+            if (link) {
+                link.classList.add('has-notif');
+                link.style.fontWeight = 'bold';
+                link.style.color = 'var(--text)';
+            }
+        } else {
+            // Hide if no new messages
+            const badge = document.getElementById('msg-badge');
+            const link = document.getElementById('nav-link-messages');
+            if (badge && msgs.length <= lastMsgCount) {
+                badge.style.display = 'none';
+            }
+            if (link && msgs.length <= lastMsgCount) {
+                link.classList.remove('has-notif');
+                link.style.fontWeight = '';
+                link.style.color = '';
             }
         }
     } catch(e) {}

@@ -14,6 +14,18 @@ async function loadMessages() {
         
         // Ensure globalDrivers is an array and filter out invalid/null elements
         globalDrivers = (globalDrivers || []).filter(d => d && d.id && d.name);
+
+        // Clear the new messages badge and bold styling since we are on the messages page
+        lastMsgCount = msgs.length;
+        localStorage.setItem('last_seen_msg_count', lastMsgCount);
+        const badge = document.getElementById('msg-badge');
+        if (badge) badge.style.display = 'none';
+        const link = document.getElementById('nav-link-messages');
+        if (link) {
+            link.classList.remove('has-notif');
+            link.style.fontWeight = '';
+            link.style.color = '';
+        }
         
         const searchInputEl = document.getElementById('driver-chat-search');
         const searchQuery = (searchInputEl ? searchInputEl.value : '').toLowerCase();
@@ -39,10 +51,26 @@ async function loadMessages() {
             };
         });
 
+        // Set select_driver_msg placeholder text appropriately
+        const selectDriverMsgEl = document.querySelector('[data-i18n="select_driver_msg"]');
+        if (selectDriverMsgEl) {
+            if (verifiedDrivers.length === 0) {
+                selectDriverMsgEl.innerText = "No verified drivers available. Verify drivers in the Verifications tab to start chatting.";
+            } else {
+                selectDriverMsgEl.innerText = "Select a driver from the left to view messages";
+            }
+        }
+
         // Render Sidebar (filtered)
         if (filteredDrivers.length === 0) {
             if (verifiedDrivers.length === 0) {
-                driverListContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">No verified drivers found.</div>`;
+                driverListContainer.innerHTML = `
+                    <div style="padding: 40px 20px; text-align: center; color: var(--muted); font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                        <span style="font-size: 2rem;">🔒</span>
+                        <div style="font-weight: 700; color: var(--text);">No verified drivers</div>
+                        <p style="margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.4;">Only drivers who have completed security verification can be messaged.</p>
+                    </div>
+                `;
             } else {
                 driverListContainer.innerHTML = `<div style="padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">No drivers match the search query.</div>`;
             }
@@ -84,7 +112,22 @@ async function loadMessages() {
         }
 
         if (selectedDriverChatId) {
-            renderChatWindow(conversations[selectedDriverChatId]);
+            const stillVerified = verifiedDrivers.some(d => d.id === selectedDriverChatId);
+            if (!stillVerified) {
+                selectedDriverChatId = null;
+                closeMobileChat();
+            } else {
+                renderChatWindow(conversations[selectedDriverChatId]);
+            }
+        } else {
+            const placeholder = document.getElementById('chat-placeholder');
+            if (placeholder) placeholder.style.display = 'flex';
+            const header = document.getElementById('chat-header');
+            if (header) header.style.display = 'none';
+            const msgContainer = document.getElementById('chat-messages-container');
+            if (msgContainer) msgContainer.style.display = 'none';
+            const inputArea = document.getElementById('chat-input-area');
+            if (inputArea) inputArea.style.display = 'none';
         }
     } catch(e) {
         console.error("Error loading messages:", e);

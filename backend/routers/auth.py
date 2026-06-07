@@ -201,7 +201,11 @@ def driver_login(data: DriverLogin):
 
     company = companies_db.get_by_id(cid)
     if not company:
-        raise HTTPException(status_code=401, detail="Invalid Company ID.")
+        companies = companies_db.get_all()
+        company = next((c for c in companies if c.get("name", "").strip().lower() == cid.lower()), None)
+        if not company:
+            raise HTTPException(status_code=401, detail="Invalid Company ID.")
+    cid = company["id"]
 
     drivers = drivers_db.get_all()
     driver = next(
@@ -233,7 +237,11 @@ def warehouse_manager_login(data: WarehouseManagerLogin):
 
     company = companies_db.get_by_id(cid)
     if not company:
-        raise HTTPException(status_code=401, detail="Invalid Company ID.")
+        companies = companies_db.get_all()
+        company = next((c for c in companies if c.get("name", "").strip().lower() == cid.lower()), None)
+        if not company:
+            raise HTTPException(status_code=401, detail="Invalid Company ID.")
+    cid = company["id"]
 
     warehouses_db = JSONDatabase("warehouses")
     wh = next(
