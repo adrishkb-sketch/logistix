@@ -12,6 +12,7 @@ import os
 import json
 import urllib.request
 import urllib.error
+import copy
 from typing import List, Dict, Any, Optional
 
 # Config
@@ -121,6 +122,7 @@ def _ensure_companies_table():
 # --- Generic blob table bootstrap ---
 _GENERIC_TABLES_CREATED: set = set()
 _SEEDED_TABLES: set = set()
+_DB_CACHE: Dict[str, Any] = {}
 
 
 def _ensure_generic_table(table_name: str):
@@ -156,9 +158,16 @@ class TursoCompaniesDB:
     def get_all(self) -> List[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().get_all()
+        
+        global _DB_CACHE
+        if "companies" in _DB_CACHE:
+            return copy.deepcopy(_DB_CACHE["companies"])
+            
         try:
             results = _execute([{"sql": "SELECT id, name, email, password FROM companies"}])
-            return _result_to_dicts(results[0]) if results else []
+            items = _result_to_dicts(results[0]) if results else []
+            _DB_CACHE["companies"] = items
+            return copy.deepcopy(items)
         except Exception as e:
             print(f"[TursoDB] get_all error: {e}")
             return self._fallback().get_all()
@@ -166,16 +175,12 @@ class TursoCompaniesDB:
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().get_by_id(item_id)
-        try:
-            results = _execute([{
-                "sql": "SELECT id, name, email, password FROM companies WHERE id = :id LIMIT 1",
-                "args": {"id": item_id}
-            }])
-            rows = _result_to_dicts(results[0]) if results else []
-            return rows[0] if rows else None
-        except Exception as e:
-            print(f"[TursoDB] get_by_id error: {e}")
-            return self._fallback().get_by_id(item_id)
+        
+        all_items = self.get_all()
+        for item in all_items:
+            if str(item.get("id")) == str(item_id):
+                return copy.deepcopy(item)
+        return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         all_items = self.get_all()
@@ -184,6 +189,10 @@ class TursoCompaniesDB:
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         if not _is_configured():
             return self._fallback().insert(item)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop("companies", None)
+        
         try:
             _execute([{
                 "sql": "INSERT OR REPLACE INTO companies (id, name, email, password) "
@@ -203,6 +212,10 @@ class TursoCompaniesDB:
     def update(self, item_id: str, updated: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().update(item_id, updated)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop("companies", None)
+        
         try:
             current = self.get_by_id(item_id)
             if not current:
@@ -216,6 +229,10 @@ class TursoCompaniesDB:
     def delete(self, item_id: str) -> bool:
         if not _is_configured():
             return self._fallback().delete(item_id)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop("companies", None)
+        
         try:
             _execute([{"sql": "DELETE FROM companies WHERE id = :id", "args": {"id": item_id}}])
             return True
@@ -292,6 +309,11 @@ class TursoGenericDB:
     def get_all(self) -> List[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().get_all()
+        
+        global _DB_CACHE
+        if self.table_name in _DB_CACHE:
+            return copy.deepcopy(_DB_CACHE[self.table_name])
+            
         try:
             results = _execute([{"sql": f"SELECT data FROM {self.table_name}"}])
             rows = _result_to_dicts(results[0]) if results else []
@@ -301,7 +323,8 @@ class TursoGenericDB:
                     items.append(json.loads(row.get("data", "{}")))
                 except Exception:
                     pass
-            return items
+            _DB_CACHE[self.table_name] = items
+            return copy.deepcopy(items)
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] get_all error: {e}")
             return self._fallback().get_all()
@@ -309,26 +332,51 @@ class TursoGenericDB:
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().get_by_id(item_id)
-        try:
-            results = _execute([{
-                "sql": f"SELECT data FROM {self.table_name} WHERE id = :id LIMIT 1",
-                "args": {"id": str(item_id)}
-            }])
-            rows = _result_to_dicts(results[0]) if results else []
-            if rows:
-                return json.loads(rows[0].get("data", "{}"))
-            return None
-        except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] get_by_id error: {e}")
-            return self._fallback().get_by_id(item_id)
+        
+        all_items = self.get_all()
+        for item in all_items:
+            if str(item.get("id")) == str(item_id):
+                return copy.deepcopy(item)
+        return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        all_items = self.get_all()
-        return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
+        if not _is_configured():
+            return self._fallback().get_filtered(filters)
+        try:
+            if not filters:
+                return self.get_all()
+            
+            # Construct a SQL query using json_extract for dynamic indexing speed
+            conditions = []
+            args = {}
+            for idx, (k, v) in enumerate(filters.items()):
+                arg_name = f"val_{idx}"
+                conditions.append(f"json_extract(data, '$.{k}') = :{arg_name}")
+                args[arg_name] = str(v)
+            
+            sql = f"SELECT data FROM {self.table_name} WHERE " + " AND ".join(conditions)
+            results = _execute([{"sql": sql, "args": args}])
+            
+            rows = _result_to_dicts(results[0]) if results else []
+            items = []
+            for row in rows:
+                try:
+                    items.append(json.loads(row.get("data", "{}")))
+                except Exception:
+                    pass
+            return items
+        except Exception as e:
+            print(f"[TursoGenericDB:{self.table_name}] get_filtered error: {e}")
+            all_items = self.get_all()
+            return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         if not _is_configured():
             return self._fallback().insert(item)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop(self.table_name, None)
+        
         try:
             _execute([{
                 "sql": f"INSERT OR REPLACE INTO {self.table_name} (id, data) VALUES (:id, :data)",
@@ -345,6 +393,10 @@ class TursoGenericDB:
     def update(self, item_id: str, updated: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().update(item_id, updated)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop(self.table_name, None)
+        
         try:
             current = self.get_by_id(item_id)
             if current is None:
@@ -359,6 +411,10 @@ class TursoGenericDB:
     def delete(self, item_id: str) -> bool:
         if not _is_configured():
             return self._fallback().delete(item_id)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop(self.table_name, None)
+        
         try:
             _execute([{
                 "sql": f"DELETE FROM {self.table_name} WHERE id = :id",
@@ -372,13 +428,28 @@ class TursoGenericDB:
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
         if not _is_configured():
             return self._fallback().delete_many(filter_column, filter_value)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop(self.table_name, None)
+        
         try:
             key_to_check = filter_column.replace("data->>", "") if filter_column.startswith("data->>") else filter_column
-            all_items = self.get_all()
-            to_delete = [i for i in all_items if str(i.get(key_to_check)) == str(filter_value)]
-            for item in to_delete:
-                self.delete(str(item.get("id", "")))
-            return len(to_delete)
+            # Count the items to be deleted first
+            count_res = _execute([{
+                "sql": f"SELECT COUNT(*) as cnt FROM {self.table_name} WHERE json_extract(data, '$.{key_to_check}') = :val",
+                "args": {"val": str(filter_value)}
+            }])
+            deleted_count = 0
+            if count_res:
+                rows = count_res[0].get("rows", [])
+                if rows:
+                    cnt_val = rows[0][0]
+                    deleted_count = int(cnt_val["value"] if isinstance(cnt_val, dict) else cnt_val)
+            
+            # Execute batch delete
+            sql = f"DELETE FROM {self.table_name} WHERE json_extract(data, '$.{key_to_check}') = :val"
+            _execute([{"sql": sql, "args": {"val": str(filter_value)}}])
+            return deleted_count
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] delete_many error: {e}")
             return self._fallback().delete_many(filter_column, filter_value)
@@ -386,6 +457,10 @@ class TursoGenericDB:
     def write(self, data: List[Dict[str, Any]]):
         if not _is_configured():
             return self._fallback().write(data)
+        
+        global _DB_CACHE
+        _DB_CACHE.pop(self.table_name, None)
+        
         try:
             _execute([{"sql": f"DELETE FROM {self.table_name}"}])
             for item in data:
@@ -395,4 +470,6 @@ class TursoGenericDB:
             self._fallback().write(data)
 
     def clear_all(self):
+        global _DB_CACHE
+        _DB_CACHE.pop(self.table_name, None)
         self.write([])

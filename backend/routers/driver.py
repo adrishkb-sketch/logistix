@@ -143,6 +143,54 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
             })
             check_weather_alerts(s, location.get("lat"), location.get("lng"))
             
+            # Update Vehicle Distance & Health Score
+            driver = drivers_db.get_by_id(driver_id)
+            if driver:
+                v_id = driver.get("assigned_vehicle_id")
+                if v_id and prev_loc and last_update:
+                    from backend.services.route_engine import haversine
+                    dist_jump = haversine(prev_loc.get("lat", 0), prev_loc.get("lng", 0), location.get("lat", 0), location.get("lng", 0))
+                    if dist_jump > 0.001:
+                        v = vehicles_db.get_by_id(v_id)
+                        if v:
+                            new_dist = v.get("total_distance_km", 0.0) + dist_jump
+                            last_serv = v.get("last_service_km", 0.0)
+                            dist_since_service = new_dist - last_serv
+                            health = max(0.0, 100.0 - (dist_since_service / 5000.0) * 100.0)
+                            vehicles_db.update(v_id, {
+                                "total_distance_km": round(new_dist, 2),
+                                "kilometers_covered": round(new_dist, 2),
+                                "vehicle_health_score": round(health, 2)
+                            })
+                
+                # Update continuous driving time and fatigue score
+                if s.get("status") == "in_transit":
+                    now_str = now.isoformat() + "Z"
+                    update_payload = {}
+                    
+                    if not driver.get("continuous_driving_start"):
+                        update_payload["continuous_driving_start"] = now_str
+                        update_payload["fatigue_at_drive_start"] = driver.get("fatigue_score", 0.0)
+                    
+                    if prev_loc and last_update:
+                        try:
+                            last_time = datetime.fromisoformat(last_update.replace('Z', '+00:00'))
+                            if last_time.tzinfo is None:
+                                last_time = last_time.replace(tzinfo=timezone.utc)
+                            hours_elapsed = (now - last_time).total_seconds() / 3600.0
+                            if hours_elapsed > 0:
+                                update_payload["driving_hours"] = driver.get("driving_hours", 0.0) + hours_elapsed
+                        except:
+                            pass
+                    
+                    if update_payload:
+                        drivers_db.update(driver_id, update_payload)
+                        driver = drivers_db.get_by_id(driver_id)
+                    
+                    from backend.services.driver_intel import calculate_fatigue
+                    new_fat = calculate_fatigue(driver)
+                    drivers_db.update(driver_id, {"fatigue_score": new_fat})
+            
             # Detailed Performance & Safety Check
             driver = drivers_db.get_by_id(driver_id)
             if not driver: continue
@@ -233,6 +281,22 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
                 "logs": s["logs"],
                 "at_warehouse_id": s.get("at_warehouse_id")
             })
+
+    driver = drivers_db.get_by_id(driver_id)
+    if driver:
+        # If no active transit, make sure continuous_driving_start is None
+        active_transit = any(s.get("status") in ["in_transit", "assigned"] for s in active_shipments)
+        if not active_transit and driver.get("continuous_driving_start"):
+            drivers_db.update(driver_id, {
+                "continuous_driving_start": None,
+                "last_drive_end": datetime.utcnow().isoformat() + "Z",
+                "fatigue_at_drive_end": driver.get("fatigue_score", 0.0)
+            })
+            driver = drivers_db.get_by_id(driver_id)
+        
+        from backend.services.driver_intel import calculate_fatigue
+        new_fat = calculate_fatigue(driver)
+        drivers_db.update(driver_id, {"fatigue_score": new_fat})
 
     return {"message": "Location updated"}
 
@@ -492,9 +556,16 @@ def report_incident(driver_id: str, data: dict):
         driver["driving_score"] = calculate_driver_performance_score(driver)
         drivers_db.update(driver_id, driver)
     elif incident_type == "resting":
-        # Resting reduces fatigue
-        new_fatigue = max(0, driver.get("fatigue_score", 0) - 40)
-        drivers_db.update(driver_id, {"fatigue_score": new_fatigue, "last_rest_start": datetime.utcnow().isoformat()})
+        # Start mandatory 8h rest period:
+        # Clear continuous driving start, save fatigue before rest, set rest start
+        current_fatigue = driver.get("fatigue_score", 0.0)
+        drivers_db.update(driver_id, {
+            "fatigue_before_rest": current_fatigue,
+            "last_rest_start": datetime.utcnow().isoformat() + "Z",
+            "continuous_driving_start": None,
+            "fatigue_at_drive_start": 0.0,
+            "fatigue_score": current_fatigue
+        })
     elif incident_type in ["toll", "refuel"]:
         # Minor stop log
         pass
@@ -619,15 +690,46 @@ def update_health_metrics(driver_id: str, metrics: Dict[str, Any]):
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
     
+    hr = int(metrics.get("heart_rate", metrics.get("heart_rate", 70)))
+    bp = metrics.get("blood_pressure", "120/80")
+    o2 = int(metrics.get("oxygen", metrics.get("oxygen_level", 98)))
+    
     driver["health_metrics"] = {
-        "heart_rate": int(metrics.get("heart_rate", 70)),
-        "blood_pressure": metrics.get("blood_pressure", "120/80"),
-        "oxygen": int(metrics.get("oxygen", 98)),
-        "stress_index": int(metrics.get("stress_index", 10)),
-        "last_updated": datetime.utcnow().isoformat()
+        "heart_rate": hr,
+        "blood_pressure": bp,
+        "oxygen": o2,
+        "stress_index": 0,
+        "last_updated": datetime.utcnow().isoformat() + "Z"
     }
+    driver["last_health_check"] = datetime.utcnow().isoformat() + "Z"
+    driver["last_vitals_update"] = datetime.utcnow().isoformat() + "Z"
+    
+    # Check if abnormal
+    abnormal = False
+    if hr < 55 or hr > 110 or o2 < 92:
+        abnormal = True
+    if bp and "/" in bp:
+        try:
+            parts = bp.split("/")
+            syst = int(parts[0].strip())
+            diast = int(parts[1].strip())
+            if syst < 90 or syst > 140 or diast < 60 or diast > 95:
+                abnormal = True
+        except:
+            pass
+            
+    if abnormal:
+        driver["is_on_duty"] = False
+        message = "Vitals updated successfully, but abnormal vitals detected. You have been placed OFF DUTY."
+    else:
+        message = "Health metrics updated successfully."
+        
     drivers_db.update(driver_id, driver)
-    return {"message": "Health metrics updated successfully"}
+    return {"message": message, "is_on_duty": driver["is_on_duty"]}
+
+@router.post("/{driver_id}/update-vitals")
+def update_vitals_sim(driver_id: str, metrics: Dict[str, Any]):
+    return update_health_metrics(driver_id, metrics)
 
 @router.post("/{driver_id}/health-emergency")
 def health_emergency(driver_id: str, location: dict, x_logistix_context: Optional[str] = Header(None)):
@@ -678,6 +780,47 @@ def toggle_duty(driver_id: str, data: dict, x_logistix_context: Optional[str] = 
         raise HTTPException(status_code=404, detail="Driver not found")
         
     is_on_duty = data.get("is_on_duty", True)
+    
+    # Block off-duty if active shipment in transit
+    active_shipments = [s for s in shipments_db.get_filtered({"assigned_driver_id": driver_id}) if s.get("status") in ["in_transit", "assigned"]]
+    if active_shipments and not is_on_duty:
+        raise HTTPException(status_code=400, detail="Cannot go off duty: You have an active assigned shipment.")
+        
+    if is_on_duty:
+        # Check vitals updated within 24 hours
+        h_check = driver.get("last_health_check")
+        if not h_check:
+            raise HTTPException(status_code=400, detail="Vitals Required: Please update your medical health vitals before going on duty.")
+        try:
+            from datetime import timezone
+            check_dt = datetime.fromisoformat(h_check.replace("Z", "+00:00"))
+            if check_dt.tzinfo is None:
+                check_dt = check_dt.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            if (now - check_dt).total_seconds() > 24 * 3600:
+                raise HTTPException(status_code=400, detail="Vitals Expired: Vitals must be updated every 24 hours. Please update/sync vitals before going on duty.")
+        except Exception as e:
+            if isinstance(e, HTTPException): raise e
+            raise HTTPException(status_code=400, detail="Vitals Error: Please update your medical health vitals before going on duty.")
+            
+        # Check abnormal vitals
+        metrics = driver.get("health_metrics") or {}
+        hr = metrics.get("heart_rate", 72)
+        bp = metrics.get("blood_pressure", "120/80")
+        o2 = metrics.get("oxygen", 98)
+        
+        if hr < 55 or hr > 110 or o2 < 92:
+            raise HTTPException(status_code=400, detail=f"Abnormal Vitals: Heart Rate ({hr} BPM) or SpO2 ({o2}%) is outside safe limits. Duty activation blocked.")
+        if bp and "/" in bp:
+            try:
+                parts = bp.split("/")
+                syst = int(parts[0].strip())
+                diast = int(parts[1].strip())
+                if syst < 90 or syst > 140 or diast < 60 or diast > 95:
+                    raise HTTPException(status_code=400, detail=f"Abnormal Vitals: Blood Pressure ({bp}) is outside safe limits. Duty activation blocked.")
+            except:
+                pass
+                
     drivers_db.update(driver_id, {"is_on_duty": is_on_duty})
     return {"message": f"Driver duty status updated to {'ON' if is_on_duty else 'OFF'}", "is_on_duty": is_on_duty}
 
@@ -845,6 +988,26 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     if not image_url:
         raise HTTPException(status_code=400, detail="Proof of delivery image is required.")
 
+    # Calculate distance dynamically
+    from backend.services.route_engine import haversine
+    pickup = shipment.get("pickup", {})
+    drop = shipment.get("drop", {})
+    dist = haversine(pickup.get("lat", 0.0), pickup.get("lng", 0.0), drop.get("lat", 0.0), drop.get("lng", 0.0))
+
+    # Calculate trip hours (elapsed time or fallback)
+    trip_hours = dist / 45.0
+    transit_logs = [l for l in shipment.get("logs", []) if l.get("status") == "in_transit"]
+    if transit_logs:
+        try:
+            start_str = transit_logs[0].get("timestamp")
+            if start_str:
+                start_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                now_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
+                trip_hours = (now_dt - start_dt).total_seconds() / 3600.0
+        except:
+            pass
+    trip_hours = round(max(0.1, trip_hours), 2)
+
     # Update Shipment
     from backend.models import ShipmentEvent
     shipments_db.update(shipment_id, {
@@ -860,7 +1023,12 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     driver = drivers_db.get_by_id(driver_id)
     if driver:
         base_wh = driver.get("base_warehouse_id")
-        drivers_db.update(driver_id, {"current_warehouse_id": base_wh})
+        drivers_db.update(driver_id, {
+            "current_warehouse_id": base_wh,
+            "continuous_driving_start": None,
+            "last_drive_end": datetime.utcnow().isoformat() + "Z",
+            "fatigue_at_drive_end": driver.get("fatigue_score", 0.0)
+        })
         v_id = driver.get("assigned_vehicle_id")
         if v_id:
             vehicles_db.update(v_id, {"current_warehouse_id": base_wh})
@@ -886,6 +1054,7 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     
     new_balance = driver.get("wallet_balance", 0) + total_credit
     new_total = driver.get("total_earnings", 0) + total_credit
+    new_driving_hours = driver.get("driving_hours", 0.0) + trip_hours
     
     # Log as Expense in Ledger
     from backend.database import JSONDatabase
@@ -916,6 +1085,7 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
         "reward_points": new_points,
         "deliveries_completed": total_trips,
         "total_trips": total_trips,
+        "driving_hours": round(new_driving_hours, 2),
         "punctuality_rate": round(new_punctuality, 2)
     })
     
@@ -923,11 +1093,19 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     if v_id:
         v = vehicles_db.get_by_id(v_id)
         if v:
+            new_dist = v.get("total_distance_km", 0.0) + dist
+            last_serv = v.get("last_service_km", 0.0)
+            dist_since_service = new_dist - last_serv
+            health = max(0.0, 100.0 - (dist_since_service / 5000.0) * 100.0)
             vehicles_db.update(v_id, {
-                "kilometers_covered": v.get("kilometers_covered", 0) + dist,
+                "total_distance_km": round(new_dist, 2),
+                "kilometers_covered": round(new_dist, 2),
+                "vehicle_health_score": round(health, 2),
                 "deliveries_completed": v.get("deliveries_completed", 0) + 1,
-                "utilization_hours": v.get("utilization_hours", 0) + (dist / 40) # Assume 40km/h avg
+                "utilization_hours": v.get("utilization_hours", 0) + (dist / 40)
             })
+    
+    return {"message": f"Delivery Complete! ₹{total_credit} credited to your wallet.", "new_balance": new_balance}
     
     return {"message": f"Delivery Complete! ₹{total_credit} credited to your wallet.", "new_balance": new_balance}
 
@@ -986,3 +1164,51 @@ def calculate_fuel_need(driver_id: str, lat: float, lng: float):
         "price_per_liter": price,
         "state": state
     }
+
+@router.post("/{driver_id}/request-checkup")
+def request_checkup(driver_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    v_id = driver.get("assigned_vehicle_id")
+    if not v_id:
+        raise HTTPException(status_code=400, detail="No vehicle linked to driver.")
+        
+    vehicle = vehicles_db.get_by_id(v_id)
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Linked vehicle not found.")
+        
+    vehicles_db.update(v_id, {"checkup_status": "pending"})
+    
+    # Generate alert for checkup
+    from backend.models import Alert
+    alerts_db = JSONDatabase("alerts")
+    new_alert = Alert(
+        company_id=driver["company_id"],
+        type="maintenance",
+        description=f"🔧 VEHICLE CHECKUP REQUEST: Driver {driver['name']} has requested a health checkup for vehicle {vehicle.get('number_plate')}.",
+        severity="medium",
+        suggestion="Review and approve checkup from Fleet page.",
+        driver_id=driver_id
+    )
+    alerts_db.insert(new_alert.model_dump())
+    
+    return {"message": "Checkup request submitted. Please wait for manager approval.", "checkup_status": "pending"}
+
+@router.post("/{driver_id}/end-rest")
+def end_rest(driver_id: str):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    drivers_db.update(driver_id, {
+        "last_rest_start": None,
+        "fatigue_before_rest": 0.0,
+        "fatigue_score": 0.0,
+        "continuous_driving_start": None,
+        "fatigue_at_drive_start": 0.0
+    })
+    return {"message": "Rest period completed successfully."}
+

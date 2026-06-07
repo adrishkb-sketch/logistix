@@ -1,38 +1,71 @@
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
+def parse_iso_datetime(dt_str: str) -> datetime:
+    from datetime import timezone
+    if not dt_str:
+        raise ValueError("Empty datetime string")
+    # Clean up JS style Z
+    if dt_str.endswith("Z"):
+        dt_str = dt_str[:-1] + "+00:00"
+    # Handle duplicate timezone offset strings like +00:00+00:00
+    if dt_str.endswith("+00:00+00:00"):
+        dt_str = dt_str[:-6]
+    dt = datetime.fromisoformat(dt_str)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
 def calculate_fatigue(driver: Dict[str, Any]) -> float:
     """
     Dynamic Fatigue Model:
-    - Fatigue resets to 0 after 12h of rest.
-    - Fatigue decreases by 8% per hour of rest.
+    - 6 hours of continuous driving leads to 100% fatigue.
+    - 8 hours of rest reduces fatigue from fatigue_before_rest to 0.
+    - Inactive time (no active drive, no active rest) decays fatigue at 12.5% per hour.
     """
-    current_fatigue = driver.get("fatigue_score", 0.0)
-    last_rest = driver.get("last_rest_start")
-    
-    if not last_rest:
-        return current_fatigue
-        
     from datetime import timezone
-    try:
-        last_rest_dt = datetime.fromisoformat(last_rest.replace("Z", "+00:00"))
-        if last_rest_dt.tzinfo is None:
-            last_rest_dt = last_rest_dt.replace(tzinfo=timezone.utc)
-    except:
-        return current_fatigue
     now = datetime.now(timezone.utc)
-    rest_duration = now - last_rest_dt
     
-    # 12-hour full reset rule
-    if rest_duration >= timedelta(hours=12):
-        return 0.0
-        
-    # Hourly recovery rule (8% reduction per hour)
-    hours_rested = rest_duration.total_seconds() / 3600
-    recovered = hours_rested * 8.0
-    
-    new_fatigue = max(0.0, current_fatigue - recovered)
-    return round(new_fatigue, 2)
+    # 1. Check if currently driving
+    cond_start = driver.get("continuous_driving_start")
+    if cond_start:
+        try:
+            start_dt = parse_iso_datetime(cond_start)
+            hours_driving = (now - start_dt).total_seconds() / 3600.0
+            
+            base_fatigue = driver.get("fatigue_at_drive_start", 0.0)
+            fatigue = base_fatigue + (hours_driving / 6.0) * 100.0
+            return round(max(0.0, min(100.0, fatigue)), 2)
+        except:
+            pass
+
+    # 2. Check if resting
+    last_rest = driver.get("last_rest_start")
+    if last_rest:
+        try:
+            rest_dt = parse_iso_datetime(last_rest)
+            hours_rested = (now - rest_dt).total_seconds() / 3600.0
+            
+            base_fatigue = driver.get("fatigue_before_rest", 100.0)
+            fatigue = base_fatigue - (hours_rested / 8.0) * 100.0
+            return round(max(0.0, fatigue), 2)
+        except:
+            pass
+
+    # 3. Check if inactive
+    last_drive_end = driver.get("last_drive_end")
+    if last_drive_end:
+        try:
+            end_dt = parse_iso_datetime(last_drive_end)
+            hours_inactive = (now - end_dt).total_seconds() / 3600.0
+            
+            base_fatigue = driver.get("fatigue_at_drive_end", 0.0)
+            fatigue = base_fatigue - (hours_inactive / 8.0) * 100.0
+            return round(max(0.0, fatigue), 2)
+        except:
+            pass
+
+    return round(max(0.0, min(100.0, driver.get("fatigue_score", 0.0))), 2)
 
 def calculate_safety_rating(driver: Dict[str, Any]) -> float:
     """

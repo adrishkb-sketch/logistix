@@ -85,6 +85,11 @@ class Driver(BaseModel):
     profile_pic: Optional[str] = None
     customer_ratings: List[float] = Field(default_factory=list)
     work_hours_today: float = 0.0
+    driving_hours: float = 0.0
+    total_rating_sum: float = 0.0
+    rating_count: int = 0
+    continuous_driving_start: Optional[str] = None
+    last_vitals_update: Optional[str] = None
     # ML Tracking Fields
     years_experience: float = 0.0
     past_accidents: int = 0
@@ -128,6 +133,9 @@ class Vehicle(BaseModel):
     join_date: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     total_distance_km: float = 0.0
     efficiency_score: float = 100.0
+    last_service_km: float = 0.0
+    checkup_status: str = "none"
+    deliveries_completed: int = 0
     
     # Daily Audit Fields
     is_operational: bool = True # working, breakdown (marked by manager)

@@ -483,6 +483,400 @@ function renderDriverChart(history) {
     });
 }
 
+// Helper functions for Vitals check and overlays
+const checkVitalsStatus = (me) => {
+    if (!me.health_metrics || !me.last_health_check) {
+        return { valid: false, reason: "Vitals Required: Please update your medical health vitals before going on duty." };
+    }
+    
+    // Check 24 hour expiration
+    try {
+        const lastCheck = new Date(me.last_health_check);
+        const now = new Date();
+        const diffHrs = (now - lastCheck) / (1000 * 60 * 60);
+        if (diffHrs > 24) {
+            return { valid: false, reason: "Vitals Expired: Vitals must be updated every 24 hours. Please sync your smartwatch." };
+        }
+    } catch(e) {
+        return { valid: false, reason: "Vitals Error: Please re-sync your smartwatch." };
+    }
+    
+    const hm = me.health_metrics;
+    const hr = hm.heart_rate || 72;
+    const o2 = hm.oxygen || hm.oxygen_level || 98;
+    const bp = hm.blood_pressure || "120/80";
+    
+    if (hr < 55 || hr > 110 || o2 < 92) {
+        return { valid: false, reason: `Abnormal Vitals: Heart Rate (${hr} BPM) or SpO2 (${o2}%) is outside safe limits.` };
+    }
+    
+    if (bp && bp.includes('/')) {
+        try {
+            const parts = bp.split('/');
+            const syst = parseInt(parts[0]);
+            const diast = parseInt(parts[1]);
+            if (syst < 90 || syst > 140 || diast < 60 || diast > 95) {
+                return { valid: false, reason: `Abnormal Vitals: Blood Pressure (${bp}) is outside safe limits.` };
+            }
+        } catch(e) {}
+    }
+    
+    return { valid: true };
+};
+
+function initBlockingOverlays() {
+    if (!document.getElementById('vitals-warning-overlay')) {
+        const div = document.createElement('div');
+        div.id = 'vitals-warning-overlay';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:100000; background:rgba(10, 15, 28, 0.9); backdrop-filter:blur(15px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.innerHTML = `
+            <div class="glass-card" style="max-width:400px; padding:30px; border:2px solid var(--danger); box-shadow:0 0 50px rgba(239,68,68,0.2); border-radius:20px; box-sizing:border-box;">
+                <div style="font-size:4rem; margin-bottom:15px; filter:drop-shadow(0 0 10px var(--danger));">❤️</div>
+                <h3 style="color:var(--danger); margin-bottom:12px; font-weight:800; margin-top:0;">Vitals Sync Required</h3>
+                <p id="vitals-warning-text" style="color:var(--text-muted); margin-bottom:24px; font-size:0.95rem; line-height:1.5;"></p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="btn-primary" id="vitals-sync-btn-overlay" style="background:var(--accent); color:#000; font-weight:800; border:none; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">⌚ Sync Smartwatch Vitals</button>
+                    <button class="btn-primary" id="vitals-close-btn-overlay" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:white; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+        
+        document.getElementById('vitals-sync-btn-overlay').addEventListener('click', () => {
+            document.getElementById('vitals-warning-overlay').style.display = 'none';
+            const syncBtn = document.getElementById('relocated-watch-sync-btn') || document.getElementById('watch-sync-btn');
+            if (syncBtn) {
+                if (!watchSyncActiveRelocated) {
+                    toggleWatchSyncRelocated(syncBtn);
+                }
+            } else {
+                toggleWatchSync();
+            }
+        });
+        document.getElementById('vitals-close-btn-overlay').addEventListener('click', () => {
+            document.getElementById('vitals-warning-overlay').style.display = 'none';
+        });
+    }
+
+    if (!document.getElementById('vehicle-health-block-overlay')) {
+        const div = document.createElement('div');
+        div.id = 'vehicle-health-block-overlay';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:99999; background:rgba(10, 15, 28, 0.92); backdrop-filter:blur(20px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.innerHTML = `
+            <div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--warning); box-shadow:0 0 50px rgba(245,158,11,0.25); border-radius:24px; box-sizing:border-box;">
+                <div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 15px rgba(245,158,11,0.3));">🔧</div>
+                <h2 style="color:var(--warning); margin-bottom:15px; font-weight:800; font-size:1.8rem; margin-top:0;">Vehicle Health 0%</h2>
+                <p style="color:var(--text-muted); margin-bottom:30px; font-size:1.05rem; line-height:1.6;">Your vehicle is due for immediate maintenance. All actions are blocked until a vehicle checkup is approved by the manager.</p>
+                <div id="checkup-status-container"></div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+    if (!document.getElementById('rest-timer-overlay')) {
+        const div = document.createElement('div');
+        div.id = 'rest-timer-overlay';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:99998; background:rgba(10, 15, 28, 0.95); backdrop-filter:blur(20px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.innerHTML = `
+            <div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--primary); box-shadow:0 0 50px rgba(79, 140, 255, 0.25); border-radius:24px; box-sizing:border-box;">
+                <div class="zen-breathing" style="font-size:5rem; margin-bottom:20px;">🧘</div>
+                <h2 style="color:var(--primary); margin-bottom:15px; font-weight:800; font-size:1.8rem; margin-top:0;">MANDATORY REST</h2>
+                <p style="color:var(--text-muted); margin-bottom:20px; font-size:1.05rem; line-height:1.6;">You are currently in your mandatory 8-hour rest period. Please take this time to recuperate.</p>
+                <div id="rest-countdown-timer" style="font-size:2.2rem; font-weight:bold; font-family:monospace; color:white; margin-bottom:30px;">08:00:00</div>
+                <button class="btn-primary" id="fast-forward-rest-btn" style="background:var(--success); color:black; font-weight:800; border:none; padding:12px 24px; border-radius:10px; cursor:pointer; font-size:1rem; width:100%;">⚡ Fast-Forward Rest (Demo)</button>
+            </div>
+        `;
+        document.body.appendChild(div);
+        
+        document.getElementById('fast-forward-rest-btn').addEventListener('click', async () => {
+            try {
+                const res = await apiCall(`/driver/${dId}/end-rest`, 'POST');
+                showNotification(res.message, "success");
+                document.getElementById('rest-timer-overlay').style.display = 'none';
+                if (window.restTimerInterval) clearInterval(window.restTimerInterval);
+                loadMissions();
+            } catch(e) {
+                showNotification("Failed to fast-forward rest period", "error");
+            }
+        });
+    }
+
+    if (!document.getElementById('switch-toggle-styles')) {
+        const style = document.createElement('style');
+        style.id = 'switch-toggle-styles';
+        style.textContent = `
+            .switch {
+              position: relative;
+              display: inline-block;
+              width: 48px;
+              height: 24px;
+            }
+            .switch input {
+              opacity: 0;
+              width: 0;
+              height: 0;
+            }
+            .slider {
+              position: absolute;
+              cursor: pointer;
+              top: 0; left: 0; right: 0; bottom: 0;
+              background-color: rgba(255,255,255,0.1);
+              transition: .4s;
+              border-radius: 24px;
+              border: 1px solid var(--border);
+            }
+            .slider:before {
+              position: absolute;
+              content: "";
+              height: 16px;
+              width: 16px;
+              left: 3px;
+              bottom: 3px;
+              background-color: white;
+              transition: .4s;
+              border-radius: 50%;
+            }
+            input:checked + .slider {
+              background-color: var(--success);
+              border-color: var(--success);
+            }
+            input:checked + .slider:before {
+              transform: translateX(24px);
+            }
+            input:disabled + .slider {
+              opacity: 0.5;
+              cursor: not-allowed;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function showVitalsWarningOverlay(reason) {
+    const overlay = document.getElementById('vitals-warning-overlay');
+    const textEl = document.getElementById('vitals-warning-text');
+    if (overlay && textEl) {
+        textEl.innerText = reason;
+        overlay.style.display = 'flex';
+    }
+}
+
+function closeVitalsWarningOverlay() {
+    const overlay = document.getElementById('vitals-warning-overlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function showRestOverlay(lastRestStartStr) {
+    const overlay = document.getElementById('rest-timer-overlay');
+    if (!overlay) return;
+    
+    overlay.style.display = 'flex';
+    
+    if (window.restTimerInterval) clearInterval(window.restTimerInterval);
+    
+    const updateTimer = () => {
+        const restStart = new Date(lastRestStartStr);
+        const now = new Date();
+        const elapsedMs = now - restStart;
+        const totalMs = 8 * 60 * 60 * 1000; 
+        const remainingMs = totalMs - elapsedMs;
+        
+        if (remainingMs <= 0) {
+            clearInterval(window.restTimerInterval);
+            overlay.style.display = 'none';
+            apiCall(`/driver/${dId}/end-rest`, 'POST').then(() => {
+                showNotification("Mandatory rest period completed! Rerouting to destination.", "success");
+                loadMissions();
+            });
+        } else {
+            const hrs = Math.floor(remainingMs / (1000 * 60 * 60));
+            const mins = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((remainingMs % (1000 * 60)) / 1000);
+            
+            const hrStr = String(hrs).padStart(2, '0');
+            const minStr = String(mins).padStart(2, '0');
+            const secStr = String(secs).padStart(2, '0');
+            
+            document.getElementById('rest-countdown-timer').innerText = `${hrStr}:${minStr}:${secStr}`;
+        }
+    };
+    
+    updateTimer();
+    window.restTimerInterval = setInterval(updateTimer, 1000);
+}
+
+async function requestVehicleCheckup() {
+    try {
+        const res = await apiCall(`/driver/${dId}/request-checkup`, 'POST');
+        showNotification(res.message, "success");
+        loadMissions();
+    } catch(e) {
+        showNotification(e.message || "Failed to request checkup", "error");
+    }
+}
+
+let watchSyncActiveRelocated = false;
+let watchSyncIntervalRelocated = null;
+
+function toggleWatchSyncRelocated(btn) {
+    watchSyncActiveRelocated = !watchSyncActiveRelocated;
+
+    if (watchSyncActiveRelocated) {
+        btn.innerText = '⌚ SYNCING...';
+        btn.style.borderColor = 'var(--success)';
+        btn.style.color = 'var(--success)';
+        showNotification("Smartwatch Sync Enabled", "success");
+        
+        watchSyncIntervalRelocated = setInterval(async () => {
+            const hr = Math.floor(Math.random() * (130 - 65 + 1)) + 65; 
+            const o2 = Math.floor(Math.random() * (100 - 88 + 1)) + 88; 
+            const bp = `${110 + Math.floor(Math.random()*20)}/${70 + Math.floor(Math.random()*15)}`;
+            
+            if (document.getElementById('h-rate')) document.getElementById('h-rate').innerText = hr + ' BPM';
+            if (document.getElementById('h-o2')) document.getElementById('h-o2').innerText = o2 + '%';
+            if (document.getElementById('h-bp')) document.getElementById('h-bp').innerText = bp;
+            if (document.getElementById('h-sync')) document.getElementById('h-sync').innerText = 'Just now (Watch)';
+            
+            const hrAbnormal = hr < 55 || hr > 110;
+            const o2Abnormal = o2 < 92;
+            let bpAbnormal = false;
+            try {
+                const parts = bp.split('/');
+                const syst = parseInt(parts[0]);
+                const diast = parseInt(parts[1]);
+                if (syst < 90 || syst > 140 || diast < 60 || diast > 95) bpAbnormal = true;
+            } catch(e) {}
+            
+            const abnormal = hrAbnormal || o2Abnormal || bpAbnormal;
+            
+            try {
+                const res = await apiCall(`/driver/${dId}/update-vitals`, 'POST', {
+                    heart_rate: hr,
+                    blood_pressure: bp,
+                    oxygen_level: o2
+                });
+                
+                if (window.currentDriverObj) {
+                    window.currentDriverObj.health_metrics = {
+                        heart_rate: hr,
+                        blood_pressure: bp,
+                        oxygen: o2,
+                        last_updated: new Date().toISOString()
+                    };
+                    window.currentDriverObj.last_health_check = new Date().toISOString();
+                }
+                
+                if (abnormal) {
+                    clearInterval(watchSyncIntervalRelocated);
+                    btn.innerText = '⌚ SYNC WATCH';
+                    btn.style.borderColor = 'var(--accent)';
+                    btn.style.color = 'var(--text)';
+                    watchSyncActiveRelocated = false;
+                    
+                    const dutySwitch = document.getElementById('duty-switch');
+                    const statusText = document.getElementById('duty-status-text');
+                    if (dutySwitch) {
+                        dutySwitch.checked = false;
+                        if (statusText) {
+                            statusText.innerText = 'NOT WORKING';
+                            statusText.style.color = 'var(--danger)';
+                        }
+                    }
+                    if (window.currentDriverObj) window.currentDriverObj.is_on_duty = false;
+                    
+                    triggerHealthEmergency(hr, o2);
+                }
+            } catch(err) {
+                console.error("Vitals update failed", err);
+            }
+        }, 5000);
+    } else {
+        btn.innerText = '⌚ SYNC WATCH';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--text)';
+        clearInterval(watchSyncIntervalRelocated);
+        showNotification("Smartwatch Sync Disabled", "warning");
+    }
+}
+
+let uiInitialized = false;
+function replaceDutyAndWatchButtons(me, activeShipments) {
+    if (uiInitialized) return;
+    const dutyBtn = document.getElementById('duty-toggle-btn');
+    const watchBtn = document.getElementById('watch-sync-btn');
+    
+    if (dutyBtn) {
+        const parent = dutyBtn.parentNode;
+        if (parent) {
+            const hasActiveTrip = activeShipments && activeShipments.length > 0;
+            const isOnDuty = me.is_on_duty !== false;
+            
+            parent.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding: 12px 16px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px; box-sizing:border-box; margin-bottom:10px;">
+                    <span style="font-weight:700; font-size:0.9rem; color:var(--text); display:flex; align-items:center; gap:8px;">
+                        🚦 <span data-i18n="duty_status_label">Duty Status</span>: 
+                        <span id="duty-status-text" style="color:${isOnDuty ? 'var(--success)' : 'var(--danger)'};">
+                            ${isOnDuty ? 'ON DUTY' : 'NOT WORKING'}
+                        </span>
+                    </span>
+                    <label class="switch">
+                        <input type="checkbox" id="duty-switch" ${isOnDuty ? 'checked' : ''} ${hasActiveTrip ? 'disabled' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            `;
+            
+            const dutySwitch = document.getElementById('duty-switch');
+            if (dutySwitch) {
+                dutySwitch.addEventListener('change', async function() {
+                    const newStatus = this.checked;
+                    if (newStatus && checkVitalsStatus(me).valid === false) {
+                        this.checked = false;
+                        showVitalsWarningOverlay(checkVitalsStatus(me).reason);
+                        return;
+                    }
+                    
+                    try {
+                        const res = await apiCall(`/driver/${dId}/toggle-duty`, 'POST', { is_on_duty: newStatus });
+                        const statusText = document.getElementById('duty-status-text');
+                        if (statusText) {
+                            statusText.innerText = newStatus ? 'ON DUTY' : 'NOT WORKING';
+                            statusText.style.color = newStatus ? 'var(--success)' : 'var(--danger)';
+                        }
+                        me.is_on_duty = newStatus;
+                        showNotification(res.message, "success");
+                    } catch(e) {
+                        this.checked = !newStatus;
+                        showNotification(e.message || "Failed to update status", "error");
+                    }
+                });
+            }
+        }
+    }
+    
+    const hStatus = document.getElementById('h-status');
+    if (hStatus) {
+        let relocatedWatchBtn = document.getElementById('relocated-watch-sync-btn');
+        if (!relocatedWatchBtn) {
+            const medCard = hStatus.closest('.glass-card');
+            if (medCard) {
+                relocatedWatchBtn = document.createElement('button');
+                relocatedWatchBtn.id = 'relocated-watch-sync-btn';
+                relocatedWatchBtn.className = 'btn-primary';
+                relocatedWatchBtn.style.cssText = 'width:100%; margin-top:12px; background:rgba(255,255,255,0.05); border:1px solid var(--accent); font-weight:800; border-radius:14px; padding:12px; box-sizing:border-box;';
+                relocatedWatchBtn.innerHTML = '⌚ SYNC SMARTWATCH VITALS';
+                
+                relocatedWatchBtn.addEventListener('click', function() {
+                    toggleWatchSyncRelocated(this);
+                });
+                
+                medCard.appendChild(relocatedWatchBtn);
+            }
+        }
+    }
+    uiInitialized = true;
+}
+
 async function loadMissions(autoStartNext = false) {
     console.info(`[Bootstrap] Starting loadMissions for Driver: ${dId}`);
     try {
@@ -494,6 +888,7 @@ async function loadMissions(autoStartNext = false) {
         // Fetch driver info to check verification status
         const drivers = await apiCall(`/manager/drivers?company_id=${companyId}`);
         const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(dId)) : null;
+        window.currentDriverObj = me;
         
         const mainContent = document.getElementById('main-content');
         const vScreen = document.getElementById('verification-screen');
@@ -502,7 +897,6 @@ async function loadMissions(autoStartNext = false) {
         const vNoVehicleBox = document.getElementById('v-no-vehicle-box');
         const vScreenMsg = document.getElementById('v-screen-msg');
         const reportBtn = document.getElementById('report-issue-btn');
-
         const secControls = document.getElementById('secondary-controls-bar');
 
         if (!me) {
@@ -518,7 +912,22 @@ async function loadMissions(autoStartNext = false) {
             return;
         }
 
-        // Safety & Fitness Block
+        initBlockingOverlays();
+
+        // 1. MANDATORY REST OVERLAY CHECK
+        if (me.last_rest_start) {
+            showRestOverlay(me.last_rest_start);
+            if (mainContent) mainContent.style.display = 'none';
+            if (secControls) secControls.style.display = 'none';
+            if (reportBtn) reportBtn.style.display = 'none';
+            return;
+        } else {
+            const restOverlay = document.getElementById('rest-timer-overlay');
+            if (restOverlay) restOverlay.style.display = 'none';
+            if (window.restTimerInterval) clearInterval(window.restTimerInterval);
+        }
+
+        // 2. Safety & Fitness Block
         const v_id = me.assigned_vehicle_id;
         const vehicles = await apiCall(`/manager/vehicles?company_id=${companyId}`);
         const myVehicle = v_id ? vehicles.find(v => v.id === v_id) : null;
@@ -546,6 +955,41 @@ async function loadMissions(autoStartNext = false) {
             if (reportBtn) reportBtn.style.display = 'none';
             return;
         }
+
+        // 3. Vehicle Health 0% check (except during transit)
+        const shipments = await apiCall(`/driver/${dId}/shipments`);
+        const activeShipments = shipments.filter(s => s.status !== 'delivered' && s.status !== 'finalized');
+        const inTransit = activeShipments.some(s => s.status === 'in_transit');
+
+        if (myVehicle && (myVehicle.vehicle_health_score <= 0) && !inTransit) {
+            const containerEl = document.getElementById('checkup-status-container');
+            if (myVehicle.checkup_status === 'pending') {
+                containerEl.innerHTML = `
+                    <div style="font-size: 1.15rem; font-weight: bold; color: var(--warning); padding: 15px; background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); border-radius: 12px; margin-bottom: 15px;">
+                        ⏳ Checkup Request Pending Approval
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin:0;">Please wait for warehouse or fleet manager approval.</p>
+                `;
+            } else {
+                containerEl.innerHTML = `
+                    <button onclick="requestVehicleCheckup()" class="btn-primary" style="background: var(--warning); color: black; font-weight: 800; border: none; padding: 14px 24px; border-radius: 12px; font-size: 1.1rem; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
+                        🔧 Request Vehicle Checkup
+                    </button>
+                `;
+            }
+            document.getElementById('vehicle-health-block-overlay').style.display = 'flex';
+            if (mainContent) mainContent.style.display = 'none';
+            if (secControls) secControls.style.display = 'none';
+            if (reportBtn) reportBtn.style.display = 'none';
+            return;
+        } else {
+            const vOverlay = document.getElementById('vehicle-health-block-overlay');
+            if (vOverlay) vOverlay.style.display = 'none';
+        }
+
+        // Dynamically replace the old duty and watch sync UI buttons
+        replaceDutyAndWatchButtons(me, activeShipments);
+
 
         // 1. VEHICLE ASSIGNMENT CHECK
         if (!me.assigned_vehicle_id) {
@@ -649,11 +1093,8 @@ async function loadMissions(autoStartNext = false) {
         
         loadDashStats();
 
-        const shipments = await apiCall(`/driver/${dId}/shipments`);
-        const container = document.getElementById('mission-container');
-        
-        const activeShipments = shipments.filter(s => s.status !== 'delivered' && s.status !== 'finalized');
         const completedShipments = shipments.filter(s => s.status === 'delivered' || s.status === 'finalized');
+        const container = document.getElementById('mission-container');
         
         // Render Completed Orders
         const completedContainer = document.getElementById('completed-container');
@@ -739,7 +1180,15 @@ async function loadMissions(autoStartNext = false) {
         
         // Render Timeline
         if (orderedStops.length > 0 && me && me.verification_status === "verified") {
-            let html = `<h3>${getTranslation('multi_stop_roadmap')} (${orderedStops.length} ${getTranslation('stops_label') || 'Stops'})</h3><div class="timeline">`;
+            let html = '';
+            if (me.fatigue_score >= 100) {
+                html += `
+                    <div style="background:linear-gradient(135deg, var(--danger), #c53030); color:white; padding:15px; border-radius:12px; margin-bottom:20px; font-weight:bold; box-shadow:0 10px 25px rgba(229,62,62,0.3); text-align:center;">
+                        🚨 FATIGUE LIMIT EXCEEDED (100%): All normal actions are blocked. Please navigate to a resting spot on the map, click "Mark Rest Stop Reached & Start Rest", and begin your mandatory 8-hour rest.
+                    </div>
+                `;
+            }
+            html += `<h3>${getTranslation('multi_stop_roadmap')} (${orderedStops.length} ${getTranslation('stops_label') || 'Stops'})</h3><div class="timeline">`;
             
             orderedStops.forEach((stop, idx) => {
                 const isCurrent = idx === 0;
@@ -751,22 +1200,30 @@ async function loadMissions(autoStartNext = false) {
                 const isLocked = idx > 0;
                 
                 if (isCurrent) {
-                    const isWarehouseDelivery = s.is_leg || (s.at_warehouse_id && s.status === 'in_transit');
-                    const isLastMile = !s.is_leg && s.status === 'in_transit';
-
-                    if (stop.type === 'pickup') {
+                    if (me.fatigue_score >= 100) {
                         actionBtn = `
-                            <button class="btn-primary" style="margin-top:10px; width:100%;" onclick="handleScan('${s.id}', 'pickup')">📸 ${getTranslation('scan_qr_pickup')}</button>
-                        `;
-                    } else if (isLastMile) {
-                        actionBtn = `
-                            <button class="btn-primary btn-success" style="margin-top:10px; width:100%;" onclick="completeDeliveryFlow('${s.id}')">🏁 ${getTranslation('deliver_to_customer')}</button>
+                            <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--danger); font-weight:800; box-shadow:0 4px 15px rgba(239, 68, 68, 0.2);" onclick="startRest()">
+                                🚨 Mark Rest Stop Reached & Start Rest
+                            </button>
                         `;
                     } else {
-                        // Warehouse handoff
-                        actionBtn = `
-                            <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--warning);" onclick="handleScan('${s.id}', 'warehouse')">🏢 ${getTranslation('scan_qr_warehouse')}</button>
-                        `;
+                        const isWarehouseDelivery = s.is_leg || (s.at_warehouse_id && s.status === 'in_transit');
+                        const isLastMile = !s.is_leg && s.status === 'in_transit';
+
+                        if (stop.type === 'pickup') {
+                            actionBtn = `
+                                <button class="btn-primary" style="margin-top:10px; width:100%;" onclick="handleScan('${s.id}', 'pickup')">📸 ${getTranslation('scan_qr_pickup')}</button>
+                            `;
+                        } else if (isLastMile) {
+                            actionBtn = `
+                                <button class="btn-primary btn-success" style="margin-top:10px; width:100%;" onclick="completeDeliveryFlow('${s.id}')">🏁 ${getTranslation('deliver_to_customer')}</button>
+                            `;
+                        } else {
+                            // Warehouse handoff
+                            actionBtn = `
+                                <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--warning);" onclick="handleScan('${s.id}', 'warehouse')">🏢 ${getTranslation('scan_qr_warehouse')}</button>
+                            `;
+                        }
                     }
                 } else {
                         actionBtn = `
@@ -1072,6 +1529,24 @@ async function drawMultiStopRoute(stops) {
             }
         }
     } catch(err) {}
+
+    if (window.currentDriverObj && window.currentDriverObj.fatigue_score >= 100) {
+        try {
+            const currentLoc = marker ? marker.getLatLng() : stops[0];
+            const restStops = await apiCall(`/driver/safety/rest-stops?lat=${currentLoc.lat}&lng=${currentLoc.lng}`);
+            restStops.forEach(stop => {
+                const bedIcon = L.icon({
+                    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                });
+                const m = L.marker([stop.lat, stop.lng], { icon: bedIcon }).addTo(map);
+                m.bindPopup(`<b>🏨 Rest Spot: ${stop.name} (${stop.rating}⭐)</b><br>Facilities: ${stop.amenities.join(', ')}<br><button onclick="window.startRest({name: '${stop.name.replace(/'/g, "\\'")}', lat: ${stop.lat}, lng: ${stop.lng}})" style="margin-top:5px; background:var(--success); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Start Rest Here</button>`);
+            });
+        } catch(e) {
+            console.error("Failed to map rest stops", e);
+        }
+    }
 }
 
 
@@ -1325,16 +1800,22 @@ async function loadProfileData() {
     document.getElementById('p-safety').innerText = `${(p.safety_index || 100).toFixed(1)}%`;
     document.getElementById('p-punct').innerText = `${(p.punctuality_rate || 100).toFixed(1)}%`;
     
-    const avgRating = (p.customer_ratings && p.customer_ratings.length > 0) ? (p.customer_ratings.reduce((a,b)=>a+b,0)/p.customer_ratings.length).toFixed(1) : "5.0";
-    document.getElementById('p-rating').innerText = `${avgRating} ⭐`;
+    let avgRating = 5.0;
+    if (p.rating_count && p.rating_count > 0) {
+        avgRating = p.total_rating_sum / p.rating_count;
+    } else if (p.rating !== undefined) {
+        avgRating = p.rating;
+    }
+    document.getElementById('p-rating').innerText = `${avgRating.toFixed(1)} ⭐`;
     document.getElementById('p-wallet').innerText = `${p.reward_points || 0}`;
     
-    // Calculate Platform Tenure in Days
+    // Calculate Platform Tenure in Days & Hours Worked
     const joinDate = p.join_date ? new Date(p.join_date) : new Date();
     const today = new Date();
     const diffTime = Math.abs(today - joinDate);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    document.getElementById('p-experience').innerText = `${diffDays} ${getTranslation('days_label')}`;
+    const drivingHours = (p.driving_hours || 0).toFixed(1);
+    document.getElementById('p-experience').innerText = `${diffDays} Days | ${drivingHours} Hours Worked`;
     
     // Health Card Population
     const hStatus = document.getElementById('h-status');
@@ -1345,13 +1826,24 @@ async function loadProfileData() {
         document.getElementById('h-rate').innerText = `${p.health_metrics.heart_rate} BPM`;
         document.getElementById('h-bp').innerText = p.health_metrics.blood_pressure;
         document.getElementById('h-o2').innerText = `${p.health_metrics.oxygen}%`;
-        document.getElementById('h-stress').innerText = p.health_metrics.stress_index;
         
-        if (p.health_metrics.stress_index > 80 || p.health_metrics.heart_rate > 120) {
-            hStatus.innerText = getTranslation('rest_required');
+        const hr = p.health_metrics.heart_rate || 72;
+        const o2 = p.health_metrics.oxygen || 98;
+        let abnormal = hr < 55 || hr > 110 || o2 < 92;
+        if (p.health_metrics.blood_pressure && p.health_metrics.blood_pressure.includes('/')) {
+            try {
+                const parts = p.health_metrics.blood_pressure.split('/');
+                const syst = parseInt(parts[0]);
+                const diast = parseInt(parts[1]);
+                if (syst < 90 || syst > 140 || diast < 60 || diast > 95) abnormal = true;
+            } catch(e) {}
+        }
+        
+        if (abnormal) {
+            hStatus.innerText = "ABNORMAL VITALS";
             hStatus.style.background = "var(--danger)";
         } else {
-            hStatus.innerText = getTranslation('fit_to_drive');
+            hStatus.innerText = getTranslation('fit_to_drive') || "FIT TO DRIVE";
             hStatus.style.background = "var(--success)";
         }
     }
@@ -1380,8 +1872,7 @@ document.getElementById('health-form')?.addEventListener('submit', async (e) => 
     const metrics = {
         heart_rate: document.getElementById('v-heart-rate').value,
         blood_pressure: document.getElementById('v-bp').value,
-        oxygen: document.getElementById('v-oxygen').value,
-        stress_index: document.getElementById('v-stress').value
+        oxygen: document.getElementById('v-oxygen').value
     };
     
     try {
@@ -1417,13 +1908,81 @@ async function uploadProfilePic() {
     }
 }
 
-async function startRest() {
+async function startRest(selectedStop = null) {
     const dId = localStorage.getItem('driver_id');
-    if (confirm(getTranslation('rest_period_confirm'))) {
-        await submitIncident('resting');
-        alert(getTranslation('rest_period_logged'));
-        loadProfileData();
+    
+    // If fatigue is >= 100, they must be at a rest stop
+    if (window.currentDriverObj && window.currentDriverObj.fatigue_score >= 100) {
+        let currentLoc = null;
+        if (marker) {
+            const ll = marker.getLatLng();
+            currentLoc = { lat: ll.lat, lng: ll.lng };
+        } else if (lastLocation) {
+            currentLoc = lastLocation;
+        }
+        
+        if (!currentLoc) {
+            alert("Unable to determine current location. Please ensure GPS or simulated location is active.");
+            return;
+        }
+        
+        // Define distance helper
+        const getDistance = (lat1, lon1, lat2, lon2) => {
+            const R = 6371e3; // meters
+            const phi1 = lat1 * Math.PI/180;
+            const phi2 = lat2 * Math.PI/180;
+            const deltaPhi = (lat2-lat1) * Math.PI/180;
+            const deltaLambda = (lon2-lon1) * Math.PI/180;
+
+            const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                      Math.cos(phi1) * Math.cos(phi2) *
+                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        };
+        
+        let targetStop = selectedStop;
+        if (!targetStop) {
+            // Fetch nearby rest stops
+            try {
+                const stopsToCheck = await apiCall(`/driver/safety/rest-stops?lat=${currentLoc.lat}&lng=${currentLoc.lng}`);
+                let minDistance = Infinity;
+                stopsToCheck.forEach(stop => {
+                    const dist = getDistance(currentLoc.lat, currentLoc.lng, stop.lat, stop.lng);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        targetStop = stop;
+                    }
+                });
+                if (targetStop) {
+                    targetStop.distance = minDistance;
+                }
+            } catch (e) {
+                console.error("Failed to fetch rest stops during validation:", e);
+            }
+        } else {
+            targetStop.distance = getDistance(currentLoc.lat, currentLoc.lng, targetStop.lat, targetStop.lng);
+        }
+        
+        if (!targetStop || targetStop.distance > 300) {
+            const distMsg = targetStop ? `You are currently ${Math.round(targetStop.distance)}m away from the nearest rest stop.` : '';
+            alert(`⚠️ You must reach a resting spot on the map (green marker) before starting your rest. ${distMsg} Please navigate closer on the map.`);
+            return;
+        }
+        
+        if (!confirm(`You have reached ${targetStop.name || 'Rest Stop'}. Do you want to mark resting spot reached and start your mandatory 8-hour rest?`)) {
+            return;
+        }
+    } else {
+        if (!confirm(getTranslation('rest_period_confirm'))) {
+            return;
+        }
     }
+    
+    await submitIncident('resting');
+    alert(getTranslation('rest_period_logged'));
+    loadProfileData();
+    loadMissions();
 }
 
 function logout() {
@@ -1438,6 +1997,7 @@ window.logout = logout;
 window.switchDriverTab = switchDriverTab;
 window.toggleDuty = typeof toggleDuty !== 'undefined' ? toggleDuty : undefined;
 window.toggleWatchSync = typeof toggleWatchSync !== 'undefined' ? toggleWatchSync : undefined;
+window.startRest = startRest;
 
 
 function openIncidentModal() {
@@ -2068,21 +2628,29 @@ async function simulateWatchData() {
     const bp = `${110 + Math.floor(Math.random()*20)}/${70 + Math.floor(Math.random()*15)}`;
     
     // Update UI
-    document.getElementById('h-rate').innerText = hr + ' BPM';
-    document.getElementById('h-o2').innerText = o2 + '%';
-    document.getElementById('h-bp').innerText = bp;
-    document.getElementById('h-sync').innerText = 'Just now (Watch)';
+    if (document.getElementById('h-rate')) document.getElementById('h-rate').innerText = hr + ' BPM';
+    if (document.getElementById('h-o2')) document.getElementById('h-o2').innerText = o2 + '%';
+    if (document.getElementById('h-bp')) document.getElementById('h-bp').innerText = bp;
+    if (document.getElementById('h-sync')) document.getElementById('h-sync').innerText = 'Just now (Watch)';
 
     // Abnormal Check
-    if (hr > 125 || o2 < 92) {
+    let bpAbnormal = false;
+    try {
+        const parts = bp.split('/');
+        const syst = parseInt(parts[0]);
+        const diast = parseInt(parts[1]);
+        if (syst < 90 || syst > 140 || diast < 60 || diast > 95) bpAbnormal = true;
+    } catch(e) {}
+    const abnormal = hr < 55 || hr > 110 || o2 < 92 || bpAbnormal;
+
+    if (abnormal) {
         triggerHealthEmergency(hr, o2);
     } else {
         // Normal update to backend
         apiCall(`/driver/${dId}/update-vitals`, 'POST', {
             heart_rate: hr,
             blood_pressure: bp,
-            oxygen_level: o2,
-            stress_index: Math.floor(Math.random() * 40)
+            oxygen_level: o2
         }).catch(() => {});
     }
 }

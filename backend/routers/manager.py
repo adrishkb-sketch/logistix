@@ -404,8 +404,18 @@ def create_driver(driver: Driver):
     if any(d.get("login_id") == driver.login_id for d in all_drivers):
         raise HTTPException(status_code=400, detail="This Login ID is already taken.")
 
-    from backend.services.driver_intel import calculate_driver_performance_score
+    from backend.services.driver_intel import calculate_driver_performance_score, calculate_safety_rating
     driver_data = driver.model_dump()
+    
+    # Calculate safety score based on accidents & experience
+    safety_rating = calculate_safety_rating(driver_data)
+    driver_data["safety_rating"] = safety_rating
+    driver_data["safety_index"] = round((safety_rating / 5.0) * 100.0, 1)
+    
+    driver_data["rating"] = 5.0
+    driver_data["total_rating_sum"] = 0.0
+    driver_data["rating_count"] = 0
+    
     driver_data["driving_score"] = calculate_driver_performance_score(driver_data)
     return drivers_db.insert(driver_data)
 
@@ -995,6 +1005,8 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
         processed = []
         for v in vehicles:
             v["efficiency_score"] = calculate_vehicle_efficiency_score(v)
+            v["kilometers_covered"] = v.get("total_distance_km", 0.0)
+            v["total_deliveries"] = v.get("deliveries_completed", 0)
             processed.append(v)
             
         key_map = {
@@ -1002,7 +1014,7 @@ def get_leaderboard(company_id: str, category: str = "driver", sort_by: str = "o
             "vehicle_health_score": "vehicle_health_score",
             "fuel_efficiency": "fuel_efficiency",
             "distance": "total_distance_km",
-            "deliveries": "total_deliveries", # if we track deliveries for vehicles
+            "deliveries": "total_deliveries",
             "operational_days": "operational_days"
         }
         target_key = key_map.get(sort_by, "efficiency_score")
@@ -1806,3 +1818,34 @@ def update_leave_status(req_id: str, status: str):
     req["status"] = status
     leave_requests_db.update(req_id, {"status": status})
     return {"message": f"Request {status}"}
+
+@router.post("/vehicles/{vehicle_id}/approve-checkup")
+def approve_checkup(vehicle_id: str, x_logistix_context: Optional[str] = Header(None)):
+    vehicle = vehicles_db.get_by_id(vehicle_id)
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+        
+    if x_logistix_context:
+        # If context matches warehouse ID, verify this vehicle belongs to it
+        from backend.database import JSONDatabase
+        wh = JSONDatabase("warehouses").get_by_id(x_logistix_context)
+        if wh:
+            if vehicle.get("base_warehouse_id") != x_logistix_context:
+                raise HTTPException(status_code=403, detail="Permission Denied: This vehicle is not based at your warehouse.")
+                
+    curr_dist = vehicle.get("total_distance_km", 0.0)
+    vehicles_db.update(vehicle_id, {
+        "last_service_km": curr_dist,
+        "vehicle_health_score": 100.0,
+        "checkup_status": "none"
+    })
+    
+    # Resolve pending maintenance alerts for this vehicle
+    alerts_db = JSONDatabase("alerts")
+    d_id = vehicle.get("assigned_driver_id")
+    if d_id:
+        driver_alerts = alerts_db.get_filtered({"driver_id": d_id, "type": "maintenance"})
+        for a in driver_alerts:
+            alerts_db.update(a["id"], {"status": "resolved"})
+            
+    return {"message": "Vehicle checkup approved. Health restored to 100%.", "vehicle_health_score": 100.0}

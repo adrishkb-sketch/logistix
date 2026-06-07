@@ -230,7 +230,13 @@ def pay_shipment(shipment_id: str):
     
 @router.post("/{shipment_id}/rate")
 def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
+    rating = rating_data.rating
     shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        # Fallback to prefix matching
+        all_ships = shipments_db.get_all()
+        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+        
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
         
@@ -240,53 +246,87 @@ def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
     if shipment.get("customer_rating"):
         raise HTTPException(status_code=400, detail="Shipment already rated")
         
-    driver_id = shipment.get("assigned_driver_id")
-    if not driver_id:
-        raise HTTPException(status_code=400, detail="No driver assigned to this shipment")
-        
+    # Gather all drivers involved in this shipment chain
     drivers_db = JSONDatabase("drivers")
-    driver = drivers_db.get_by_id(driver_id)
-    if not driver:
-        raise HTTPException(status_code=404, detail="Driver not found")
+    driver_ids = set()
+    if shipment.get("assigned_driver_id"):
+        driver_ids.add(shipment["assigned_driver_id"])
         
-    # Update driver rating
-    old_rating = driver.get("rating", 5.0)
-    # Use total_deliveries from model
-    count = driver.get("total_deliveries", 0)
-    new_rating = ((old_rating * count) + rating_data.rating) / (count + 1)
+    # Check legs if it's a parent
+    all_ships = shipments_db.get_all()
+    legs = [s for s in all_ships if s.get("parent_id") == shipment["id"]]
+    for leg in legs:
+        if leg.get("assigned_driver_id"):
+            driver_ids.add(leg["assigned_driver_id"])
+            
+    # Check if it's a leg and find parent's drivers
+    if shipment.get("is_leg") and shipment.get("parent_id"):
+        parent = shipments_db.get_by_id(shipment["parent_id"])
+        if parent:
+            if parent.get("assigned_driver_id"):
+                driver_ids.add(parent["assigned_driver_id"])
+            parent_legs = [s for s in all_ships if s.get("parent_id") == parent["id"]]
+            for pl in parent_legs:
+                if pl.get("assigned_driver_id"):
+                    driver_ids.add(pl["assigned_driver_id"])
+                    
+    # Exclude drone-system or invalid driver IDs
+    driver_ids = {d for d in driver_ids if d and d != "DRONE-SYSTEM"}
     
-    # Update reward points based on rating
-    # Bonus: (Rating - 3) * 20. 5=40, 4=20, 3=0, 2=-20, 1=-40
-    rating_bonus = (rating_data.rating - 3) * 20
-    new_points = driver.get("reward_points", 0.0) + rating_bonus
+    # Calculate points bonus
+    rating_bonus = (rating - 3) * 20
     
-    drivers_db.update(driver_id, {
-        "rating": round(new_rating, 2),
-        "total_deliveries": count + 1,
-        "reward_points": new_points
-    })
-    
-    # Store rating in shipment and update breakdown
-    breakdown = shipment.get("points_breakdown", {})
+    for d_id in driver_ids:
+        driver = drivers_db.get_by_id(d_id)
+        if driver:
+            r_sum = driver.get("total_rating_sum", 0.0) + rating
+            r_count = driver.get("rating_count", 0) + 1
+            avg_rating = round(r_sum / r_count, 2)
+            new_points = driver.get("reward_points", 0.0) + rating_bonus
+            
+            drivers_db.update(d_id, {
+                "total_rating_sum": r_sum,
+                "rating_count": r_count,
+                "rating": avg_rating,
+                "reward_points": new_points
+            })
+            
+    # Update parent shipment
+    breakdown = shipment.get("points_breakdown", {}) or {}
     breakdown["customer_rating_bonus"] = rating_bonus
-    breakdown["total"] = breakdown.get("total", 0) + rating_bonus
+    breakdown["total"] = breakdown.get("total", 0.0) + rating_bonus
     
-    shipments_db.update(shipment_id, {
-        "customer_rating": rating_data.rating,
+    shipments_db.update(shipment["id"], {
+        "customer_rating": rating,
         "points_breakdown": breakdown
     })
     
-    # Log the event
+    # Append log to parent shipment
     log = ShipmentEvent(
         status="delivered",
-        message=f"Receiver rated the delivery: {rating_data.rating}⭐. Driver earned {rating_bonus} bonus points.",
+        message=f"Receiver rated the delivery: {rating}⭐. Propagated to {len(driver_ids)} drivers.",
         location=shipment.get("drop")
     )
-    history = shipment.get("logs", [])
+    history = shipment.get("logs", []) or []
     history.append(log.model_dump())
-    shipments_db.update(shipment_id, {"logs": history})
+    shipments_db.update(shipment["id"], {"logs": history})
     
-    return {"message": "Rating submitted", "bonus_points": rating_bonus}
+    # Update all leg shipments with rating & logs too
+    for leg in legs:
+        leg_breakdown = leg.get("points_breakdown", {}) or {}
+        leg_breakdown["customer_rating_bonus"] = rating_bonus
+        leg_breakdown["total"] = leg_breakdown.get("total", 0.0) + rating_bonus
+        
+        leg_history = leg.get("logs", []) or []
+        leg_history.append(log.model_dump())
+        
+        shipments_db.update(leg["id"], {
+            "customer_rating": rating,
+            "points_breakdown": leg_breakdown,
+            "logs": leg_history
+        })
+        
+    return {"message": f"Rating of {rating} applied to {len(driver_ids)} participants.", "bonus_points": rating_bonus}
 
 receivers_db = JSONDatabase("receivers")
 
@@ -1396,59 +1436,11 @@ def pay_shipment(shipment_id: str):
         
     return {"message": "Payment successful"}
 
-@router.post("/{shipment_id}/rate")
-def rate_shipment(shipment_id: str, data: dict):
+@router.post("/{shipment_id}/rate-legacy")
+def rate_shipment_legacy(shipment_id: str, data: dict):
     rating = data.get("rating")
     if not rating: raise HTTPException(status_code=400, detail="Rating required")
-    
-    shipment = shipments_db.get_by_id(shipment_id)
-    if not shipment:
-        all_ships = shipments_db.get_all()
-        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
-        
-    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
-    
-    shipments_db.update(shipment["id"], {"customer_rating": rating})
-    
-    # Propagate rating to all drivers involved
-    drivers_db = JSONDatabase("drivers")
-    driver_ids = set()
-    if shipment.get("assigned_driver_id"):
-        driver_ids.add(shipment["assigned_driver_id"])
-        
-    # Check legs if it's a parent
-    all_ships = shipments_db.get_all()
-    legs = [s for s in all_ships if s.get("parent_id") == shipment["id"]]
-    for leg in legs:
-        if leg.get("assigned_driver_id"):
-            driver_ids.add(leg["assigned_driver_id"])
-            
-    # Also check if THIS IS a leg and find its parent's drivers
-    if shipment.get("is_leg") and shipment.get("parent_id"):
-        parent = shipments_db.get_by_id(shipment["parent_id"])
-        if parent:
-            if parent.get("assigned_driver_id"):
-                driver_ids.add(parent["assigned_driver_id"])
-            parent_legs = [s for s in all_ships if s.get("parent_id") == parent["id"]]
-            for pl in parent_legs:
-                if pl.get("assigned_driver_id"):
-                    driver_ids.add(pl["assigned_driver_id"])
-
-    for d_id in driver_ids:
-        driver = drivers_db.get_by_id(d_id)
-        if driver:
-            r_sum = driver.get("total_rating_sum", 0) + rating
-            r_count = driver.get("rating_count", 0) + 1
-            avg = round(r_sum / r_count, 1)
-            
-            # Update safety/driving score too
-            drivers_db.update(d_id, {
-                "total_rating_sum": r_sum,
-                "rating_count": r_count,
-                "safety_rating": avg # Sync with rating
-            })
-            
-    return {"message": f"Rating of {rating} applied to {len(driver_ids)} participants."}
+    return rate_shipment(shipment_id, ShipmentRating(rating=float(rating)))
 @router.get("/assets/eligible/{shipment_id}")
 def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str] = None, to_wh: Optional[str] = None):
     shipment = shipments_db.get_by_id(shipment_id)

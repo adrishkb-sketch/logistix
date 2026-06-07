@@ -121,6 +121,10 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if vehicle.get("is_operational") == False:
             rejection_reasons.append(f"{d_name}: Vehicle {vehicle.get('number_plate')} is in maintenance")
             continue
+
+        if float(vehicle.get("vehicle_health_score", 100.0)) <= 0.0:
+            rejection_reasons.append(f"{d_name}: Vehicle {vehicle.get('number_plate')} health is 0% (Checkup required)")
+            continue
         
         v_type = str(vehicle.get("type", "")).lower()
         v_base = vehicle.get("base_warehouse_id")

@@ -31,6 +31,7 @@ async function init() {
     await loadDriversAndVehicles();
     initTheme();
     updatePageTranslations();
+    injectProfileModal();
     
     const savedLang = localStorage.getItem('app_lang') || 'en';
     const langSelect = document.getElementById('lang-select');
@@ -283,7 +284,7 @@ window.renderDriversTable = function() {
         
         return `
             <tr>
-                <td><b>${d.name}</b> ${fitnessBadge}<br><small style="color:var(--primary); font-family:monospace;">${d.system_id || d.id.slice(0,8)}</small></td>
+                <td style="cursor:pointer;" onclick="viewFullProfile('driver', '${d.id}')"><b>${d.name}</b> ${fitnessBadge}<br><small style="color:var(--primary); font-family:monospace;">${d.system_id || d.id.slice(0,8)}</small></td>
                 <td><small style="font-family:monospace;">${d.login_id || 'N/A'}</small></td>
                 <td><span class="status-pill" style="background:rgba(255,255,255,0.1)">${d.license_type || 'CLASS A'}</span></td>
                 <td><b>${d.years_experience || 0}y Exp</b></td>
@@ -324,9 +325,14 @@ window.renderVehiclesTable = function() {
         const healthColor = v.vehicle_health_score > 80 ? 'var(--success)' : (v.vehicle_health_score > 60 ? 'var(--warning)' : 'var(--danger)');
         const opBadge = v.is_operational !== false ? '<span class="status-pill" style="background:var(--success)22; color:var(--success); font-size:0.6rem;">OPERATIONAL</span>' : '<span class="status-pill" style="background:var(--danger)22; color:var(--danger); font-size:0.6rem;">BREAKDOWN</span>';
         
+        let checkupBtn = '';
+        if (v.checkup_status === 'pending') {
+            checkupBtn = `<button class="btn-primary" style="padding:4px 8px; font-size:0.7rem; background:var(--success); color:black; font-weight:bold; border-radius:6px;" onclick="approveCheckup('${v.id}')">Approve Checkup</button>`;
+        }
+
         return `
             <tr>
-                <td><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || v.id.slice(0,8)}</small></td>
+                <td style="cursor:pointer;" onclick="viewFullProfile('vehicle', '${v.id}')"><b>${v.type}</b><br><small style="color:var(--accent); font-family:monospace;">${v.system_id || v.id.slice(0,8)}</small></td>
                 <td><b style="font-family:monospace; letter-spacing:1px;">${formatDisplayPlate(v.number_plate)}</b></td>
                 <td><span style="color:${healthColor}; font-weight:bold;">${v.vehicle_health_score || 100}%</span></td>
                 <td>${v.capacity}kg<br><small>Eff: ${v.fuel_efficiency}km/l</small></td>
@@ -335,6 +341,7 @@ window.renderVehiclesTable = function() {
                 <td>${linkedDriver ? `<b>${linkedDriver.name}</b>` : '<span style="opacity:0.4;">Unlinked</span>'}</td>
                 <td>
                     <div style="display:flex; align-items:center; gap:8px;">
+                        ${checkupBtn}
                         <button class="btn-primary btn-accent" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="openEditModal('vehicles', '${v.id}')">✏️</button>
                         <button class="btn-primary btn-danger" style="padding:6px; border-radius:6px; width:30px; height:30px;" onclick="deleteItem('vehicles', '${v.id}')">🗑️</button>
                     </div>
@@ -1436,4 +1443,356 @@ switchTab = function(tab) {
         loadGateQueue();
     }
 };
+
+// --- Profile Modal & Checkup Approval Integration ---
+function injectProfileModal() {
+    if (document.getElementById('profile-modal')) return;
+    const modal = document.createElement('div');
+    modal.className = 'glass-card modal-glass';
+    modal.id = 'profile-modal';
+    modal.style.cssText = 'display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:700px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 32px; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(20px);';
+    modal.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+            <div style="display:flex; gap:20px; align-items:center;">
+                <img id="prof-image" src="" style="width:80px; height:80px; border-radius:50%; border:3px solid var(--primary); object-fit:cover;"/>
+                <div>
+                    <h2 id="prof-name" style="margin:0;"></h2>
+                    <p id="prof-sub" style="color:var(--text-muted); margin:0;"></p>
+                    <div id="prof-driving-status" style="margin-top:8px; font-size:0.8rem; display:inline-block; padding:4px 10px; border-radius:12px; font-weight:700;"></div>
+                </div>
+            </div>
+            <button onclick="document.getElementById('profile-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">✖</button>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(6, 1fr); gap:10px; margin-bottom:25px;">
+            <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+                <small style="color:var(--text-muted)">Safety Index</small>
+                <h3 id="prof-stat-1" style="font-size:1.1rem; margin-top:5px; margin-bottom:0;"></h3>
+            </div>
+            <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+                <small style="color:var(--text-muted)">Punctuality</small>
+                <h3 id="prof-stat-2" style="font-size:1.1rem; margin-top:5px; margin-bottom:0;"></h3>
+            </div>
+            <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+                <small style="color:var(--text-muted)">Experience</small>
+                <h3 id="prof-stat-3" style="font-size:1.1rem; margin-top:5px; margin-bottom:0;"></h3>
+            </div>
+            <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+                <small style="color:var(--text-muted)">Rating</small>
+                <h3 id="prof-stat-5" style="font-size:1.1rem; margin-top:5px; margin-bottom:0; color:var(--warning);"></h3>
+            </div>
+            <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+                <small style="color:var(--text-muted)">Trips</small>
+                <h3 id="prof-stat-4" style="font-size:1.1rem; margin-top:5px; margin-bottom:0;"></h3>
+            </div>
+            <div class="glass-card" style="padding:10px; text-align:center; background:rgba(255,255,255,0.05)">
+                <small style="color:var(--text-muted)">Earnings</small>
+                <h3 id="prof-stat-6" style="font-size:1.1rem; margin-top:5px; margin-bottom:0; color:var(--accent);"></h3>
+            </div>
+        </div>
+        <h4>Performance Insights</h4>
+        <div style="margin-bottom:20px;">
+            <label id="prof-meter-label" style="font-size:0.85rem; color:var(--text-muted)"></label>
+            <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; margin-top:5px; overflow:hidden;">
+                <div id="prof-meter-bar" style="width:0%; height:100%; background:var(--primary); transition:width 1s ease;"></div>
+            </div>
+        </div>
+        <div id="prof-tab-container">
+            <div style="display:flex; gap:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:12px;">
+                <span id="prof-btn-trips" style="cursor:pointer; font-weight:bold; color:var(--primary); font-size:1rem; border-bottom:2px solid var(--primary); padding-bottom:6px;" onclick="window.switchProfTab('trips')">Recent Trip History</span>
+                <span id="prof-btn-hours" style="cursor:pointer; font-weight:bold; color:var(--text-muted); font-size:1rem; padding-bottom:6px;" onclick="window.switchProfTab('hours')">Driving Hours</span>
+            </div>
+            <div id="prof-tab-trips-table" class="table-container">
+                <table style="font-size:0.85rem; width:100%;">
+                    <thead><tr><th>ID</th><th>Route</th><th>Date</th><th>Status</th></tr></thead>
+                    <tbody id="prof-trips-body"></tbody>
+                </table>
+            </div>
+            <div id="prof-tab-hours-table" class="table-container" style="display:none;">
+                <table style="font-size:0.85rem; width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:1px solid var(--border);">
+                            <th style="padding:8px;">Trip ID</th>
+                            <th style="padding:8px;">Route</th>
+                            <th style="padding:8px;">Distance</th>
+                            <th style="padding:8px;">Hours Worked</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prof-hours-body"></tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    window.switchProfTab = function(tab) {
+        const tripsTable = document.getElementById('prof-tab-trips-table');
+        const hoursTable = document.getElementById('prof-tab-hours-table');
+        const btnTrips = document.getElementById('prof-btn-trips');
+        const btnHours = document.getElementById('prof-btn-hours');
+        if (tab === 'trips') {
+            if (tripsTable) tripsTable.style.display = 'block';
+            if (hoursTable) hoursTable.style.display = 'none';
+            if (btnTrips) {
+                btnTrips.style.color = 'var(--primary)';
+                btnTrips.style.borderBottom = '2px solid var(--primary)';
+            }
+            if (btnHours) {
+                btnHours.style.color = 'var(--text-muted)';
+                btnHours.style.borderBottom = 'none';
+            }
+        } else {
+            if (tripsTable) tripsTable.style.display = 'none';
+            if (hoursTable) hoursTable.style.display = 'block';
+            if (btnTrips) {
+                btnTrips.style.color = 'var(--text-muted)';
+                btnTrips.style.borderBottom = 'none';
+            }
+            if (btnHours) {
+                btnHours.style.color = 'var(--primary)';
+                btnHours.style.borderBottom = '2px solid var(--primary)';
+            }
+        }
+    };
+}
+
+async function viewFullProfile(type, id) {
+    try {
+        const data = await apiCall(`/manager/${type}s/${id}/profile?company_id=${companyId}`);
+        const p = data.profile;
+        const shipments = data.recent_shipments;
+        
+        const modal = document.getElementById('profile-modal');
+        
+        let profilePic = p.profile_pic;
+        if (type === 'vehicle') {
+            const vType = (p.type || 'van').toLowerCase();
+            let emoji = '🚐';
+            let color = '#4f8cff';
+            if (vType.includes('truck')) {
+                emoji = '🚚';
+                color = '#f59e0b';
+            } else if (vType.includes('bike') || vType.includes('scooty') || vType.includes('scooter')) {
+                emoji = '🏍️';
+                color = '#10b981';
+            } else if (vType.includes('drone')) {
+                emoji = '🛸';
+                color = '#8b5cf6';
+            }
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
+                        <stop offset="100%" stop-color="${color}" stop-opacity="0.05"/>
+                    </linearGradient>
+                </defs>
+                <rect width="100" height="100" rx="50" fill="url(#g)" stroke="${color}" stroke-width="2"/>
+                <text x="50%" y="62%" font-size="45" text-anchor="middle" dominant-baseline="middle">${emoji}</text>
+            </svg>`;
+            profilePic = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+        } else {
+            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+        }
+        
+        document.getElementById('prof-image').src = profilePic;
+        document.getElementById('prof-name').innerText = p.name || p.number_plate;
+        document.getElementById('prof-sub').innerText = type === 'driver' ? `@${p.login_id || 'user'} | ${(p.license_type || 'regular').toUpperCase()} LICENSE` : `${(p.type || 'vehicle').toUpperCase()} | HEALTH: ${p.vehicle_health_score || 100}%`;
+        
+        if (type === 'driver') {
+            const tabContainer = document.getElementById('prof-tab-container');
+            if (tabContainer) tabContainer.style.display = 'block';
+            
+            document.getElementById('prof-stat-1').innerText = `${(p.safety_index || 100).toFixed(1)}%`;
+            document.getElementById('prof-stat-2').innerText = `${(p.punctuality_rate || 100).toFixed(1)}%`;
+            document.getElementById('prof-stat-3').innerText = `${p.years_experience || 0} Years`;
+            document.getElementById('prof-stat-4').innerText = `${p.total_trips || p.deliveries_completed || 0}`;
+            
+            let avgRating = 5.0;
+            if (p.rating_count && p.rating_count > 0) {
+                avgRating = p.total_rating_sum / p.rating_count;
+            } else if (p.rating !== undefined) {
+                avgRating = p.rating;
+            }
+            document.getElementById('prof-stat-5').innerText = `${avgRating.toFixed(1)}⭐`;
+            document.getElementById('prof-stat-6').innerText = `₹${p.wallet_balance || 0} / ${p.reward_points || 0} pts`;
+            
+            document.getElementById('prof-meter-label').innerText = `Fatigue Level: ${(p.fatigue_score || 0).toFixed(0)}%`;
+            const meter = document.getElementById('prof-meter-bar');
+            meter.style.width = `${p.fatigue_score || 0}%`;
+            meter.style.background = (p.fatigue_score || 0) > 80 ? 'var(--danger)' : 'var(--primary)';
+
+            const statusEl = document.getElementById('prof-driving-status');
+            const hasActiveShipment = shipments.some(s => s.status === 'in_transit');
+            const isResting = p.fatigue_score > 80;
+            const hasVehicle = p.vehicle_id !== null;
+
+            if (p.is_on_duty === false) {
+                statusEl.innerText = "NOT WORKING";
+                statusEl.style.background = "rgba(239, 68, 68, 0.15)";
+                statusEl.style.color = "var(--danger)";
+            } else if (hasActiveShipment) {
+                statusEl.innerText = "ON ROAD";
+                statusEl.style.background = "rgba(16, 185, 129, 0.15)";
+                statusEl.style.color = "var(--success)";
+            } else if (isResting) {
+                statusEl.innerText = "RESTING";
+                statusEl.style.background = "rgba(79, 140, 255, 0.15)";
+                statusEl.style.color = "var(--primary)";
+            } else if (hasVehicle) {
+                statusEl.innerText = "READY";
+                statusEl.style.background = "rgba(245, 158, 11, 0.15)";
+                statusEl.style.color = "var(--warning)";
+            } else {
+                statusEl.innerText = "UNAVAILABLE";
+                statusEl.style.background = "rgba(255, 255, 255, 0.05)";
+                statusEl.style.color = "var(--text-muted)";
+            }
+            
+            let hCard = document.getElementById('prof-health-card');
+            if (!hCard) {
+                hCard = document.createElement('div');
+                hCard.id = 'prof-health-card';
+                hCard.className = 'glass-card';
+                hCard.style.cssText = 'padding:15px; background:linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(0, 0, 0, 0)); border: 1px solid rgba(239, 68, 68, 0.2); margin-top: 15px; margin-bottom: 20px; text-align: left;';
+                hCard.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0; color:var(--danger);">❤️ Driver Vitals (Smartwatch Live)</h4>
+                        <span id="prof-health-status" class="badge" style="background:var(--success); font-size:0.7rem;">FIT TO DRIVE</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                        <div style="text-align:center;">
+                            <div style="font-size:0.7rem; color:var(--text-muted);">HEART RATE</div>
+                            <div id="prof-health-rate" style="font-size:1.1rem; font-weight:bold; color:var(--danger);">-- BPM</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.7rem; color:var(--text-muted);">BLOOD PRESSURE</div>
+                            <div id="prof-health-bp" style="font-size:1.1rem; font-weight:bold; color:white;">--/--</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.7rem; color:var(--text-muted);">OXYGEN (SpO2)</div>
+                            <div id="prof-health-o2" style="font-size:1.1rem; font-weight:bold; color:var(--accent);">--%</div>
+                        </div>
+                    </div>
+                `;
+                const targetHeader = document.querySelector('#profile-modal h4:last-of-type') || document.getElementById('prof-trips-body')?.closest('.table-container');
+                if (targetHeader) {
+                    targetHeader.parentNode.insertBefore(hCard, targetHeader);
+                } else {
+                    document.getElementById('profile-modal').appendChild(hCard);
+                }
+            }
+            
+            if (p.health_metrics) {
+                hCard.style.display = 'block';
+                document.getElementById('prof-health-rate').innerText = `${p.health_metrics.heart_rate || '--'} BPM`;
+                document.getElementById('prof-health-bp').innerText = p.health_metrics.blood_pressure || '--/--';
+                document.getElementById('prof-health-o2').innerText = `${p.health_metrics.oxygen || '--'}%`;
+                
+                const statusBadge = document.getElementById('prof-health-status');
+                if (p.is_fit === false) {
+                    statusBadge.innerText = "UNFIT (AUDIT)";
+                    statusBadge.style.background = "var(--danger)";
+                } else {
+                    const hr = p.health_metrics.heart_rate;
+                    const o2 = p.health_metrics.oxygen;
+                    let abnormal = hr < 55 || hr > 110 || o2 < 92;
+                    if (p.health_metrics.blood_pressure && p.health_metrics.blood_pressure.includes('/')) {
+                        const parts = p.health_metrics.blood_pressure.split('/');
+                        const syst = parseInt(parts[0]);
+                        const diast = parseInt(parts[1]);
+                        if (syst < 90 || syst > 140 || diast < 60 || diast > 95) {
+                            abnormal = true;
+                        }
+                    }
+                    if (abnormal) {
+                        statusBadge.innerText = "ABNORMAL VITALS";
+                        statusBadge.style.background = "var(--danger)";
+                    } else {
+                        statusBadge.innerText = "FIT TO DRIVE";
+                        statusBadge.style.background = "var(--success)";
+                    }
+                }
+            } else {
+                hCard.style.display = 'none';
+            }
+            
+            const hoursBody = document.getElementById('prof-hours-body');
+            if (hoursBody) {
+                const getHaversine = (lat1, lon1, lat2, lon2) => {
+                    const R = 6371;
+                    const dLat = (lat2-lat1) * Math.PI / 180;
+                    const dLon = (lon2-lon1) * Math.PI / 180;
+                    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                              Math.sin(dLon/2) * Math.sin(dLon/2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                    return R * c;
+                };
+                hoursBody.innerHTML = shipments.map(s => {
+                    const distVal = getHaversine(s.pickup.lat, s.pickup.lng, s.drop.lat, s.drop.lng);
+                    const dist = distVal.toFixed(1) + ' km';
+                    const hrs = (s.driving_hours || (distVal / 45.0)).toFixed(1) + ' hrs';
+                    const route = `${s.pickup.address || 'Pickup'} → ${s.drop.address || 'Drop'}`;
+                    return `
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <td style="padding:8px; font-family:monospace;">${s.id.substring(0,8)}</td>
+                            <td style="padding:8px;">${route}</td>
+                            <td style="padding:8px;">${dist}</td>
+                            <td style="padding:8px; font-weight:bold; color:var(--primary);">${hrs}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            if (window.switchProfTab) window.switchProfTab('trips');
+            
+        } else {
+            const hCard = document.getElementById('prof-health-card');
+            if (hCard) hCard.style.display = 'none';
+            const tabContainer = document.getElementById('prof-tab-container');
+            if (tabContainer) tabContainer.style.display = 'none';
+            
+            document.getElementById('prof-stat-1').innerText = `${(p.efficiency_score || 100).toFixed(1)}%`;
+            document.getElementById('prof-stat-2').innerText = `${p.vehicle_health_score || 100}%`;
+            document.getElementById('prof-stat-3').innerText = `${(p.total_distance_km || p.kilometers_covered || 0).toFixed(0)} km`;
+            document.getElementById('prof-stat-4').innerText = `${p.deliveries_completed || 0}`;
+            document.getElementById('prof-stat-5').innerText = ''; 
+            document.getElementById('prof-stat-6').innerText = '';
+            
+            document.getElementById('prof-meter-label').innerText = 'Fuel Efficiency Index';
+            document.getElementById('prof-meter-bar').style.width = '85%';
+        }
+        
+        const tripsBody = document.getElementById('prof-trips-body');
+        if (tripsBody) {
+            tripsBody.innerHTML = shipments.map(s => `
+                <tr>
+                    <td>${s.id.substring(0,8)}</td>
+                    <td>${s.pickup.address.split(',')[0]} → ${s.drop.address.split(',')[0]}</td>
+                    <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                    <td><span class="status-pill" style="font-size:0.7rem;">${s.status}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        modal.style.display = 'block';
+    } catch(e) {
+        console.error("Profile view error:", e);
+        alert("Could not load full profile data.");
+    }
+}
+
+async function approveCheckup(vehicleId) {
+    if(!confirm("Approve vehicle checkup and restore health to 100%?")) return;
+    try {
+        const res = await apiCall(`/manager/vehicles/${vehicleId}/approve-checkup`, 'POST');
+        alert("✅ checkup approved: " + res.message);
+        loadDriversAndVehicles();
+    } catch(e) {
+        alert("Failed to approve checkup: " + (e.message || "Error"));
+    }
+}
+
+window.viewFullProfile = viewFullProfile;
+window.approveCheckup = approveCheckup;
+window.injectProfileModal = injectProfileModal;
+
 

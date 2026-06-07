@@ -406,7 +406,7 @@
                                 <h4 style="margin:0; color:var(--danger);" data-i18n="medical_health_card">🛡️ Medical Health Card</h4>
                                 <span id="h-status" class="badge" style="background:var(--success); font-size:0.7rem;" data-i18n="fit_to_drive">FIT TO DRIVE</span>
                             </div>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
                                 <div style="text-align:center;">
                                     <div style="font-size:0.7rem; color:var(--text-muted);" data-i18n="heart_rate">HEART RATE</div>
                                     <div style="font-size:1.2rem; font-weight:bold; color:var(--danger);" id="h-rate">-- BPM</div>
@@ -418,10 +418,6 @@
                                 <div style="text-align:center;">
                                     <div style="font-size:0.7rem; color:var(--text-muted);" data-i18n="oxygen_level">OXYGEN (SpO2)</div>
                                     <div style="font-size:1.2rem; font-weight:bold; color:var(--accent);" id="h-o2">--%</div>
-                                </div>
-                                <div style="text-align:center;">
-                                    <div style="font-size:0.7rem; color:var(--text-muted);" data-i18n="stress_index">STRESS INDEX</div>
-                                    <div style="font-size:1.2rem; font-weight:bold;" id="h-stress">--</div>
                                 </div>
                             </div>
                             <p style="margin-top:10px; font-size:0.7rem; color:var(--text-muted); text-align:center;"><span data-i18n="last_sync">Last Sync</span>: <span id="h-sync">Just now</span> <span data-i18n="via_wearable">via Wearable Systems</span></p>
@@ -435,7 +431,7 @@
                         </div>
                     </div>
                     
-                    <button class="btn-primary" style="margin-top:30px; background:var(--secondary);" onclick="startRest()" data-i18n="btn_start_rest">Start 12h Rest Period</button>
+                    <button class="btn-primary" style="margin-top:30px; background:var(--secondary); width:100%;" onclick="startRest()" data-i18n="btn_start_rest">Start 8h Rest Period</button>
                 </div>
             </div>
     
@@ -571,14 +567,7 @@
                 <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;" data-i18n="label_oxygen">Oxygen Level (SpO2 %)</label>
                 <input type="number" id="v-oxygen" required placeholder="e.g. 98" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
             </div>
-            <div style="margin-bottom:20px;">
-                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:5px;" data-i18n="label_stress">Stress Index (0-100)</label>
-                <input type="range" id="v-stress" min="0" max="100" style="width:100%;">
-                <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-muted);">
-                    <span data-i18n="label_relaxed">Relaxed</span>
-                    <span data-i18n="label_stressed">Stressed</span>
-                </div>
-            </div>
+
             <div style="display:flex; gap:10px;">
                 <button type="submit" class="btn-primary" style="flex:1;" data-i18n="btn_update_vitals">Update Vitals</button>
                 <button type="button" class="btn-primary" style="flex:1; background:transparent; border:1px solid white;" onclick="closeHealthModal()" data-i18n="btn_cancel">Cancel</button>
