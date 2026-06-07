@@ -805,6 +805,10 @@ def auto_assign(shipment_id: str):
                         
                         assigned_data_leg["logs"] = (leg.get("logs") or []) + [log_event.model_dump()]
                         shipments_db.update(leg["id"], assigned_data_leg)
+                        try:
+                            update_shipment_finance_post_assignment(leg["id"])
+                        except Exception as e:
+                            print(f"Finance recalculation error in auto_assign leg: {e}")
                         
                         if d_id != "DRONE-SYSTEM":
                             d_db.update(d_id, {"status": "assigned", "assigned_vehicle_id": v_id})
@@ -817,7 +821,7 @@ def auto_assign(shipment_id: str):
             if assigned_count == 0:
                 err_detail = " | ".join(leg_errors) if leg_errors else "No suitable drivers found for any segments."
                 raise HTTPException(status_code=400, detail=f"AI Assignment Failed: {err_detail}")
-
+ 
             return {
                 "message": f"Processed {len(child_ids)} journey legs. Total {assigned_count} new assignments confirmed.",
                 "action": "multi_assign",
@@ -828,7 +832,7 @@ def auto_assign(shipment_id: str):
         
         if assigned_data and "error" in assigned_data:
              raise HTTPException(status_code=400, detail=assigned_data["error"])
-
+ 
         if assigned_data:
             from backend.models import ShipmentEvent
             d_db = JSONDatabase("drivers")
@@ -863,6 +867,11 @@ def auto_assign(shipment_id: str):
                 
             updated = shipments_db.update(shipment_id, assigned_data)
             try:
+                update_shipment_finance_post_assignment(shipment_id)
+                updated = shipments_db.get_by_id(shipment_id)
+            except Exception as e:
+                print(f"Finance recalculation error in auto_assign parent: {e}")
+            try:
                 if d_id != "DRONE-SYSTEM":
                     from backend.services.assignment import reoptimize_driver_route
                     reoptimize_driver_route(d_id)
@@ -875,6 +884,73 @@ def auto_assign(shipment_id: str):
         err_msg = traceback.format_exc()
         print(f"AUTO_ASSIGN_ERROR: {err_msg}")
         raise HTTPException(status_code=500, detail=f"Critical Assignment Error:\n{err_msg}")
+
+def update_shipment_finance_post_assignment(shipment_id: str):
+    """
+    Recalculates shipment or leg finance based on its current vehicle assignment.
+    If it is a leg of a parent shipment, triggers parent finance summation.
+    """
+    from backend.database import JSONDatabase
+    from backend.services.finance_engine import estimate_delivery_cost
+    
+    shipments_db = JSONDatabase("shipments")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        return
+        
+    v_id = shipment.get("assigned_vehicle_id")
+    v_type = "van"
+    if v_id:
+        v = vehicles_db.get_by_id(v_id)
+        if v:
+            v_type = v.get("type", "van")
+    else:
+        if shipment.get("is_leg"):
+            l_type = shipment.get("leg_type")
+            if l_type == "middle_mile":
+                v_type = "truck"
+            elif l_type == "first_mile":
+                v_type = "scooty"
+            elif l_type == "last_mile":
+                v_type = "van"
+                
+    finance = estimate_delivery_cost(shipment, v_type)
+    finance["expected_profit"] = finance.get("projected_profit", 0)
+    shipment["finance"] = finance
+    shipments_db.update(shipment_id, shipment)
+    
+    parent_id = shipment.get("parent_id")
+    if parent_id:
+        parent = shipments_db.get_by_id(parent_id)
+        if parent:
+            all_ships = shipments_db.get_all()
+            parent_legs = [l for l in all_ships if l and l.get("parent_id") == parent_id]
+            
+            suggested_price_sum = sum(l.get("finance", {}).get("suggested_price", 0.0) for l in parent_legs)
+            total_cost_sum = sum(l.get("finance", {}).get("total_cost", 0.0) for l in parent_legs)
+            fuel_budget_sum = sum(l.get("finance", {}).get("fuel_budget", 0.0) for l in parent_legs)
+            toll_budget_sum = sum(l.get("finance", {}).get("toll_budget", 0.0) for l in parent_legs)
+            driver_wage_sum = sum(l.get("finance", {}).get("driver_wage", 0.0) for l in parent_legs)
+            food_allowance_sum = sum(l.get("finance", {}).get("food_allowance", 0.0) for l in parent_legs)
+            breakdown_reserve_sum = sum(l.get("finance", {}).get("breakdown_reserve", 0.0) for l in parent_legs)
+            projected_profit_sum = sum(l.get("finance", {}).get("projected_profit", 0.0) for l in parent_legs)
+            distance_km_sum = sum(l.get("finance", {}).get("distance_km", 0.0) for l in parent_legs)
+            
+            parent["finance"] = {
+                "suggested_price": round(suggested_price_sum, 2),
+                "total_cost": round(total_cost_sum, 2),
+                "fuel_budget": round(fuel_budget_sum, 2),
+                "toll_budget": round(toll_budget_sum, 2),
+                "driver_wage": round(driver_wage_sum, 2),
+                "food_allowance": round(food_allowance_sum, 2),
+                "breakdown_reserve": round(breakdown_reserve_sum, 2),
+                "projected_profit": round(projected_profit_sum, 2),
+                "margin": round(projected_profit_sum, 2),
+                "distance_km": round(distance_km_sum, 2)
+            }
+            shipments_db.update(parent_id, parent)
 
 def _perform_assignment(shipment_id: str, driver_id: Optional[str], vehicle_id: str):
     from backend.database import JSONDatabase
@@ -943,6 +1019,11 @@ def _perform_assignment(shipment_id: str, driver_id: Optional[str], vehicle_id: 
     }
     
     updated = shipments_db.update(shipment_id, updated_fields)
+    try:
+        update_shipment_finance_post_assignment(shipment_id)
+        updated = shipments_db.get_by_id(shipment_id)
+    except Exception as fe:
+        print(f"Finance recalculation error in _perform_assignment: {fe}")
     
     try:
         from backend.services.assignment import reoptimize_driver_route
@@ -1023,6 +1104,10 @@ def bulk_assign(company_id: str):
             )
             assigned_data["logs"] = s.get("logs", []) + [log_event.model_dump()]
             shipments_db.update(s["id"], assigned_data)
+            try:
+                update_shipment_finance_post_assignment(s["id"])
+            except Exception as e:
+                print(f"Finance recalculation error in bulk_assign: {e}")
             assigned_count += 1
         else:
             failed_count += 1
@@ -1243,6 +1328,8 @@ def _generate_legs(parent_shipment, leg_data):
     fuel_budget_sum = 0.0
     toll_budget_sum = 0.0
     driver_wage_sum = 0.0
+    food_allowance_sum = 0.0
+    breakdown_reserve_sum = 0.0
     projected_profit_sum = 0.0
     distance_km_sum = 0.0
     
@@ -1292,6 +1379,8 @@ def _generate_legs(parent_shipment, leg_data):
         fuel_budget_sum += finance.get("fuel_budget", 0.0)
         toll_budget_sum += finance.get("toll_budget", 0.0)
         driver_wage_sum += finance.get("driver_wage", 0.0)
+        food_allowance_sum += finance.get("food_allowance", 0.0)
+        breakdown_reserve_sum += finance.get("breakdown_reserve", 0.0)
         projected_profit_sum += finance.get("projected_profit", 0.0)
         distance_km_sum += finance.get("distance_km", 0.0)
 
@@ -1337,6 +1426,8 @@ def _generate_legs(parent_shipment, leg_data):
         "fuel_budget": round(fuel_budget_sum, 2),
         "toll_budget": round(toll_budget_sum, 2),
         "driver_wage": round(driver_wage_sum, 2),
+        "food_allowance": round(food_allowance_sum, 2),
+        "breakdown_reserve": round(breakdown_reserve_sum, 2),
         "projected_profit": round(projected_profit_sum, 2),
         "margin": round(projected_profit_sum, 2), # margin is profit for dashboard compatibility
         "distance_km": round(distance_km_sum, 2)

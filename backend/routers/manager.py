@@ -1304,6 +1304,13 @@ def rescue_shipment(shipment_id: str, driver_id: str, vehicle_id: str, x_logisti
         "logs": shipment.get("logs", []) + [log.model_dump()]
     })
     
+    # Recalculate finance based on assigned rescue vehicle
+    try:
+        from backend.routers.shipment import update_shipment_finance_post_assignment
+        update_shipment_finance_post_assignment(shipment_id)
+    except Exception as fe:
+        print(f"Finance recalculation error in rescue_shipment: {fe}")
+        
     # If there was an old driver, free them (their vehicle is already in maintenance)
     if old_driver_id:
         drivers_db.update(old_driver_id, {"assigned_vehicle_id": None})

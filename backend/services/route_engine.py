@@ -483,7 +483,7 @@ def check_eway_bill_expiry_return(shipment: dict) -> bool:
     # Swap drop → pickup (return to sender)
     shipment["drop"] = original_pickup
     shipment["pickup"] = original_drop
-    shipment["stage"] = f"Cancelled: Return to Sender (E-Way {eway_no} Expired)"
+    shipment["stage"] = f"Returned: E-Way Bill Expired ({eway_no})"
     shipment["status"] = "cancelled"
     shipment["route_type"] = "return"
 

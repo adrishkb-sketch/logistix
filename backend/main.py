@@ -12,6 +12,15 @@ from backend.routers import auth, manager, driver, shipment, tracking, simulatio
 
 app = FastAPI(title="Logistix API", version="1.0.0")
 
+@app.on_event("startup")
+def startup_migration():
+    try:
+        from backend.services.finance_engine import migrate_all_shipment_finances
+        migrate_all_shipment_finances()
+    except Exception as e:
+        print(f"[Migration Error] {e}")
+
+
 try:
     if os.environ.get("VERCEL") != "1":
         os.makedirs("data/images", exist_ok=True)
