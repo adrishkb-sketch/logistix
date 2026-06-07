@@ -13,12 +13,15 @@ import json
 import urllib.request
 import urllib.error
 import copy
+import time
+import requests
 from typing import List, Dict, Any, Optional
 
 # Config
 _RAW_URL = os.environ.get("TURSO_DATABASE_URL", "")
 _TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
 _HTTP_URL = _RAW_URL.replace("libsql://", "https://") if _RAW_URL else ""
+_SESSION = requests.Session()
 
 _DEFAULT_COMPANY = {
     "id": "557f9b08-30da-4b99-b233-a16c9df5191d",
@@ -33,7 +36,7 @@ def _is_configured() -> bool:
 
 
 def _execute(statements: List[Dict]) -> List[Any]:
-    """Execute SQL statements via Turso HTTP pipeline."""
+    """Execute SQL statements via Turso HTTP pipeline using a shared requests session."""
     if not _is_configured():
         raise RuntimeError("Turso not configured")
 
@@ -51,23 +54,18 @@ def _execute(statements: List[Dict]) -> List[Any]:
         })
     reqs.append({"type": "close"})
 
-    payload = json.dumps({"requests": reqs}).encode("utf-8")
-    http_req = urllib.request.Request(
-        f"{_HTTP_URL}/v2/pipeline",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {_TOKEN}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+    payload = {"requests": reqs}
+    headers = {
+        "Authorization": f"Bearer {_TOKEN}",
+        "Content-Type": "application/json",
+    }
 
     try:
-        with urllib.request.urlopen(http_req, timeout=10) as resp:
-            body = json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Turso HTTP {e.code}: {err_body}")
+        resp = _SESSION.post(f"{_HTTP_URL}/v2/pipeline", json=payload, headers=headers, timeout=10)
+        resp.raise_for_status()
+        body = resp.json()
+    except Exception as e:
+        raise RuntimeError(f"Turso HTTP post error: {e}")
 
     results = []
     for r in body.get("results", []):
@@ -123,6 +121,7 @@ def _ensure_companies_table():
 _GENERIC_TABLES_CREATED: set = set()
 _SEEDED_TABLES: set = set()
 _DB_CACHE: Dict[str, Any] = {}
+_CACHE_TTL = 2.0
 
 
 def _ensure_generic_table(table_name: str):
@@ -160,17 +159,20 @@ class TursoCompaniesDB:
             return self._fallback().get_all()
         
         global _DB_CACHE
+        now = time.time()
         if "companies" in _DB_CACHE:
-            return copy.deepcopy(_DB_CACHE["companies"])
+            ts, val = _DB_CACHE["companies"]
+            if now - ts < _CACHE_TTL:
+                return copy.deepcopy(val)
             
         try:
             results = _execute([{"sql": "SELECT id, name, email, password FROM companies"}])
             items = _result_to_dicts(results[0]) if results else []
-            _DB_CACHE["companies"] = items
+            _DB_CACHE["companies"] = (now, items)
             return copy.deepcopy(items)
         except Exception as e:
             print(f"[TursoDB] get_all error: {e}")
-            return self._fallback().get_all()
+            raise e
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         if not _is_configured():
@@ -207,7 +209,7 @@ class TursoCompaniesDB:
             return item
         except Exception as e:
             print(f"[TursoDB] insert error: {e}")
-            return self._fallback().insert(item)
+            raise e
 
     def update(self, item_id: str, updated: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not _is_configured():
@@ -224,7 +226,7 @@ class TursoCompaniesDB:
             return self.insert(current)
         except Exception as e:
             print(f"[TursoDB] update error: {e}")
-            return self._fallback().update(item_id, updated)
+            raise e
 
     def delete(self, item_id: str) -> bool:
         if not _is_configured():
@@ -238,7 +240,7 @@ class TursoCompaniesDB:
             return True
         except Exception as e:
             print(f"[TursoDB] delete error: {e}")
-            return self._fallback().delete(item_id)
+            raise e
 
 
 # ============================================================
@@ -311,8 +313,11 @@ class TursoGenericDB:
             return self._fallback().get_all()
         
         global _DB_CACHE
+        now = time.time()
         if self.table_name in _DB_CACHE:
-            return copy.deepcopy(_DB_CACHE[self.table_name])
+            ts, val = _DB_CACHE[self.table_name]
+            if now - ts < _CACHE_TTL:
+                return copy.deepcopy(val)
             
         try:
             results = _execute([{"sql": f"SELECT data FROM {self.table_name}"}])
@@ -323,11 +328,11 @@ class TursoGenericDB:
                     items.append(json.loads(row.get("data", "{}")))
                 except Exception:
                     pass
-            _DB_CACHE[self.table_name] = items
+            _DB_CACHE[self.table_name] = (now, items)
             return copy.deepcopy(items)
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] get_all error: {e}")
-            return self._fallback().get_all()
+            raise e
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         if not _is_configured():
@@ -340,35 +345,10 @@ class TursoGenericDB:
         return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        if not _is_configured():
-            return self._fallback().get_filtered(filters)
-        try:
-            if not filters:
-                return self.get_all()
-            
-            # Construct a SQL query using json_extract for dynamic indexing speed
-            conditions = []
-            args = {}
-            for idx, (k, v) in enumerate(filters.items()):
-                arg_name = f"val_{idx}"
-                conditions.append(f"json_extract(data, '$.{k}') = :{arg_name}")
-                args[arg_name] = str(v)
-            
-            sql = f"SELECT data FROM {self.table_name} WHERE " + " AND ".join(conditions)
-            results = _execute([{"sql": sql, "args": args}])
-            
-            rows = _result_to_dicts(results[0]) if results else []
-            items = []
-            for row in rows:
-                try:
-                    items.append(json.loads(row.get("data", "{}")))
-                except Exception:
-                    pass
-            return items
-        except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] get_filtered error: {e}")
-            all_items = self.get_all()
-            return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
+        all_items = self.get_all()
+        if not filters:
+            return all_items
+        return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         if not _is_configured():
@@ -388,7 +368,7 @@ class TursoGenericDB:
             return item
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] insert error: {e}")
-            return self._fallback().insert(item)
+            raise e
 
     def update(self, item_id: str, updated: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not _is_configured():
@@ -406,7 +386,7 @@ class TursoGenericDB:
             return current
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] update error: {e}")
-            return self._fallback().update(item_id, updated)
+            raise e
 
     def delete(self, item_id: str) -> bool:
         if not _is_configured():
@@ -423,7 +403,7 @@ class TursoGenericDB:
             return True
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] delete error: {e}")
-            return self._fallback().delete(item_id)
+            raise e
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
         if not _is_configured():
@@ -452,7 +432,7 @@ class TursoGenericDB:
             return deleted_count
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] delete_many error: {e}")
-            return self._fallback().delete_many(filter_column, filter_value)
+            raise e
 
     def write(self, data: List[Dict[str, Any]]):
         if not _is_configured():
@@ -467,7 +447,7 @@ class TursoGenericDB:
                 self.insert(item)
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] write error: {e}")
-            self._fallback().write(data)
+            raise e
 
     def clear_all(self):
         global _DB_CACHE

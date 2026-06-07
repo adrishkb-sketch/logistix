@@ -1,0 +1,101 @@
+[
+    {
+        "id": "8b08b6f4-7c81-443e-a93b-2fa8635eee78",
+        "system_id": "DRN-J4ZR",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "xy",
+        "base_warehouse_id": "e27797a5-6fd8-484e-a6bc-a4d2ba0e7195",
+        "capacity": 10.0,
+        "radius": 20.0,
+        "status": "available",
+        "join_date": "2026-06-06T12:45:23.045045Z"
+    },
+    {
+        "id": "1e2d6f9f-6ced-439d-b0a9-350f82e06747",
+        "system_id": "DRN-LM4Z",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "xy",
+        "base_warehouse_id": "e27797a5-6fd8-484e-a6bc-a4d2ba0e7195",
+        "capacity": 10.0,
+        "radius": 20.0,
+        "status": "available",
+        "join_date": "2026-06-06T12:45:46.751245Z"
+    },
+    {
+        "id": "0dc13cc0-7a40-4429-9a0d-ebcf45989ac8",
+        "system_id": "DRN-GV89",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "456",
+        "base_warehouse_id": "d932237e-1eb6-4c10-824f-901823ee2d48",
+        "capacity": 10.0,
+        "radius": 20.0,
+        "status": "available",
+        "join_date": "2026-06-06T12:48:26.760767Z"
+    },
+    {
+        "id": "14cff3d5-a6a9-463e-905a-6baa22e6c7e2",
+        "system_id": "DRN-DAXP",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "DRN1234",
+        "base_warehouse_id": "37bc439e-1b0b-42f2-b4bf-04e52a422300",
+        "capacity": 5.0,
+        "radius": 10.0,
+        "status": "available",
+        "join_date": "2026-06-06T12:57:32.740216Z"
+    },
+    {
+        "id": "47512b7b-a6ab-4517-98f5-b21b3161f2df",
+        "system_id": "DRN-YRGY",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "TEST-DRN-123",
+        "base_warehouse_id": "37bc439e-1b0b-42f2-b4bf-04e52a422300",
+        "capacity": 10.0,
+        "radius": 20.0,
+        "status": "available",
+        "join_date": "2026-06-06T13:11:04.922774Z"
+    },
+    {
+        "id": "5af360d2-8e14-48d6-b79e-74e6e05112e0",
+        "system_id": "DRN-52YM",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "flyingadrish",
+        "base_warehouse_id": "e27797a5-6fd8-484e-a6bc-a4d2ba0e7195",
+        "capacity": 4.0,
+        "radius": 10.0,
+        "status": "available",
+        "join_date": "2026-06-06T13:18:35.180135Z"
+    },
+    {
+        "id": "3546dc18-5d90-4f59-906b-958dc5de17cb",
+        "system_id": "DRN-HB17",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "ERY-2351",
+        "base_warehouse_id": "504f0c59-fb65-4757-b158-e0156410ff44",
+        "capacity": 12.0,
+        "radius": 30.0,
+        "status": "available",
+        "join_date": "2026-06-07T05:35:19.139563Z"
+    },
+    {
+        "id": "a31e4a85-4e39-4713-92c3-f506ded38cd1",
+        "system_id": "DRN-H9GN",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "DET-9875",
+        "base_warehouse_id": "37bc439e-1b0b-42f2-b4bf-04e52a422300",
+        "capacity": 45.0,
+        "radius": 10.0,
+        "status": "available",
+        "join_date": "2026-06-07T05:37:06.737355Z"
+    },
+    {
+        "id": "0e32f115-46a0-4860-b534-d2319832455e",
+        "system_id": "DRN-LY14",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "license_number": "HYG-5687",
+        "base_warehouse_id": "e27797a5-6fd8-484e-a6bc-a4d2ba0e7195",
+        "capacity": 10.0,
+        "radius": 20.0,
+        "status": "available",
+        "join_date": "2026-06-07T05:38:56.666164Z"
+    }
+]

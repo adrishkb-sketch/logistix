@@ -233,15 +233,15 @@ async function viewFullProfile(type, id) {
             }
             
             // Dynamic Driving Hours Tab injection
-            let tabContainer = document.getElementById('prof-tab-container');
-            if (!tabContainer) {
+            let tabContainerElement = document.getElementById('prof-tab-container');
+            if (!tabContainerElement) {
                 const oldHeading = document.querySelector('#profile-modal h4:last-of-type');
                 if (oldHeading) oldHeading.style.display = 'none';
                 
-                tabContainer = document.createElement('div');
-                tabContainer.id = 'prof-tab-container';
-                tabContainer.style.cssText = 'margin-top: 15px; margin-bottom: 15px; text-align: left;';
-                tabContainer.innerHTML = `
+                tabContainerElement = document.createElement('div');
+                tabContainerElement.id = 'prof-tab-container';
+                tabContainerElement.style.cssText = 'margin-top: 15px; margin-bottom: 15px; text-align: left;';
+                tabContainerElement.innerHTML = `
                     <div style="display:flex; gap:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:12px;">
                         <span id="prof-btn-trips" style="cursor:pointer; font-weight:bold; color:var(--primary); font-size:1rem; border-bottom:2px solid var(--primary); padding-bottom:6px;" onclick="window.switchProfTab('trips')">Recent Trip History</span>
                         <span id="prof-btn-hours" style="cursor:pointer; font-weight:bold; color:var(--text-muted); font-size:1rem; padding-bottom:6px;" onclick="window.switchProfTab('hours')">Driving Hours</span>
@@ -261,7 +261,7 @@ async function viewFullProfile(type, id) {
                     </div>
                 `;
                 const tripsTableContainer = document.getElementById('prof-trips-body').closest('.table-container');
-                tripsTableContainer.parentNode.insertBefore(tabContainer, tripsTableContainer);
+                tripsTableContainer.parentNode.insertBefore(tabContainerElement, tripsTableContainer);
                 tripsTableContainer.id = 'prof-tab-trips-table';
                 
                 window.switchProfTab = function(tab) {

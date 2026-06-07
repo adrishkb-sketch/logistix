@@ -1,5 +1,77 @@
 [
     {
+        "id": "37bc439e-1b0b-42f2-b4bf-04e52a422300",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "2",
+        "lat": 26.77070388423915,
+        "lng": 75.92620367010885,
+        "contact_number": "12345",
+        "manager_name": "as",
+        "manager_email": "7@g.com",
+        "manager_password": "1234",
+        "drone_count": 0
+    },
+    {
+        "id": "504f0c59-fb65-4757-b158-e0156410ff44",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "1",
+        "lat": 22.580381864964874,
+        "lng": 88.08254374293159,
+        "contact_number": "1234567890",
+        "manager_name": "Baban",
+        "manager_email": "2@g.com",
+        "manager_password": "1234",
+        "drone_count": 0
+    },
+    {
+        "id": "e27797a5-6fd8-484e-a6bc-a4d2ba0e7195",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "A1",
+        "lat": 28.529639924786405,
+        "lng": 77.40877097178455,
+        "contact_number": "9330860201",
+        "manager_name": "A1",
+        "manager_email": "a@g.com",
+        "manager_password": "123",
+        "drone_count": 0
+    },
+    {
+        "id": "96c389cf-4059-4546-be2e-cde817374f44",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "C1",
+        "lat": 13.06597648325282,
+        "lng": 77.60045908295658,
+        "contact_number": "9330860301",
+        "manager_name": "C1",
+        "manager_email": "c@g.com",
+        "manager_password": "123",
+        "drone_count": 0
+    },
+    {
+        "id": "d932237e-1eb6-4c10-824f-901823ee2d48",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "B1",
+        "lat": 23.11762139417233,
+        "lng": 77.52839661816226,
+        "contact_number": "9876548954",
+        "manager_name": "B1",
+        "manager_email": "b@g.com",
+        "manager_password": "123",
+        "drone_count": 0
+    },
+    {
+        "id": "8eafb7b6-e04f-4968-a9f1-ef89cf03ac26",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "D1",
+        "lat": 35.757084729363264,
+        "lng": 74.94120637482584,
+        "contact_number": "09330855604",
+        "manager_name": "D1",
+        "manager_email": "d@g.com",
+        "manager_password": "123",
+        "drone_count": 0
+    },
+    {
         "id": "c7b6daa2-a17b-4ae8-bcfb-f9fb3df277f7",
         "company_id": "557f9b08-30da-4b99-b233-a16c9df5191d",
         "name": "Mumbai Gateway Hub",

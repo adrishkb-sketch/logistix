@@ -1,0 +1,26 @@
+[
+    {
+        "id": "REC-IEMG",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "Baban",
+        "email": "adrishkumarbanerjee@gmail.com",
+        "phone": "+918240783578",
+        "created_at": "2026-06-06T13:43:38.441264Z"
+    },
+    {
+        "id": "REC-TI24",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "john",
+        "email": "x@g.com",
+        "phone": "+919330855201",
+        "created_at": "2026-06-07T05:42:03.249129Z"
+    },
+    {
+        "id": "REC-0UB2",
+        "company_id": "1cd1e383-5cba-45ee-b38d-c14b4a080a44",
+        "name": "ad",
+        "email": "y@g.com",
+        "phone": "+915468413246",
+        "created_at": "2026-06-07T05:52:22.534094Z"
+    }
+]
