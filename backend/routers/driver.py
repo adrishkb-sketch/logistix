@@ -398,11 +398,38 @@ async def verify_vehicle(driver_id: str, file: UploadFile = File(...)):
                 all_vehicles = vehicles_db.get_all()
                 target_v = next((v for v in all_vehicles if v and normalize(v.get("number_plate", "")) == found_norm), None)
                 if target_v:
-                    v_id = target_v["id"]
-                    drivers_db.update(driver_id, {"assigned_vehicle_id": v_id})
-                    ml_result["verified"] = True
-                    ml_result["message"] = f"Vehicle {target_v.get('number_plate')} identified and assigned to you."
-                    print(f"[Verification] Auto-linked driver {driver_id} to vehicle {v_id}")
+                    # Validate compatibility: base hub and vehicle type matching driver's license type
+                    d_hub = driver.get("base_warehouse_id")
+                    v_hub = target_v.get("base_warehouse_id")
+                    d_license = driver.get("license_type")
+                    v_type = target_v.get("type")
+                    
+                    if d_hub == v_hub and d_license == v_type:
+                        v_id = target_v["id"]
+                        
+                        # Unlink any existing links to maintain 1:1 mapping consistency
+                        if target_v.get("assigned_driver_id"):
+                            drivers_db.update(target_v["assigned_driver_id"], {"assigned_vehicle_id": None})
+                        if driver.get("assigned_vehicle_id"):
+                            vehicles_db.update(driver["assigned_vehicle_id"], {"assigned_driver_id": None})
+                            
+                        # Link
+                        drivers_db.update(driver_id, {"assigned_vehicle_id": v_id})
+                        vehicles_db.update(v_id, {"assigned_driver_id": driver_id})
+                        
+                        ml_result["verified"] = True
+                        ml_result["message"] = f"Vehicle {target_v.get('number_plate')} identified and assigned to you."
+                        print(f"[Verification] Auto-linked driver {driver_id} to vehicle {v_id}")
+                    else:
+                        mismatch_reasons = []
+                        if d_hub != v_hub:
+                            mismatch_reasons.append("Warehouse hub mismatch")
+                        if d_license != v_type:
+                            mismatch_reasons.append("License/vehicle type mismatch")
+                        
+                        ml_result["verified"] = False
+                        ml_result["message"] = f"Vehicle {target_v.get('number_plate')} detected but incompatible: {', '.join(mismatch_reasons)}."
+                        print(f"[Verification] Auto-link compatibility check failed for driver {driver_id} and vehicle {target_v['id']}")
             except Exception as e:
                 print(f"[Verification] Auto-link Error: {e}")
 

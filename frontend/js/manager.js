@@ -3079,11 +3079,16 @@ document.getElementById('link-form').addEventListener('submit', async (e) => {
     const vId = document.getElementById('link-vehicle').value;
     if (!dId || !vId) return alert("Select both driver and vehicle");
 
-    // Validation: Same Warehouse Base
+    // Validation: Same Warehouse Base & Matching License/Vehicle Type
     const driver = globalDrivers.find(d => d.id === dId);
     const vehicle = globalVehicles.find(v => v.id === vId);
-    if (driver && vehicle && driver.base_warehouse_id !== vehicle.base_warehouse_id) {
-        return alert("🚨 Hub Mismatch: Driver and Vehicle must belong to the same base hub for linkage.");
+    if (driver && vehicle) {
+        if (driver.base_warehouse_id !== vehicle.base_warehouse_id) {
+            return alert("🚨 Hub Mismatch: Driver and Vehicle must belong to the same base hub for linkage.");
+        }
+        if (driver.license_type !== vehicle.type) {
+            return alert(`🚨 License Mismatch: Driver ${driver.name} has ${driver.license_type} license, cannot drive ${vehicle.type}.`);
+        }
     }
     
     try {

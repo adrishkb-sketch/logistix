@@ -582,6 +582,21 @@ function setupFormListeners() {
         try {
             const dId = document.getElementById('link-driver').value;
             const vId = document.getElementById('link-vehicle').value;
+            
+            // Frontend validation
+            const driver = globalDrivers.find(d => d.id === dId);
+            const vehicle = globalVehicles.find(v => v.id === vId);
+            if (driver && vehicle) {
+                if (driver.base_warehouse_id !== vehicle.base_warehouse_id) {
+                    showNotification("🚨 Hub Mismatch: Driver and Vehicle must belong to the same base hub.", "error");
+                    return;
+                }
+                if (driver.license_type !== vehicle.type) {
+                    showNotification(`🚨 License Mismatch: Driver ${driver.name} has ${driver.license_type} license, cannot drive ${vehicle.type}.`, "error");
+                    return;
+                }
+            }
+            
             await apiCall('/manager/link-vehicle', 'POST', { driver_id: dId, vehicle_id: vId });
             showNotification("Successfully linked driver and vehicle!", "success");
             loadDriversAndVehicles();

@@ -868,10 +868,27 @@ def delete_warehouse(wh_id: str):
     warehouses_db.delete(wh_id)
     return {"message": "Warehouse decommissioned successfully"}
 
+class LinkVehicleRequest(BaseModel):
+    driver_id: str
+    vehicle_id: str
+
 @router.post("/link-vehicle")
-def link_driver_to_vehicle(driver_id: str, vehicle_id: str):
-    driver = drivers_db.get_by_id(driver_id)
-    vehicle = vehicles_db.get_by_id(vehicle_id)
+def link_driver_to_vehicle(
+    req: Optional[LinkVehicleRequest] = None,
+    driver_id: Optional[str] = None,
+    vehicle_id: Optional[str] = None
+):
+    d_id = driver_id
+    v_id = vehicle_id
+    if req:
+        d_id = d_id or req.driver_id
+        v_id = v_id or req.vehicle_id
+        
+    if not d_id or not v_id:
+        raise HTTPException(status_code=400, detail="driver_id and vehicle_id are required")
+        
+    driver = drivers_db.get_by_id(d_id)
+    vehicle = vehicles_db.get_by_id(v_id)
     
     if not driver or not vehicle:
         raise HTTPException(status_code=404, detail="Driver or Vehicle not found")
@@ -890,8 +907,8 @@ def link_driver_to_vehicle(driver_id: str, vehicle_id: str):
         vehicles_db.update(driver["assigned_vehicle_id"], {"assigned_driver_id": None})
         
     # Link
-    drivers_db.update(driver_id, {"assigned_vehicle_id": vehicle_id, "verification_status": "unverified"})
-    vehicles_db.update(vehicle_id, {"assigned_driver_id": driver_id})
+    drivers_db.update(d_id, {"assigned_vehicle_id": v_id, "verification_status": "unverified"})
+    vehicles_db.update(v_id, {"assigned_driver_id": d_id})
     
     return {"message": "Linked successfully"}
 
@@ -942,10 +959,30 @@ def manual_verify_driver(driver_id: str, status: str, vehicle_id: Optional[str] 
         
     update_data = {"verification_status": status}
     if status == "verified" and vehicle_id:
+        vehicle = vehicles_db.get_by_id(vehicle_id)
+        if not vehicle:
+            raise HTTPException(status_code=404, detail="Vehicle not found")
+            
+        # Compatibility Validation
+        if driver.get("license_type") != vehicle.get("type"):
+            raise HTTPException(status_code=400, detail=f"License mismatch: {driver['name']} has {driver['license_type']} license, cannot drive {vehicle['type']}.")
+        
+        if driver.get("base_warehouse_id") != vehicle.get("base_warehouse_id"):
+            raise HTTPException(status_code=400, detail="Warehouse mismatch: Driver and Vehicle must belong to the same base hub.")
+            
         # Check if vehicle is already assigned
         all_drivers = drivers_db.get_all()
         if any(d and d.get("assigned_vehicle_id") == vehicle_id and d.get("id") != driver_id for d in all_drivers):
             raise HTTPException(status_code=400, detail="This vehicle is already assigned to another driver.")
+            
+        # Unlink any existing
+        if vehicle.get("assigned_driver_id"):
+            drivers_db.update(vehicle["assigned_driver_id"], {"assigned_vehicle_id": None})
+        if driver.get("assigned_vehicle_id"):
+            vehicles_db.update(driver["assigned_vehicle_id"], {"assigned_driver_id": None})
+            
+        # Link in vehicles table
+        vehicles_db.update(vehicle_id, {"assigned_driver_id": driver_id})
         update_data["assigned_vehicle_id"] = vehicle_id
         
     drivers_db.update(driver_id, update_data)
