@@ -198,15 +198,15 @@
 <p data-i18n="incident_report_desc" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px;">Requests are sent to the manager for instant approval.</p>
 <div style="display:flex; flex-direction:column; gap:12px;">
 <div style="display:flex; gap:10px;">
-<select id="fund-req-type" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; flex:1;">
+<select id="fund-req-type" onchange="onFundTypeChange()" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; flex:1;">
 <option data-i18n="fund_type_fuel" value="FUEL">Fuel / Gas ⛽</option>
 <option data-i18n="fund_type_food" value="FOOD">Food / Subsistence 🍔</option>
 <option data-i18n="fund_type_maintenance" value="MAINTENANCE">Emergency Repair 🛠️</option>
 <option data-i18n="fund_type_other" value="OTHER">Other / Misc 📦</option>
 </select>
 <div style="position:relative;">
-<input id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;" type="number"/>
-<button onclick="calculateSuggestedFuel(event)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:var(--primary); color:white; border:none; border-radius:4px; font-size:0.6rem; padding:4px 6px; cursor:pointer;" title="Auto-calculate fuel based on location">Oracle ✨</button>
+<input id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;" type="number" readonly/>
+<button id="oracle-btn" onclick="calculateSuggestedFuel(event)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:var(--primary); color:white; border:none; border-radius:4px; font-size:0.6rem; padding:4px 6px; cursor:pointer;" title="Auto-calculate fuel based on location">Oracle ✨</button>
 </div>
 </div>
 <button class="btn-primary" onclick="handleFundRequest()" style="width:100%; padding:14px; font-weight:700;">

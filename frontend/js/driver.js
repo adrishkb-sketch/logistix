@@ -1696,15 +1696,24 @@ window.simulateAIReroute = function() {
     }, 1200);
 };
 
+window.getDistanceKm = function(p1, p2) {
+    const R = 6371;
+    const dLat = (p2[0] - p1[0]) * Math.PI / 180;
+    const dLon = (p2[1] - p1[1]) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+};
+
 async function drawMultiStopRoute(stops) {
     if (stops.length === 0) return;
     
-    // Re-add current driver marker if exists
     if (marker) {
         marker.addTo(map);
     }
     
-    // Draw markers
     stops.forEach((stop, idx) => {
         const isCurrent = idx === 0;
         const icon = stop.type === 'pickup' ? ICON_PICKUP : ICON_DROP;
@@ -1722,7 +1731,6 @@ async function drawMultiStopRoute(stops) {
         if (isCurrent) m.openPopup();
     });
     
-    // OSRM handles up to 100 coordinates
     let coordsString = stops.map(s => `${s.lng},${s.lat}`).join(';');
     if (marker) {
         coordsString = `${marker.getLatLng().lng},${marker.getLatLng().lat};` + coordsString;
@@ -1734,7 +1742,6 @@ async function drawMultiStopRoute(stops) {
         if(data.routes && data.routes[0]) {
             routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
             
-            // Clear old polylines if any
             activeRoutePolylines.forEach(p => map.removeLayer(p));
             activeRoutePolylines = [];
             
@@ -1742,8 +1749,38 @@ async function drawMultiStopRoute(stops) {
             const mLoc = marker ? marker.getLatLng() : null;
             if (mLoc) {
                 updateRouteProgress(mLoc.lat, mLoc.lng);
-            } else {
-                const poly = L.polyline(routeCoords, {color: '#3182ce', weight: 6, opacity: 0.85}).addTo(map);
+            }
+            
+            let driverPos = marker ? [marker.getLatLng().lat, marker.getLatLng().lng] : [stops[0].lat, stops[0].lng];
+            if(window.lastLat && window.lastLng) driverPos = [window.lastLat, window.lastLng];
+            if(!window.globalCoveredCoords) window.globalCoveredCoords = [];
+            
+            // Add current pos to covered path
+            if (window.globalCoveredCoords.length === 0 || window.getDistanceKm(window.globalCoveredCoords[window.globalCoveredCoords.length-1], driverPos) > 0.05) {
+                window.globalCoveredCoords.push(driverPos);
+            }
+            
+            let remainingDist = 0;
+            for(let i=0; i<routeCoords.length - 1; i++) {
+                remainingDist += window.getDistanceKm(routeCoords[i], routeCoords[i+1]);
+            }
+            window.currentRemainingKm = remainingDist;
+            
+            if(window.globalCoveredCoords.length > 1) {
+                const polyCovered = L.polyline(window.globalCoveredCoords, {color: '#888888', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map);
+                activeRoutePolylines.push(polyCovered);
+            }
+            
+            const chunkSize = Math.ceil(routeCoords.length / 5);
+            for(let i=0; i<routeCoords.length; i+=chunkSize) {
+                const chunk = routeCoords.slice(i, i+chunkSize+1);
+                if(chunk.length < 2) continue;
+                const rand = Math.random();
+                let color = '#3182ce'; 
+                if (rand > 0.9) color = '#ff4b4b'; 
+                else if (rand > 0.7) color = '#f6ad55'; 
+                
+                const poly = L.polyline(chunk, {color: color, weight: 6, opacity: 0.85}).addTo(map);
                 activeRoutePolylines.push(poly);
             }
             
@@ -2643,8 +2680,35 @@ async function loadWallet() {
         
         document.getElementById('w-balance').innerText = `₹ ${stats.balance.toLocaleString()}`;
         document.getElementById('w-today').innerText = `₹ ${stats.today_earning.toLocaleString()}`;
-        document.getElementById('w-bonus').innerText = `₹ ${stats.total_bonuses.toLocaleString()}`;
+        document.getElementById('w-bonus').innerText = `₹ ${stats.total_earnings.toLocaleString()}`;
         
+        // Disable UI if not active
+        const reqBtn = document.querySelector('button[onclick="handleFundRequest()"]');
+        const oracleBtn = document.getElementById('oracle-btn');
+        const amtInput = document.getElementById('fund-req-amount');
+        const typeSelect = document.getElementById('fund-req-type');
+        
+        if (!stats.is_active_route) {
+            if (reqBtn) { reqBtn.disabled = true; reqBtn.innerText = "Inactive Route"; }
+            if (oracleBtn) oracleBtn.disabled = true;
+            if (amtInput) amtInput.disabled = true;
+            if (typeSelect) typeSelect.disabled = true;
+        } else {
+            if (reqBtn) { reqBtn.disabled = false; reqBtn.innerText = "Request Funds Now"; }
+            if (oracleBtn) oracleBtn.disabled = false;
+            if (amtInput) amtInput.disabled = false;
+            if (typeSelect) typeSelect.disabled = false;
+            
+            // Disable options
+            Array.from(typeSelect.options).forEach(opt => {
+                if (opt.value === 'FOOD' && !stats.food_allowed) { opt.disabled = true; if(!opt.text.includes('Used')) opt.text += ' (Used Today)'; }
+                if (opt.value === 'MAINTENANCE' && !stats.maintenance_allowed) { opt.disabled = true; if(!opt.text.includes('Active')) opt.text += ' (Active)'; }
+                if (opt.value === 'FUEL' && !stats.fuel_allowed) { opt.disabled = true; if(!opt.text.includes('Locked')) opt.text += ' (Locked)'; }
+            });
+            // trigger onchange to handle amount input lock
+            if (typeof window.onFundTypeChange === 'function') window.onFundTypeChange();
+        }
+
         const tList = document.getElementById('wallet-transactions');
         tList.innerHTML = '';
         stats.transactions.forEach(t => {
@@ -2677,6 +2741,22 @@ async function withdrawMoney() {
     alert(getTranslation('withdrawal_initiated'));
 }
 
+window.onFundTypeChange = function() {
+    const type = document.getElementById('fund-req-type').value;
+    const amtInput = document.getElementById('fund-req-amount');
+    const oracleBtn = document.getElementById('oracle-btn');
+    if (type === 'FUEL') {
+        amtInput.readOnly = true;
+        amtInput.value = '';
+        amtInput.placeholder = "Click Oracle ✨";
+        if(oracleBtn) oracleBtn.style.display = 'block';
+    } else {
+        amtInput.readOnly = false;
+        amtInput.placeholder = "Amount (₹)";
+        if(oracleBtn) oracleBtn.style.display = 'none';
+    }
+};
+
 window.calculateSuggestedFuel = async function(e) {
     if (e && e.preventDefault) e.preventDefault();
     const btn = e ? (e.currentTarget || e.target || e) : null;
@@ -2689,11 +2769,12 @@ window.calculateSuggestedFuel = async function(e) {
     try {
         const lat = lastLat || 28.6139;
         const lng = lastLng || 77.2090;
+        const remaining_km = window.currentRemainingKm || 300.0;
         
-        const data = await apiCall(`/driver/${dId}/calculate-fuel?lat=${lat}&lng=${lng}`, 'GET');
+        const data = await apiCall(`/driver/${dId}/calculate-fuel?lat=${lat}&lng=${lng}&remaining_km=${remaining_km}`, 'GET');
         document.getElementById('fund-req-amount').value = Math.round(data.suggested_amount);
         document.getElementById('fund-req-type').value = 'FUEL';
-        showNotification(`${getTranslation('fuel_oracle')}: ₹${data.price_per_liter}/L ${getTranslation('in_label')} ${data.state}. ${getTranslation('suggested_amount')}: ₹${Math.round(data.suggested_amount)}`, 'success');
+        showNotification(`${getTranslation('fuel_oracle')}: ₹${data.price_per_liter}/L ${getTranslation('in_label')} ${data.state}. ${getTranslation('suggested_amount')}: ₹${Math.round(data.suggested_amount)} for ${remaining_km.toFixed(1)} km`, 'success');
     } catch (e) {
         showNotification(getTranslation('fuel_oracle_unavailable'), "error");
     } finally {
@@ -2762,12 +2843,14 @@ async function handleFundRequest() {
     try {
         await apiCall(`/driver/${dId}/request-funds`, 'POST', {
             amount: parseFloat(amt), 
-            type: type
+            type: type,
+            remaining_km: window.currentRemainingKm || 0
         });
         showNotification(`${getTranslation('emergency_fund_sent')} ₹${amt} (${type})!`, 'success');
         document.getElementById('fund-req-amount').value = '';
+        loadWallet(); // Reload to check locks
     } catch (e) {
-        showNotification(getTranslation('failed_send_request'), "error");
+        showNotification(e.message || getTranslation('failed_send_request'), "error");
     }
 }
 

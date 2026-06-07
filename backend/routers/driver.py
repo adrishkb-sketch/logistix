@@ -1021,12 +1021,44 @@ def get_driver_wallet(driver_id: str):
     txs = [
         {"desc": "Last Trip Earnings", "amount": driver.get("wallet_balance", 0), "timestamp": datetime.now().isoformat(), "type": "Trip"},
     ]
+    
+    # Check if active
+    is_active = driver.get("status") in ["assigned", "in_transit"]
+    
+    # Check food fund
+    food_allowed = True
+    last_food = driver.get("food_fund_last_date")
+    if last_food and last_food.startswith(datetime.utcnow().strftime("%Y-%m-%d")):
+        food_allowed = False
+        
+    # Check maintenance
+    maintenance_allowed = True
+    vehicle_id = driver.get("assigned_vehicle_id")
+    if vehicle_id:
+        v = vehicles_db.get_by_id(vehicle_id)
+        if v and v.get("checkup_status") == "pending" or v.get("status") == "maintenance":
+            maintenance_allowed = False
+            
+    # Check fuel
+    fuel_allowed = True
+    if vehicle_id:
+        v = vehicles_db.get_by_id(vehicle_id)
+        if v:
+            km_covered = float(v.get("kilometers_covered", 0))
+            funded_until = float(v.get("fuel_funded_until_km", 0))
+            if km_covered < funded_until:
+                fuel_allowed = False
+                
     return {
         "balance": driver.get("wallet_balance", 0),
         "today_earning": driver.get("monthly_earnings", 0) / 30, # Approximation
         "total_earnings": driver.get("total_earnings", 0),
         "monthly_earnings": driver.get("monthly_earnings", 0),
-        "transactions": txs
+        "transactions": txs,
+        "is_active_route": is_active,
+        "food_allowed": food_allowed,
+        "maintenance_allowed": maintenance_allowed,
+        "fuel_allowed": fuel_allowed
     }
 
 @router.post("/{driver_id}/verify-qr/{shipment_id}")
@@ -1505,11 +1537,46 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
 
 @router.post("/{driver_id}/request-funds")
 def request_funds(driver_id: str, data: dict):
-    # amount, type (fuel, food)
+    # amount, type (fuel, food), remaining_km
     driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    if driver.get("status") not in ["assigned", "in_transit"]:
+        raise HTTPException(status_code=400, detail="You must be active on a route to request emergency funds.")
+
     amount = data.get("amount", 0)
-    f_type = data.get("type", "fuel")
+    f_type = data.get("type", "FUEL").upper()
+    remaining_km = float(data.get("remaining_km", 0))
     
+    from datetime import datetime
+    
+    if f_type == "FOOD":
+        last_food = driver.get("food_fund_last_date")
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        if last_food and last_food.startswith(today_str):
+            raise HTTPException(status_code=400, detail="Food fund is limited to one request per day.")
+        drivers_db.update(driver_id, {"food_fund_last_date": today_str})
+        
+    elif f_type == "MAINTENANCE":
+        vehicle_id = driver.get("assigned_vehicle_id")
+        if vehicle_id:
+            v = vehicles_db.get_by_id(vehicle_id)
+            if v and (v.get("checkup_status") == "pending" or v.get("status") == "maintenance"):
+                raise HTTPException(status_code=400, detail="Maintenance already requested/active. Mark vehicle as fixed first.")
+            vehicles_db.update(vehicle_id, {"checkup_status": "pending"})
+            
+    elif f_type == "FUEL":
+        vehicle_id = driver.get("assigned_vehicle_id")
+        if vehicle_id:
+            v = vehicles_db.get_by_id(vehicle_id)
+            if v:
+                km_covered = float(v.get("kilometers_covered", 0))
+                funded_until = float(v.get("fuel_funded_until_km", 0))
+                if km_covered < funded_until:
+                    raise HTTPException(status_code=400, detail="Fuel fund locked. Previous fuel distance has not been fully covered yet.")
+                vehicles_db.update(vehicle_id, {"fuel_funded_until_km": km_covered + remaining_km})
+
     from backend.models import Alert
     alerts_db = JSONDatabase("alerts")
     new_alert = Alert(
@@ -1524,7 +1591,7 @@ def request_funds(driver_id: str, data: dict):
     return {"message": "Request sent to manager."}
 
 @router.get("/{driver_id}/calculate-fuel")
-def calculate_fuel_need(driver_id: str, lat: float, lng: float):
+def calculate_fuel_need(driver_id: str, lat: float, lng: float, remaining_km: float = 300.0):
     # 1. Reverse geocode to get state (Simplified mock)
     # In real life, use Nominatim or a state-boundary check
     state = "Delhi"
@@ -1549,14 +1616,18 @@ def calculate_fuel_need(driver_id: str, lat: float, lng: float):
             mileage = float(v.get("fuel_efficiency", 15.0))
             v_type = v.get("type", "van")
             
-    # Calculate suggested amount for a 300km range
+    if remaining_km <= 0:
+        remaining_km = 300.0
+            
+    # Calculate suggested amount for remaining_km range
     price = price_info["diesel"] if any(x in v_type.lower() for x in ["truck", "van"]) else price_info["petrol"]
-    suggested = (300 / (mileage or 15)) * price
+    suggested = (remaining_km / (mileage or 15)) * price
     
     return {
         "suggested_amount": round(suggested, 2),
         "price_per_liter": price,
-        "state": state
+        "state": state,
+        "remaining_km": remaining_km
     }
 
 @router.post("/{driver_id}/request-checkup")
