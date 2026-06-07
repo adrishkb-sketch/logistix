@@ -1346,6 +1346,79 @@ def auto_split(shipment_id: str):
         
     return {"message": f"Successfully planned multi-leg route with {len(new_leg_ids)} legs."}
 
+@router.post("/{shipment_id}/calamity-divert")
+def manual_calamity_divert(shipment_id: str):
+    """
+    Manually forces a calamity-based route divert/splitting and re-assignment.
+    This bypasses normal wait-it-out buffer logic, forcing the route engine to
+    divert the shipment to the nearest safe warehouse.
+    """
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    # Standardize to the parent shipment for splitting
+    parent_id = shipment.get("parent_id") or shipment["id"]
+    parent = shipments_db.get_by_id(parent_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent shipment not found")
+        
+    # To force a divert, we need:
+    # 1. The current location (from current_location, or the active leg, or pickup)
+    # 2. Find nearest safe warehouse outside calamity zone.
+    # Let's get the active weather cells:
+    from backend.routers.tracking import get_all_active_weather_cells
+    disaster_cells = get_all_active_weather_cells(parent["company_id"])
+    
+    # Current location of transit
+    curr_loc = shipment.get("current_location") or shipment.get("pickup")
+    if not curr_loc or not curr_loc.get("lat"):
+        raise HTTPException(status_code=400, detail="Cannot determine current location of shipment for divert.")
+        
+    from backend.services.route_engine import find_nearest_safe_warehouse, haversine
+    safe_wh = find_nearest_safe_warehouse(curr_loc["lat"], curr_loc["lng"], parent["company_id"], disaster_cells)
+    if not safe_wh:
+        # Fallback: find ANY warehouse not in calamity if possible, or just the nearest warehouse
+        warehouses_db = JSONDatabase("warehouses")
+        all_whs = warehouses_db.get_all()
+        company_whs = [w for w in all_whs if w and w.get("company_id") == parent["company_id"]]
+        if company_whs:
+            safe_wh = min(company_whs, key=lambda w: haversine(curr_loc["lat"], curr_loc["lng"], w["lat"], w["lng"]))
+            
+    if not safe_wh:
+        raise HTTPException(status_code=400, detail="No suitable warehouse found for diversion.")
+        
+    # Now trigger the divert logic. Let's force check_and_reroute_calamities to run with can_delay=False!
+    # To do that, we temporarily set the shipment status to "in_transit" and expected_delivery to a past date
+    # so that within_range or emergency halt gets triggered, and run it.
+    orig_status = shipment.get("status")
+    orig_expected = shipment.get("expected_delivery")
+    
+    shipment["status"] = "in_transit"
+    shipment["expected_delivery"] = (datetime.utcnow() - timedelta(days=1)).isoformat()
+    
+    # We must also write it temporarily to database so check_and_reroute_calamities (which fetches parent/child from database) sees it correctly.
+    shipments_db.update(shipment["id"], shipment)
+    
+    from backend.services.route_engine import check_and_reroute_calamities
+    try:
+        # Run it
+        rerouted = check_and_reroute_calamities(shipment, disaster_cells)
+        if rerouted:
+            return {"message": "Shipment successfully diverted due to calamity override."}
+        else:
+            # If check_and_reroute_calamities did not divert, let's restore original state
+            shipment["status"] = orig_status
+            shipment["expected_delivery"] = orig_expected
+            shipments_db.update(shipment["id"], shipment)
+            raise HTTPException(status_code=400, detail="Could not automatically route divert. Verify if calamity is active near shipment route.")
+    except Exception as e:
+        # Restore on failure
+        shipment["status"] = orig_status
+        shipment["expected_delivery"] = orig_expected
+        shipments_db.update(shipment["id"], shipment)
+        raise HTTPException(status_code=500, detail=f"Divert execution error: {str(e)}")
+
 def _generate_legs(parent_shipment, leg_data):
     from backend.models import ShipmentEvent
     import random

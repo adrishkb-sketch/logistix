@@ -1976,10 +1976,20 @@ window.openShipmentDetailModal = function(id) {
                 <div id="sd-weather-details" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); text-align: left;">
                     Loading live weather conditions at shipment location...
                 </div>
-                <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: flex-start;">
+                <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: flex-start; flex-wrap: wrap;">
                     <button class="btn-primary" onclick="window.location.href='manager_weather.html'" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
                         🗺️ View Weather Map
                     </button>
+                    ${affectedAlert ? `
+                    <button class="btn-primary" onclick="resolveCalamityAlert('${affectedAlert.id}')" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--success); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: black;">
+                        ✅ Resolve Alert
+                    </button>
+                    ` : ''}
+                    ${s.status === 'assigned' || s.status === 'in_transit' || s.status === 'delayed' ? `
+                    <button class="btn-primary" onclick="manualDivertShipment('${s.id}')" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--accent); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: black;">
+                        🔀 Manual Divert
+                    </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -2128,6 +2138,9 @@ window.openTrackModal = async function(shipmentId) {
     if (!trackMap) {
         trackMap = L.map('track-map').setView([20.5937, 78.9629], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
+    }
+    if (window.updateMapTheme) {
+        window.updateMapTheme(trackMap);
     }
     
     // Invalidate size in case modal was hidden
@@ -2894,6 +2907,55 @@ window.downloadShipmentEsgCertificate = function(shipmentId) {
     certWindow.document.close();
 };
 
+async function resolveCalamityAlert(alertId) {
+    if (!confirm("Are you sure you want to resolve this calamity alert?")) return;
+    try {
+        await apiCall(`/manager/alerts/${alertId}/resolve`, 'POST');
+        showNotification("Calamity alert resolved successfully!", "success");
+        loadShipments();
+        closeShipmentDetailModal();
+    } catch (e) {
+        showNotification("Failed to resolve calamity alert.", "error");
+    }
+}
+
+async function manualDivertShipment(shipmentId) {
+    if (!confirm("🚨 MANUAL DIVERT OVERRIDE: Are you sure you want to manually divert this shipment to a safe hub? This will force a new multi-leg split and route assignment bypass.")) return;
+    try {
+        const res = await apiCall(`/shipments/${shipmentId}/calamity-divert`, 'POST');
+        showNotification(res.message || "Shipment diverted successfully!", "success");
+        loadShipments();
+        closeShipmentDetailModal();
+    } catch (e) {
+        showNotification(e.detail || "Manual divert failed.", "error");
+    }
+}
+
+async function loadDriversAndVehicles() {
+    try {
+        const companyId = localStorage.getItem('manager_id');
+        const [drivers, vehicles, warehouses, drones] = await Promise.all([
+            apiCall(`/manager/drivers?company_id=${companyId}`),
+            apiCall(`/manager/vehicles?company_id=${companyId}`),
+            apiCall(`/manager/warehouses?company_id=${companyId}`),
+            apiCall(`/manager/drones?company_id=${companyId}`).catch(() => [])
+        ]);
+        globalDrivers = drivers;
+        globalVehicles = vehicles;
+        globalWarehouses = warehouses;
+        globalHubs = warehouses;
+        globalDrones = drones;
+        
+        window.globalDrivers = drivers;
+        window.globalVehicles = vehicles;
+        window.globalWarehouses = warehouses;
+        window.globalHubs = warehouses;
+        window.globalDrones = drones;
+    } catch (e) {
+        console.error("Failed to load drivers and vehicles:", e);
+    }
+}
+
 // Expose other functions explicitly for inline HTML onclick handlers
 window.openBulkUploadModal = openBulkUploadModal;
 window.closeBulkUploadModal = closeBulkUploadModal;
@@ -2908,6 +2970,18 @@ window.managerManualVerify = managerManualVerify;
 window.openLogsModal = openLogsModal;
 window.bulkRouteSplitter = bulkRouteSplitter;
 window.extendEwayBill = extendEwayBill;
+
+window.loadShipments = loadShipments;
+window.applyShipmentFilters = applyShipmentFilters;
+window.finalizeShipment = finalizeShipment;
+window.fetchJourneyReview = fetchJourneyReview;
+window.miniChatSend = miniChatSend;
+window.viewCargoPlan = viewCargoPlan;
+window.downloadQR = downloadQR;
+window.openQRModal = openQRModal;
+window.resolveCalamityAlert = resolveCalamityAlert;
+window.manualDivertShipment = manualDivertShipment;
+window.loadDriversAndVehicles = loadDriversAndVehicles;
 
 window.checkShipmentWeather = async function(id) {
     const s = globalShipments.find(ship => ship.id === id);
