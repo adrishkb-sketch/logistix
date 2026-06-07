@@ -2272,7 +2272,7 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                 </td>
                 <td>
                     <div style="font-size:0.8rem; font-weight:600; color:var(--primary);">${driverName}</div>
-                    <div style="font-size:0.7rem; color:var(--text-muted); cursor:${s.loading_blueprint ? 'pointer' : 'default'};" onclick="${s.loading_blueprint ? `viewCargoPlan('${s.id}')` : ''}">
+                    <div style="font-size:0.8rem; font-weight:700; color:#fff; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px; border:1px solid rgba(255,255,255,0.2); cursor:${s.loading_blueprint ? 'pointer' : 'default'};" onclick="${s.loading_blueprint ? `viewCargoPlan('${s.id}')` : ''}">
                         ${plate}
                     </div>
                 </td>
@@ -2307,9 +2307,11 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                         <td>
                             <div style="font-size:0.75rem; color:var(--text-muted);">${getTranslation('eway_label')}: ${leg.eway_bill_no || getTranslation('na')}</div>
                         </td>
-                        <td>
+                        <td style="padding-left:30px;">
                             <div style="font-size:0.8rem; font-weight:600; color:var(--primary);">${lDriverName}</div>
-                            <div style="font-size:0.7rem; color:var(--text-muted);">${leg.assigned_driver_id === 'DRONE-SYSTEM' ? '🚁 Drone' : lPlate}</div>
+                            <div style="font-size:0.8rem; font-weight:700; color:#fff; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; display:inline-block; margin-top:4px; border:1px solid rgba(255,255,255,0.2); cursor:${leg.loading_blueprint ? 'pointer' : 'default'};" onclick="${leg.loading_blueprint ? `viewCargoPlan('${leg.id}')` : ''}">
+                                ${lPlate}
+                            </div>
                         </td>
                         <td>
                             <div style="font-size:0.75rem; color:var(--success); font-weight:bold;">₹${(leg.finance?.suggested_price || 0).toLocaleString()}</div>
@@ -2889,6 +2891,10 @@ let trackMarkers = [];
 
 async function openTrackModal(shipmentId) {
     document.getElementById('track-shipment-id').innerText = shipmentId.substring(0,8);
+    document.getElementById('track-shipment-id').style.color = '#fff';
+    document.getElementById('track-shipment-id').style.backgroundColor = 'rgba(255,255,255,0.1)';
+    document.getElementById('track-shipment-id').style.padding = '2px 8px';
+    document.getElementById('track-shipment-id').style.borderRadius = '4px';
     document.getElementById('track-modal').style.display = 'block';
     
     if (!trackMap) {
@@ -2913,8 +2919,14 @@ async function openTrackModal(shipmentId) {
         if (!target) return;
         
         let parentId = target.is_leg ? target.parent_id : target.id;
-        const legs = shipments.filter(s => s.parent_id === parentId).sort((a,b) => a.leg_order - b.leg_order);
+        let legs = shipments.filter(s => s.parent_id === parentId);
         const mainShipment = target.is_leg ? target : (legs.length > 0 ? (shipments.find(s => s.id === parentId) || target) : target);
+        
+        // Filter out obsolete legs not in the active child_leg_ids array
+        if (mainShipment.child_leg_ids && mainShipment.child_leg_ids.length > 0) {
+            legs = legs.filter(s => mainShipment.child_leg_ids.includes(s.id));
+        }
+        legs.sort((a,b) => a.leg_order - b.leg_order);
         
         // 1. Plot Origin (of the tracked segment)
         let pName = mainShipment.pickup.address || mainShipment.pickup.name || "Initial Pickup";

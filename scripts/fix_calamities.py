@@ -2,7 +2,8 @@ import sys
 import os
 
 # Add the backend path so we can import from backend
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(base_dir)
 
 from backend.database import JSONDatabase
 from backend.services.route_engine import check_and_reroute_calamities

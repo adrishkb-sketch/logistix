@@ -185,11 +185,18 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
         max_divert_km = 50.0
         vehicle_class_label = "Unknown"
 
+    # Bypass divert limits for long distance
+    long_distance_divert = False
+
     # ── Find nearest safe warehouse and check distance ───────────────────────
     safe_wh = find_nearest_safe_warehouse(lat, lng, company_id, disaster_cells)
     safe_wh_dist = haversine(lat, lng, safe_wh["lat"], safe_wh["lng"]) if safe_wh else None
 
-    within_range = safe_wh is not None and safe_wh_dist <= max_divert_km
+    if safe_wh_dist and safe_wh_dist > max_divert_km:
+        long_distance_divert = True
+        within_range = True
+    else:
+        within_range = safe_wh is not None and safe_wh_dist <= max_divert_km
 
     orig_driver_id = shipment.get("assigned_driver_id")
 
@@ -249,16 +256,27 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
         import uuid as _uuid
         from backend.services.assignment import auto_assign_shipment
         
-        leg1_id = "leg_" + str(_uuid.uuid4())[:8]
-        leg2_id = "leg_" + str(_uuid.uuid4())[:8]
+        # Determine remaining journey legs
+        remaining_shipment = {
+            "pickup": {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]},
+            "drop": parent.get("drop"),
+            "company_id": company_id
+        }
         
+        # Decompose the remaining journey through warehouses
+        from backend.services.route_engine import decompose_shipment
+        remaining_legs = decompose_shipment(remaining_shipment)
+        
+        new_legs = []
+        # Leg 1: Current Loc -> Safe Hub
+        leg1_id = "leg_" + str(_uuid.uuid4())[:8]
         leg1 = {
             "id": leg1_id,
             "parent_id": parent_id,
             "company_id": company_id,
             "is_leg": True,
             "leg_order": 1,
-            "leg_type": "middle_mile",
+            "leg_type": "middle_mile" if long_distance_divert else "first_mile",
             "pickup": curr_loc,
             "drop": {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]},
             "drop_warehouse_id": safe_wh["id"],
@@ -266,44 +284,79 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
             "description": parent.get("description", "") + f" [Diverted Leg 1]",
             "finance": parent.get("finance", {})
         }
-        leg2 = {
-            "id": leg2_id,
-            "parent_id": parent_id,
-            "company_id": company_id,
-            "is_leg": True,
-            "leg_order": 2,
-            "leg_type": "last_mile",
-            "pickup": {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]},
-            "pickup_warehouse_id": safe_wh["id"],
-            "drop": parent.get("drop"),
-            "status": "pending",
-            "description": parent.get("description", "") + f" [Diverted Leg 2]",
-            "finance": parent.get("finance", {})
-        }
+        new_legs.append(leg1)
         
-        assign1 = auto_assign_shipment(leg1)
-        if assign1 and "error" not in assign1:
-            leg1["assigned_driver_id"] = assign1.get("assigned_driver_id")
-            leg1["assigned_vehicle_id"] = assign1.get("assigned_vehicle_id")
-            leg1["status"] = "assigned"
+        # Subsequent Legs (Remaining Journey)
+        leg_order_counter = 2
+        if not remaining_legs:
+            # Direct to drop
+            leg2_id = "leg_" + str(_uuid.uuid4())[:8]
+            leg2 = {
+                "id": leg2_id,
+                "parent_id": parent_id,
+                "company_id": company_id,
+                "is_leg": True,
+                "leg_order": leg_order_counter,
+                "leg_type": "last_mile",
+                "pickup": leg1["drop"],
+                "pickup_warehouse_id": safe_wh["id"],
+                "drop": parent.get("drop"),
+                "status": "pending",
+                "description": parent.get("description", "") + f" [Diverted Leg {leg_order_counter}]",
+                "finance": parent.get("finance", {})
+            }
+            new_legs.append(leg2)
+        else:
+            for rleg in remaining_legs:
+                rleg_id = "leg_" + str(_uuid.uuid4())[:8]
+                rleg["id"] = rleg_id
+                rleg["parent_id"] = parent_id
+                rleg["company_id"] = company_id
+                rleg["is_leg"] = True
+                rleg["leg_order"] = leg_order_counter
+                rleg["status"] = "pending"
+                rleg["description"] = parent.get("description", "") + f" [Diverted Leg {leg_order_counter}]"
+                rleg["finance"] = parent.get("finance", {})
+                new_legs.append(rleg)
+                leg_order_counter += 1
+                
+        # Attempt assignment
+        assignment_failed = False
+        for leg in new_legs:
+            assign = auto_assign_shipment(leg)
+            if not assign or "error" in assign:
+                assignment_failed = True
+                break
+            leg["assigned_driver_id"] = assign.get("assigned_driver_id")
+            leg["assigned_vehicle_id"] = assign.get("assigned_vehicle_id")
+            leg["status"] = "assigned"
             
-        assign2 = auto_assign_shipment(leg2)
-        if assign2 and "error" not in assign2:
-            leg2["assigned_driver_id"] = assign2.get("assigned_driver_id")
-            leg2["assigned_vehicle_id"] = assign2.get("assigned_vehicle_id")
-            leg2["status"] = "assigned"
+        if assignment_failed:
+            # If we fail to assign ANY of the required vehicles (e.g. no heavy truck for long distance)
+            # fallback to Delay or Expiry Return
+            from backend.services.route_engine import check_eway_bill_expiry_return
+            if check_eway_bill_expiry_return(shipment):
+                return True
+                
+            shipment["stage"] = f"Delayed: Awaiting Vehicle at Safe Hub"
+            shipment["status"] = "delayed"
+            log = ShipmentEvent(status="delayed", message="🚨 AI FALLBACK: Calamity route requires vehicles currently unavailable. Shipment delayed.", reason=f"Vehicle Unavailable")
+            shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
+            shipments_db.update(shipment["id"], shipment)
+            return True
             
-        shipments_db.insert(leg1)
-        shipments_db.insert(leg2)
+        # Successfully assigned
+        for leg in new_legs:
+            shipments_db.insert(leg)
         
-        parent["child_leg_ids"] = [leg1_id, leg2_id]
+        parent["child_leg_ids"] = [l["id"] for l in new_legs]
         parent["route_type"] = "multi-leg"
         parent["status"] = "split"
         parent["stage"] = f"Diverted: Safe Hub ({safe_wh['name']})"
         
         log_msg = (
             f"🚨 AI CALAMITY DIVERT: Deadline endangered by {calamity_type}. Shipment automatically diverted "
-            f"via safe hub '{safe_wh['name']}'. Route resplit and new drivers assigned."
+            f"via safe hub '{safe_wh['name']}'. Route resplit into {len(new_legs)} legs and new drivers assigned."
         )
         log = ShipmentEvent(status="split", message=log_msg, reason=f"Natural Calamity: {calamity_type}")
         parent["logs"] = parent.get("logs", []) + [log.model_dump()]
@@ -316,7 +369,7 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
             description=(
                 f"AI AUTO-DIVERT: Shipment {parent_id[:8]} rerouted to safe hub '{safe_wh['name']}' "
                 f"({round(safe_wh_dist, 1)} km) to avoid missing deadline due to {calamity_type}. "
-                f"Route was resplit and drivers reassigned."
+                f"Route resplit to {len(new_legs)} legs."
             ),
             suggestion=f"Verify driver safety and cargo at {safe_wh['name']}.",
             shipment_id=parent_id,
@@ -430,10 +483,9 @@ def check_eway_bill_expiry_return(shipment: dict) -> bool:
     # Swap drop → pickup (return to sender)
     shipment["drop"] = original_pickup
     shipment["pickup"] = original_drop
-    shipment["stage"] = f"Returned: E-Way Bill Expired ({eway_no})"
-    shipment["status"] = "returned" if True else "delayed"  # Store as a distinct status
-    # Use delayed as base since 'returned' may not be in status enum; log explains reason
-    shipment["status"] = "delayed"
+    shipment["stage"] = f"Cancelled: Return to Sender (E-Way {eway_no} Expired)"
+    shipment["status"] = "cancelled"
+    shipment["route_type"] = "return"
 
     log_msg = (
         f"📋 COMPLIANCE RETURN: E-Way Bill {eway_no} expires on "
