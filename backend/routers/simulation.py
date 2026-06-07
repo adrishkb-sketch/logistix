@@ -124,11 +124,18 @@ def custom_disaster(data: dict):
         if intersects:
             affected_count += 1
             
+            # Perform AI Rerouting / Handoff
+            from backend.services.route_engine import check_and_reroute_calamities
+            check_and_reroute_calamities(s, cells)
+            
+            # Fetch updated shipment
+            s_updated = shipments_db.get_by_id(s["id"])
+            
             # Fetch driver and vehicle details for the detailed report
             drivers_db = JSONDatabase("drivers")
             vehicles_db = JSONDatabase("vehicles")
-            driver = drivers_db.get_by_id(s.get("assigned_driver_id", ""))
-            vehicle = vehicles_db.get_by_id(s.get("assigned_vehicle_id", ""))
+            driver = drivers_db.get_by_id(s_updated.get("assigned_driver_id", ""))
+            vehicle = vehicles_db.get_by_id(s_updated.get("assigned_vehicle_id", ""))
             
             ai_action = "Reroute"
             if new_cell['type'] in ['cyclone', 'flood']:
@@ -151,20 +158,21 @@ def custom_disaster(data: dict):
             elif new_cell['type'] == 'hail': icon = "🌨️"
             elif new_cell['type'] == 'flood': icon = "🌊"
 
+            diverted_dest = s_updated.get("drop", {}).get("address", "N/A")
             affected_list.append({
-                "id": s["id"],
-                "description": s["description"],
+                "id": s_updated["id"],
+                "description": s_updated["description"],
                 "driver_name": driver.get("name", "Unknown") if driver else "Unassigned",
                 "vehicle_plate": vehicle.get("number_plate", "N/A") if vehicle else "N/A",
                 "location": curr_loc,
-                "ai_action": ai_action,
-                "driver_instruction": f"PROPOSED: Move to nearest safe zone. Awaiting Manager Approval."
+                "ai_action": f"{ai_action} (Diverted to Safe Hub: {diverted_dest})",
+                "driver_instruction": f"AI ROUTING ACTION CONFLICT: Diverted to {diverted_dest}."
             })
             
-            # We still log it in the shipment history as a 'simulated' event, but NO ALERT in alerts_db
-            log_event = ShipmentEvent(status="simulated_delay", message=f"{icon} SIMULATION: Impacted by {new_cell['type'].upper()}. Analyzing bypass routes.", reason=f"Disaster Simulation Sandbox")
-            s["logs"] = s.get("logs", []) + [log_event.model_dump()]
-            shipments_db.update(s["id"], s)
+            # Log in the shipment history
+            log_event = ShipmentEvent(status="simulated_delay", message=f"{icon} SIMULATION: Impacted by {new_cell['type'].upper()}. Diverting to {diverted_dest}.", reason=f"Disaster Simulation Sandbox")
+            s_updated["logs"] = s_updated.get("logs", []) + [log_event.model_dump()]
+            shipments_db.update(s_updated["id"], s_updated)
 
     # Generate AI Recommendation
     recommendation = "No shipments affected."

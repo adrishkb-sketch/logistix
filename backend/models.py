@@ -140,6 +140,7 @@ class Vehicle(BaseModel):
     # Daily Audit Fields
     is_operational: bool = True # working, breakdown (marked by manager)
     current_warehouse_id: Optional[str] = None # Where the vehicle is right now
+    present_warehouse_id: Optional[str] = None # Where the vehicle is physically present (or destination warehouse)
     last_audit_date: Optional[str] = None # Refresh every 24h logic
 
     # Operational Consistency

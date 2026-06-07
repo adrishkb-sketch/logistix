@@ -587,6 +587,23 @@ def get_fleet_weather(company_id: str):
                 elif cell_type in ("rain", "cloud"):
                     ai_action = "Monitor & Proceed with Caution"
 
+                # Fetch active diversion alert from DB
+                alerts_db_inst = JSONDatabase("alerts")
+                active_alert = next((a for a in alerts_db_inst.get_all() if a and a.get("shipment_id") == s["id"] and a.get("type") == "calamity_divert" and a.get("status") == "active"), None)
+                
+                alert_id = active_alert["id"] if active_alert else None
+                alert_status = "active" if active_alert else "none"
+                
+                stage_str = s.get("stage", "")
+                if "Diverted:" in stage_str:
+                    ai_action = f"Automatically Diverted to Safe Hub: {s.get('drop', {}).get('address', 'N/A')}"
+                    driver_instruction = f"ACTIVE DIVERSION: Diverted to safe hub {s.get('drop', {}).get('address', 'N/A')} outside disaster region."
+                elif "Halted:" in stage_str:
+                    ai_action = "Automatically Halted (No Safe Hubs Available)"
+                    driver_instruction = "ACTIVE EMERGENCY HALT: Halted in open safe zone. Awaiting safety clearance."
+                else:
+                    driver_instruction = "PROPOSED: Move to nearest safe zone. Awaiting Manager Approval."
+
                 affected_list.append({
                     "id":             s["id"],
                     "description":    s["description"],
@@ -595,7 +612,9 @@ def get_fleet_weather(company_id: str):
                     "location":       curr_loc,
                     "ai_action":      ai_action,
                     "condition":      cell.get("condition", ""),
-                    "driver_instruction": "PROPOSED: Move to nearest safe zone. Awaiting Manager Approval."
+                    "driver_instruction": driver_instruction,
+                    "alert_id":       alert_id,
+                    "alert_status":   alert_status
                 })
                 break
 

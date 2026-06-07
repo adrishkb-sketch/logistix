@@ -143,6 +143,10 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
             })
             check_weather_alerts(s, location.get("lat"), location.get("lng"))
             
+            # AI Weather Reroute Check
+            from backend.services.route_engine import check_and_reroute_calamities
+            check_and_reroute_calamities(s)
+            
             # Update Vehicle Distance & Health Score
             driver = drivers_db.get_by_id(driver_id)
             if driver:
@@ -215,7 +219,7 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
                     location=location
                 )
                 s["logs"] = s.get("logs", []) + [log.model_dump()]
-
+ 
             # Automatic Warehouse Checkpoint Logging
             from backend.services.route_engine import haversine
             # We filter by company_id if we have it, otherwise get all warehouses (still fewer than shipments)
@@ -236,6 +240,13 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
                         )
                         s["logs"] = s.get("logs", []) + [checkpoint_log.model_dump()]
                         s["at_warehouse_id"] = w["id"]
+                        
+                        # Update Vehicle Location
+                        if driver and driver.get("assigned_vehicle_id"):
+                            vehicles_db.update(driver["assigned_vehicle_id"], {
+                                "current_warehouse_id": w["id"],
+                                "present_warehouse_id": w["id"]
+                            })
                         
                         # DRONE-LEG INTEGRATION
                         from backend.services.route_engine import check_drone_viability
@@ -959,7 +970,10 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
                 target_wh = drop_wh_id if is_truck else vehicle.get("base_warehouse_id")
                 
                 drivers_db.update(driver_id, {"current_warehouse_id": target_wh})
-                vehicles_db.update(v_id, {"current_warehouse_id": target_wh})
+                vehicles_db.update(v_id, {
+                    "current_warehouse_id": target_wh,
+                    "present_warehouse_id": target_wh
+                })
 
         # CREDIT DRIVER WALLET & POINTS
         driver = drivers_db.get_by_id(driver_id)
@@ -1058,7 +1072,10 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
         })
         v_id = driver.get("assigned_vehicle_id")
         if v_id:
-            vehicles_db.update(v_id, {"current_warehouse_id": base_wh})
+            vehicles_db.update(v_id, {
+                "current_warehouse_id": base_wh,
+                "present_warehouse_id": base_wh
+            })
     
     # Update Driver Wallet & Log Expense
     driver = drivers_db.get_by_id(driver_id)

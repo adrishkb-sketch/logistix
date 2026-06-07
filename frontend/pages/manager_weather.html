@@ -1022,18 +1022,99 @@ function closeResultsPanel() {
     simulationPanelClosedByUser = true;
 }
 
-function applySimulationFixes() {
+async function executeAIAction(shipmentId, alertId) {
+    if (!alertId || alertId === "null" || alertId === "undefined" || alertId === "none") {
+        showToast(`AI diversion already verified and active for shipment ${shipmentId.substring(0,8)}.`, 'info');
+        return;
+    }
+    try {
+        await apiCall(`/manager/alerts/${alertId}/resolve`, 'POST');
+        showToast(`AI contingency verified and alert resolved for shipment ${shipmentId.substring(0,8)}`, 'success');
+        loadWeatherFleetData();
+    } catch(err) {
+        showToast('Failed to resolve alert.', 'error');
+    }
+}
+
+async function applySimulationFixes() {
     showToast('Executing AI contingency protocols for all affected shipments…', 'info');
+    const items = document.querySelectorAll('.affected-item');
+    let resolvedCount = 0;
+    for (const item of items) {
+        const alertId = item.getAttribute('data-alert-id');
+        if (alertId && alertId !== "null" && alertId !== "undefined" && alertId !== "none") {
+            try {
+                await apiCall(`/manager/alerts/${alertId}/resolve`, 'POST');
+                resolvedCount++;
+            } catch(e) {}
+        }
+    }
+    if (resolvedCount > 0) {
+        showToast(`Successfully verified AI reroutes for ${resolvedCount} shipment(s).`, 'success');
+    } else {
+        showToast('No pending alerts to verify.', 'info');
+    }
     closeResultsPanel();
+    loadWeatherFleetData();
 }
 
-function executeAIAction(id) {
-    showToast(`AI contingency applied for shipment ${id.substring(0,8)}`, 'success');
-}
-
-function manualDivert(id) {
-    const reason = prompt('Enter diversion reason:');
-    if (reason) showToast(`Manual diversion logged for ${id.substring(0,8)}`, 'info');
+async function manualDivert(shipmentId) {
+    try {
+        const warehouses = await apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+        if (!warehouses || warehouses.length === 0) {
+            showToast('No warehouses found to divert to.', 'error');
+            return;
+        }
+        
+        let promptText = "Choose a safe warehouse to divert to:\n";
+        warehouses.forEach((wh, idx) => {
+            promptText += `${idx + 1}. ${wh.name} (${wh.address || ''})\n`;
+        });
+        
+        const selectionStr = prompt(promptText + "\nEnter the number of your choice:");
+        if (!selectionStr) return;
+        
+        const selectionIdx = parseInt(selectionStr, 10) - 1;
+        if (isNaN(selectionIdx) || selectionIdx < 0 || selectionIdx >= warehouses.length) {
+            showToast('Invalid selection.', 'error');
+            return;
+        }
+        
+        const selectedWh = warehouses[selectionIdx];
+        const reason = prompt('Enter reason for manual diversion:');
+        if (!reason) return;
+        
+        // Update the shipment's drop location to this warehouse
+        const updatePayload = {
+            drop: {
+                lat: selectedWh.lat,
+                lng: selectedWh.lng,
+                address: selectedWh.name
+            },
+            drop_warehouse_id: selectedWh.id,
+            stage: `Manually Diverted: ${selectedWh.name}`,
+            status: "assigned"
+        };
+        
+        await apiCall(`/shipments/${shipmentId}`, 'PUT', updatePayload);
+        showToast(`Manually diverted shipment to ${selectedWh.name}`, 'success');
+        
+        // Resolve matching alert if any exists
+        const items = document.querySelectorAll('.affected-item');
+        for (const item of items) {
+            if (item.getAttribute('data-shipment-id') === shipmentId) {
+                const alertId = item.getAttribute('data-alert-id');
+                if (alertId && alertId !== "null" && alertId !== "undefined" && alertId !== "none") {
+                    await apiCall(`/manager/alerts/${alertId}/resolve`, 'POST');
+                }
+            }
+        }
+        
+        loadWeatherFleetData();
+    } catch(err) {
+        console.error(err);
+        showToast('Failed to perform manual diversion.', 'error');
+    }
 }
 
 // ── Main Data Loader ─────────────────────────────────────────
@@ -1050,6 +1131,45 @@ async function loadWeatherFleetData() {
         // Clear old weather markers
         weatherMarkers.forEach(m => { try { map.removeLayer(m); } catch(e) {} });
         weatherMarkers = [];
+
+        // Clear old warehouse markers
+        warehouseMarkers.forEach(m => { try { map.removeLayer(m); } catch(e) {} });
+        warehouseMarkers = [];
+
+        // Fetch and plot warehouses on map
+        try {
+            const warehouses = await apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+            warehouses.forEach(wh => {
+                const whIcon = L.divIcon({
+                    html: `<div style="
+                        background: rgba(16, 185, 129, 0.15);
+                        border: 2px solid #10b981;
+                        box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+                        border-radius: 8px;
+                        width: 28px; height: 28px;
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 16px;
+                        font-weight: bold;
+                    ">🏢</div>`,
+                    className: '',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+                const m = L.marker([wh.lat, wh.lng], { icon: whIcon, zIndexOffset: 150 })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="min-width:180px; font-family:Outfit,sans-serif; line-height:1.6; color:var(--text);">
+                            <b style="color:#10b981; font-size:1.05rem;">🏭 ${wh.name}</b>
+                            <br><small style="color:var(--muted);">📍 ${wh.address || 'N/A'}</small>
+                            <br><small>📦 Max Capacity: <b>${wh.max_capacity || 'N/A'} tons</b></small>
+                            <br><small>⚡ Drone Support: <b>${wh.has_drone_pad ? '✅ Yes' : '❌ No'}</b></small>
+                        </div>
+                    `);
+                warehouseMarkers.push(m);
+            });
+        } catch(whErr) {
+            console.error('Failed to load warehouses:', whErr);
+        }
 
         // Update Stats
         document.getElementById('stat-fleet').innerText = data.fleet.length;
@@ -1176,17 +1296,23 @@ async function loadWeatherFleetData() {
             document.getElementById('res-recommendation').innerText = data.recommendation || '—';
 
             const listEl = document.getElementById('res-affected-list');
-            listEl.innerHTML = (data.affected_list || []).map(s => `
-                <div class="affected-item">
+            listEl.innerHTML = (data.affected_list || []).map(s => {
+                const buttonText = (s.alert_status === "active" || s.alert_id) ? "Verify & Approve" : "Verified";
+                const buttonDisabled = (s.alert_status === "active" || s.alert_id) ? "" : "disabled";
+                const buttonStyle = (s.alert_status === "active" || s.alert_id) ? "" : "background-color: var(--muted); opacity: 0.6; cursor: not-allowed;";
+                return `
+                <div class="affected-item" data-alert-id="${s.alert_id}" data-shipment-id="${s.id}">
                     <div class="a-title">${s.description}</div>
                     <div class="a-sub">Driver: ${s.driver_name} · ${s.vehicle_plate}</div>
                     <div class="a-action">💡 ${s.ai_action}</div>
+                    <div style="font-size:0.68rem; color:var(--muted); margin-top:2px; font-style:italic;">${s.driver_instruction}</div>
                     <div class="a-btns">
-                        <button class="a-btn-ai" onclick="executeAIAction('${s.id}')">Apply AI</button>
+                        <button class="a-btn-ai" onclick="executeAIAction('${s.id}', '${s.alert_id}')" ${buttonDisabled} style="${buttonStyle}">${buttonText}</button>
                         <button class="a-btn-manual" onclick="manualDivert('${s.id}')">Divert</button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             if (!simulationPanelClosedByUser) {
                 resultsPanel.style.display = 'block';

@@ -285,7 +285,8 @@ function formatDate(isoStr) {
             month: 'short', 
             hour: '2-digit', 
             minute: '2-digit', 
-            hour12: true 
+            hour12: true,
+            timeZone: 'Asia/Kolkata'
         }).toUpperCase();
     } catch(e) {
         return "Format Error";

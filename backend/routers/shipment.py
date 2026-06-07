@@ -1307,8 +1307,8 @@ def _generate_legs(parent_shipment, leg_data):
         raw_eta = p_deadline + timedelta(hours=travel_time_hours + wait_time_hours)
         expected_time = snap_eta_to_business_hours(raw_eta)
         
-        # 4. Set Pivot for NEXT leg: Prev Drop + 5 mins
-        next_pivot_time = snap_eta_to_business_hours(expected_time + timedelta(minutes=5))
+        # 4. Set Pivot for NEXT leg: Prev Drop + 30 mins buffer gap
+        next_pivot_time = snap_eta_to_business_hours(expected_time + timedelta(minutes=30))
         
         leg_log = ShipmentEvent(
             status="pending",

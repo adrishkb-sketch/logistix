@@ -55,6 +55,211 @@ def find_nearest_warehouse(lat: float, lng: float, company_id: str) -> dict:
     nearest = min(company_wh, key=lambda w: haversine(lat, lng, w["lat"], w["lng"]))
     return nearest
 
+def find_nearest_safe_warehouse(lat: float, lng: float, company_id: str, disaster_cells: list) -> dict:
+    warehouses_db = JSONDatabase("warehouses")
+    all_wh = warehouses_db.get_all()
+    company_wh = [w for w in all_wh if w and w.get("company_id") == company_id]
+    
+    safe_whs = []
+    for wh in company_wh:
+        in_zone = False
+        for cell in disaster_cells:
+            if not cell:
+                continue
+            calamities = ["cyclone", "flood", "heatwave", "earthquake", "hail", "riot", "storm"]
+            c_type = str(cell.get("type", "")).lower()
+            if not any(c in c_type for c in calamities):
+                continue
+                
+            if cell.get("shapeType") == "polyline":
+                for pt in cell.get("coordinates", []):
+                    if haversine(wh["lat"], wh["lng"], pt["lat"], pt["lng"]) <= 5.0:
+                        in_zone = True
+                        break
+            else:
+                r = cell.get("radius", 50.0)
+                dist = haversine(wh["lat"], wh["lng"], cell.get("lat", 0.0), cell.get("lng", 0.0))
+                if dist <= r:
+                    in_zone = True
+                    break
+        if not in_zone:
+            safe_whs.append(wh)
+            
+    if not safe_whs:
+        return None
+        
+    nearest = min(safe_whs, key=lambda w: haversine(lat, lng, w["lat"], w["lng"]))
+    return nearest
+
+def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) -> bool:
+    if shipment.get("status") not in ["assigned", "in_transit"]:
+        return False
+
+    if disaster_cells is None:
+        from backend.database import JSONDatabase
+        disaster_cells = JSONDatabase("weather_cells").get_all() or []
+        
+        # Also query Open-Meteo for live weather at current location and destination
+        # to detect live calamities (storms, high winds/cyclones, extreme rain/floods, heatwaves)
+        curr_loc = shipment.get("current_location") or shipment.get("pickup")
+        dest = shipment.get("drop")
+        if curr_loc and curr_loc.get("lat") and dest and dest.get("lat"):
+            try:
+                import urllib.request
+                import json as _json
+                lats = f"{round(curr_loc['lat'], 4)},{round(dest['lat'], 4)}"
+                lngs = f"{round(curr_loc['lng'], 4)},{round(dest['lng'], 4)}"
+                url = (
+                    "https://api.open-meteo.com/v1/forecast"
+                    f"?latitude={lats}&longitude={lngs}"
+                    "&current=weather_code,temperature_2m,cloud_cover,wind_speed_10m"
+                    "&forecast_days=1"
+                )
+                with urllib.request.urlopen(url, timeout=3) as resp:
+                    raw = _json.loads(resp.read())
+                if isinstance(raw, dict):
+                    raw = [raw]
+                
+                for i, result in enumerate(raw):
+                    current = result.get("current", {})
+                    wmo = current.get("weather_code", 0)
+                    temp = current.get("temperature_2m")
+                    wind_speed = current.get("wind_speed_10m")
+                    
+                    loc = curr_loc if i == 0 else dest
+                    
+                    # Map severe weather codes or wind speed to live calamities
+                    c_type = None
+                    c_cond = None
+                    c_icon = None
+                    
+                    if wmo in (95, 96, 99):
+                        c_type = "storm"
+                        c_cond = "Severe Storm"
+                        c_icon = "⛈️"
+                    elif wmo in (65, 82) or (wind_speed is not None and wind_speed >= 40.0):
+                        c_type = "flood" if wmo in (65, 82) else "cyclone"
+                        c_cond = "Heavy Flooding" if wmo in (65, 82) else "Cyclone Wind Warning"
+                        c_icon = "🌊" if wmo in (65, 82) else "🌀"
+                    elif temp is not None and temp >= 45.0:
+                        c_type = "heatwave"
+                        c_cond = "Extreme Heatwave"
+                        c_icon = "🔥"
+                        
+                    if c_type:
+                        disaster_cells.append({
+                            "id": f"live-detected-{shipment['id']}-{i}",
+                            "type": c_type,
+                            "condition": c_cond,
+                            "icon": c_icon,
+                            "lat": loc["lat"],
+                            "lng": loc["lng"],
+                            "radius": 40.0, # 40km warning radius for live detected hazards
+                            "shapeType": "circle",
+                            "severity": "critical",
+                            "is_simulation": False
+                        })
+            except Exception as e:
+                print(f"[Calamity Detection] Failed to fetch live weather for routing check: {e}")
+        
+    curr_loc = shipment.get("current_location") or shipment.get("pickup")
+    if not curr_loc or not curr_loc.get("lat"):
+        return False
+        
+    lat, lng = curr_loc["lat"], curr_loc["lng"]
+    dest = shipment["drop"]
+    
+    intersecting_calamity = None
+    for cell in disaster_cells:
+        if not cell:
+            continue
+        calamities = ["cyclone", "flood", "heatwave", "earthquake", "hail", "riot", "storm"]
+        c_type = str(cell.get("type", "")).lower()
+        if not any(c in c_type for c in calamities):
+            continue
+            
+        intersects = False
+        if cell.get("shapeType") == "polyline":
+            for pt in cell.get("coordinates", []):
+                if haversine(lat, lng, pt["lat"], pt["lng"]) <= 5.0 or haversine(dest["lat"], dest["lng"], pt["lat"], pt["lng"]) <= 5.0:
+                    intersects = True
+                    break
+        else:
+            r = cell.get("radius", 50.0)
+            dist_curr = haversine(lat, lng, cell.get("lat", 0.0), cell.get("lng", 0.0))
+            dist_dest = haversine(dest["lat"], dest["lng"], cell.get("lat", 0.0), cell.get("lng", 0.0))
+            if dist_curr <= r or dist_dest <= r:
+                intersects = True
+                
+        if intersects:
+            intersecting_calamity = cell
+            break
+            
+    if not intersecting_calamity:
+        return False
+        
+    company_id = shipment.get("company_id")
+    calamity_type = intersecting_calamity["type"].upper()
+    
+    from backend.database import JSONDatabase
+    from backend.models import Alert, ShipmentEvent
+    alerts_db = JSONDatabase("alerts")
+    shipments_db = JSONDatabase("shipments")
+    
+    existing_alert = next((a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "calamity_divert" and a.get("status") == "active"), None)
+    if existing_alert:
+        return False
+        
+    safe_wh = find_nearest_safe_warehouse(lat, lng, company_id, disaster_cells)
+    if safe_wh:
+        shipment["drop"] = {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]}
+        shipment["drop_warehouse_id"] = safe_wh["id"]
+        shipment["stage"] = f"Diverted: Safe Hub ({safe_wh['name']})"
+        shipment["status"] = "assigned"
+        
+        log = ShipmentEvent(
+            status="assigned",
+            message=f"🚨 AI CALAMITY ROUTING: Automatically rerouted vehicle to safe hub '{safe_wh['name']}' outside the {calamity_type} affected region.",
+            reason=f"Natural Calamity: {calamity_type}"
+        )
+        shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
+        shipments_db.update(shipment["id"], shipment)
+        
+        alert = Alert(
+            company_id=company_id,
+            type="calamity_divert",
+            severity="critical",
+            description=f"AI DIVERSION: Shipment {shipment['id'][:8]} rerouted to safe hub {safe_wh['name']} due to active {calamity_type} calamity.",
+            suggestion=f"Verify driver safety and cargo status at {safe_wh['name']}. Safe hub is outside the affected region.",
+            shipment_id=shipment["id"],
+            driver_id=shipment.get("assigned_driver_id")
+        )
+        alerts_db.insert(alert.model_dump())
+        return True
+    else:
+        shipment["stage"] = "Halted: Disaster Zone"
+        shipment["status"] = "delayed"
+        
+        log = ShipmentEvent(
+            status="delayed",
+            message=f"🚨 AI EMERGENCY HALT: Halted operations in open safe area. No safe hubs available outside {calamity_type} zone.",
+            reason=f"Natural Calamity: {calamity_type}"
+        )
+        shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
+        shipments_db.update(shipment["id"], shipment)
+        
+        alert = Alert(
+            company_id=company_id,
+            type="calamity_divert",
+            severity="critical",
+            description=f"AI HALT: Shipment {shipment['id'][:8]} forced to halt due to {calamity_type} calamity zone. No safe hubs available.",
+            suggestion="Contact driver immediately to ensure safety. Maintain halt status until calamity zone clears.",
+            shipment_id=shipment["id"],
+            driver_id=shipment.get("assigned_driver_id")
+        )
+        alerts_db.insert(alert.model_dump())
+        return True
+
 def decompose_shipment(shipment: dict) -> list:
     """
     World's Strongest Route Splitter logic (Refined):
