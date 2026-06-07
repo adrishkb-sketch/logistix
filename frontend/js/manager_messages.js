@@ -5,6 +5,14 @@ let mainChatMediaData = null;
 let mainChatMediaRecorder = null;
 let mainChatRecording = false;
 
+function isUnread(driverId, conv) {
+    if (selectedDriverChatId === driverId) return false;
+    if (!conv.lastMessage) return false;
+    if (conv.lastMessage.sender_type !== 'driver') return false;
+    const lastSeenCount = parseInt(localStorage.getItem(`last_seen_msg_count_${driverId}`) || '0');
+    return conv.messages.length > lastSeenCount;
+}
+
 async function loadMessages() {
     try {
         const mId = localStorage.getItem('manager_id');
@@ -50,6 +58,11 @@ async function loadMessages() {
             };
         });
 
+        // If a driver is currently selected, mark their messages as read
+        if (selectedDriverChatId && conversations[selectedDriverChatId]) {
+            localStorage.setItem(`last_seen_msg_count_${selectedDriverChatId}`, conversations[selectedDriverChatId].messages.length);
+        }
+
         // Set select_driver_msg placeholder text appropriately
         const selectDriverMsgEl = document.querySelector('[data-i18n="select_driver_msg"]');
         if (selectDriverMsgEl) {
@@ -59,6 +72,26 @@ async function loadMessages() {
                 selectDriverMsgEl.innerText = "Select a driver from the left to view messages";
             }
         }
+
+        // Sort: Unread first (newest unread first), then rest (newest first), then alphabetical
+        filteredDrivers.sort((a, b) => {
+            const convA = conversations[a.id] || { messages: [], lastMessage: null };
+            const convB = conversations[b.id] || { messages: [], lastMessage: null };
+            
+            const unreadA = isUnread(a.id, convA);
+            const unreadB = isUnread(b.id, convB);
+            
+            if (unreadA && !unreadB) return -1;
+            if (!unreadA && unreadB) return 1;
+            
+            const timeA = convA.lastMessage ? new Date(convA.lastMessage.created_at).getTime() : 0;
+            const timeB = convB.lastMessage ? new Date(convB.lastMessage.created_at).getTime() : 0;
+            
+            if (timeA !== timeB) {
+                return timeB - timeA;
+            }
+            return a.name.localeCompare(b.name);
+        });
 
         // Render Sidebar (filtered)
         if (filteredDrivers.length === 0) {
@@ -89,19 +122,22 @@ async function loadMessages() {
                     }
                 }
                 
+                const unread = isUnread(d.id, conv);
+                
                 return `
                     <div class="chat-driver-item ${isSelected ? 'active' : ''}" 
-                         onclick="selectDriverChat('${d.id}')"
-                         style="padding:16px 24px; cursor:pointer; border-bottom:1px solid var(--border); transition:0.2s; background:${isSelected ? 'rgba(79, 140, 255, 0.1)' : 'transparent'};">
+                          onclick="selectDriverChat('${d.id}')"
+                          style="padding:16px 24px; cursor:pointer; border-bottom:1px solid var(--border); transition:0.2s; background:${isSelected ? 'rgba(79, 140, 255, 0.1)' : 'transparent'};">
                          <div style="display:flex; gap:12px; align-items:center;">
                             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
                             <div style="flex:1; overflow:hidden;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                                    <b style="font-size:0.9rem; color:${isSelected ? 'var(--primary)' : 'var(--text)'}">${d.name}</b>
-                                    <span style="font-size:0.65rem; color:var(--muted);">${lastTime}</span>
+                                    <b style="font-size:0.9rem; font-weight:${unread ? '800' : '500'}; color:${unread ? 'var(--text)' : (isSelected ? 'var(--primary)' : 'var(--text)')}">${d.name}</b>
+                                    <span style="font-size:0.65rem; color:var(--muted); font-weight:${unread ? '800' : 'normal'};">${lastTime}</span>
                                 </div>
-                                <p style="margin:0; font-size:0.75rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lastText}</p>
+                                <p style="margin:0; font-size:0.75rem; color:${unread ? 'var(--text)' : 'var(--muted)'}; font-weight:${unread ? '800' : 'normal'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lastText}</p>
                             </div>
+                            ${unread ? `<span style="width: 8px; height: 8px; background: var(--danger); border-radius: 50%; flex-shrink: 0; margin-left: 6px;"></span>` : ''}
                         </div>
                     </div>
                 `;
