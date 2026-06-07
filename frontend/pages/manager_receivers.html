@@ -462,6 +462,14 @@
 </div>
 </form>
 </div>
+<!-- Receiver Orders Modal -->
+<div class="glass-card modal-glass" id="receiver-orders-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:700px; max-width:94vw; max-height:90vh; overflow-y:auto; box-shadow: 0 40px 80px rgba(0,0,0,0.3); padding:28px; border:1px solid rgba(255,255,255,0.1);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="margin:0;">Receiver Orders</h3>
+        <button onclick="document.getElementById('receiver-orders-modal').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.3rem;line-height:1;">✕</button>
+    </div>
+    <div id="receiver-orders-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+</div>
 <!-- Split Modal -->
 <div class="glass-card modal-glass" id="split-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:550px; max-width:95vw; box-shadow: 0 40px 80px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); padding: 25px;">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">

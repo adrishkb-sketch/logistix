@@ -78,8 +78,36 @@ window.lookupReceiverByEmail = async function(email) {
     }
 }
 
-window.viewReceiverOrders = function(id) {
-    showNotification("View Orders logic coming soon!");
+window.viewReceiverOrders = async function(id) {
+    try {
+        const company_id = localStorage.getItem('manager_id');
+        const shipments = await apiCall(`/shipments/?company_id=${company_id}`);
+        const receiverOrders = shipments.filter(s => s.receiver_id === id);
+
+        const modal = document.getElementById('receiver-orders-modal');
+        const list = document.getElementById('receiver-orders-list');
+        list.innerHTML = '';
+
+        if (receiverOrders.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);text-align:center;">No orders found for this receiver.</p>';
+        } else {
+            receiverOrders.forEach(order => {
+                list.innerHTML += `
+                    <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                            <span style="font-weight:bold; color:var(--primary);">${order.description || 'Shipment'}</span>
+                            <span class="status-pill status-${order.status}" style="font-size:0.7rem;">${order.status.toUpperCase()}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">ID: ${order.id}</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">Updates: ${order.stage || 'No recent updates'}</div>
+                    </div>
+                `;
+            });
+        }
+        modal.style.display = 'block';
+    } catch (err) {
+        showNotification("Failed to load orders", "error");
+    }
 }
 
 window.editReceiver = async function(id) {
@@ -89,22 +117,47 @@ window.editReceiver = async function(id) {
         const r = receivers.find(rec => rec.id === id);
         if (!r) return;
 
-        const newName = prompt("Edit Name:", r.name);
-        const newPhone = prompt("Edit Phone:", r.phone);
-        const newEmail = prompt("Edit Email:", r.email);
-
-        if (newName && newPhone && newEmail) {
-            await apiCall('/manager/receivers/upsert', 'POST', {
-                ...r,
-                name: newName,
-                phone: newPhone,
-                email: newEmail
-            });
-            showNotification("Receiver updated successfully!");
-            loadReceivers();
-        }
+        const modal = document.getElementById('edit-modal');
+        document.getElementById('edit-type').innerText = "Receiver";
+        const fields = document.getElementById('edit-fields');
+        fields.innerHTML = `
+            <div class="input-group">
+                <label>Name</label>
+                <input type="text" id="edit-rec-name" value="${r.name}" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+            <div class="input-group">
+                <label>Phone</label>
+                <input type="text" id="edit-rec-phone" value="${r.phone}" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="edit-rec-email" value="${r.email}" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
+            </div>
+        `;
+        
+        const form = document.getElementById('edit-form');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const newName = document.getElementById('edit-rec-name').value;
+            const newPhone = document.getElementById('edit-rec-phone').value;
+            const newEmail = document.getElementById('edit-rec-email').value;
+            
+            if (newName && newPhone && newEmail) {
+                await apiCall('/manager/receivers/upsert', 'POST', {
+                    ...r,
+                    name: newName,
+                    phone: newPhone,
+                    email: newEmail
+                });
+                showNotification("Receiver updated successfully!");
+                modal.style.display = 'none';
+                loadReceivers();
+            }
+        };
+        
+        modal.style.display = 'block';
     } catch (err) {
-        showNotification("Failed to update receiver", "error");
+        showNotification("Failed to open edit dialog", "error");
     }
 }
 
