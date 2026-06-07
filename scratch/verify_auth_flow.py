@@ -60,26 +60,26 @@ def run_tests():
     assert res.json()["exists"] is True
     print("✅ check-email works: registered email exists")
     
-    # 5. Verify that demo data (warehouses, drivers, shipments, vehicles) has been cloned for the new company ID
+    # 5. Verify that new companies start with empty dashboard datasets (no cloned demo data)
     wh_db = JSONDatabase("warehouses")
     whs = wh_db.get_filtered({"company_id": new_company_id})
-    assert len(whs) > 0
-    print(f"✅ demo data cloning works: cloned {len(whs)} warehouses")
+    assert len(whs) == 0
+    print("✅ empty dashboard works: 0 cloned warehouses")
     
     drivers_db = JSONDatabase("drivers")
     drvs = drivers_db.get_filtered({"company_id": new_company_id})
-    assert len(drvs) > 0
-    print(f"✅ demo data cloning works: cloned {len(drvs)} drivers")
+    assert len(drvs) == 0
+    print("✅ empty dashboard works: 0 cloned drivers")
     
     vehicles_db = JSONDatabase("vehicles")
     veh = vehicles_db.get_filtered({"company_id": new_company_id})
-    assert len(veh) > 0
-    print(f"✅ demo data cloning works: cloned {len(veh)} vehicles")
+    assert len(veh) == 0
+    print("✅ empty dashboard works: 0 cloned vehicles")
     
     shipments_db = JSONDatabase("shipments")
     ships = shipments_db.get_filtered({"company_id": new_company_id})
-    assert len(ships) > 0
-    print(f"✅ demo data cloning works: cloned {len(ships)} shipments")
+    assert len(ships) == 0
+    print("✅ empty dashboard works: 0 cloned shipments")
     
     # 6. Verify case-insensitive, whitespace-padded manager login
     res = client.post("/api/auth/company/login", json={

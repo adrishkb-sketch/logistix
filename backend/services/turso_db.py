@@ -345,10 +345,38 @@ class TursoGenericDB:
         return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        all_items = self.get_all()
+        if not _is_configured():
+            return self._fallback().get_filtered(filters)
         if not filters:
-            return all_items
-        return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
+            return self.get_all()
+        
+        try:
+            where_clauses = []
+            args = {}
+            for i, (k, v) in enumerate(filters.items()):
+                # Clean key names to be safe for json_extract path formatting
+                clean_k = "".join(c for c in k if c.isalnum() or c in ("_", "-", "."))
+                param_name = f"val_{i}"
+                # Cast extract to text or compare directly to support typed comparisons correctly
+                where_clauses.append(f"(CAST(json_extract(data, '$.{clean_k}') AS TEXT) = :{param_name} OR json_extract(data, '$.{clean_k}') = :{param_name})")
+                args[param_name] = str(v)
+            
+            where_str = " AND ".join(where_clauses)
+            sql = f"SELECT data FROM {self.table_name} WHERE {where_str}"
+            results = _execute([{"sql": sql, "args": args}])
+            
+            rows = _result_to_dicts(results[0]) if results else []
+            items = []
+            for row in rows:
+                try:
+                    items.append(json.loads(row.get("data", "{}")))
+                except Exception:
+                    pass
+            return items
+        except Exception as e:
+            print(f"[TursoGenericDB:{self.table_name}] get_filtered error: {e}")
+            raise e
+
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         if not _is_configured():
