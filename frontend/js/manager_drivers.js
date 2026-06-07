@@ -672,7 +672,7 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
     let html = '';
     const fieldStyle = `style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit; font-size:0.95rem; margin-top:5px;"`;
     const labelStyle = `style="font-size:0.8rem; color:var(--primary); margin-top:10px; display:block;"`;
-    const types = ['bike', 'scooty', 'van', 'truck', '3 wheeled (battery)'];
+    const types = ['Truck (Heavy)', 'Truck (Small)', 'Delivery Van', 'Bike/Scooty', 'EV-Cargo'];
 
     if (type === 'drones') {
         const hubOptions = (globalWarehouses || []).map(w => `<option value="${w.id}" ${w.id === val2 ? 'selected' : ''}>${w.name}</option>`).join('');
@@ -699,7 +699,7 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
                     <input type="text" id="edit-d-pass" value="${d.password || ''}" ${fieldStyle}>
                     <label ${labelStyle}>License Type</label>
                     <select id="edit-d-license" ${fieldStyle}>
-                        ${types.map(t => `<option value="${t}" ${t === d.license_type ? 'selected' : ''}>${t.toUpperCase()}</option>`).join('')}
+                        ${types.map(t => `<option value="${t}" ${t === d.license_type ? 'selected' : ''}>${t}</option>`).join('')}
                     </select>
                     <label ${labelStyle}>Years of Experience</label>
                     <input type="number" id="edit-d-exp" value="${d.years_experience || 0}" ${fieldStyle}>
@@ -717,7 +717,7 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
                     <input type="text" id="edit-v-plate" value="${v.number_plate || ''}" ${fieldStyle}>
                     <label ${labelStyle}>Vehicle Type</label>
                     <select id="edit-v-type" ${fieldStyle}>
-                        ${types.map(t => `<option value="${t}" ${t === v.type ? 'selected' : ''}>${t.toUpperCase()}</option>`).join('')}
+                        ${types.map(t => `<option value="${t}" ${t === v.type ? 'selected' : ''}>${t}</option>`).join('')}
                     </select>
                     <label ${labelStyle}>Capacity (kg)</label>
                     <input type="number" id="edit-v-cap" value="${v.capacity || 0}" ${fieldStyle}>

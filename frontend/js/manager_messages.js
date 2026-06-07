@@ -1,6 +1,10 @@
 // Dedicated script for manager_messages.html
 
-let selectedDriverChatId = null; let lastMsgCount = -1;
+let selectedDriverChatId = null;
+let lastMsgCount = -1;
+let mainChatMediaData = null;
+let mainChatMediaRecorder = null;
+let mainChatRecording = false;
 
 async function loadMessages() {
     try {

@@ -3832,7 +3832,7 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
     
     let html = '';
     const fieldStyle = `style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border); border-radius:10px; font-family:inherit; font-size:0.95rem;"`;
-    const types = ['bike', 'scooty', 'van', 'truck', '3 wheeled (battery)'];
+    const types = ['Truck (Heavy)', 'Truck (Small)', 'Delivery Van', 'Bike/Scooty', 'EV-Cargo'];
 
     if (type === 'shipments') {
         html = `<div style="display:flex;flex-direction:column;gap:10px;">
@@ -3867,7 +3867,7 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
                     
                     <label style="font-size:0.8rem; color:var(--primary);">License Type</label>
                     <select id="edit-d-license" ${fieldStyle}>
-                        ${types.map(t => `<option value="${t}" ${t === d.license_type ? 'selected' : ''}>${t.toUpperCase()}</option>`).join('')}
+                        ${types.map(t => `<option value="${t}" ${t === d.license_type ? 'selected' : ''}>${t}</option>`).join('')}
                     </select>
                     
                     <label style="font-size:0.8rem; color:var(--primary);">Years of Experience</label>
@@ -3889,7 +3889,7 @@ window.openEditModal = function(type, id, val1, val2, val3, val4) {
                     
                     <label style="font-size:0.8rem; color:var(--primary);">Vehicle Type</label>
                     <select id="edit-v-type" ${fieldStyle}>
-                        ${types.map(t => `<option value="${t}" ${t === v.type ? 'selected' : ''}>${t.toUpperCase()}</option>`).join('')}
+                        ${types.map(t => `<option value="${t}" ${t === v.type ? 'selected' : ''}>${t}</option>`).join('')}
                     </select>
                     
                     <label style="font-size:0.8rem; color:var(--primary);">Capacity (kg)</label>
