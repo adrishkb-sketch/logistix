@@ -416,7 +416,7 @@
                             <div class="chat-input-row">
                                 <button onclick="mainChatPickPhoto()" title="Send Photo" class="chat-icon-btn">📷</button>
                                 <button id="main-chat-voice-btn" onclick="mainChatToggleRecording()" title="Voice Note" class="chat-icon-btn">🎙️</button>
-                                <input id="main-chat-photo-input" type="file" accept="image/*"  onchange="mainChatHandlePhoto(this)">
+                                <input id="main-chat-photo-input" type="file" accept="image/*" style="display: none;" onchange="mainChatHandlePhoto(this)">
                                 <input type="text" id="manager-chat-input"
                                     placeholder="Type your message..."
                                     data-i18n-placeholder="placeholder_message"

@@ -1,7 +1,6 @@
 // Dedicated script for manager_messages.html
 
 let selectedDriverChatId = null;
-let lastMsgCount = -1;
 let mainChatMediaData = null;
 let mainChatMediaRecorder = null;
 let mainChatRecording = false;
@@ -10,10 +9,10 @@ async function loadMessages() {
     try {
         const mId = localStorage.getItem('manager_id');
         const msgs = (await apiCall(`/tracking/messages/${mId}?company_id=${mId}`)) || [];
-        globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
+        window.globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
         
         // Ensure globalDrivers is an array and filter out invalid/null elements
-        globalDrivers = (globalDrivers || []).filter(d => d && d.id && d.name);
+        window.globalDrivers = (window.globalDrivers || []).filter(d => d && d.id && d.name);
 
         // Clear the new messages badge and bold styling since we are on the messages page
         lastMsgCount = msgs.length;
@@ -31,7 +30,7 @@ async function loadMessages() {
         const searchQuery = (searchInputEl ? searchInputEl.value : '').toLowerCase();
         
         // Only verified drivers should appear in the messages list
-        const verifiedDrivers = globalDrivers.filter(d => d.verification_status === "verified");
+        const verifiedDrivers = window.globalDrivers.filter(d => d.verification_status === "verified");
         const filteredDrivers = verifiedDrivers.filter(d => d.name && typeof d.name === 'string' && d.name.toLowerCase().includes(searchQuery));
         
         const driverListContainer = document.getElementById('chat-driver-list');
@@ -40,7 +39,7 @@ async function loadMessages() {
         // Group messages by driver
         const conversations = {};
         
-        globalDrivers.forEach(d => {
+        window.globalDrivers.forEach(d => {
             const dMsgs = msgs.filter(m => m && (m.sender_id === d.id || m.receiver_id === d.id));
             dMsgs.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
             
@@ -55,7 +54,7 @@ async function loadMessages() {
         const selectDriverMsgEl = document.querySelector('[data-i18n="select_driver_msg"]');
         if (selectDriverMsgEl) {
             if (verifiedDrivers.length === 0) {
-                selectDriverMsgEl.innerText = "No verified drivers available. Verify drivers in the Verifications tab to start chatting.";
+                selectDriverMsgEl.innerText = "no verified drivers";
             } else {
                 selectDriverMsgEl.innerText = "Select a driver from the left to view messages";
             }
@@ -65,10 +64,8 @@ async function loadMessages() {
         if (filteredDrivers.length === 0) {
             if (verifiedDrivers.length === 0) {
                 driverListContainer.innerHTML = `
-                    <div style="padding: 40px 20px; text-align: center; color: var(--muted); font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                        <span style="font-size: 2rem;">🔒</span>
-                        <div style="font-weight: 700; color: var(--text);">No verified drivers</div>
-                        <p style="margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.4;">Only drivers who have completed security verification can be messaged.</p>
+                    <div style="padding: 20px; text-align: center; color: var(--muted); font-size: 0.95rem;">
+                        no verified drivers
                     </div>
                 `;
             } else {
@@ -151,7 +148,7 @@ function selectDriverChat(driverId) {
     document.getElementById('chat-messages-container').style.display = 'block';
     document.getElementById('chat-input-area').style.display = 'block';
     
-    const driver = globalDrivers.find(d => d.id === driverId);
+    const driver = window.globalDrivers.find(d => d.id === driverId);
     if (driver) {
         document.getElementById('chat-driver-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
     }
@@ -308,6 +305,17 @@ async function mainChatToggleRecording() {
         btn.style.color = 'var(--text)';
     }
 }
+
+// Bind all page events to window
+window.filterDriverChatList = filterDriverChatList;
+window.selectDriverChat = selectDriverChat;
+window.closeMobileChat = closeMobileChat;
+window.sendMessageToSelectedDriver = sendMessageToSelectedDriver;
+window.mainChatPickPhoto = mainChatPickPhoto;
+window.mainChatHandlePhoto = mainChatHandlePhoto;
+window.mainChatClearMedia = mainChatClearMedia;
+window.mainChatToggleRecording = mainChatToggleRecording;
+window.loadMessages = loadMessages;
 
 async function initPage() {
     loadMessages();
