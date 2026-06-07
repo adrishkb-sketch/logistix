@@ -4204,11 +4204,6 @@ function executeAIAction(shipmentId) {
     alert(`AI contingecy applied for shipment ${shipmentId.substring(0,8)}. Diverting via OSRM bypass.`);
 }
 
-function manualDivert(shipmentId) {
-    const reason = prompt("Enter custom diversion reason:");
-    if (reason) alert(`Manual diversion logged for ${shipmentId.substring(0,8)}: ${reason}`);
-}
-
 async function clearDisasters() {
     try {
         await apiCall('/simulation/disaster/clear', 'POST', { company_id: localStorage.getItem('manager_id') });
@@ -4342,7 +4337,6 @@ async function loadWeatherFleetData() {
                             const manualBtns = aiHandled ? '' : `
                                 <div style="margin-top:5px; display:flex; gap:5px;">
                                     <button style="padding:2px 6px; font-size:0.7rem; background:var(--primary); border:none; color:white; border-radius:3px; cursor:pointer;" onclick="executeAIAction('${s.id}')">Apply AI Solution</button>
-                                    <button style="padding:2px 6px; font-size:0.7rem; background:rgba(255,255,255,0.1); border:1px solid white; color:white; border-radius:3px; cursor:pointer;" onclick="manualDivert('${s.id}')">Manual Divert</button>
                                 </div>`;
 
                             return `

@@ -1840,9 +1840,6 @@ window.openShipmentDetailModal = function(id) {
                     <button class="btn-primary" onclick="window.location.href='manager_weather.html'" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
                         🗺️ View Weather Map
                     </button>
-                    <button class="btn-primary" onclick="openManualSplit('${s.id}')" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--warning); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
-                        🔀 Manual Divert
-                    </button>
                 </div>
             </div>
         `;
@@ -2002,8 +1999,13 @@ window.openTrackModal = async function(shipmentId) {
         if (!target) return;
         
         let parentId = target.is_leg ? target.parent_id : target.id;
-        const legs = shipments.filter(s => s.parent_id === parentId).sort((a,b) => a.leg_order - b.leg_order);
-        const mainShipment = target.is_leg ? target : (legs.length > 0 ? (shipments.find(s => s.id === parentId) || target) : target);
+        const mainShipment = shipments.find(s => s.id === parentId) || target;
+        let legs = shipments.filter(s => s.parent_id === parentId);
+        // Filter out obsolete legs not in the active child_leg_ids array
+        if (mainShipment.child_leg_ids && mainShipment.child_leg_ids.length > 0) {
+            legs = legs.filter(s => mainShipment.child_leg_ids.includes(s.id));
+        }
+        legs.sort((a,b) => a.leg_order - b.leg_order);
         
         const localIconPickup = window.ICON_PICKUP || L.divIcon({className: 'custom-marker'});
         const localIconDrop = window.ICON_DROP || L.divIcon({className: 'custom-marker'});

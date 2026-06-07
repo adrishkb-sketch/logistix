@@ -193,54 +193,133 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
 
     orig_driver_id = shipment.get("assigned_driver_id")
 
-    if within_range:
-        # ── Divert to safe hub ────────────────────────────────────────────
-        shipment["drop"] = {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]}
-        shipment["drop_warehouse_id"] = safe_wh["id"]
-        shipment["stage"] = f"Diverted: Safe Hub ({safe_wh['name']})"
-        shipment["status"] = "assigned"
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    
+    expected_str = shipment.get("expected_delivery")
+    can_delay = True
+    if expected_str:
+        try:
+            expected_dt = datetime.fromisoformat(expected_str.replace("Z", "+00:00"))
+            if expected_dt.tzinfo is None:
+                expected_dt = expected_dt.replace(tzinfo=timezone.utc)
+            if now + timedelta(hours=24) > expected_dt:
+                can_delay = False
+        except Exception:
+            pass
+
+    if can_delay:
+        shipment["stage"] = f"Delayed: Waiting out {calamity_type}"
+        shipment["status"] = "delayed"
         
         log_msg = (
-            f"🚨 AI CALAMITY DIVERT: Due to active {calamity_type}, this shipment has been automatically "
-            f"rerouted to safe hub '{safe_wh['name']}' ({round(safe_wh_dist, 1)} km away — within {vehicle_class_label} "
-            f"safe divert range of {int(max_divert_km)} km). Original driver has been notified."
+            f"🚨 AI CALAMITY DELAY: Due to active {calamity_type}, this shipment is automatically delayed "
+            f"for 24 hours to ensure safety without missing the deadline."
         )
-        log = ShipmentEvent(status="assigned", message=log_msg, reason=f"Natural Calamity: {calamity_type}")
+        log = ShipmentEvent(status="delayed", message=log_msg, reason=f"Natural Calamity: {calamity_type}")
         shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
         shipments_db.update(shipment["id"], shipment)
         
-        # Notify original driver of diversion
-        if orig_driver_id:
-            orig_driver = drivers_db.get_by_id(orig_driver_id)
-            if orig_driver:
-                import uuid as _uuid
-                notifs = orig_driver.get("notifications", [])
-                notifs.append({
-                    "id": str(_uuid.uuid4()),
-                    "shipment_id": shipment["id"],
-                    "title": f"⚠️ Calamity Divert — {calamity_type}",
-                    "message": (
-                        f"Your order '{shipment.get('description', shipment['id'][:8])}' has been diverted by AI "
-                        f"due to an active {calamity_type} calamity. New destination: {safe_wh['name']} "
-                        f"({round(safe_wh_dist, 1)} km). Please update your route immediately."
-                    ),
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
-                    "read": False
-                })
-                orig_driver["notifications"] = notifs
-                drivers_db.update(orig_driver_id, orig_driver)
+        alert = Alert(
+            company_id=company_id,
+            type="calamity_divert",
+            severity="warning",
+            description=f"AI AUTO-DELAY: Shipment {shipment['id'][:8]} delayed for 24h due to {calamity_type}.",
+            suggestion="Monitor calamity zone. The shipment has enough buffer to wait it out.",
+            shipment_id=shipment["id"],
+            driver_id=orig_driver_id
+        )
+        alerts_db.insert(alert.model_dump())
+        return True
+
+    elif within_range:
+        # Divert, resplit and reassign
+        parent_id = shipment.get("parent_id") or shipment["id"]
+        parent = shipments_db.get_by_id(parent_id)
+        if not parent:
+            return False
+            
+        # Delete old unstarted/active legs
+        old_child_ids = parent.get("child_leg_ids", [])
+        for cid in old_child_ids:
+            cleg = shipments_db.get_by_id(cid)
+            if cleg and cleg.get("status") in ["pending", "assigned", "in_transit"]:
+                shipments_db.delete(cid)
+                
+        import uuid as _uuid
+        from backend.services.assignment import auto_assign_shipment
+        
+        leg1_id = "leg_" + str(_uuid.uuid4())[:8]
+        leg2_id = "leg_" + str(_uuid.uuid4())[:8]
+        
+        leg1 = {
+            "id": leg1_id,
+            "parent_id": parent_id,
+            "company_id": company_id,
+            "is_leg": True,
+            "leg_order": 1,
+            "leg_type": "middle_mile",
+            "pickup": curr_loc,
+            "drop": {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]},
+            "drop_warehouse_id": safe_wh["id"],
+            "status": "pending",
+            "description": parent.get("description", "") + f" [Diverted Leg 1]",
+            "finance": parent.get("finance", {})
+        }
+        leg2 = {
+            "id": leg2_id,
+            "parent_id": parent_id,
+            "company_id": company_id,
+            "is_leg": True,
+            "leg_order": 2,
+            "leg_type": "last_mile",
+            "pickup": {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]},
+            "pickup_warehouse_id": safe_wh["id"],
+            "drop": parent.get("drop"),
+            "status": "pending",
+            "description": parent.get("description", "") + f" [Diverted Leg 2]",
+            "finance": parent.get("finance", {})
+        }
+        
+        assign1 = auto_assign_shipment(leg1)
+        if assign1 and "error" not in assign1:
+            leg1["assigned_driver_id"] = assign1.get("assigned_driver_id")
+            leg1["assigned_vehicle_id"] = assign1.get("assigned_vehicle_id")
+            leg1["status"] = "assigned"
+            
+        assign2 = auto_assign_shipment(leg2)
+        if assign2 and "error" not in assign2:
+            leg2["assigned_driver_id"] = assign2.get("assigned_driver_id")
+            leg2["assigned_vehicle_id"] = assign2.get("assigned_vehicle_id")
+            leg2["status"] = "assigned"
+            
+        shipments_db.insert(leg1)
+        shipments_db.insert(leg2)
+        
+        parent["child_leg_ids"] = [leg1_id, leg2_id]
+        parent["route_type"] = "multi-leg"
+        parent["status"] = "split"
+        parent["stage"] = f"Diverted: Safe Hub ({safe_wh['name']})"
+        
+        log_msg = (
+            f"🚨 AI CALAMITY DIVERT: Deadline endangered by {calamity_type}. Shipment automatically diverted "
+            f"via safe hub '{safe_wh['name']}'. Route resplit and new drivers assigned."
+        )
+        log = ShipmentEvent(status="split", message=log_msg, reason=f"Natural Calamity: {calamity_type}")
+        parent["logs"] = parent.get("logs", []) + [log.model_dump()]
+        shipments_db.update(parent_id, parent)
 
         alert = Alert(
             company_id=company_id,
             type="calamity_divert",
             severity="critical",
             description=(
-                f"AI AUTO-DIVERT: Shipment {shipment['id'][:8]} rerouted to safe hub '{safe_wh['name']}' "
-                f"({round(safe_wh_dist, 1)} km) due to active {calamity_type}. "
-                f"Vehicle class: {vehicle_class_label} (max safe divert: {int(max_divert_km)} km)."
+                f"AI AUTO-DIVERT: Shipment {parent_id[:8]} rerouted to safe hub '{safe_wh['name']}' "
+                f"({round(safe_wh_dist, 1)} km) to avoid missing deadline due to {calamity_type}. "
+                f"Route was resplit and drivers reassigned."
             ),
-            suggestion=f"Verify driver safety and cargo at {safe_wh['name']}. Safe hub is outside the calamity-affected region.",
-            shipment_id=shipment["id"],
+            suggestion=f"Verify driver safety and cargo at {safe_wh['name']}.",
+            shipment_id=parent_id,
             driver_id=orig_driver_id
         )
         alerts_db.insert(alert.model_dump())
@@ -260,7 +339,6 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
         shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
         shipments_db.update(shipment["id"], shipment)
         
-        # Notify original driver of halt
         if orig_driver_id:
             orig_driver = drivers_db.get_by_id(orig_driver_id)
             if orig_driver:
