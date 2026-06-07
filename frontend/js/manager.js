@@ -4360,33 +4360,41 @@ async function loadWeatherFleetData() {
 async function loadMessages() {
     try {
         const mId = localStorage.getItem('manager_id');
-        const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`);
+        const msgs = (await apiCall(`/tracking/messages/${mId}?company_id=${mId}`)) || [];
         globalDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
         
-        const searchQuery = document.getElementById('driver-chat-search').value.toLowerCase();
-        const filteredDrivers = globalDrivers.filter(d => d.name.toLowerCase().includes(searchQuery));
+        // Ensure globalDrivers is an array and filter out invalid/null elements
+        globalDrivers = (globalDrivers || []).filter(d => d && d.id && d.name);
+        
+        const searchInputEl = document.getElementById('driver-chat-search');
+        const searchQuery = (searchInputEl ? searchInputEl.value : '').toLowerCase();
+        
+        // Only verified drivers should appear in the messages list
+        const verifiedDrivers = globalDrivers.filter(d => d.verification_status === "verified");
+        const filteredDrivers = verifiedDrivers.filter(d => d.name.toLowerCase().includes(searchQuery));
         
         const driverListContainer = document.getElementById('chat-driver-list');
+        if (!driverListContainer) return;
         
         // Group messages by driver
         const conversations = {};
         
         globalDrivers.forEach(d => {
+            const dMsgs = msgs.filter(m => m && (m.sender_id === d.id || m.receiver_id === d.id));
+            dMsgs.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+            
             conversations[d.id] = {
                 driver: d,
-                messages: msgs.filter(m => m.sender_id === d.id || m.receiver_id === d.id).sort((a,b) => new Date(a.created_at) - new Date(b.created_at)),
-                lastMessage: null
+                messages: dMsgs,
+                lastMessage: dMsgs.length > 0 ? dMsgs[dMsgs.length - 1] : null
             };
-            if (conversations[d.id].messages.length > 0) {
-                conversations[d.id].lastMessage = conversations[d.id].messages[conversations[d.id].messages.length - 1];
-            }
         });
 
         // Render Sidebar (filtered)
         driverListContainer.innerHTML = filteredDrivers.map(d => {
-            const conv = conversations[d.id];
+            const conv = conversations[d.id] || { messages: [], lastMessage: null };
             const isSelected = selectedDriverChatId === d.id;
-            const lastText = conv.lastMessage ? conv.lastMessage.content : "No messages yet";
+            const lastText = conv.lastMessage ? (conv.lastMessage.content || "[Media]") : "No messages yet";
             const lastTime = conv.lastMessage ? new Date(conv.lastMessage.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
             
             return `
