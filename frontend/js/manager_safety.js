@@ -182,7 +182,7 @@ async function openLogsModal(shipmentId) {
         
         // Show Rescue Button if Breakdown
         const rescueContainer = document.getElementById('rescue-container');
-        if (shipment.stage === 'Vehicle Breakdown') {
+        if (shipment.stage === 'Vehicle Breakdown' || shipment.stage === 'Halted: Calamity Zone' || shipment.stage === 'Rescue Dispatched' || shipment.stage === 'Recovering') {
             rescueContainer.style.display = 'block';
         } else {
             rescueContainer.style.display = 'none';

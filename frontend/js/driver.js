@@ -137,6 +137,7 @@ let marker;
 let driverPerfChart;
 let watchId;
 let routeCoords = [];
+let currentStops = [];
 let hasSetInitialView = false;
 let legendControl = null;
 let hudControl = null;
@@ -1244,6 +1245,8 @@ async function loadMissions(autoStartNext = false) {
             unvisited = unvisited.filter(s => s.id !== nextStop.id);
         }
         
+        currentStops = orderedStops;
+        
         // Render Timeline
         if (orderedStops.length > 0 && me && me.verification_status === "verified") {
             let html = '';
@@ -1254,7 +1257,7 @@ async function loadMissions(autoStartNext = false) {
                     </div>
                 `;
             }
-            html += `<h3>${getTranslation('multi_stop_roadmap')} (${orderedStops.length} ${getTranslation('stops_label') || 'Stops'})</h3><div class="timeline">`;
+            html += `<h3>Your Segment (${orderedStops.length} ${getTranslation('stops_label') || 'Stops'})</h3><div class="timeline">`;
             
             orderedStops.forEach((stop, idx) => {
                 const isCurrent = idx === 0;
@@ -1507,6 +1510,11 @@ async function updateLocation(position) {
     }
     lastLocation = {lat, lng};
     
+    // Call new advanced features
+    if (typeof updateRouteProgress === 'function') updateRouteProgress(lat, lng);
+    if (typeof updateNavDrawerProgress === 'function') updateNavDrawerProgress(lat, lng);
+    if (typeof checkGeofenceArrival === 'function') checkGeofenceArrival(lat, lng, currentStops);
+    
     // Send to backend
     try {
         await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng});
@@ -1550,6 +1558,11 @@ function handleError(err) {
                 map.setView([lat, lng], 15);
                 hasSetInitialView = true;
             }
+            
+            // Call new advanced features
+            if (typeof updateRouteProgress === 'function') updateRouteProgress(lat, lng);
+            if (typeof updateNavDrawerProgress === 'function') updateNavDrawerProgress(lat, lng);
+            if (typeof checkGeofenceArrival === 'function') checkGeofenceArrival(lat, lng, currentStops);
             
             try {
                 await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng});
@@ -1602,13 +1615,31 @@ window.addMapControlsAndHUD = function() {
         div.style.display = 'flex';
         div.style.flexDirection = 'column';
         div.style.gap = '6px';
-        div.style.minWidth = '160px';
+        div.style.minWidth = '200px';
         
         div.innerHTML = `
             <div style="font-size:0.65rem; color:var(--text-muted); font-weight:800; text-transform:uppercase;">🛰️ Live Telemetry HUD</div>
             <div><b>Speed:</b> <span id="hud-speed" style="color:var(--success); font-weight:bold;">45 km/h</span></div>
             <div><b>ETA Status:</b> <span id="hud-eta" style="color:var(--accent); font-weight:bold;">On Time</span></div>
             <div><b>Next Waypoint:</b> <span id="hud-waypoint" style="color:var(--primary); font-weight:600; font-size:0.75rem;">Loading...</span></div>
+            <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:6px; margin-top:2px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">
+                    <span>Fatigue Level:</span>
+                    <span id="hud-fatigue-text" style="font-weight:bold;">0%</span>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                    <div id="hud-fatigue-bar" style="width:0%; height:100%; background:var(--success); transition:width 0.5s ease;"></div>
+                </div>
+            </div>
+            <div style="margin-top:2px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">
+                    <span>Leg Progress:</span>
+                    <span id="hud-progress-text" style="font-weight:bold;">0%</span>
+                </div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                    <div id="hud-progress-bar" style="width:0%; height:100%; background:var(--primary); transition:width 0.5s ease;"></div>
+                </div>
+            </div>
         `;
         return div;
     };
@@ -1698,7 +1729,7 @@ async function drawMultiStopRoute(stops) {
     }
     
     try {
-        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`);
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson&steps=true`);
         const data = await res.json();
         if(data.routes && data.routes[0]) {
             routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
@@ -1707,17 +1738,25 @@ async function drawMultiStopRoute(stops) {
             activeRoutePolylines.forEach(p => map.removeLayer(p));
             activeRoutePolylines = [];
             
-            const chunkSize = Math.ceil(routeCoords.length / 5);
-            for(let i=0; i<routeCoords.length; i+=chunkSize) {
-                const chunk = routeCoords.slice(i, i+chunkSize+1);
-                const rand = Math.random();
-                let color = '#3182ce'; 
-                if (rand > 0.9) color = '#ff4b4b'; 
-                else if (rand > 0.7) color = '#f6ad55'; 
-                
-                const poly = L.polyline(chunk, {color: color, weight: 6, opacity: 0.85}).addTo(map);
+            // Initially render route progress
+            const mLoc = marker ? marker.getLatLng() : null;
+            if (mLoc) {
+                updateRouteProgress(mLoc.lat, mLoc.lng);
+            } else {
+                const poly = L.polyline(routeCoords, {color: '#3182ce', weight: 6, opacity: 0.85}).addTo(map);
                 activeRoutePolylines.push(poly);
             }
+            
+            // Call Turn-by-Turn Panel
+            if (data.routes[0].legs) {
+                renderTurnByTurnPanel(data.routes[0].legs);
+            }
+            
+            // Weather Strip Update
+            updateWeatherStrip(stops);
+            
+            // Start HUD live telemetry ticker
+            startHUDTicker(stops);
             
             // Update HUD
             setTimeout(() => {
@@ -1726,34 +1765,11 @@ async function drawMultiStopRoute(stops) {
                 if (waypointEl && nextStop) {
                     waypointEl.innerText = nextStop.shipment.drop.address || nextStop.shipment.drop.name || "Hub Base";
                 }
-                
-                const speedEl = document.getElementById('hud-speed');
-                const etaEl = document.getElementById('hud-eta');
-                
-                if (speedEl) {
-                    const randSpeed = Math.floor(Math.random() * 20) + 40; 
-                    speedEl.innerText = `${randSpeed} km/h`;
-                }
-                
-                if (etaEl && nextStop && nextStop.shipment) {
-                    const s = nextStop.shipment;
-                    if (s.performance_stats) {
-                        const ps = s.performance_stats;
-                        if (ps.status === 'delayed') {
-                            etaEl.innerText = `Delayed (-${ps.diff_mins}m)`;
-                            etaEl.style.color = 'var(--danger)';
-                        } else {
-                            etaEl.innerText = `Early (+${Math.abs(ps.diff_mins)}m)`;
-                            etaEl.style.color = 'var(--success)';
-                        }
-                    } else {
-                        etaEl.innerText = "On Time";
-                        etaEl.style.color = 'var(--primary)';
-                    }
-                }
             }, 500);
         }
-    } catch(err) {}
+    } catch(err) {
+        console.error("OSRM drawing error:", err);
+    }
 
     if (window.currentDriverObj && window.currentDriverObj.fatigue_score >= 100) {
         try {
@@ -2921,4 +2937,437 @@ async function triggerHealthEmergency(hr, o2) {
     } catch(e) {
         showNotification("Emergency signal failed. Contact manager immediately!", "error");
     }
+}
+
+// Dynamic CSS Injection for Animated Polylines
+(function injectDynamicCSS() {
+    const style = document.createElement('style');
+    style.innerHTML = `
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -40;
+      }
+    }
+    .animated-route-polyline {
+      stroke-dasharray: 10, 10;
+      animation: dash 1s linear infinite;
+      stroke: #3182ce !important;
+    }
+    .pulse-circle {
+      animation: pulseCircle 2s infinite;
+    }
+    @keyframes pulseCircle {
+      0% { fill-opacity: 0.15; stroke-width: 1px; }
+      50% { fill-opacity: 0.35; stroke-width: 2px; }
+      100% { fill-opacity: 0.15; stroke-width: 1px; }
+    }
+    `;
+    document.head.appendChild(style);
+})();
+
+// Voice synthesis helper
+function speakInstruction(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+// Turn-by-Turn Panel Helpers
+let navSteps = [];
+let lastSpokenStepIndex = -1;
+
+function renderTurnByTurnPanel(routeLegs) {
+    const navDrawer = document.getElementById('nav-drawer');
+    const navStepsList = document.getElementById('nav-steps-list');
+    if (!navDrawer || !navStepsList) return;
+
+    navSteps = [];
+    routeLegs.forEach(leg => {
+        if (leg.steps) {
+            leg.steps.forEach(step => {
+                if (step.maneuver) {
+                    navSteps.push(step);
+                }
+            });
+        }
+    });
+
+    if (navSteps.length === 0) {
+        navDrawer.style.display = 'none';
+        return;
+    }
+
+    navDrawer.style.display = 'block';
+
+    navStepsList.innerHTML = navSteps.map((step, idx) => {
+        const type = step.maneuver.type;
+        const modifier = step.maneuver.modifier || '';
+        let icon = '➡️';
+        if (type.includes('turn') || type.includes('ramp')) {
+            if (modifier.includes('left')) icon = '↩️';
+            else if (modifier.includes('right')) icon = '↪️';
+        } else if (type.includes('roundabout')) {
+            icon = '🔄';
+        } else if (type.includes('arrive')) {
+            icon = '🏁';
+        } else if (type.includes('depart')) {
+            icon = '🚗';
+        }
+
+        const distanceStr = step.distance > 1000 
+            ? `${(step.distance / 1000).toFixed(1)} km` 
+            : `${Math.round(step.distance)} m`;
+
+        const instruction = getStepInstruction(step);
+
+        return `
+            <div class="nav-step" id="nav-step-${idx}" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.85rem;">
+                <div class="nav-icon" style="font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(79, 140, 255, 0.1); color: var(--primary);">${icon}</div>
+                <div style="flex:1;">
+                    <div style="font-weight:600; color:white;">${instruction}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">for ${distanceStr}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Auto-read first instruction
+    if (navSteps.length > 0) {
+        speakStepIfNeeded(0);
+    }
+}
+
+function getStepInstruction(step) {
+    const type = step.maneuver.type;
+    const modifier = step.maneuver.modifier || '';
+    const name = step.name ? `onto ${step.name}` : '';
+    
+    if (type === 'depart') return `Head ${modifier} ${name}`;
+    if (type === 'arrive') return `You have arrived at your destination`;
+    if (type === 'turn') {
+        return `Turn ${modifier} ${name}`;
+    }
+    if (type === 'new name') return `Continue ${name}`;
+    return `${type.charAt(0).toUpperCase() + type.slice(1)} ${modifier} ${name}`;
+}
+
+function speakStepIfNeeded(index) {
+    if (index !== lastSpokenStepIndex && navSteps[index]) {
+        lastSpokenStepIndex = index;
+        const text = getStepInstruction(navSteps[index]) + ` for ${navSteps[index].distance > 1000 ? (navSteps[index].distance / 1000).toFixed(1) + ' kilometers' : Math.round(navSteps[index].distance) + ' meters'}`;
+        speakInstruction(text);
+    }
+}
+
+window.toggleNavDrawer = function() {
+    const navDrawer = document.getElementById('nav-drawer');
+    if (navDrawer) {
+        if (navDrawer.style.maxHeight === '40px') {
+            navDrawer.style.maxHeight = '250px';
+        } else {
+            navDrawer.style.maxHeight = '40px';
+        }
+    }
+};
+
+function updateNavDrawerProgress(driverLat, driverLng) {
+    if (navSteps.length === 0) return;
+
+    let closestIdx = 0;
+    let minDistance = Infinity;
+
+    for (let i = 0; i < navSteps.length; i++) {
+        const stepLoc = navSteps[i].maneuver.location; // [lng, lat]
+        const dist = Math.sqrt(Math.pow(stepLoc[1] - driverLat, 2) + Math.pow(stepLoc[0] - driverLng, 2)) * 111000;
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestIdx = i;
+        }
+    }
+
+    for (let i = 0; i < navSteps.length; i++) {
+        const el = document.getElementById(`nav-step-${i}`);
+        if (el) {
+            if (i === closestIdx) {
+                el.style.background = 'rgba(79, 140, 255, 0.15)';
+                el.style.fontWeight = 'bold';
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                speakStepIfNeeded(i);
+            } else {
+                el.style.background = 'none';
+                el.style.fontWeight = 'normal';
+            }
+        }
+    }
+}
+
+// POI Layers Helper
+let poiLayers = {
+    fuel: L.layerGroup(),
+    food: L.layerGroup(),
+    mechanic: L.layerGroup(),
+    rest: L.layerGroup()
+};
+let activePoiTypes = new Set();
+
+async function loadNearbyPOIs(lat, lng) {
+    if (activePoiTypes.size === 0) {
+        Object.keys(poiLayers).forEach(type => {
+            if (map) map.removeLayer(poiLayers[type]);
+        });
+        return;
+    }
+    
+    const typesParam = Array.from(activePoiTypes).join(',');
+    try {
+        const pois = await apiCall(`/driver/nearby-pois?lat=${lat}&lng=${lng}&types=${typesParam}`);
+        
+        // Clear layers
+        Object.keys(poiLayers).forEach(type => {
+            poiLayers[type].clearLayers();
+        });
+        
+        const typeIcons = {
+            fuel: '⛽',
+            food: '🍔',
+            mechanic: '🔧',
+            rest: '🛏️'
+        };
+
+        pois.forEach(poi => {
+            const iconHtml = `<div style="font-size: 1.4rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${typeIcons[poi.type] || '📍'}</div>`;
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: 'custom-poi-icon',
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+
+            const m = L.marker([poi.lat, poi.lng], {icon: customIcon});
+            m.bindPopup(`<b>${poi.name}</b><br>${poi.desc}`);
+            
+            if (poiLayers[poi.type]) {
+                m.addTo(poiLayers[poi.type]);
+            }
+        });
+
+        // Ensure active layers are on map
+        Object.keys(poiLayers).forEach(type => {
+            if (activePoiTypes.has(type)) {
+                if (map) poiLayers[type].addTo(map);
+            } else {
+                if (map) map.removeLayer(poiLayers[type]);
+            }
+        });
+    } catch (e) {
+        console.error("Failed to load POIs:", e);
+    }
+}
+
+window.togglePOILayer = function(type) {
+    const btn = document.getElementById(`poi-btn-${type}`);
+    if (activePoiTypes.has(type)) {
+        activePoiTypes.delete(type);
+        if (map && poiLayers[type]) {
+            map.removeLayer(poiLayers[type]);
+        }
+        if (btn) btn.style.background = 'rgba(255, 255, 255, 0.05)';
+    } else {
+        activePoiTypes.add(type);
+        if (btn) btn.style.background = 'var(--primary)';
+        const mLoc = marker ? marker.getLatLng() : (currentStops.length > 0 ? currentStops[0] : null);
+        if (mLoc) {
+            loadNearbyPOIs(mLoc.lat || mLoc.latlng?.lat, mLoc.lng || mLoc.latlng?.lng);
+        }
+    }
+};
+
+// Telemetry Ticker Helper
+let hudTickerInterval = null;
+
+function startHUDTicker(stops) {
+    if (hudTickerInterval) clearInterval(hudTickerInterval);
+    
+    hudTickerInterval = setInterval(() => {
+        if (!marker || !window.currentDriverObj) return;
+        
+        const speedEl = document.getElementById('hud-speed');
+        const etaEl = document.getElementById('hud-eta');
+        const fatigueBarEl = document.getElementById('hud-fatigue-bar');
+        const fatigueTextEl = document.getElementById('hud-fatigue-text');
+        
+        if (speedEl) {
+            const baseSpeed = 45;
+            const variance = Math.floor(Math.sin(Date.now() / 5000) * 10);
+            speedEl.innerText = `${baseSpeed + variance} km/h`;
+        }
+        
+        if (fatigueBarEl && fatigueTextEl) {
+            const fatigueVal = window.currentDriverObj.fatigue_score || 0;
+            fatigueBarEl.style.width = `${fatigueVal}%`;
+            fatigueTextEl.innerText = `${Math.round(fatigueVal)}%`;
+            
+            if (fatigueVal < 60) {
+                fatigueBarEl.style.background = 'var(--success)';
+            } else if (fatigueVal < 85) {
+                fatigueBarEl.style.background = 'var(--warning)';
+            } else {
+                fatigueBarEl.style.background = 'var(--danger)';
+            }
+        }
+
+        if (etaEl && stops && stops[0] && stops[0].shipment) {
+            const s = stops[0].shipment;
+            const deadline = new Date(stops[0].type === 'pickup' ? s.pickup_deadline : s.expected_delivery);
+            const now = new Date();
+            const diffMs = deadline - now;
+            
+            if (diffMs > 0) {
+                const diffHrs = Math.floor(diffMs / 3600000);
+                const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                etaEl.innerText = `${diffHrs}h ${diffMins}m remaining`;
+                etaEl.style.color = 'var(--accent)';
+            } else {
+                etaEl.innerText = `OVERDUE`;
+                etaEl.style.color = 'var(--danger)';
+            }
+        }
+    }, 1000);
+}
+
+// Route Progress Helper
+let completedPolyline = null;
+let remainingPolyline = null;
+
+function updateRouteProgress(driverLat, driverLng) {
+    if (!routeCoords || routeCoords.length === 0 || !map) return;
+
+    let closestIdx = 0;
+    let minDistance = Infinity;
+
+    for (let i = 0; i < routeCoords.length; i++) {
+        const c = routeCoords[i];
+        const dist = Math.sqrt(Math.pow(c[0] - driverLat, 2) + Math.pow(c[1] - driverLng, 2));
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestIdx = i;
+        }
+    }
+
+    const progressPct = Math.round((closestIdx / (routeCoords.length - 1)) * 100);
+    const progressTextEl = document.getElementById('hud-progress-text');
+    const progressBarEl = document.getElementById('hud-progress-bar');
+    if (progressTextEl) progressTextEl.innerText = `${progressPct}%`;
+    if (progressBarEl) progressBarEl.style.width = `${progressPct}%`;
+
+    if (completedPolyline) map.removeLayer(completedPolyline);
+    if (remainingPolyline) map.removeLayer(remainingPolyline);
+
+    const completedCoords = routeCoords.slice(0, closestIdx + 1);
+    const remainingCoords = routeCoords.slice(closestIdx);
+
+    if (completedCoords.length > 1) {
+        completedPolyline = L.polyline(completedCoords, {
+            color: '#64748b',
+            weight: 5,
+            opacity: 0.5
+        }).addTo(map);
+    }
+
+    if (remainingCoords.length > 1) {
+        remainingPolyline = L.polyline(remainingCoords, {
+            color: '#3182ce',
+            weight: 6,
+            opacity: 0.85,
+            className: 'animated-route-polyline'
+        }).addTo(map);
+    }
+}
+
+// Geofence Circle
+let geofenceCircle = null;
+let hasTriggeredGeofence = false;
+
+function checkGeofenceArrival(driverLat, driverLng, stops) {
+    if (!stops || stops.length === 0 || !map) return;
+    
+    const nextStop = stops[0];
+    const dist = Math.sqrt(Math.pow(nextStop.lat - driverLat, 2) + Math.pow(nextStop.lng - driverLng, 2)) * 111000;
+    
+    if (!geofenceCircle) {
+        geofenceCircle = L.circle([nextStop.lat, nextStop.lng], {
+            radius: 150,
+            color: 'var(--accent)',
+            fillColor: 'var(--accent)',
+            fillOpacity: 0.15,
+            weight: 1,
+            className: 'pulse-circle'
+        }).addTo(map);
+    } else {
+        geofenceCircle.setLatLng([nextStop.lat, nextStop.lng]);
+    }
+    
+    if (dist <= 150) {
+        if (!hasTriggeredGeofence) {
+            hasTriggeredGeofence = true;
+            showNotification(`🎯 You are within 150m of your next stop!`, "info");
+            
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker && !(layer === marker)) {
+                    const lLat = layer.getLatLng().lat;
+                    const lLng = layer.getLatLng().lng;
+                    const diff = Math.sqrt(Math.pow(lLat - nextStop.lat, 2) + Math.pow(lLng - nextStop.lng, 2)) * 111000;
+                    if (diff < 5) {
+                        layer.openPopup();
+                    }
+                }
+            });
+        }
+    } else {
+        hasTriggeredGeofence = false;
+    }
+}
+
+// Weather Strip Update Helper
+function updateWeatherStrip(stops) {
+    const strip = document.getElementById('route-weather-strip');
+    const iconEl = document.getElementById('weather-icon');
+    const textEl = document.getElementById('weather-text');
+    const tempEl = document.getElementById('weather-temp');
+    
+    if (!strip || !stops || stops.length === 0) {
+        if (strip) strip.style.display = 'none';
+        return;
+    }
+    
+    const s = stops[0].shipment;
+    const weather = (s.performance_stats && s.performance_stats.weather) || 'Clear';
+    
+    strip.style.display = 'flex';
+    
+    const weatherInfo = {
+        'Clear': { icon: '☀️', text: 'Clear weather along the route.', bg: 'rgba(15, 23, 42, 0.85)', border: 'rgba(255,255,255,0.08)' },
+        'Rain': { icon: '🌧️', text: 'Rain alert: Drive carefully, roads may be wet.', bg: 'rgba(49, 130, 206, 0.2)', border: 'rgba(49, 130, 206, 0.4)' },
+        'Storm': { icon: '⛈️', text: 'Severe storm alert: Heavy rain and wind. Ground vehicles if unsafe.', bg: 'rgba(229, 62, 62, 0.2)', border: 'rgba(229, 62, 62, 0.4)' },
+        'Fog': { icon: '🌫️', text: 'Fog alert: Reduced visibility. Keep hazard lights active.', bg: 'rgba(245, 158, 11, 0.2)', border: 'rgba(245, 158, 11, 0.4)' }
+    };
+    
+    const info = weatherInfo[weather] || weatherInfo['Clear'];
+    iconEl.innerText = info.icon;
+    textEl.innerText = info.text;
+    strip.style.background = info.bg;
+    strip.style.borderColor = info.border;
+    
+    if (weather === 'Clear') tempEl.innerText = '28°C';
+    else if (weather === 'Rain') tempEl.innerText = '22°C';
+    else if (weather === 'Storm') tempEl.innerText = '19°C';
+    else if (weather === 'Fog') tempEl.innerText = '15°C';
+    else tempEl.innerText = '25°C';
 }

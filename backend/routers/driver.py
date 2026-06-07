@@ -6,6 +6,7 @@ from backend.services.ocr_service import process_number_plate_image
 import os
 import uuid
 import random
+import string
 from datetime import datetime
 
 def save_and_compress_image(file_bytes: bytes, filename: str) -> str:
@@ -77,6 +78,50 @@ def get_rest_stops(lat: float, lng: float):
         {"name": "Driver Relief Point", "lat": lat + 0.03, "lng": lng - 0.01, "rating": 4.2, "amenities": ["Mechanic", "Clean Restrooms"]}
     ]
     return stops
+
+@router.get("/nearby-pois")
+def get_nearby_pois(lat: float, lng: float, types: str):
+    # types is comma-separated e.g. "fuel,food,mechanic,rest"
+    type_list = [t.strip().lower() for t in types.split(",")]
+    pois = []
+    
+    # Seeds for realistic offsets and names
+    poi_data = {
+        "fuel": [
+            {"name": "Highway Fuel Station", "offset_lat": 0.008, "offset_lng": -0.012, "desc": "⛽ 24/7 CNG/Diesel, Air pump"},
+            {"name": "IndianOil Plaza", "offset_lat": -0.015, "offset_lng": 0.007, "desc": "⛽ Refueling, Clean restrooms"},
+            {"name": "HP Petrol Pump", "offset_lat": 0.022, "offset_lng": 0.018, "desc": "⛽ Card payments accepted"}
+        ],
+        "food": [
+            {"name": "Sher-e-Punjab Dhaba", "offset_lat": -0.009, "offset_lng": 0.015, "desc": "🍔 Hot meals, Tea & Coffee"},
+            {"name": "Highway Express Food Court", "offset_lat": 0.014, "offset_lng": -0.022, "desc": "🍔 Multi-cuisine dining"},
+            {"name": "Chai & Snacks Corner", "offset_lat": -0.021, "offset_lng": -0.011, "desc": "☕ Quick bites, Snacks"}
+        ],
+        "mechanic": [
+            {"name": "National Truck Repair & Spares", "offset_lat": 0.019, "offset_lng": -0.005, "desc": "🔧 Engine & tire repair"},
+            {"name": "QuickFix Auto Clinic", "offset_lat": -0.011, "offset_lng": -0.019, "desc": "🔧 Hydraulic system specialists"},
+            {"name": "24/7 Breakdown Assistance", "offset_lat": 0.028, "offset_lng": 0.009, "desc": "🔧 Towing, puncture repairs"}
+        ],
+        "rest": [
+            {"name": "Highway Comfort Inn", "offset_lat": 0.012, "offset_lng": 0.012, "desc": "🛏️ Rooms, Showers, Parking"},
+            {"name": "Sovereign Rest House", "offset_lat": -0.018, "offset_lng": 0.024, "desc": "🛏️ Quiet rooms, AC lounge"},
+            {"name": "Zen Haven Rest Stop", "offset_lat": 0.015, "offset_lng": 0.01, "desc": "🛏️ Sleep pods, cafe, showers"}
+        ]
+    }
+    
+    for t in type_list:
+        if t in poi_data:
+            for item in poi_data[t]:
+                pois.append({
+                    "name": item["name"],
+                    "lat": lat + item["offset_lat"],
+                    "lng": lng + item["offset_lng"],
+                    "type": t,
+                    "desc": item["desc"],
+                    "is_open": True
+                })
+                
+    return pois
 
 @router.post("/{driver_id}/zen")
 def toggle_zen(driver_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
@@ -1613,61 +1658,79 @@ def check_and_run_dynamic_reassignment(company_id: str):
                         reason = f"Weather disruption makes vehicle type '{v_type}' unsuitable."
 
         if disrupted:
-            # Perform re-assignment
+            _v_db = JSONDatabase("vehicles")
+
+            # --- FREE OLD DRIVER & VEHICLE ---
+            # Clear old driver's vehicle link
+            orig_driver = drivers_db.get_by_id(driver_id)
+            if orig_driver:
+                notifications = orig_driver.get("notifications", [])
+                notifications.append({
+                    "id": str(uuid.uuid4()),
+                    "shipment_id": s["id"],
+                    "title": "Task Deassignment Notice ⚠️",
+                    "message": f"Order '{s.get('description', s['id'])}' has been removed from your dashboard due to a safety hazard: {reason}. Please check back for further instructions.",
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "read": False
+                })
+                drivers_db.update(driver_id, {
+                    **orig_driver,
+                    "notifications": notifications,
+                    "assigned_vehicle_id": None
+                })
+
+            # Free old vehicle
+            if vehicle_id:
+                _v_db.update(vehicle_id, {
+                    "assigned_driver_id": None,
+                    "status": "available"
+                })
+
+            # Clear stale location so manager map does not show backdated route
+            s["assigned_driver_id"] = None
+            s["assigned_vehicle_id"] = None
+            s["current_location"] = None
+
+            # Perform re-assignment (may fail if calamity zone blocks it)
             s_temp = s.copy()
-            s_temp["assigned_driver_id"] = None
-            s_temp["assigned_vehicle_id"] = None
-            s_temp["status"] = "pending"
-            
             res = auto_assign_shipment(s_temp)
-            new_driver_id = None
-            new_vehicle_id = None
-            
-            if res and "error" not in res:
-                new_driver_id = res.get("assigned_driver_id")
-                new_vehicle_id = res.get("assigned_vehicle_id")
-                
-            # If the reassignment changed the driver
-            if new_driver_id != driver_id:
-                # Notify original driver
-                orig_driver = drivers_db.get_by_id(driver_id)
-                if orig_driver:
-                    notifications = orig_driver.get("notifications", [])
-                    notifications.append({
-                        "id": str(uuid.uuid4()),
-                        "shipment_id": s["id"],
-                        "title": "Task Deassignment Notice ⚠️",
-                        "message": f"Order '{s.get('description', s['id'])}' is no longer assigned to you. It was dynamically reassigned because of a safety hazard: {reason}. For route safety compliance, a more suitable vehicle category has been selected for this leg, and the task has been moved from your dashboard.",
-                        "timestamp": datetime.utcnow().isoformat() + "Z",
-                        "read": False
-                    })
-                    orig_driver["notifications"] = notifications
-                    drivers_db.update(driver_id, orig_driver)
-                
-                # Apply new assignment
-                if new_driver_id:
-                    s["assigned_driver_id"] = new_driver_id
-                    s["assigned_vehicle_id"] = new_vehicle_id
-                    s["status"] = "assigned"
-                    s["stage"] = "Assigned to Driver"
-                    s["logs"] = s.get("logs", []) + [{
-                        "status": "assigned",
-                        "message": f"🔄 Dynamic Reassignment: Driver changed due to weather disruption.",
-                        "timestamp": datetime.utcnow().isoformat() + "Z"
-                    }]
-                else:
-                    # No new driver could be assigned
-                    s["assigned_driver_id"] = None
-                    s["assigned_vehicle_id"] = None
-                    s["status"] = "pending"
-                    s["stage"] = "Awaiting AI/Manual Assignment"
-                    s["logs"] = s.get("logs", []) + [{
-                        "status": "pending",
-                        "message": f"⚠️ Shipment deassigned due to: {reason}. Reset to pending.",
-                        "timestamp": datetime.utcnow().isoformat() + "Z"
-                    }]
-                
-                shipments_db.update(s["id"], s)
+            new_driver_id = res.get("assigned_driver_id") if res and "error" not in res else None
+            new_vehicle_id = res.get("assigned_vehicle_id") if res and "error" not in res else None
+
+            if new_driver_id:
+                # Link new driver to vehicle
+                drivers_db.update(new_driver_id, {"assigned_vehicle_id": new_vehicle_id})
+                _v_db.update(new_vehicle_id, {
+                    "assigned_driver_id": new_driver_id,
+                    "status": "assigned"
+                })
+
+                # Generate fresh verification codes for the new driver
+                new_pickup_code = str(random.randint(100, 999))
+                new_delivery_code = str(random.randint(1000, 9999))
+
+                s["assigned_driver_id"] = new_driver_id
+                s["assigned_vehicle_id"] = new_vehicle_id
+                s["status"] = "assigned"
+                s["stage"] = "Assigned to Driver"
+                s["pickup_code"] = new_pickup_code
+                s["delivery_code"] = new_delivery_code
+                s["logs"] = s.get("logs", []) + [{
+                    "status": "assigned",
+                    "message": f"🔄 Dynamic Reassignment: New fleet dispatched due to: {reason}. Fresh verification codes issued.",
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }]
+            else:
+                # No replacement found — halt and let manager resolve manually
+                s["status"] = "pending"
+                s["stage"] = "Halted: Calamity Zone"
+                s["logs"] = s.get("logs", []) + [{
+                    "status": "pending",
+                    "message": f"⚠️ Shipment halted: {reason}. No eligible replacement fleet found — manual assignment required.",
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                }]
+
+            shipments_db.update(s["id"], s)
 
 
 @router.get("/{driver_id}/notifications")

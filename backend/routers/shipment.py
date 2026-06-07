@@ -704,6 +704,7 @@ def dispatch_rescue(shipment_id: str):
         raise HTTPException(status_code=404, detail="Shipment not found")
         
     old_driver = s.get("assigned_driver_id")
+    old_vehicle = s.get("assigned_vehicle_id")
     
     # Reset shipment for assignment
     s["assigned_driver_id"] = None
@@ -714,27 +715,55 @@ def dispatch_rescue(shipment_id: str):
     from backend.services.assignment import auto_assign_shipment
     try:
         assigned_data = auto_assign_shipment(s)
-        s["assigned_driver_id"] = assigned_data["driver_id"]
-        s["assigned_vehicle_id"] = assigned_data["vehicle_id"]
+        if not assigned_data or "error" in assigned_data:
+            raise ValueError(assigned_data.get("error", "No eligible rescue units available"))
+            
+        new_driver_id = assigned_data["assigned_driver_id"]
+        new_vehicle_id = assigned_data["assigned_vehicle_id"]
+        
+        s["assigned_driver_id"] = new_driver_id
+        s["assigned_vehicle_id"] = new_vehicle_id
         s["status"] = "assigned"
         s["stage"] = "Rescue Dispatched"
+        s["current_location"] = None # Clear stale location to fix backdated map
+        
+        # Generate fresh verification codes for the new driver
+        new_pickup_code = str(random.randint(100, 999))
+        new_delivery_code = str(random.randint(1000, 9999))
+        s["pickup_code"] = new_pickup_code
+        s["delivery_code"] = new_delivery_code
         
         from backend.models import ShipmentEvent
-        log = ShipmentEvent(status="assigned", message="🚑 Rescue vehicle dispatched and assigned automatically.", reason="Previous vehicle breakdown. AI rerouted nearest available recovery unit.")
+        log = ShipmentEvent(status="assigned", message="🚑 Rescue vehicle dispatched and assigned automatically. Fresh verification codes generated.", reason="Previous vehicle breakdown. AI rerouted nearest available recovery unit.")
         s["logs"] = s.get("logs", []) + [log.model_dump()]
         
         shipments_db.update(shipment_id, s)
         
+        from backend.database import JSONDatabase
+        drivers_db = JSONDatabase("drivers")
+        vehicles_db = JSONDatabase("vehicles")
+        
+        # Link new driver and vehicle
+        drv = drivers_db.get_by_id(new_driver_id)
+        if drv:
+            drivers_db.update(new_driver_id, {"assigned_vehicle_id": new_vehicle_id})
+        veh = vehicles_db.get_by_id(new_vehicle_id)
+        if veh:
+            vehicles_db.update(new_vehicle_id, {"assigned_driver_id": new_driver_id, "status": "assigned"})
+        
         # Free up the old driver
         if old_driver:
-            from backend.database import JSONDatabase
-            drivers_db = JSONDatabase("drivers")
-            drv = drivers_db.get_by_id(old_driver)
-            if drv:
-                drv["assigned_vehicle_id"] = None # Old driver loses the broken vehicle
-                drivers_db.update(old_driver, drv)
+            orig_drv = drivers_db.get_by_id(old_driver)
+            if orig_drv:
+                drivers_db.update(old_driver, {"assigned_vehicle_id": None})
                 
-        return {"message": "Rescue successful.", "new_driver": assigned_data["driver_id"]}
+        # Free up and flag maintenance for the broken vehicle
+        if old_vehicle:
+            orig_veh = vehicles_db.get_by_id(old_vehicle)
+            if orig_veh:
+                vehicles_db.update(old_vehicle, {"assigned_driver_id": None, "status": "maintenance"})
+                
+        return {"message": "Rescue successful.", "new_driver": new_driver_id}
     except ValueError as e:
         # Revert status if no rescue available
         s["status"] = "delayed"
