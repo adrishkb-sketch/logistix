@@ -318,31 +318,88 @@ def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigu
     base_time_mins = (distance_km / base_speed) * 60
     
     # Weather Impact
-    w_mult = weather["multiplier"]
-    # Bikes/Scootys are hit harder by rain
-    if weather["condition"] in ["Rain", "Storm"] and v_type.lower() in ["bike", "scooty"]:
-        w_mult *= 1.8
+    w_cond = weather.get("condition", "Clear")
+    if w_cond == "Clear":
+        w_mult = 0.9
+    elif w_cond == "Cloudy":
+        w_mult = 1.0
+    elif w_cond == "Rain":
+        w_mult = 1.3
+        if v_type.lower() in ["bike", "scooty"]:
+            w_mult = 1.6
+    elif w_cond == "Storm":
+        w_mult = 1.8
+        if v_type.lower() in ["bike", "scooty"]:
+            w_mult = 2.5
+    else:
+        w_mult = weather.get("multiplier", 1.0)
         
-    # Fatigue Impact (Driver slows down)
-    f_mult = 1.0 + (fatigue / 200.0) # Max +50% delay
-    
+    # Fatigue Impact (Driver slows down or drives optimally)
+    if fatigue < 15:
+        f_mult = 0.95
+    elif fatigue >= 50:
+        f_mult = 1.2
+    else:
+        f_mult = 1.0
+        
     # Traffic Impact
-    traffic = simulate_traffic(lat, lng) if lat != 0 else {"delay_mult": 1.0, "level": "Unknown"}
-    t_mult = traffic["delay_mult"]
+    traffic = simulate_traffic(lat, lng) if lat != 0 else {"delay_mult": 1.0, "level": "Light", "reason": "Free Flow"}
+    t_level = traffic.get("level", "Light")
+    if t_level == "Light":
+        t_mult = 0.9
+    elif t_level == "Moderate":
+        t_mult = 1.2
+    elif t_level == "Heavy":
+        t_mult = 1.6
+    else:
+        t_mult = 1.0
 
     # Health Impact (Vehicle issues)
-    h_mult = 1.0 + ((100 - health) / 200.0) # Max +50% delay
-    
+    if health >= 95:
+        h_mult = 0.95
+    elif health < 70:
+        h_mult = 1.25
+    else:
+        h_mult = 1.0
+        
     adjusted_time = (base_time_mins * w_mult * f_mult * h_mult * t_mult) + wait_time_mins
     delay = adjusted_time - base_time_mins
+    
+    # AI Reasoning for early/late predictions
+    reasons_list = []
+    if w_cond in ["Rain", "Storm"]:
+        reasons_list.append(f"adverse weather ({w_cond}) along the route")
+    elif w_cond == "Clear":
+        reasons_list.append("clear sky conditions")
+        
+    if fatigue < 15:
+        reasons_list.append("fully alert and well-rested driver")
+    elif fatigue >= 50:
+        reasons_list.append("reduced driver speeds for safety rest breaks")
+        
+    if health >= 95:
+        reasons_list.append("pristine vehicle health status")
+    elif health < 70:
+        reasons_list.append("reduced speed limits due to degraded vehicle health")
+        
+    if t_level == "Light":
+        reasons_list.append("optimal free-flowing traffic flow")
+    elif t_level == "Heavy":
+        reasons_list.append("heavy congestion bottlenecks")
+        
+    if not reasons_list:
+        reasons_list.append("normal transit parameters")
+        
+    reason_str = "Route optimization model inputs: " + ", ".join(reasons_list) + "."
     
     return {
         "base_mins": round(base_time_mins),
         "adjusted_mins": round(adjusted_time),
         "delay_mins": round(delay),
         "wait_time_mins": wait_time_mins,
-        "weather": weather["condition"],
-        "weather_icon": weather["icon"],
+        "weather": w_cond,
+        "weather_icon": weather.get("icon", "☀️"),
+        "reason": reason_str,
         "factors": {
             "weather_impact": round((w_mult - 1) * 100),
             "fatigue_impact": round((f_mult - 1) * 100),

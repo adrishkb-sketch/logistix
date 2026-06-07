@@ -958,7 +958,13 @@ def maintenance_complete(driver_id: str):
         "current_warehouse_id": base_wh
     })
     
-    return {"message": "Vehicle maintenance complete. Original driver paid out (if split), vehicle present warehouse reset to base hub."}
+    # Reset driver status to available and return driver to base warehouse empty
+    drivers_db.update(driver_id, {
+        "status": "available",
+        "current_warehouse_id": base_wh
+    })
+    
+    return {"message": "Vehicle maintenance complete. Original driver paid out (if split), vehicle and driver present warehouse reset to base hub."}
 
 @router.get("/wallet/{driver_id}")
 def get_driver_wallet(driver_id: str):
@@ -1395,7 +1401,8 @@ def check_and_run_dynamic_reassignment(company_id: str):
                     notifications.append({
                         "id": str(uuid.uuid4()),
                         "shipment_id": s["id"],
-                        "message": f"Shipment '{s.get('description', s['id'])}' was deassigned from you due to: {reason}",
+                        "title": "Task Deassignment Notice ⚠️",
+                        "message": f"Order '{s.get('description', s['id'])}' is no longer assigned to you. It was dynamically reassigned because of a safety hazard: {reason}. For route safety compliance, a more suitable vehicle category has been selected for this leg, and the task has been moved from your dashboard.",
                         "timestamp": datetime.utcnow().isoformat() + "Z",
                         "read": False
                     })

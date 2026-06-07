@@ -221,25 +221,36 @@ async function viewOrder(id) {
         
         // Render Dynamic ETA Factors if available
         const infoGrid = document.getElementById('track-info-grid');
+        const offsetHtml = dynamicEta.delay_mins > 0 
+            ? `<span style="color:var(--danger); font-weight:800;">+${dynamicEta.delay_mins} mins (Late)</span>` 
+            : (dynamicEta.delay_mins < 0 ? `<span style="color:var(--success); font-weight:800;">${dynamicEta.delay_mins} mins (Early)</span>` : `<span style="color:var(--success); font-weight:800;">On Time</span>`);
+            
+        const factorsInnerHtml = `
+            <h4 style="margin: 0 0 12px 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">📡 Live Transit Insights</h4>
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem; line-height: 1.5;">
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div><strong>Weather:</strong> ${dynamicEta.weather_icon} ${dynamicEta.weather}</div>
+                    <div><strong>Traffic:</strong> 🚦 Live Flow</div>
+                    <div><strong>Schedule Status:</strong> ${offsetHtml}</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">
+                        🤖 <strong>AI ETA Prediction Model:</strong><br>
+                        ${dynamicEta.reason || 'Transit parameters are standard. Tracking active.'}
+                    </p>
+                </div>
+            </div>
+        `;
+        
         if (dynamicEta && document.getElementById('dynamic-eta-factors') === null) {
             const factorsHtml = `
-                <div id="dynamic-eta-factors" style="grid-column: 1 / -1; background: rgba(79, 140, 255, 0.05); padding: 15px; border-radius: 12px; border: 1px solid var(--primary); margin-top: 15px;">
-                    <h4 style="margin: 0 0 10px 0; color: var(--primary);">Live Transit Insights 📡</h4>
-                    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 0.85rem;">
-                        <div><strong>Weather:</strong> ${dynamicEta.weather_icon} ${dynamicEta.weather}</div>
-                        <div><strong>Delay factors:</strong> +${dynamicEta.delay_mins} mins</div>
-                    </div>
+                <div id="dynamic-eta-factors" class="glass-card" style="grid-column: 1 / -1; background: rgba(79, 140, 255, 0.05); padding: 20px; border-radius: 16px; border: 1px solid var(--primary); margin-top: 15px; box-shadow: 0 4px 15px rgba(79,140,255,0.15);">
+                    ${factorsInnerHtml}
                 </div>
             `;
             infoGrid.insertAdjacentHTML('beforeend', factorsHtml);
         } else if (dynamicEta && document.getElementById('dynamic-eta-factors')) {
-             document.getElementById('dynamic-eta-factors').innerHTML = `
-                    <h4 style="margin: 0 0 10px 0; color: var(--primary);">Live Transit Insights 📡</h4>
-                    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 0.85rem;">
-                        <div><strong>Weather:</strong> ${dynamicEta.weather_icon} ${dynamicEta.weather}</div>
-                        <div><strong>Delay factors:</strong> +${dynamicEta.delay_mins} mins</div>
-                    </div>
-             `;
+             document.getElementById('dynamic-eta-factors').innerHTML = factorsInnerHtml;
         }
 
         // Render Legs if it's a multi-leg journey
@@ -469,17 +480,29 @@ async function initMap(shipment, dynamicEta, vehicleType) {
 
         // Animate marker along the path if in transit
         if (shipment.status === 'in_transit' && routeCoords.length > 1) {
-            let stepIndex = 0;
+            let currentPtIndex = 0;
+            let subStep = 0;
+            const subStepsCount = 10; // Interpolate 10 frames between consecutive coordinate nodes
             const totalSteps = routeCoords.length;
+            
             vehicleAnimationInterval = setInterval(() => {
-                if (stepIndex >= totalSteps) {
-                    stepIndex = 0;
+                if (!trackMarker) return;
+                
+                const startPt = routeCoords[currentPtIndex];
+                const endPt = routeCoords[(currentPtIndex + 1) % totalSteps];
+                
+                // Linear interpolation for a playful moving animation along the road geometry
+                const lat = startPt[0] + (endPt[0] - startPt[0]) * (subStep / subStepsCount);
+                const lng = startPt[1] + (endPt[1] - startPt[1]) * (subStep / subStepsCount);
+                
+                trackMarker.setLatLng([lat, lng]);
+                
+                subStep++;
+                if (subStep >= subStepsCount) {
+                    subStep = 0;
+                    currentPtIndex = (currentPtIndex + 1) % totalSteps;
                 }
-                if (trackMarker) {
-                    trackMarker.setLatLng(routeCoords[stepIndex]);
-                }
-                stepIndex++;
-            }, 300);
+            }, 60); // 60ms updates result in super-smooth transition along OSRM route path
         }
     }
     

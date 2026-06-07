@@ -1478,8 +1478,7 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
     from backend.services.route_engine import haversine
     all_shipments = shipments_db.get_all()
     
-    L_MILE_TYPES = ["ev-cargo", "bike/scooty", "delivery van", "scooty", "bike"]
-    M_MILE_TYPES = ["large truck", "small truck", "truck (heavy)"]
+    # M_MILE_TYPES and L_MILE_TYPES are replaced by normalized is_x flags.
 
     for d in drivers:
         v_id = d.get("assigned_vehicle_id")
@@ -1490,19 +1489,46 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
         v_type = v.get("type", "").lower()
         v_base = v.get("base_warehouse_id")
 
-        # 1. Filter by Vehicle Type Rules
+        # 1. Filter by Vehicle Type Rules (Normalized case-insensitive match)
+        is_heavy_truck = "heavy" in v_type or "large" in v_type
+        is_small_truck = "small" in v_type or ("truck" in v_type and not is_heavy_truck)
+        is_van = "van" in v_type or "delivery" in v_type
+        is_bike_scooty = "bike" in v_type or "scooty" in v_type or "scooter" in v_type or "motorcycle" in v_type
+        is_ev = "ev" in v_type or "electric" in v_type
+        is_drone = "drone" in v_type
+
         if is_first_mile or is_last_mile or is_direct:
-            if not any(t in v_type for t in L_MILE_TYPES): continue
+            if not (is_ev or is_bike_scooty or is_van or is_drone):
+                continue
         if is_middle_mile:
-            if not any(t in v_type for t in M_MILE_TYPES): continue
+            if not (is_heavy_truck or is_small_truck):
+                continue
         
         # 2. Weather Filter
-        if bad_weather and any(t in v_type for t in ["bike", "scooty"]): continue
+        if bad_weather and is_bike_scooty:
+            continue
 
         # 3. Capacity Check (Current load + this shipment)
         active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == v["id"] and s.get("status") in ["assigned", "in_transit"]]
         curr_load = sum(s.get("weight", 0) for s in active_for_v)
-        if curr_load + shipment.get("weight", 0) > v.get("capacity", 0): continue
+        
+        # Robust capacity check with fallback defaults
+        v_cap = v.get("capacity")
+        if not v_cap:
+            if is_heavy_truck: v_cap = 10000.0
+            elif is_small_truck: v_cap = 3000.0
+            elif is_van: v_cap = 1500.0
+            elif is_ev: v_cap = 800.0
+            elif is_bike_scooty: v_cap = 80.0
+            elif is_drone: v_cap = 15.0
+            else: v_cap = 1000.0
+        else:
+            try:
+                v_cap = float(v_cap)
+            except (ValueError, TypeError):
+                v_cap = 1000.0
+                
+        if curr_load + shipment.get("weight", 0) > v_cap: continue
 
         # Determine location category
         p_wh = next((w for w in warehouses if w["id"] == p_wh_id), None) if p_wh_id else None

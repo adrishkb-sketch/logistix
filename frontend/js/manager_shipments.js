@@ -281,8 +281,11 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     <div style="font-size:0.6rem; color:var(--text-muted);">Profit: <span style="color:var(--success);">₹${(s.finance?.margin || 0).toLocaleString()}</span></div>
                 </td>
                 <td>
-                    <button class="btn-primary" style="padding:6px 12px; font-size:0.7rem; width:auto; background:var(--accent);" onclick="openShipmentDetailModal('${s.id}')">
+                    <button class="btn-primary" style="padding:6px 12px; font-size:0.7rem; width:auto; background:var(--accent); margin-bottom:4px;" onclick="openShipmentDetailModal('${s.id}')">
                         ⚡ <span data-i18n="btn_manage">Manage</span>
+                    </button>
+                    <button class="btn-primary" style="padding:6px 12px; font-size:0.7rem; width:auto; background:var(--primary);" onclick="checkShipmentWeather('${s.id}')">
+                        🌦️ Weather Check
                     </button>
                 </td>
             `;
@@ -334,8 +337,11 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                             <div style="font-size:0.75rem; color:var(--success); font-weight:bold;">₹${(leg.finance?.suggested_price || 0).toLocaleString()}</div>
                         </td>
                         <td>
-                            <button class="btn-primary" style="padding:4px 8px; font-size:0.6rem; width:auto; background:rgba(255,255,255,0.1);" onclick="openShipmentDetailModal('${leg.id}')">
+                            <button class="btn-primary" style="padding:4px 8px; font-size:0.6rem; width:auto; background:rgba(255,255,255,0.1); margin-bottom:2px;" onclick="openShipmentDetailModal('${leg.id}')">
                                 ⚡ <span data-i18n="btn_manage">Manage</span>
+                            </button>
+                            <button class="btn-primary" style="padding:4px 8px; font-size:0.6rem; width:auto; background:var(--primary);" onclick="checkShipmentWeather('${leg.id}')">
+                                🌦️ Weather Check
                             </button>
                         </td>
                     `;
@@ -2381,6 +2387,75 @@ window.miniChatToggleRecording = async function() {
         btn.style.background = 'rgba(255,255,255,0.08)';
         btn.style.color = 'var(--text)';
         btn.title = 'Voice Note';
+    }
+};
+
+window.checkShipmentWeather = async function(id) {
+    const s = globalShipments.find(ship => ship.id === id);
+    if (!s) return alert("Shipment not found.");
+    
+    const loc = s.current_location && s.current_location.lat ? s.current_location : s.pickup;
+    const name = s.description || "Shipment";
+    
+    try {
+        const w = await apiCall(`/tracking/weather-at?lat=${loc.lat}&lng=${loc.lng}&company_id=${localStorage.getItem('manager_id')}`);
+        const temp = w.temp !== undefined ? `${w.temp}°C` : 'N/A';
+        const aqi = w.us_aqi !== undefined ? `${w.us_aqi} AQI` : 'N/A';
+        const wind = w.wind_speed !== undefined ? `${w.wind_speed} km/h` : 'N/A';
+        const cond = w.condition || 'N/A';
+        const icon = w.icon || '🌡️';
+        const risk = w.risk_score !== undefined ? `${w.risk_score}` : '0.0';
+        
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.background = 'rgba(0, 0, 0, 0.7)';
+        overlay.style.backdropFilter = 'blur(10px)';
+        overlay.style.zIndex = '99999';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.onclick = () => document.body.removeChild(overlay);
+        
+        const card = document.createElement('div');
+        card.className = 'glass-card';
+        card.style.padding = '30px';
+        card.style.maxWidth = '450px';
+        card.style.width = '95%';
+        card.style.textAlign = 'center';
+        card.style.border = '1px solid var(--border)';
+        card.style.background = 'rgba(15, 23, 42, 0.85)';
+        card.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.5)';
+        card.style.borderRadius = '16px';
+        card.onclick = (e) => e.stopPropagation();
+        
+        card.innerHTML = `
+            <div style="font-size: 3.5rem; margin-bottom: 15px;">${icon}</div>
+            <h3 style="margin: 0 0 10px 0; color: var(--primary); font-size: 1.4rem; font-weight: bold;">Route Weather Intel</h3>
+            <p style="font-weight: bold; font-size: 0.95rem; color: var(--text); margin-bottom: 20px;">${name}</p>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem;">
+                <div>🌡️ <b>Temp:</b> <span style="color: var(--accent); font-weight: bold;">${temp}</span></div>
+                <div>💨 <b>Wind:</b> <span style="color: var(--accent); font-weight: bold;">${wind}</span></div>
+                <div>🌫️ <b>Air Quality:</b> <span style="color: var(--accent); font-weight: bold;">${aqi}</span></div>
+                <div>🌥️ <b>Condition:</b> <span style="color: var(--accent); font-weight: bold;">${cond}</span></div>
+                <div style="grid-column: span 2; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; font-size: 0.85rem;">
+                    ⚠️ <b>Location Risk Score:</b> <span style="color: ${w.risk_score > 30 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">${risk}/100</span>
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="this.closest('body').removeChild(this.parentNode.parentNode)" style="width: 100%; font-weight: bold; background: var(--primary); color: #000; border: none; border-radius: 10px; padding: 12px; cursor: pointer;">
+                Close Intel
+            </button>
+        `;
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+    } catch(err) {
+        console.error("Failed to check route weather", err);
+        alert("Failed to retrieve live weather telemetry for this shipment route.");
     }
 };
 

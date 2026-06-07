@@ -284,7 +284,23 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == vehicle["id"] and s.get("status") in ["assigned", "in_transit"]]
         curr_load = sum(s.get("weight", 0) for s in active_for_v)
         ship_weight = shipment.get("weight", 0)
-        v_cap = vehicle.get("capacity", 0)
+        
+        # Robust capacity check with fallback defaults
+        v_cap = vehicle.get("capacity")
+        if not v_cap:
+            if is_heavy_truck: v_cap = 10000.0
+            elif is_small_truck: v_cap = 3000.0
+            elif is_van: v_cap = 1500.0
+            elif is_ev: v_cap = 800.0
+            elif is_bike_scooty: v_cap = 80.0
+            elif is_drone: v_cap = 15.0
+            else: v_cap = 1000.0
+        else:
+            try:
+                v_cap = float(v_cap)
+            except (ValueError, TypeError):
+                v_cap = 1000.0
+                
         if curr_load + ship_weight > v_cap:
             rejection_reasons.append(f"{d_name}: Overloaded ({curr_load + ship_weight}kg > {v_cap}kg)")
             continue
@@ -385,7 +401,22 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
             elif is_ev: matches = ("ev" in t)
             elif is_drone: matches = ("drone" in t)
             
-            if matches and v.get("capacity", 0) >= total_weight:
+            v_cap = v.get("capacity")
+            if not v_cap:
+                if is_heavy: v_cap = 10000.0
+                elif is_small: v_cap = 3000.0
+                elif is_van: v_cap = 1500.0
+                elif is_ev: v_cap = 800.0
+                elif is_bike: v_cap = 80.0
+                elif is_drone: v_cap = 15.0
+                else: v_cap = 1000.0
+            else:
+                try:
+                    v_cap = float(v_cap)
+                except (ValueError, TypeError):
+                    v_cap = 1000.0
+
+            if matches and v_cap >= total_weight:
                 rescue_pair = (d, v)
                 break
         if rescue_pair:
