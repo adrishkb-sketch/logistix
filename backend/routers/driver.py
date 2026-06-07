@@ -53,19 +53,31 @@ def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Hea
     fund_db = JSONDatabase("fund_requests")
     all_funds = fund_db.get_all()
     
+    weather_db = JSONDatabase("weather_cells")
+    cells_list = weather_db.get_all()
+    all_ships = shipments_db.get_all()
+    
+    db_changed = False
     # Recalculate vitality for perishables and attach fund request status
     for s in assigned:
         if s.get("is_perishable"):
-            new_v = calculate_shipment_vitality(s)
+            new_v = calculate_shipment_vitality(s, cells=cells_list)
             if new_v != s.get("vitality"):
                 s["vitality"] = new_v
-                shipments_db.update(s["id"], {"vitality": new_v})
+                for master_s in all_ships:
+                    if master_s and master_s.get("id") == s["id"]:
+                        master_s["vitality"] = new_v
+                        break
+                db_changed = True
         
         # Attach fund request status
         shipment_funds = [f for f in all_funds if f and f.get("shipment_id") == s["id"]]
         s["has_refuel_req"] = any(f.get("type") == "refuel" for f in shipment_funds)
         s["has_toll_req"] = any(f.get("type") == "toll" for f in shipment_funds)
                 
+    if db_changed:
+        shipments_db.write(all_ships)
+        
     return assigned
 
 @router.get("/safety/rest-stops")
@@ -193,7 +205,8 @@ def update_driver_location(driver_id: str, location: Dict[str, Any], x_logistix_
             
             # AI Weather Reroute Check
             from backend.services.route_engine import check_and_reroute_calamities
-            check_and_reroute_calamities(s)
+            if check_and_reroute_calamities(s):
+                continue
             
             # Update Vehicle Distance & Health Score
             driver = drivers_db.get_by_id(driver_id)

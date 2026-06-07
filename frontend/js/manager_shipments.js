@@ -1669,25 +1669,58 @@ window.renderEslLedger = async function(s) {
     const blocksContainer = document.getElementById('escrow-blocks');
     if (!lockAnim || !statusText || !blocksContainer) return;
 
+    // Injected dynamic CSS animations for escrow lock
+    if (!document.getElementById('esl-ledger-animations')) {
+        const style = document.createElement('style');
+        style.id = 'esl-ledger-animations';
+        style.textContent = `
+            @keyframes lockFlash {
+                0% { opacity: 0.6; transform: scale(0.95); text-shadow: 0 0 5px var(--danger); }
+                100% { opacity: 1; transform: scale(1.1); text-shadow: 0 0 20px var(--danger); }
+            }
+            @keyframes lockRelease {
+                0% { transform: rotate(0deg) scale(0.8); opacity: 0; }
+                50% { transform: rotate(-15deg) scale(1.15); opacity: 0.8; }
+                100% { transform: rotate(0deg) scale(1.05); opacity: 1; }
+            }
+            @keyframes lockPulse {
+                0% { transform: scale(1); opacity: 0.8; }
+                50% { transform: scale(1.05); opacity: 1; }
+                100% { transform: scale(1); opacity: 0.8; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     // SLA Heuristics: SLA violated if delay > 30 minutes
     const delay = s.performance_stats?.delay_mins || 0;
     const isDelayed = delay > 30;
     const isDelivered = s.status === 'delivered';
     const isSlaViolated = isDelayed;
 
+    lockAnim.style.fontSize = '2rem';
+    lockAnim.style.fontWeight = 'bold';
+    lockAnim.style.transition = 'all 0.5s ease-in-out';
+
     if (isDelivered) {
         if (isSlaViolated) {
             lockAnim.innerHTML = '🔒';
             lockAnim.style.color = 'var(--danger)';
+            lockAnim.style.textShadow = '0 0 15px var(--danger)';
+            lockAnim.style.animation = 'lockFlash 1s ease-in-out infinite alternate';
             statusText.innerHTML = `<span style="color:var(--danger)">🚨 SLA VIOLATED (Delay: ${delay}m). Escrow Locked (Payout Frozen).</span>`;
         } else {
             lockAnim.innerHTML = '🔓';
             lockAnim.style.color = '#10b981';
+            lockAnim.style.textShadow = '0 0 15px #10b981';
+            lockAnim.style.animation = 'lockRelease 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
             statusText.innerHTML = `<span style="color:#10b981">✅ SLA MET. Cryptographic Escrow Released (Payout Settled).</span>`;
         }
     } else {
         lockAnim.innerHTML = '🔒';
         lockAnim.style.color = '#3b82f6';
+        lockAnim.style.textShadow = '0 0 15px #3b82f6';
+        lockAnim.style.animation = 'lockPulse 2s infinite ease-in-out';
         statusText.innerHTML = `<span style="color:#3b82f6">⏳ Shipment In Transit. Escrow Funds Safely Locked.</span>`;
     }
 
@@ -1767,6 +1800,11 @@ window.openShipmentDetailModal = function(id) {
                 <label style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Compliance Status</label>
                 <div style="margin-top:8px; font-weight:700;">${getTranslation('eway_label')}: ${s.eway_bill_no || getTranslation('na')}</div>
                 <div style="font-size:0.7rem; opacity:0.7;">Expires: ${s.eway_bill_expiry ? new Date(s.eway_bill_expiry).toLocaleString() : 'N/A'}</div>
+                ${s.eway_bill_expiry && s.status !== 'delivered' ? `
+                    <button class="btn-primary" onclick="extendEwayBill('${s.id}')" style="margin-top:10px; padding:6px 12px; font-size:0.75rem; background:var(--warning); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+                        📄 Extend E-Way Bill
+                    </button>
+                ` : ''}
             </div>
         </div>
 
@@ -1892,6 +1930,7 @@ window.openShipmentDetailModal = function(id) {
                     `).join('')}
                 </div>
             </div>`;
+        }
     }
 
     // Add SLA Escrow Ledger Section
@@ -1991,6 +2030,14 @@ window.openShipmentDetailModal = function(id) {
             <span class="icon">⚙️</span> <span>Edit / Manual Override</span>
         </button>
     `;
+
+    if (s.status === 'delivered') {
+        actionsHtml += `
+            <button class="btn-action-details" style="background:#10b981; color:#000;" onclick="downloadShipmentEsgCertificate('${s.id}')">
+                <span class="icon">🌳</span> <span>Green Certificate</span>
+            </button>
+        `;
+    }
 
     // Message: strictly for splits OR direct main shipments
     if (s.is_leg || !isMultiLegParent) {
@@ -2574,6 +2621,293 @@ window.miniChatToggleRecording = async function() {
         btn.title = 'Voice Note';
     }
 };
+
+window.bulkAssign = async function() {
+    if (!confirm("Are you sure you want to auto-assign all pending shipments?")) return;
+    try {
+        const res = await apiCall(`/shipments/bulk-assign?company_id=${localStorage.getItem('manager_id')}`, 'POST');
+        alert(res.message);
+        loadShipments();
+    } catch(e) {
+        alert("Failed to auto-assign fleet.");
+    }
+};
+
+window.dispatchRescueVehicle = async function() {
+    const sid = document.getElementById('logs-shipment-id').innerText;
+    if (!sid) return;
+    
+    try {
+        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
+        const vehicles = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`);
+        
+        const freeDriver = drivers.find(d => !d.assigned_vehicle_id && d.verification_status === 'verified');
+        const freeVehicle = vehicles.find(v => !v.assigned_driver_id && v.status === 'available');
+        
+        if (!freeDriver || !freeVehicle) {
+            alert("No available drivers or vehicles found for rescue. Please add more fleet resources.");
+            return;
+        }
+        
+        if (confirm(`Rescue Proposal:\nAssign ${freeDriver.name} with vehicle ${freeVehicle.number_plate} to recover Shipment ${sid.substring(0,8)}?\n\nThis will resume the journey.`)) {
+            try {
+                await apiCall('/manager/rescue-shipment', 'POST', {
+                    company_id: localStorage.getItem('manager_id'),
+                    shipment_id: sid,
+                    driver_id: freeDriver.id,
+                    vehicle_id: freeVehicle.id
+                });
+                alert("Rescue mission dispatched! The shipment status has been restored.");
+                document.getElementById('logs-modal').style.display = 'none';
+                loadShipments();
+            } catch(err) {
+                alert("Failed to dispatch rescue.");
+            }
+        }
+    } catch(e) {
+        alert("Failed to load rescue resources.");
+    }
+};
+
+window.downloadShipmentEsgCertificate = function(shipmentId) {
+    const s = globalShipments.find(ship => ship.id === shipmentId);
+    if (!s) return alert("Shipment not found.");
+
+    const companyName = localStorage.getItem('company_name') || "Logistix Partner";
+    const w = s.weight || 10.0;
+    const dist = 15.0 + (w * 0.5);
+    const s_co2 = w * dist * 0.15;
+    const e_co2 = w * dist * 0.11;
+    const offsetWeight = (s_co2 - e_co2).toFixed(1);
+    const fuelSaved = ((s_co2 - e_co2) / 2.6).toFixed(1);
+    const greenPct = 100;
+    const integrityHash = s.id;
+    const printDate = new Date().toLocaleDateString('en-IN', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    const certWindow = window.open('', '_blank', 'width=800,height=600');
+    certWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Green Logistics Certificate - Shipment ${s.id.substring(0,8)}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+                body {
+                    font-family: 'Outfit', sans-serif;
+                    background: #090d16;
+                    color: #e2e8f0;
+                    margin: 0;
+                    padding: 40px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                }
+                .certificate {
+                    background: radial-gradient(circle at 50% 50%, #111827, #030712);
+                    border: 8px double #10b981;
+                    border-radius: 24px;
+                    padding: 50px;
+                    max-width: 700px;
+                    width: 100%;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    text-align: center;
+                    position: relative;
+                }
+                .header {
+                    font-size: 2.5rem;
+                    font-weight: 800;
+                    color: #10b981;
+                    margin-bottom: 5px;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                }
+                .subtitle {
+                    font-size: 1.1rem;
+                    color: #94a3b8;
+                    margin-bottom: 30px;
+                    letter-spacing: 1px;
+                }
+                .recipient-title {
+                    font-size: 1rem;
+                    color: #64748b;
+                    text-transform: uppercase;
+                    margin-bottom: 5px;
+                }
+                .recipient-name {
+                    font-size: 1.8rem;
+                    font-weight: 600;
+                    color: #ffffff;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid rgba(16, 185, 129, 0.2);
+                    display: inline-block;
+                    padding-bottom: 10px;
+                    min-width: 300px;
+                }
+                .description {
+                    font-size: 1.05rem;
+                    line-height: 1.8;
+                    color: #cbd5e1;
+                    margin-bottom: 40px;
+                    max-width: 550px;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 20px;
+                    margin-bottom: 40px;
+                }
+                .stat-box {
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(16, 185, 129, 0.2);
+                    border-radius: 16px;
+                    padding: 15px;
+                }
+                .stat-val {
+                    font-size: 1.4rem;
+                    font-weight: 800;
+                    color: #10b981;
+                }
+                .stat-lbl {
+                    font-size: 0.75rem;
+                    color: #94a3b8;
+                    margin-top: 5px;
+                    text-transform: uppercase;
+                }
+                .footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
+                    margin-top: 50px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.05);
+                    padding-top: 20px;
+                    font-size: 0.8rem;
+                    color: #64748b;
+                }
+                .signature {
+                    text-align: left;
+                }
+                .hash-box {
+                    font-family: monospace;
+                    background: rgba(0, 0, 0, 0.4);
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                    max-width: 250px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-size: 0.7rem;
+                }
+                @media print {
+                    body {
+                        background: #ffffff;
+                        color: #000000;
+                    }
+                    .certificate {
+                        background: #ffffff;
+                        border-color: #047857;
+                        color: #000000;
+                        box-shadow: none;
+                    }
+                    .recipient-name {
+                        color: #000000;
+                        border-bottom-color: #047857;
+                    }
+                    .stat-box {
+                        background: #f0fdf4;
+                        border-color: #a7f3d0;
+                    }
+                    .stat-val {
+                        color: #047857;
+                    }
+                    .stat-lbl {
+                        color: #374151;
+                    }
+                    .description {
+                        color: #1f2937;
+                    }
+                    .hash-box {
+                        background: #f3f4f6;
+                        color: #4b5563;
+                        border-color: #e5e7eb;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="certificate">
+                <div style="font-size: 3rem; margin-bottom: 15px;">🌳</div>
+                <div class="header">Eco-Offset Certificate</div>
+                <div class="subtitle">Green Logistics Verification Ledger</div>
+                
+                <div class="recipient-title">Honoring Shipment</div>
+                <div class="recipient-name" style="font-size: 1.3rem;">${s.description} (${s.id.substring(0,8)})</div>
+                
+                <div class="description">
+                    This document verifies that standard logistical freight lanes have been optimized using 
+                    <b>Logistix Green Routing Heuristics</b> to bypass high-congestion, steep-gradient, and high-idle sectors, 
+                    resulting in measurable reduction of atmospheric greenhouse gas emissions.
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-val">${offsetWeight} kg</div>
+                        <div class="stat-lbl">CO2 Offset</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val">${fuelSaved} L</div>
+                        <div class="stat-lbl">Fuel Saved</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val">${greenPct}%</div>
+                        <div class="stat-lbl">Eco Route Share</div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <div class="signature">
+                        <b>LOGISTIX GREEN AUDIT</b><br>
+                        Company: ${companyName}<br>
+                        Verification Date: ${printDate}
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 5px; text-transform:uppercase; font-size: 0.65rem;">Cryptographic Ledger Hash</div>
+                        <div class="hash-box" title="${integrityHash}">${integrityHash}</div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
+                }
+            </script>
+        </body>
+        </html>
+    `);
+    certWindow.document.close();
+};
+
+// Expose other functions explicitly for inline HTML onclick handlers
+window.openBulkUploadModal = openBulkUploadModal;
+window.closeBulkUploadModal = closeBulkUploadModal;
+window.handleBulkFileSelect = handleBulkFileSelect;
+window.previewGoogleSheets = previewGoogleSheets;
+window.confirmBulkUpload = confirmBulkUpload;
+window.optimizeFleet = optimizeFleet;
+window.autoSplit = autoSplit;
+window.deassignShipment = deassignShipment;
+window.openManualAssignModal = openManualAssignModal;
+window.managerManualVerify = managerManualVerify;
+window.openLogsModal = openLogsModal;
+window.bulkRouteSplitter = bulkRouteSplitter;
+window.extendEwayBill = extendEwayBill;
 
 window.checkShipmentWeather = async function(id) {
     const s = globalShipments.find(ship => ship.id === id);

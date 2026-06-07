@@ -8,7 +8,7 @@ shipments_db = JSONDatabase("shipments")
 
 VULNERABLE_VEHICLE_TYPES = ["bike", "scooty", "bicycle"]
 
-def check_heatwave_safety(shipment: dict, vehicle: dict):
+def check_heatwave_safety(shipment: dict, vehicle: dict, cells: list = None, alerts: list = None):
     """
     If a heatwave cell is active and the vehicle is a bike/scooty, stop the driver
     and log the event in the shipment logs with a manager alert.
@@ -19,8 +19,9 @@ def check_heatwave_safety(shipment: dict, vehicle: dict):
     if not any(t in v_type for t in VULNERABLE_VEHICLE_TYPES):
         return  # Only applies to vulnerable vehicles
 
-    weather_db = JSONDatabase("weather_cells")
-    cells = weather_db.get_all()
+    if cells is None:
+        weather_db = JSONDatabase("weather_cells")
+        cells = weather_db.get_all()
     
     current_loc = shipment.get("current_location", {})
     if not current_loc:
@@ -35,12 +36,22 @@ def check_heatwave_safety(shipment: dict, vehicle: dict):
         dist = haversine(lat, lng, cell.get("lat", 0), cell.get("lng", 0))
         if dist <= cell.get("radius", 50):
             # Check if alert already exists
-            existing = [
-                a for a in alerts_db.get_all()
-                if a and a.get("shipment_id") == shipment["id"]
-                and a.get("type") == "heatwave_safety"
-                and a.get("status") == "active"
-            ]
+            if alerts is None:
+                existing = [
+                    a for a in alerts_db.get_all()
+                    if a and a.get("shipment_id") == shipment["id"]
+                    and a.get("type") == "weather"
+                    and "HEATWAVE" in a.get("description", "")
+                    and a.get("status") == "active"
+                ]
+            else:
+                existing = [
+                    a for a in alerts
+                    if a and a.get("shipment_id") == shipment["id"]
+                    and a.get("type") == "weather"
+                    and "HEATWAVE" in a.get("description", "")
+                    and a.get("status") == "active"
+                ]
             if existing:
                 return
             
@@ -160,24 +171,29 @@ def check_weather_alerts(shipment: dict, lat: float, lng: float):
                 shipment["logs"] = shipment.get("logs", []) + [log_event.model_dump()]
                 shipments_db.update(shipment["id"], shipment)
 
-def check_street_intel_alerts(shipment: dict):
+def check_street_intel_alerts(shipment: dict, zones: list = None, vehicles: list = None, alerts: list = None):
     """
     Checks if a vehicle is too large for the destination zone (Hyper-local gully mapping).
     """
     from backend.services.route_engine import haversine
     from backend.database import JSONDatabase
     
-    street_db = JSONDatabase("street_intel")
-    vehicles_db = JSONDatabase("vehicles")
-    
-    zones = street_db.get_all()
+    if zones is None:
+        street_db = JSONDatabase("street_intel")
+        zones = street_db.get_all()
+        
     drop = shipment.get("drop", {})
     if not drop: return
 
     v_id = shipment.get("assigned_vehicle_id")
     if not v_id: return
     
-    vehicle = vehicles_db.get_by_id(v_id)
+    if vehicles is None:
+        vehicles_db = JSONDatabase("vehicles")
+        vehicle = vehicles_db.get_by_id(v_id)
+    else:
+        vehicle = next((v for v in vehicles if v.get("id") == v_id), None)
+        
     if not vehicle: return
     
     v_type = vehicle.get("type", "truck")
@@ -200,7 +216,10 @@ def check_street_intel_alerts(shipment: dict):
                 
             if v_rank > max_rank:
                 # Alert!
-                existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "street_intel" and a.get("status") == "active"]
+                if alerts is None:
+                    existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "street_intel" and a.get("status") == "active"]
+                else:
+                    existing = [a for a in alerts if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "street_intel" and a.get("status") == "active"]
                 if not existing:
                     new_alert = Alert(
                         company_id=shipment.get("company_id"),
@@ -213,7 +232,7 @@ def check_street_intel_alerts(shipment: dict):
                     )
                     alerts_db.insert(new_alert.model_dump())
 
-def check_compliance_alerts(shipment: dict):
+def check_compliance_alerts(shipment: dict, alerts: list = None):
     """
     Checks if ETA exceeds E-Way Bill expiry (Compliance Guardian).
     """
@@ -237,7 +256,10 @@ def check_compliance_alerts(shipment: dict):
     
     # If ETA is within 2 hours of expiry, or already exceeded
     if eta_dt > expiry_dt - timedelta(hours=2):
-        existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "compliance" and a.get("status") == "active"]
+        if alerts is None:
+            existing = [a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "compliance" and a.get("status") == "active"]
+        else:
+            existing = [a for a in alerts if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "compliance" and a.get("status") == "active"]
         if not existing:
             new_alert = Alert(
                 company_id=shipment.get("company_id"),

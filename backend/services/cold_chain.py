@@ -2,7 +2,7 @@ from datetime import datetime
 from backend.services.route_engine import haversine
 from backend.database import JSONDatabase
 
-def calculate_shipment_vitality(shipment: dict) -> float:
+def calculate_shipment_vitality(shipment: dict, cells: list = None) -> float:
     if not shipment.get("is_perishable"):
         return 100.0
         
@@ -35,8 +35,9 @@ def calculate_shipment_vitality(shipment: dict) -> float:
             vitality -= (delay_hours * 2.0)
 
     # 2. Decay based on Temperature (Weather Cells)
-    weather_db = JSONDatabase("weather_cells")
-    cells = weather_db.get_all()
+    if cells is None:
+        weather_db = JSONDatabase("weather_cells")
+        cells = weather_db.get_all()
     
     curr_loc = shipment.get("current_location") or shipment.get("pickup")
     

@@ -403,6 +403,7 @@ async function viewOrder(id) {
 let trackMap = null;
 let trackMarker = null;
 let vehicleAnimationInterval = null;
+let trackWeatherLayers = [];
 
 async function initMap(shipment, dynamicEta, vehicleType, legs = []) {
     if (vehicleAnimationInterval) {
@@ -439,6 +440,64 @@ async function initMap(shipment, dynamicEta, vehicleType, legs = []) {
             trackMap.removeLayer(layer);
         }
     });
+
+    // Clear previous weather layers
+    trackWeatherLayers.forEach(l => trackMap.removeLayer(l));
+    trackWeatherLayers = [];
+
+    // Fetch and draw live calamity/weather cells
+    try {
+        const weatherRes = await apiCall(`/tracking/fleet/weather?company_id=${shipment.company_id}`, 'GET', null, true);
+        if (weatherRes && weatherRes.cells) {
+            weatherRes.cells.forEach(cell => {
+                let animClass = 'weather-cell-pulse';
+                if (cell.severity === 'critical') animClass = 'weather-cell-critical-pulse';
+                
+                if (cell.shapeType === 'polyline') {
+                    const polyline = L.polyline(cell.coordinates, {
+                        color: cell.color || '#dd6b20', weight: 8, opacity: 0.8, className: animClass
+                    }).addTo(trackMap).bindPopup(`<b>${cell.icon || '🌡️'} ${cell.type} System</b>`);
+                    trackWeatherLayers.push(polyline);
+                } else {
+                    const circle = L.circle([cell.lat, cell.lng], {
+                        radius: cell.radius * 1000, 
+                        color: cell.color || '#e53e3e', 
+                        fillColor: cell.color || '#e53e3e', 
+                        fillOpacity: 0.2,
+                        className: animClass
+                    }).addTo(trackMap).bindPopup(`<b>${cell.icon || '🌩️'} ${cell.type} System</b><br>Severity: ${cell.severity}`);
+                    trackWeatherLayers.push(circle);
+                    
+                    const iconMarker = L.marker([cell.lat, cell.lng], {
+                        icon: L.divIcon({
+                            className: 'weather-div-icon',
+                            html: `<div style="font-size:24px; text-shadow: 0 0 10px rgba(0,0,0,0.5);">${cell.icon || '🌦️'}</div>`,
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    }).addTo(trackMap);
+                    trackWeatherLayers.push(iconMarker);
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Failed to load weather cells on tracking page", err);
+    }
+    
+    // Draw completed legs as dashed grey lines
+    if (legs && legs.length > 0) {
+        const completedLegs = legs.filter(l => l.status === 'delivered');
+        completedLegs.forEach(l => {
+            if (l.pickup && l.drop) {
+                const completedLine = L.polyline([[l.pickup.lat, l.pickup.lng], [l.drop.lat, l.drop.lng]], {
+                    color: '#718096',
+                    weight: 2,
+                    dashArray: '5, 5',
+                    opacity: 0.6
+                }).addTo(trackMap);
+            }
+        });
+    }
     
     // Determine Emoji
     let emoji = '🚚';
@@ -512,7 +571,8 @@ async function initMap(shipment, dynamicEta, vehicleType, legs = []) {
         L.polyline(pathLine, {color: 'var(--primary)', weight: 3, opacity: 0.8}).addTo(trackMap);
 
         // Animate marker along the path if in transit
-        if (shipment.status === 'in_transit' && routeCoords.length > 1) {
+        const isMoving = shipment.status === 'in_transit' || (activeLeg && activeLeg.status === 'in_transit');
+        if (isMoving && routeCoords.length > 1) {
             let currentPtIndex = 0;
             let subStep = 0;
             const subStepsCount = 10; // Interpolate 10 frames between consecutive coordinate nodes

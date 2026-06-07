@@ -458,27 +458,49 @@ def get_shipments(company_id: str):
     all_ships = shipments_db.get_all()
     company_ships = [s for s in all_ships if s and s.get("company_id") == company_id]
     
-    # Recalculate vitality and check compliance/street intel
-    from backend.services.alert_engine import check_compliance_alerts, check_street_intel_alerts, check_heatwave_safety
+    # Pre-fetch database lists to eliminate N+1 query loading overhead
+    alerts_db = JSONDatabase("alerts")
     vehicles_db = JSONDatabase("vehicles")
+    street_db = JSONDatabase("street_intel")
+    weather_db = JSONDatabase("weather_cells")
+    
+    alerts_list = alerts_db.get_all()
+    vehicles_list = vehicles_db.get_all()
+    zones_list = street_db.get_all()
+    cells_list = weather_db.get_all()
+    
+    from backend.services.alert_engine import check_compliance_alerts, check_street_intel_alerts, check_heatwave_safety
+    
+    db_changed = False
     for s in company_ships:
         if s.get("is_perishable"):
-            new_v = calculate_shipment_vitality(s)
-            if new_v != s.get("vitality"):
+            new_v = calculate_shipment_vitality(s, cells=cells_list)
+            old_v = s.get("vitality", 100.0)
+            if new_v != old_v:
                 s["vitality"] = new_v
-                shipments_db.update(s["id"], {"vitality": new_v})
+                # Only write to DB if the change is significant (>= 1.0%) to prevent excessive Turso REST network overhead
+                if abs(new_v - old_v) >= 1.0:
+                    # Update in the master list so it persists correctly when we save the entire db
+                    for master_s in all_ships:
+                        if master_s and master_s.get("id") == s["id"]:
+                            master_s["vitality"] = new_v
+                            break
+                    db_changed = True
         
-        # Run Indian-specific "Killer Feature" checks
-        check_compliance_alerts(s)
-        check_street_intel_alerts(s)
+        # Run Indian-specific "Killer Feature" checks using pre-loaded parameters
+        check_compliance_alerts(s, alerts=alerts_list)
+        check_street_intel_alerts(s, zones=zones_list, vehicles=vehicles_list, alerts=alerts_list)
         
         # Heatwave safety: stop bike/scooty drivers in heat zones
         v_id = s.get("assigned_vehicle_id")
         if v_id and s.get("status") == "in_transit":
-            vehicle = vehicles_db.get_by_id(v_id)
+            vehicle = next((v for v in vehicles_list if v.get("id") == v_id), None)
             if vehicle:
-                check_heatwave_safety(s, vehicle)
+                check_heatwave_safety(s, vehicle, cells=cells_list, alerts=alerts_list)
                 
+    if db_changed:
+        shipments_db.write(all_ships)
+        
     return company_ships
 
 @router.get("/{shipment_id}")
