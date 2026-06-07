@@ -1203,7 +1203,7 @@ class AutomatedControl {
                 'active': 'driver_live.html',
                 'chat': 'driver_chat.html',
                 'completed': 'driver_history.html',
-                'contracts': 'driver_contracts.html',
+                
                 'wallet': 'driver_wallet.html',
                 'profile': 'driver_account.html'
             };
@@ -1230,7 +1230,7 @@ class AutomatedControl {
                 'manager_leaderboard.html': 'leaderboard',
                 'manager_verifications.html': 'verifications',
                 'manager_safety.html': 'safety',
-                'manager_ledger.html': 'ledger',
+                
                 'manager_oracle.html': 'oracle',
                 'manager_fuel_oracle.html': 'fuel-oracle',
                 'manager_payments.html': 'paisa-fast',

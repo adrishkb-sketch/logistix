@@ -452,11 +452,20 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
             new_finance = finance.copy()
             new_finance["driver_wage"] = rescue_wage
             
+            rescue_details = {
+                "original_driver_id": driver_id,
+                "original_vehicle_id": vehicle_id,
+                "rescue_driver_id": new_d["id"],
+                "rescue_vehicle_id": new_v["id"],
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            
             shipments_db.update(s["id"], {
                 "assigned_driver_id": new_d["id"],
                 "assigned_vehicle_id": new_v["id"],
                 "status": "assigned",
-                "finance": new_finance
+                "finance": new_finance,
+                "rescue_details": rescue_details
             })
             
             logs = s.get("logs", [])

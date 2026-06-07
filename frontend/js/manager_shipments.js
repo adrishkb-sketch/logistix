@@ -1647,6 +1647,23 @@ window.lookupReceiverByEmail = async function(email) {
 };
 
 // Open details modal
+window.toggleVerificationCodesDisplay = function(btn) {
+    const el = document.getElementById('sd-verification-codes');
+    if (el) {
+        const isHidden = el.style.display === 'none';
+        el.style.display = isHidden ? 'block' : 'none';
+        btn.innerText = isHidden ? '🙈 Hide Codes' : '👁️ Show Codes';
+    }
+};
+
+window.toggleManualOverride = function() {
+    const el = document.getElementById('manual-override-controls');
+    if (el) {
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+};
+
+// Open details modal
 window.openShipmentDetailModal = function(id) {
     const s = globalShipments.find(ship => ship.id === id);
     if (!s) return;
@@ -1688,6 +1705,72 @@ window.openShipmentDetailModal = function(id) {
                     <div style="font-size:0.8rem; opacity:0.8;">${v ? v.number_plate : (s.assigned_driver_id === 'DRONE-SYSTEM' ? '🚁 Autonomous Drone' : 'No Vehicle')}</div>
                 </div>
                 ${s.loading_blueprint ? `<button class="btn-action-pill" onclick="viewCargoPlan('${s.id}')">📦 View Cargo Plan</button>` : ''}
+            </div>
+        </div>
+    `;
+
+    // Rescue details rendering
+    if (s.rescue_details) {
+        const origDrv = globalDrivers.find(d => d.id === s.rescue_details.original_driver_id);
+        const origVeh = globalVehicles.find(v => v.id === s.rescue_details.original_vehicle_id);
+        const rescDrv = globalDrivers.find(d => d.id === s.rescue_details.rescue_driver_id);
+        const rescVeh = globalVehicles.find(v => v.id === s.rescue_details.rescue_vehicle_id);
+        
+        const origName = origDrv ? origDrv.name : 'Unknown Driver';
+        const origPlate = origVeh ? origVeh.number_plate : 'N/A';
+        const origType = origVeh ? origVeh.type : 'N/A';
+        const rescName = rescDrv ? rescDrv.name : 'Unknown Rescue Driver';
+        const rescPlate = rescVeh ? rescVeh.number_plate : 'N/A';
+        
+        contentHtml += `
+            <div class="glass-card" style="padding: 15px; border: 1px dashed var(--warning); background: rgba(245, 158, 11, 0.05); border-radius: 12px; margin-bottom: 20px;">
+                <h4 style="color: var(--warning); margin: 0 0 10px 0; font-size: 0.95rem; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                    🚨 Vehicle Breakdown & Rescue Dispatched
+                </h4>
+                <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-muted);">
+                    <div><b>Broken Down Vehicle:</b> ${origType} (${origPlate}) driven by ${origName}</div>
+                    <div style="margin-top: 6px; color: var(--success);"><b>Alternate Rescue Assigned:</b> ${rescName} with vehicle ${rescPlate}</div>
+                    <div style="margin-top: 6px;"><b>Transfer Status:</b> Completed & In-Transit</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Verification Codes display section
+    let p_code = s.pickup_code;
+    let d_code = s.delivery_code;
+    if (s.parent_id) {
+        const parent = globalShipments.find(p => p.id === s.parent_id);
+        if (parent) {
+            if (!p_code) p_code = parent.pickup_code;
+            if (!d_code) d_code = parent.delivery_code;
+        }
+    }
+
+    contentHtml += `
+        <div class="intel-block" style="margin-top:20px; background:rgba(79, 140, 255, 0.05); border:1px solid rgba(79, 140, 255, 0.2); padding: 15px; border-radius: 12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase;">🔑 Verification Codes</label>
+                <button class="btn-action-pill" onclick="toggleVerificationCodesDisplay(this)">👁️ Show Codes</button>
+            </div>
+            <div id="sd-verification-codes" style="display:none; margin-top:10px; font-size:0.85rem;">
+                <div><b>Pickup Code (First Point):</b> <span style="font-family:monospace; font-weight:bold; color:var(--accent); font-size:1.1rem;">${p_code || 'N/A'}</span></div>
+                <div style="margin-top:6px;"><b>Delivery Code (Receiver):</b> <span style="font-family:monospace; font-weight:bold; color:var(--accent); font-size:1.1rem;">${d_code || 'N/A'}</span></div>
+            </div>
+        </div>
+    `;
+
+    // Collapsable manual override controls
+    contentHtml += `
+        <div id="manual-override-controls" style="display:none; margin-top:20px; padding:15px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px;">
+            <h4 style="margin:0 0 12px 0; font-size:0.85rem; color:var(--warning); font-weight:bold;">⚙️ Edit / Manual Override Controls</h4>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn-primary" style="background:#3182ce; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="openManualSplit('${s.id}')">
+                    🔀 Manual Split Route
+                </button>
+                <button class="btn-primary" style="background:#3182ce; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="openManualAssignModal('${s.id}')">
+                    👤 Manual Assign Driver
+                </button>
             </div>
         </div>
     `;
@@ -1738,7 +1821,8 @@ window.openShipmentDetailModal = function(id) {
         
         const loc = s.current_location && s.current_location.lat ? s.current_location : s.pickup;
         apiCall(`/tracking/weather-at?lat=${loc.lat}&lng=${loc.lng}&company_id=${localStorage.getItem('manager_id')}`)
-            .then(w => {
+            .then(res => {
+                const w = res.weather || {};
                 const temp = w.temp !== undefined ? `${w.temp}°C` : 'N/A';
                 const aqi = w.us_aqi !== undefined ? `${w.us_aqi} AQI` : 'N/A';
                 const wind = w.wind_speed !== undefined ? `${w.wind_speed} km/h` : 'N/A';
@@ -1777,16 +1861,10 @@ window.openShipmentDetailModal = function(id) {
         <button class="btn-action-details" style="background:var(--accent);" onclick="openTrackModal('${s.id}')">
             <span class="icon">📍</span> <span data-i18n="btn_track">Live Track</span>
         </button>
+        <button class="btn-action-details" style="background:rgba(255,255,255,0.05);" onclick="toggleManualOverride()">
+            <span class="icon">⚙️</span> <span>Edit / Manual Override</span>
+        </button>
     `;
-
-    // QR: Only for Main Shipment (not legs)
-    if (!s.is_leg) {
-        actionsHtml += `
-            <button class="btn-action-details" onclick="openQRModal('${s.id}')">
-                <span class="icon">🖼️</span> <span data-i18n="btn_qr">Generate QR</span>
-            </button>
-        `;
-    }
 
     // Message: strictly for splits OR direct main shipments
     if (s.is_leg || !isMultiLegParent) {
@@ -1807,17 +1885,11 @@ window.openShipmentDetailModal = function(id) {
                 <button class="btn-action-details" style="background:var(--accent);" onclick="autoSplit('${s.id}')">
                     <span class="icon">🤖</span> <span>Route Splitter</span>
                 </button>
-                <button class="btn-action-details" style="background:#3182ce;" onclick="openManualSplit('${s.id}')">
-                    <span class="icon">⛓️</span> <span data-i18n="btn_manual_split">Manual Split</span>
-                </button>
             `;
         } else {
             actionsHtml += `
                 <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
                     <span class="icon">🤖</span> <span>Route Finalized</span>
-                </button>
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
-                    <span class="icon">⛓️</span> <span>Route Finalized</span>
                 </button>
             `;
         }
@@ -1828,17 +1900,11 @@ window.openShipmentDetailModal = function(id) {
                 <button class="btn-action-details" style="background:var(--success);" onclick="autoAssignShipment('${s.id}')">
                     <span class="icon">🤖</span> <span>Auto Assign (AI)</span>
                 </button>
-                <button class="btn-action-details" style="background:#3182ce;" onclick="openManualAssignModal('${s.id}')">
-                    <span class="icon">👤</span> <span>Manual Assign</span>
-                </button>
             `;
         } else if (isAssigned) {
             actionsHtml += `
                 <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
                     <span class="icon">🤖</span> <span>Already Assigned</span>
-                </button>
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
-                    <span class="icon">👤</span> <span>Already Assigned</span>
                 </button>
             `;
         } else {
@@ -1846,9 +1912,6 @@ window.openShipmentDetailModal = function(id) {
             actionsHtml += `
                 <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Split route first">
                     <span class="icon">🤖</span> <span>Assign (Locked)</span>
-                </button>
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Split route first">
-                    <span class="icon">👤</span> <span>Assign (Locked)</span>
                 </button>
             `;
         }
@@ -1865,15 +1928,6 @@ window.openShipmentDetailModal = function(id) {
         actionsHtml += `
             <button class="btn-action-details" style="background:var(--success);" onclick="finalizeShipment('${s.id}')">
                 <span class="icon">✅</span> <span data-i18n="btn_finalize">Finalize</span>
-            </button>
-        `;
-    }
-
-    // Manual Verify: strictly for splits OR direct main shipments
-    if (s.is_leg || !isMultiLegParent) {
-        actionsHtml += `
-            <button class="btn-action-details" style="background:var(--warning); color:#000;" onclick="managerManualVerify('${s.id}')">
-                <span class="icon">🛡️</span> <span data-i18n="btn_override">Manual Verify</span>
             </button>
         `;
     }
@@ -2398,7 +2452,8 @@ window.checkShipmentWeather = async function(id) {
     const name = s.description || "Shipment";
     
     try {
-        const w = await apiCall(`/tracking/weather-at?lat=${loc.lat}&lng=${loc.lng}&company_id=${localStorage.getItem('manager_id')}`);
+        const res = await apiCall(`/tracking/weather-at?lat=${loc.lat}&lng=${loc.lng}&company_id=${localStorage.getItem('manager_id')}`);
+        const w = res.weather || {};
         const temp = w.temp !== undefined ? `${w.temp}°C` : 'N/A';
         const aqi = w.us_aqi !== undefined ? `${w.us_aqi} AQI` : 'N/A';
         const wind = w.wind_speed !== undefined ? `${w.wind_speed} km/h` : 'N/A';

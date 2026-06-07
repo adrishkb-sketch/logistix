@@ -195,6 +195,9 @@ class Shipment(BaseModel):
     description: str
     labels: List[str] = Field(default_factory=list)
     delivery_otp: Optional[str] = None
+    pickup_code: Optional[str] = None
+    delivery_code: Optional[str] = None
+    rescue_details: Optional[dict] = None
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     status: str = "pending" # pending, assigned, in_transit, delivered
     route_type: Optional[str] = None # direct, warehouse

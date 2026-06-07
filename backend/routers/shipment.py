@@ -189,45 +189,6 @@ async def bulk_confirm(shipments: List[ShipmentCreate]):
 class ShipmentRating(BaseModel):
     rating: float # 1-5
 
-@router.post("/{shipment_id}/pay")
-def pay_shipment(shipment_id: str):
-    shipment = shipments_db.get_by_id(shipment_id)
-    if not shipment:
-        raise HTTPException(status_code=404, detail="Shipment not found")
-    
-    if shipment.get("payment_status") == "paid":
-        return {"message": "Already paid"}
-        
-    price = shipment.get("finance", {}).get("suggested_price", 0)
-    
-    # 1. Update Shipment
-    from backend.models import ShipmentEvent
-    from datetime import datetime
-    new_log = {
-        "status": shipment.get("status"),
-        "message": f"💰 PAYMENT RECEIVED: ₹{price.toLocaleString() if hasattr(price, 'toLocaleString') else price} paid by customer via Digital Gateway.",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
-    }
-    
-    shipments_db.update(shipment_id, {
-        "payment_status": "paid",
-        "logs": shipment.get("logs", []) + [new_log]
-    })
-    
-    # 2. Record in Ledger
-    ledger_db = JSONDatabase("ledger")
-    ledger_db.insert({
-        "id": str(uuid.uuid4()),
-        "company_id": shipment.get("company_id"),
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "type": "REVENUE",
-        "amount": price,
-        "description": f"Customer Payment for Shipment #{shipment_id[:8]}",
-        "category": "shipping_fee"
-    })
-    
-    return {"message": "Payment successful", "amount": price}
-    
 @router.post("/{shipment_id}/rate")
 def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
     rating = rating_data.rating
@@ -437,6 +398,10 @@ def create_shipment(shipment_data: ShipmentCreate):
     # Generate random 4-digit OTP for delivery security
     otp = str(random.randint(1000, 9999))
     
+    # Generate random 6-digit pickup and delivery codes
+    p_code = str(random.randint(100000, 999999))
+    d_code = str(random.randint(100000, 999999))
+    
     pickup_addr = shipment_data.pickup.address or f"{shipment_data.pickup.lat}, {shipment_data.pickup.lng}"
     drop_addr = shipment_data.drop.address or f"{shipment_data.drop.lat}, {shipment_data.drop.lng}"
     initial_log = ShipmentEvent(
@@ -458,6 +423,8 @@ def create_shipment(shipment_data: ShipmentCreate):
         "expected_delivery": expected_delivery,
         "pickup_deadline": pickup_deadline,
         "delivery_otp": otp,
+        "pickup_code": p_code,
+        "delivery_code": d_code,
         "logs": [initial_log],
         "vitality": 100.0,
         "qr_code_data": f"LX-{uuid.uuid4().hex[:8].upper()}",
@@ -1241,10 +1208,11 @@ def auto_split(shipment_id: str):
     # Optional: Auto-assign is usually a separate step, but we'll keep it if needed.
     # For now, following "Route Splitter" focus.
         
-    return {"message": f"Successfully planned optimized {len(legs_data)}-leg journey via Hub Network."}
+    return {"message": f"Successfully planned multi-leg route with {len(new_leg_ids)} legs."}
 
 def _generate_legs(parent_shipment, leg_data):
     from backend.models import ShipmentEvent
+    import random
     
     # Ensure parent_shipment is a dict for consistency
     if hasattr(parent_shipment, 'model_dump'):
@@ -1252,7 +1220,7 @@ def _generate_legs(parent_shipment, leg_data):
     else:
         p_dict = parent_shipment
 
-    # Update parent shipment
+    # Update parent shipment basic status
     p_dict["route_type"] = "multi-leg"
     p_dict["status"] = "split"
     p_dict["stage"] = "Route Optimized"
@@ -1260,28 +1228,26 @@ def _generate_legs(parent_shipment, leg_data):
     log_event = ShipmentEvent(status="split", message=f"🔗 Multi-leg journey planned via {len(leg_data)} warehouse hubs.")
     p_dict["logs"] = (p_dict.get("logs") or []) + [log_event.model_dump()]
     
-    shipments_db.update(p_dict["id"], p_dict)
-    
-    # Financial Proportional Distribution Hardening
-    p_finance = p_dict.get("finance") or estimate_delivery_cost(p_dict)
-    p_total_price = p_finance.get("suggested_price", 0)
-    p_total_margin = p_finance.get("margin", 0)
-    
-    # Pre-calculate total distance of all legs for proportional distribution
-    total_legs_dist = 0
-    for leg in leg_data:
-        lp = leg.get("pickup") or {"lat": 0, "lng": 0}
-        ld = leg.get("drop") or {"lat": 0, "lng": 0}
-        total_legs_dist += haversine(lp.get("lat", 0), lp.get("lng", 0), ld.get("lat", 0), ld.get("lng", 0))
-    
-    if total_legs_dist == 0: total_legs_dist = 1
-    
-    remaining_price = p_total_price
-    remaining_margin = p_total_margin
+    # Generate/obtain verification codes for parent
+    p_code = p_dict.get("pickup_code") or str(random.randint(100000, 999999))
+    d_code = p_dict.get("delivery_code") or str(random.randint(100000, 999999))
+    p_dict["pickup_code"] = p_code
+    p_dict["delivery_code"] = d_code
     
     # Sequential Protocol Hardening: Next Pickup = Previous Drop + 5 Minutes Buffer
     next_pivot_time = snap_eta_to_business_hours(datetime.utcnow())
     new_ids = []
+    
+    suggested_price_sum = 0.0
+    total_cost_sum = 0.0
+    fuel_budget_sum = 0.0
+    toll_budget_sum = 0.0
+    driver_wage_sum = 0.0
+    projected_profit_sum = 0.0
+    distance_km_sum = 0.0
+    
+    # We will generate the legs and calculate bottom-up sums
+    legs_to_insert = []
     
     for i, leg in enumerate(leg_data):
         # 1. Pickup Deadline for THIS leg
@@ -1318,21 +1284,20 @@ def _generate_legs(parent_shipment, leg_data):
         
         v_pref = "truck" if is_middle_mile else "scooty"
         finance = estimate_delivery_cost(leg, v_pref)
+        finance["expected_profit"] = finance.get("projected_profit", 0) # Compatibility
         
-        # Override with proportional values to ensure Sum(Legs) == Parent
-        if i == len(leg_data) - 1:
-            leg_price = remaining_price
-            leg_margin = remaining_margin
-        else:
-            ratio = dist / total_legs_dist
-            leg_price = round(p_total_price * ratio, 2)
-            leg_margin = round(p_total_margin * ratio, 2)
-            remaining_price -= leg_price
-            remaining_margin -= leg_margin
-            
-        finance["suggested_price"] = round(leg_price, 2)
-        finance["expected_profit"] = round(leg_margin, 2) # Profit is the margin
-        # The other budgets (fuel_budget, driver_wage, toll_budget) are already set by estimate_delivery_cost
+        # Sum up leg finances
+        suggested_price_sum += finance.get("suggested_price", 0.0)
+        total_cost_sum += finance.get("total_cost", 0.0)
+        fuel_budget_sum += finance.get("fuel_budget", 0.0)
+        toll_budget_sum += finance.get("toll_budget", 0.0)
+        driver_wage_sum += finance.get("driver_wage", 0.0)
+        projected_profit_sum += finance.get("projected_profit", 0.0)
+        distance_km_sum += finance.get("distance_km", 0.0)
+
+        # Set codes specifically for Leg 1 and Final Leg
+        leg_pickup_code = p_code if i == 0 else None
+        leg_delivery_code = d_code if i == len(leg_data) - 1 else None
 
         l_id = str(uuid.uuid4())
         leg_shipment = Shipment(
@@ -1350,6 +1315,8 @@ def _generate_legs(parent_shipment, leg_data):
             expected_delivery=expected_time.isoformat() + "Z",
             pickup_deadline=p_deadline.isoformat() + "Z",
             delivery_otp=p_dict.get("delivery_otp"),
+            pickup_code=leg_pickup_code,
+            delivery_code=leg_delivery_code,
             logs=[leg_log],
             is_perishable=p_dict.get("is_perishable", False),
             vitality=p_dict.get("vitality", 100),
@@ -1360,9 +1327,26 @@ def _generate_legs(parent_shipment, leg_data):
             payment_status=p_dict.get("payment_status", "unpaid")
         )
         
-        shipments_db.insert(leg_shipment.model_dump())
+        legs_to_insert.append(leg_shipment.model_dump())
         new_ids.append(l_id)
     
+    # Save the consolidated finances on the parent shipment
+    p_dict["finance"] = {
+        "suggested_price": round(suggested_price_sum, 2),
+        "total_cost": round(total_cost_sum, 2),
+        "fuel_budget": round(fuel_budget_sum, 2),
+        "toll_budget": round(toll_budget_sum, 2),
+        "driver_wage": round(driver_wage_sum, 2),
+        "projected_profit": round(projected_profit_sum, 2),
+        "margin": round(projected_profit_sum, 2), # margin is profit for dashboard compatibility
+        "distance_km": round(distance_km_sum, 2)
+    }
+    
+    # Save parent and insert all legs
+    shipments_db.update(p_dict["id"], p_dict)
+    for leg_data_dict in legs_to_insert:
+        shipments_db.insert(leg_data_dict)
+        
     return new_ids
 
 @router.delete("/{shipment_id}")
@@ -1406,14 +1390,28 @@ def pay_shipment(shipment_id: str):
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
         
-    shipments_db.update(shipment["id"], {"payment_status": "paid"})
+    if shipment.get("payment_status") == "paid":
+        return {"message": "Already paid"}
+
+    amount = shipment.get("finance", {}).get("suggested_price", 0)
     
-    # Update Company Profit (Receiver paid the amount)
+    # 1. Update Shipment Logs & status
+    from backend.models import ShipmentEvent
+    new_log = ShipmentEvent(
+        status=shipment.get("status", "pending"),
+        message=f"💰 PAYMENT RECEIVED: ₹{amount} paid by customer via Digital Gateway."
+    ).model_dump()
+    
+    shipments_db.update(shipment["id"], {
+        "payment_status": "paid",
+        "logs": shipment.get("logs", []) + [new_log]
+    })
+    
+    # 2. Update Company Profit (Receiver paid the amount)
     from backend.services.turso_db import TursoCompaniesDB
     comp_kv = TursoCompaniesDB()
     comp = comp_kv.get_by_id(shipment.get("company_id"))
     if comp:
-        amount = shipment.get("finance", {}).get("suggested_price", 0)
         comp_kv.update(comp["id"], {"total_profit": comp.get("total_profit", 0) + amount})
         
         # Log to ledger
@@ -1425,6 +1423,7 @@ def pay_shipment(shipment_id: str):
             "type": "REVENUE",
             "amount": amount,
             "shipment_id": shipment["id"],
+            "desc": f"Customer Payment for Shipment #{shipment['id'][:8]}",
             "timestamp": datetime.utcnow().isoformat() + "Z"
         })
     
@@ -1432,7 +1431,14 @@ def pay_shipment(shipment_id: str):
     all_ships = shipments_db.get_all()
     legs = [s for s in all_ships if s.get("parent_id") == shipment["id"]]
     for leg in legs:
-        shipments_db.update(leg["id"], {"payment_status": "paid"})
+        leg_log = ShipmentEvent(
+            status=leg.get("status", "pending"),
+            message=f"💰 PAYMENT RECEIVED (Parent Payment): Parent shipment paid by customer."
+        ).model_dump()
+        shipments_db.update(leg["id"], {
+            "payment_status": "paid",
+            "logs": leg.get("logs", []) + [leg_log]
+        })
         
     return {"message": "Payment successful"}
 

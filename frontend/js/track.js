@@ -327,11 +327,11 @@ async function viewOrder(id) {
             payBox.style.display = 'none';
         }
 
-        // OTP for non-delivered AND PAID
+        // Delivery Code for non-delivered AND PAID
         const otpBox = document.getElementById('det-otp-box');
         if (s.status !== 'delivered' && s.payment_status === 'paid') {
             otpBox.style.display = 'block';
-            document.getElementById('det-otp').innerText = s.delivery_otp;
+            document.getElementById('det-otp').innerText = s.delivery_code || s.delivery_otp || 'N/A';
         } else {
             otpBox.style.display = 'none';
         }

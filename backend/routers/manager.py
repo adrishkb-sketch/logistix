@@ -183,37 +183,7 @@ async def bulk_confirm_drivers(drivers: List[Driver]):
     
 @router.post("/finance/recalculate-all")
 def recalculate_all_shipments(company_id: str):
-    from backend.services.finance_engine import recalculate_shipment_finance, estimate_delivery_cost
-    all_shipments = shipments_db.get_all()
-    company_shipments = [s for s in all_shipments if s and s.get("company_id") == company_id]
-    
-    updated_count = 0
-    # Process parents first
-    parents = [s for s in company_shipments if s.get("route_type") == "multi-leg" and not s.get("parent_id")]
-    
-    for p in parents:
-        legs = [s for s in company_shipments if s.get("parent_id") == p["id"]]
-        if legs:
-            res = recalculate_shipment_finance(p, legs, vehicles_db)
-            shipments_db.update(p["id"], res["shipment"])
-            for leg in res["legs"]:
-                shipments_db.update(leg["id"], leg)
-            updated_count += 1
-            
-    # Process single shipments
-    singles = [s for s in company_shipments if s.get("route_type") != "multi-leg" and not s.get("parent_id")]
-    for s in singles:
-        v_type = "van"
-        if s.get("assigned_vehicle_id"):
-            v = vehicles_db.get_by_id(s["assigned_vehicle_id"])
-            if v: v_type = v.get("type", "van")
-            
-        new_finance = estimate_delivery_cost(s, v_type)
-        s["finance"] = new_finance
-        shipments_db.update(s["id"], s)
-        updated_count += 1
-        
-    return {"message": f"Successfully recalculated finance for {updated_count} shipments."}
+    return {"message": "Finances are locked once calculated and cannot be recalculated."}
 
 
 

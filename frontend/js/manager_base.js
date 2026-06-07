@@ -126,7 +126,7 @@ window.showSection = function(id) {
         'manager_leaderboard.html': 'leaderboard',
         'manager_verifications.html': 'verifications',
         'manager_safety.html': 'safety',
-        'manager_ledger.html': 'ledger',
+        
         'manager_oracle.html': 'oracle',
         'manager_fuel_oracle.html': 'fuel-oracle',
         'manager_payments.html': 'paisa-fast',
@@ -168,7 +168,7 @@ function initBase() {
         'manager_leaderboard.html': 'leaderboard',
         'manager_verifications.html': 'verifications',
         'manager_safety.html': 'safety',
-        'manager_ledger.html': 'ledger',
+        
         'manager_oracle.html': 'oracle',
         'manager_fuel_oracle.html': 'fuel-oracle',
         'manager_payments.html': 'paisa-fast',

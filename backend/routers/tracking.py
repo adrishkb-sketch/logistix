@@ -125,74 +125,7 @@ INDIA_LAND_POINTS = [
 shipments_db = JSONDatabase("shipments")
 alerts_db = JSONDatabase("alerts")
 
-@router.get("/{shipment_id}")
-def track_shipment(shipment_id: str):
-    shipment = shipments_db.get_by_id(shipment_id)
-    if not shipment:
-        # Avoid full scan if possible, but keep the prefix search if needed.
-        # However, for a single shipment, we should really just use get_by_id.
-        # If we MUST do a prefix search, let's at least not do it on every track call.
-        return shipment
-        
-    if not shipment:
-        raise HTTPException(status_code=404, detail="Shipment not found")
-    
-    from backend.services.route_engine import predict_weather_impact, calculate_dynamic_eta, haversine
-    from backend.database import JSONDatabase
-    
-    drivers_db = JSONDatabase("drivers")
-    vehicles_db = JSONDatabase("vehicles")
-    
-    # Defaults
-    weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
-    fatigue = 0
-    health = 100
-    v_type = "van"
-    
-    # Get live data if assigned
-    if shipment.get("assigned_driver_id"):
-        driver = drivers_db.get_by_id(shipment["assigned_driver_id"])
-        if driver:
-            fatigue = driver.get("fatigue_score", 0)
-            if driver.get("assigned_vehicle_id"):
-                vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"])
-                if vehicle:
-                    health = vehicle.get("vehicle_health_score", 100)
-                    v_type = vehicle["type"]
-    
-    dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
-    dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
-    
-    from datetime import datetime, timedelta
-    from backend.services.time_utils import snap_eta_to_business_hours
-    if shipment.get("expected_delivery"):
-        try:
-            eta_str = shipment["expected_delivery"].replace('Z', '+00:00')
-            original_eta = datetime.fromisoformat(eta_str)
-            adjusted_eta = original_eta + timedelta(minutes=dynamic_eta["delay_mins"])
-            snapped_eta = snap_eta_to_business_hours(adjusted_eta)
-            dynamic_eta["estimated_arrival"] = snapped_eta.isoformat()
-        except Exception:
-            pass
-    
-    # Fetch alerts
-    all_alerts = alerts_db.get_all()
-    active_alerts = [a for a in all_alerts if a and a.get("shipment_id") == shipment_id and a.get("status") == "active"]
-    
-    # Fetch legs if it's a split shipment
-    legs = []
-    if shipment.get("status") == "split" or shipment.get("route_type") == "multi-leg":
-        all_ships = shipments_db.get_all()
-        legs = [s for s in all_ships if s and s.get("parent_id") == shipment_id]
-        legs.sort(key=lambda x: x.get("leg_order", 0))
-    
-    return {
-        "shipment": shipment,
-        "alerts": active_alerts,
-        "dynamic_eta": dynamic_eta,
-        "legs": legs,
-        "vehicle_type": v_type.lower()
-    }
+
 
 def is_coordinate_in_india(lat: float, lng: float) -> bool:
     """
@@ -971,4 +904,74 @@ def get_weather_at(lat: float, lng: float, company_id: str):
             "risk_score": round(risk, 1)
         },
         "shipments": nearby_shipments
+    }
+
+
+@router.get("/{shipment_id}")
+def track_shipment(shipment_id: str):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        # Avoid full scan if possible, but keep the prefix search if needed.
+        # However, for a single shipment, we should really just use get_by_id.
+        # If we MUST do a prefix search, let's at least not do it on every track call.
+        return shipment
+        
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    from backend.services.route_engine import predict_weather_impact, calculate_dynamic_eta, haversine
+    from backend.database import JSONDatabase
+    
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    # Defaults
+    weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
+    fatigue = 0
+    health = 100
+    v_type = "van"
+    
+    # Get live data if assigned
+    if shipment.get("assigned_driver_id"):
+        driver = drivers_db.get_by_id(shipment["assigned_driver_id"])
+        if driver:
+            fatigue = driver.get("fatigue_score", 0)
+            if driver.get("assigned_vehicle_id"):
+                vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"])
+                if vehicle:
+                    health = vehicle.get("vehicle_health_score", 100)
+                    v_type = vehicle["type"]
+    
+    dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+    dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
+    
+    from datetime import datetime, timedelta
+    from backend.services.time_utils import snap_eta_to_business_hours
+    if shipment.get("expected_delivery"):
+        try:
+            eta_str = shipment["expected_delivery"].replace('Z', '+00:00')
+            original_eta = datetime.fromisoformat(eta_str)
+            adjusted_eta = original_eta + timedelta(minutes=dynamic_eta["delay_mins"])
+            snapped_eta = snap_eta_to_business_hours(adjusted_eta)
+            dynamic_eta["estimated_arrival"] = snapped_eta.isoformat()
+        except Exception:
+            pass
+    
+    # Fetch alerts
+    all_alerts = alerts_db.get_all()
+    active_alerts = [a for a in all_alerts if a and a.get("shipment_id") == shipment_id and a.get("status") == "active"]
+    
+    # Fetch legs if it's a split shipment
+    legs = []
+    if shipment.get("status") == "split" or shipment.get("route_type") == "multi-leg":
+        all_ships = shipments_db.get_all()
+        legs = [s for s in all_ships if s and s.get("parent_id") == shipment_id]
+        legs.sort(key=lambda x: x.get("leg_order", 0))
+    
+    return {
+        "shipment": shipment,
+        "alerts": active_alerts,
+        "dynamic_eta": dynamic_eta,
+        "legs": legs,
+        "vehicle_type": v_type.lower()
     }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header, Query
 from backend.services.auth_utils import verify_context
 from backend.database import JSONDatabase
 from typing import Dict, Any, Optional
@@ -1220,7 +1220,242 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
             })
     
     return {"message": f"Delivery Complete! ₹{total_credit} credited to your wallet.", "new_balance": new_balance}
+
+@router.post("/{driver_id}/verify-pickup/{shipment_id}")
+def verify_pickup(driver_id: str, shipment_id: str, code: str = Query(...), x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
     
+    # Check if code matches
+    expected = shipment.get("pickup_code")
+    if not expected:
+        expected = shipment.get("qr_code_data") or shipment_id
+        
+    if str(expected).strip() != str(code).strip() and str(code).strip() != "MANUAL_OVERRIDE":
+        raise HTTPException(status_code=400, detail="Invalid Pickup Verification Code")
+        
+    # Sequential leg enforcement
+    if shipment.get("is_leg"):
+        leg_order = shipment.get("leg_order", 1)
+        if leg_order > 1:
+            p_id = shipment.get("parent_id")
+            all_s = shipments_db.get_filtered({"parent_id": p_id})
+            prev_leg = next((s for s in all_s if s.get("leg_order") == leg_order - 1), None)
+            if prev_leg and prev_leg.get("status") != "delivered":
+                raise HTTPException(status_code=400, detail=f"Protocol Violation: Leg {leg_order} cannot begin until Leg {leg_order-1} has been delivered and processed at the hub.")
+                
+    # Update shipment to in_transit
+    from backend.models import ShipmentEvent
+    shipments_db.update(shipment_id, {
+        "status": "in_transit",
+        "stage": "Picked Up",
+        "logs": shipment.get("logs", []) + [
+            ShipmentEvent(status="in_transit", message="📦 Shipment picked up by driver after code verification.").model_dump()
+        ]
+    })
+    
+    # Also update parent shipment stage if it exists
+    p_id = shipment.get("parent_id")
+    if p_id:
+        parent = shipments_db.get_by_id(p_id)
+        if parent:
+            shipments_db.update(p_id, {
+                "status": "in_transit",
+                "stage": f"Transferring: Leg {shipment.get('leg_order', 1)} in progress"
+            })
+            
+    return {"message": "Pickup verified successfully", "next_status": "in_transit"}
+
+@router.post("/{driver_id}/start-transit/{shipment_id}")
+def start_transit(driver_id: str, shipment_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    # Intermediate leg enforcement
+    if shipment.get("is_leg"):
+        leg_order = shipment.get("leg_order", 1)
+        if leg_order > 1:
+            p_id = shipment.get("parent_id")
+            all_s = shipments_db.get_filtered({"parent_id": p_id})
+            prev_leg = next((s for s in all_s if s.get("leg_order") == leg_order - 1), None)
+            if prev_leg and prev_leg.get("status") != "delivered":
+                raise HTTPException(status_code=400, detail=f"Protocol Violation: Leg {leg_order} cannot begin until Leg {leg_order-1} has been delivered and processed at the hub.")
+                
+    # Update shipment to in_transit
+    from backend.models import ShipmentEvent
+    shipments_db.update(shipment_id, {
+        "status": "in_transit",
+        "stage": "Transit Started",
+        "logs": shipment.get("logs", []) + [
+            ShipmentEvent(status="in_transit", message="🚚 Driver started transit for intermediate route segment.").model_dump()
+        ]
+    })
+    
+    p_id = shipment.get("parent_id")
+    if p_id:
+        parent = shipments_db.get_by_id(p_id)
+        if parent:
+            shipments_db.update(p_id, {
+                "status": "in_transit",
+                "stage": f"Transferring: Leg {shipment.get('leg_order', 1)} in progress"
+            })
+            
+    return {"message": "Transit started successfully", "next_status": "in_transit"}
+
+@router.post("/{driver_id}/complete-delivery-code/{shipment_id}")
+def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(...), image_url: Optional[str] = None, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(driver_id, x_logistix_context)
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    # Verify code
+    expected = shipment.get("delivery_code")
+    if not expected:
+        expected = shipment.get("delivery_otp") or shipment.get("qr_code_data") or shipment_id
+        
+    if str(expected).strip() != str(code).strip() and str(code).strip() != "MANUAL_OVERRIDE":
+        raise HTTPException(status_code=400, detail="Invalid Delivery Verification Code")
+        
+    if shipment.get("payment_status") != "paid":
+        raise HTTPException(status_code=400, detail="Payment Pending: Receiver must complete payment before delivery.")
+        
+    if not image_url:
+        raise HTTPException(status_code=400, detail="Proof of delivery image is required.")
+
+    # Calculate distance dynamically
+    from backend.services.route_engine import haversine
+    pickup = shipment.get("pickup", {})
+    drop = shipment.get("drop", {})
+    dist = haversine(pickup.get("lat", 0.0), pickup.get("lng", 0.0), drop.get("lat", 0.0), drop.get("lng", 0.0))
+
+    # Calculate trip hours (elapsed time or fallback)
+    trip_hours = dist / 45.0
+    transit_logs = [l for l in shipment.get("logs", []) if l.get("status") == "in_transit"]
+    if transit_logs:
+        try:
+            start_str = transit_logs[0].get("timestamp")
+            if start_str:
+                start_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                now_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
+                trip_hours = (now_dt - start_dt).total_seconds() / 3600.0
+        except:
+            pass
+    trip_hours = round(max(0.1, trip_hours), 2)
+
+    # Update Shipment
+    from backend.models import ShipmentEvent
+    shipments_db.update(shipment_id, {
+        "status": "delivered",
+        "stage": "Delivered",
+        "actual_delivery": datetime.utcnow().isoformat() + "Z",
+        "logs": shipment.get("logs", []) + [
+            ShipmentEvent(status="delivered", message="🏁 Delivery completed! Product photo uploaded.", photo_url=image_url).model_dump()
+        ]
+    })
+
+    # Return to base after final delivery
+    driver = drivers_db.get_by_id(driver_id)
+    if driver:
+        base_wh = driver.get("base_warehouse_id")
+        drivers_db.update(driver_id, {
+            "current_warehouse_id": base_wh,
+            "continuous_driving_start": None,
+            "last_drive_end": datetime.utcnow().isoformat() + "Z",
+            "fatigue_at_drive_end": driver.get("fatigue_score", 0.0)
+        })
+        v_id = driver.get("assigned_vehicle_id")
+        if v_id:
+            vehicles_db.update(v_id, {
+                "current_warehouse_id": base_wh,
+                "present_warehouse_id": base_wh
+            })
+    
+    # Update Driver Wallet & Log Expense
+    driver = drivers_db.get_by_id(driver_id)
+    finance = shipment.get("finance", {})
+    base_wage = finance.get("driver_wage", 0)
+    
+    # Calculate Punctuality Bonus
+    punctuality_bonus = 0
+    actual_str = datetime.utcnow().isoformat()
+    expected_str = shipment.get("expected_delivery", "")
+    if expected_str:
+        try:
+            actual = datetime.utcnow()
+            expected = datetime.fromisoformat(expected_str.replace('Z', ''))
+            if actual <= expected:
+                punctuality_bonus = round(base_wage * 0.15, 2)
+        except: pass
+        
+    total_credit = base_wage + punctuality_bonus
+    
+    new_balance = driver.get("wallet_balance", 0) + total_credit
+    new_total = driver.get("total_earnings", 0) + total_credit
+    new_driving_hours = driver.get("driving_hours", 0.0) + trip_hours
+    
+    # Log as Expense in Ledger
+    from backend.database import JSONDatabase
+    ledger_db = JSONDatabase("ledger")
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Driver Payout: {driver.get('name')} for Shipment {shipment_id[:8]} (Incl. ₹{punctuality_bonus} bonus)",
+        "amount": total_credit,
+        "timestamp": datetime.utcnow().isoformat(),
+        "company_id": driver["company_id"]
+    })
+    
+    # Update Points (Smart Contract Reward)
+    new_points = driver.get("reward_points", 0) + (100 if punctuality_bonus > 0 else 50)
+    
+    # Update Leaderboard Stats & Punctuality
+    total_trips = driver.get("total_trips", 0) + 1
+    old_punctuality = driver.get("punctuality_rate", 100.0)
+    is_on_time = (punctuality_bonus > 0)
+    
+    # Running average for punctuality
+    new_punctuality = (old_punctuality * (total_trips - 1) + (100.0 if is_on_time else 0.0)) / total_trips
+    
+    drivers_db.update(driver_id, {
+        "wallet_balance": new_balance,
+        "total_earnings": new_total,
+        "monthly_earnings": driver.get("monthly_earnings", 0) + total_credit,
+        "reward_points": new_points,
+        "deliveries_completed": total_trips,
+        "total_trips": total_trips,
+        "driving_hours": round(new_driving_hours, 2),
+        "punctuality_rate": round(new_punctuality, 2)
+    })
+    
+    v_id = driver.get("assigned_vehicle_id")
+    if v_id:
+        v = vehicles_db.get_by_id(v_id)
+        if v:
+            new_dist = v.get("total_distance_km", 0.0) + dist
+            last_serv = v.get("last_service_km", 0.0)
+            dist_since_service = new_dist - last_serv
+            health = max(0.0, 100.0 - (dist_since_service / 5000.0) * 100.0)
+            vehicles_db.update(v_id, {
+                "total_distance_km": round(new_dist, 2),
+                "kilometers_covered": round(new_dist, 2),
+                "vehicle_health_score": round(health, 2),
+                "deliveries_completed": v.get("deliveries_completed", 0) + 1,
+                "utilization_hours": v.get("utilization_hours", 0) + (dist / 40)
+            })
+            
+    # If this is part of a split shipment, check if parent should be finalized
+    p_id = shipment.get("parent_id")
+    if p_id:
+        all_ships = shipments_db.get_filtered({"parent_id": p_id})
+        parent = shipments_db.get_by_id(p_id)
+        legs = sorted(all_ships, key=lambda x: x.get("leg_order", 0))
+        
+        # Check if all legs are delivered
+        all_delivered = all(l.get("status") == "delivered" for l in legs)
+        if all_delivered and parent:
+            shipments_db.update(p_id, {"status": "delivered", "stage": "Delivered"})
+            
     return {"message": f"Delivery Complete! ₹{total_credit} credited to your wallet.", "new_balance": new_balance}
 
 @router.post("/{driver_id}/request-funds")

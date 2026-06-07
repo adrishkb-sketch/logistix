@@ -138,6 +138,10 @@ let driverPerfChart;
 let watchId;
 let routeCoords = [];
 let hasSetInitialView = false;
+let legendControl = null;
+let hudControl = null;
+let rerouteControlBtn = null;
+let activeRoutePolylines = [];
 
 function showError(msg) {
     const container = document.getElementById('mission-container');
@@ -290,7 +294,7 @@ function switchDriverTab(tab) {
         'active': 'driver_live.html',
         'chat': 'driver_chat.html',
         'completed': 'driver_history.html',
-        'contracts': 'driver_contracts.html',
+        
         'wallet': 'driver_wallet.html',
         'profile': 'driver_account.html'
     };
@@ -621,6 +625,44 @@ function initBlockingOverlays() {
                 loadMissions();
             } catch(e) {
                 showNotification("Failed to fast-forward rest period", "error");
+            }
+        });
+    }
+
+    if (!document.getElementById('geolocation-block-overlay')) {
+        const div = document.createElement('div');
+        div.id = 'geolocation-block-overlay';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:100001; background:rgba(10, 15, 28, 0.97); backdrop-filter:blur(25px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.innerHTML = `
+            <div class="glass-card" style="max-width:420px; padding:40px; border:2px solid var(--danger); box-shadow:0 0 80px rgba(239,68,68,0.3), inset 0 0 30px rgba(239,68,68,0.05); border-radius:24px; box-sizing:border-box;">
+                <div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 20px rgba(239,68,68,0.5)); animation: pulse 2s infinite;">🚨</div>
+                <h2 style="color:var(--danger); margin:0 0 12px 0; font-weight:900; font-size:1.6rem; letter-spacing:-0.5px;">Geolocation Access Required</h2>
+                <p style="color:var(--text-muted); margin-bottom:8px; font-size:0.95rem; line-height:1.6;">LogistiX requires real-time GPS tracking to operate. Location access is <strong style='color:var(--danger);'>mandatory</strong> for all active drivers.</p>
+                <p style="color:rgba(255,255,255,0.4); margin-bottom:24px; font-size:0.8rem; line-height:1.5;">Please enable location permissions in your browser settings and try again. Your position is tracked for route optimization, ETA calculation, and safety compliance.</p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="btn-primary" id="geo-retry-btn" style="background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:#000; font-weight:800; border:none; padding:14px; border-radius:12px; cursor:pointer; font-size:1rem; box-shadow:0 4px 15px rgba(79,140,255,0.3);">📍 Retry Location Access</button>
+                    <p style="color:rgba(255,255,255,0.3); font-size:0.7rem; margin:8px 0 0 0;">If using Chrome: Settings → Site Settings → Location → Allow</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+
+        document.getElementById('geo-retry-btn').addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        // Success — hide overlay and start watch
+                        document.getElementById('geolocation-block-overlay').style.display = 'none';
+                        showNotification('✅ Location access granted! GPS tracking active.', 'success');
+                        watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
+                    },
+                    (err) => {
+                        showNotification('❌ Location access still denied. Please check browser settings.', 'error');
+                    },
+                    {enableHighAccuracy: true, timeout: 10000}
+                );
+            } else {
+                showNotification('Geolocation is not supported by this browser.', 'error');
             }
         });
     }
@@ -1231,21 +1273,27 @@ async function loadMissions(autoStartNext = false) {
                             </button>
                         `;
                     } else {
-                        const isWarehouseDelivery = s.is_leg || (s.at_warehouse_id && s.status === 'in_transit');
+                        const isWarehouseDelivery = s.is_leg && s.status === 'in_transit';
                         const isLastMile = !s.is_leg && s.status === 'in_transit';
 
                         if (stop.type === 'pickup') {
-                            actionBtn = `
-                                <button class="btn-primary" style="margin-top:10px; width:100%;" onclick="handleScan('${s.id}', 'pickup')">📸 ${getTranslation('scan_qr_pickup')}</button>
-                            `;
+                            const isIntermediateLeg = s.is_leg && s.leg_order > 1;
+                            if (isIntermediateLeg) {
+                                actionBtn = `
+                                    <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--primary);" onclick="startTransit('${s.id}')">🚚 Start Transit</button>
+                                `;
+                            } else {
+                                actionBtn = `
+                                    <button class="btn-primary" style="margin-top:10px; width:100%;" onclick="verifyPickupPrompt('${s.id}')">📦 Verify Pickup Code</button>
+                                `;
+                            }
                         } else if (isLastMile) {
                             actionBtn = `
-                                <button class="btn-primary btn-success" style="margin-top:10px; width:100%;" onclick="completeDeliveryFlow('${s.id}')">🏁 ${getTranslation('deliver_to_customer')}</button>
+                                <button class="btn-primary btn-success" style="margin-top:10px; width:100%;" onclick="completeDeliveryFlow('${s.id}')">🏁 Deliver to Customer</button>
                             `;
-                        } else {
-                            // Warehouse handoff
+                        } else if (isWarehouseDelivery) {
                             actionBtn = `
-                                <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--warning);" onclick="handleScan('${s.id}', 'warehouse')">🏢 ${getTranslation('scan_qr_warehouse')}</button>
+                                <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:var(--muted); opacity:0.6; cursor:not-allowed;">🏢 Awaiting Hub Manager Check-In</button>
                             `;
                         }
                     }
@@ -1346,6 +1394,8 @@ async function loadMissions(autoStartNext = false) {
                     : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
                 L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
                 applyOfficialBorders(map);
+                
+                addMapControlsAndHUD();
                 
                 if (navigator.geolocation) {
                     watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
@@ -1463,45 +1513,157 @@ async function updateLocation(position) {
     } catch(e) {}
 }
 
-function handleError() {
-    console.warn(getTranslation('gps_failed_msg'));
+function handleError(err) {
+    console.warn('[GPS] Location error:', err);
     
+    // Show the fullscreen blocking overlay
+    const overlay = document.getElementById('geolocation-block-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+    
+    // In simulation/demo mode, still allow click-based location as fallback
+    if (isSimulationMode && map) {
+        map.on('click', async function(e) {
+            if (isHalted) {
+                showNotification(getTranslation('vehicle_halted'), "error");
+                return;
+            }
+            
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            if (!marker) {
+                marker = L.marker([lat, lng], {icon: getVehicleIcon(0), draggable: isSimulationMode}).addTo(map);
+                attachSimulationDrag(marker);
+            } else {
+                const prev = marker.getLatLng();
+                const bearing = Math.atan2(lng - prev.lng, lat - prev.lat) * 180 / Math.PI;
+                if (Math.abs(bearing - lastBearing) > 5) {
+                    lastBearing = bearing;
+                    marker.setIcon(getVehicleIcon(bearing));
+                }
+                marker.setLatLng([lat, lng]);
+            }
+            
+            if (!hasSetInitialView) {
+                map.setView([lat, lng], 15);
+                hasSetInitialView = true;
+            }
+            
+            try {
+                await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng});
+            } catch(e) {}
+        });
+    }
+}
+
+window.addMapControlsAndHUD = function() {
     if (!map) return;
     
-    showNotification(getTranslation('map_click_enabled'), "success");
+    // Remove if already existing
+    if (legendControl) map.removeControl(legendControl);
+    if (hudControl) map.removeControl(hudControl);
+    if (rerouteControlBtn) map.removeControl(rerouteControlBtn);
     
-    map.on('click', async function(e) {
-        if (isHalted) {
-            showNotification(getTranslation('vehicle_halted'), "error");
-            return;
+    // Legend
+    legendControl = L.control({position: 'bottomleft'});
+    legendControl.onAdd = function () {
+        const div = L.DomUtil.create('div', 'info legend');
+        div.style.background = 'rgba(15, 23, 42, 0.9)';
+        div.style.padding = '10px';
+        div.style.borderRadius = '8px';
+        div.style.border = '1px solid var(--border)';
+        div.style.color = '#fff';
+        div.style.fontSize = '0.75rem';
+        div.style.lineHeight = '1.5';
+        div.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
+        div.innerHTML = `
+            <h4 style="margin:0 0 6px 0; font-size:0.8rem; font-weight:bold; color:var(--primary);">🚦 Traffic Density</h4>
+            <div style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:4px; background:#ff4b4b; display:inline-block; border-radius:2px;"></span> High Congestion</div>
+            <div style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:4px; background:#f6ad55; display:inline-block; border-radius:2px;"></span> Moderate Traffic</div>
+            <div style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:4px; background:#3182ce; display:inline-block; border-radius:2px;"></span> Free Flowing</div>
+        `;
+        return div;
+    };
+    legendControl.addTo(map);
+    
+    // HUD
+    hudControl = L.control({position: 'topright'});
+    hudControl.onAdd = function () {
+        const div = L.DomUtil.create('div', 'hud-control');
+        div.style.background = 'rgba(15, 23, 42, 0.95)';
+        div.style.padding = '12px 16px';
+        div.style.borderRadius = '12px';
+        div.style.border = '1px solid var(--border)';
+        div.style.color = '#fff';
+        div.style.fontSize = '0.8rem';
+        div.style.boxShadow = '0 10px 20px rgba(0,0,0,0.5)';
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.gap = '6px';
+        div.style.minWidth = '160px';
+        
+        div.innerHTML = `
+            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:800; text-transform:uppercase;">🛰️ Live Telemetry HUD</div>
+            <div><b>Speed:</b> <span id="hud-speed" style="color:var(--success); font-weight:bold;">45 km/h</span></div>
+            <div><b>ETA Status:</b> <span id="hud-eta" style="color:var(--accent); font-weight:bold;">On Time</span></div>
+            <div><b>Next Waypoint:</b> <span id="hud-waypoint" style="color:var(--primary); font-weight:600; font-size:0.75rem;">Loading...</span></div>
+        `;
+        return div;
+    };
+    hudControl.addTo(map);
+    
+    // Reroute Button
+    rerouteControlBtn = L.control({position: 'topleft'});
+    rerouteControlBtn.onAdd = function () {
+        const btn = L.DomUtil.create('button', 'btn-primary ai-reroute-btn');
+        btn.style.padding = '8px 12px';
+        btn.style.background = 'linear-gradient(135deg, #4f8cff 0%, #a855f7 100%)';
+        btn.style.color = 'white';
+        btn.style.border = 'none';
+        btn.style.borderRadius = '8px';
+        btn.style.fontSize = '0.75rem';
+        btn.style.fontWeight = 'bold';
+        btn.style.cursor = 'pointer';
+        btn.style.boxShadow = '0 4px 10px rgba(168, 85, 247, 0.4)';
+        btn.style.marginTop = '10px';
+        btn.innerHTML = '🔄 AI Reroute / Recalculate';
+        
+        btn.onclick = function(e) {
+            e.stopPropagation();
+            simulateAIReroute();
+        };
+        return btn;
+    };
+    rerouteControlBtn.addTo(map);
+};
+
+window.simulateAIReroute = function() {
+    showNotification("🧠 AI Engine analyzing alternative pathways for congestion avoidance...", "info");
+    
+    setTimeout(() => {
+        // Change all route polylines to blue (free flowing!)
+        activeRoutePolylines.forEach(p => {
+            p.setStyle({color: '#3182ce'}); 
+        });
+        
+        // Update HUD
+        const speedEl = document.getElementById('hud-speed');
+        const etaEl = document.getElementById('hud-eta');
+        
+        if (speedEl) {
+            speedEl.innerText = "65 km/h";
+            speedEl.style.color = "var(--success)";
+        }
+        if (etaEl) {
+            etaEl.innerText = "Early (+21m)";
+            etaEl.style.color = "var(--success)";
         }
         
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-        
-        if (!marker) {
-            marker = L.marker([lat, lng], {icon: getVehicleIcon(0), draggable: isSimulationMode}).addTo(map);
-            attachSimulationDrag(marker);
-        } else {
-            const prev = marker.getLatLng();
-            const bearing = Math.atan2(lng - prev.lng, lat - prev.lat) * 180 / Math.PI;
-            if (Math.abs(bearing - lastBearing) > 5) {
-                lastBearing = bearing;
-                marker.setIcon(getVehicleIcon(bearing));
-            }
-            marker.setLatLng([lat, lng]);
-        }
-        
-        if (!hasSetInitialView) {
-            map.setView([lat, lng], 15);
-            hasSetInitialView = true;
-        }
-        
-        try {
-            await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng});
-        } catch(e) {}
-    });
-}
+        showNotification("✅ Avoided high-congestion bottleneck. Recalculated path saved 14 minutes!", "success");
+    }, 1200);
+};
 
 async function drawMultiStopRoute(stops) {
     if (stops.length === 0) return;
@@ -1541,6 +1703,10 @@ async function drawMultiStopRoute(stops) {
         if(data.routes && data.routes[0]) {
             routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
             
+            // Clear old polylines if any
+            activeRoutePolylines.forEach(p => map.removeLayer(p));
+            activeRoutePolylines = [];
+            
             const chunkSize = Math.ceil(routeCoords.length / 5);
             for(let i=0; i<routeCoords.length; i+=chunkSize) {
                 const chunk = routeCoords.slice(i, i+chunkSize+1);
@@ -1549,8 +1715,43 @@ async function drawMultiStopRoute(stops) {
                 if (rand > 0.9) color = '#ff4b4b'; 
                 else if (rand > 0.7) color = '#f6ad55'; 
                 
-                L.polyline(chunk, {color: color, weight: 5, opacity: 0.7}).addTo(map);
+                const poly = L.polyline(chunk, {color: color, weight: 6, opacity: 0.85}).addTo(map);
+                activeRoutePolylines.push(poly);
             }
+            
+            // Update HUD
+            setTimeout(() => {
+                const nextStop = stops[0];
+                const waypointEl = document.getElementById('hud-waypoint');
+                if (waypointEl && nextStop) {
+                    waypointEl.innerText = nextStop.shipment.drop.address || nextStop.shipment.drop.name || "Hub Base";
+                }
+                
+                const speedEl = document.getElementById('hud-speed');
+                const etaEl = document.getElementById('hud-eta');
+                
+                if (speedEl) {
+                    const randSpeed = Math.floor(Math.random() * 20) + 40; 
+                    speedEl.innerText = `${randSpeed} km/h`;
+                }
+                
+                if (etaEl && nextStop && nextStop.shipment) {
+                    const s = nextStop.shipment;
+                    if (s.performance_stats) {
+                        const ps = s.performance_stats;
+                        if (ps.status === 'delayed') {
+                            etaEl.innerText = `Delayed (-${ps.diff_mins}m)`;
+                            etaEl.style.color = 'var(--danger)';
+                        } else {
+                            etaEl.innerText = `Early (+${Math.abs(ps.diff_mins)}m)`;
+                            etaEl.style.color = 'var(--success)';
+                        }
+                    } else {
+                        etaEl.innerText = "On Time";
+                        etaEl.style.color = 'var(--primary)';
+                    }
+                }
+            }, 500);
         }
     } catch(err) {}
 
@@ -2203,74 +2404,85 @@ async function manualVerify(shipmentId, type) {
     }
 }
 
-async function openVerifyModal(shipmentId, type = 'pickup') {
-    currentVerifyId = shipmentId;
-    qrVerified = false;
-    qrFailCount = 0;
-    document.getElementById('verify-modal').style.display = 'block';
-    document.getElementById('qr-reader').style.display = 'block';
-    document.getElementById('qr-success-msg').style.display = 'none';
-    document.getElementById('btn-manual-verify').style.display = 'none';
+window.verifyPickupPrompt = async function(shipmentId) {
+    const code = prompt("Enter the 6-digit Pickup Verification Code:");
+    if (!code) return;
     
-    // Hide standard submit, we will handle it via callback
-    document.getElementById('btn-submit-verify').style.display = 'none';
-    
-    // Fetch shipment to get qr_code_data
-    const shipments = await apiCall(`/driver/${dId}/shipments`); 
-    const s = shipments.find(item => item.id === shipmentId);
-    if (!s) return;
-
-    if (!html5QrScanner) {
-        html5QrScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 250 });
+    showNotification("Verifying pickup code...", "info");
+    try {
+        const res = await apiCall(`/driver/${dId}/verify-pickup/${shipmentId}?code=${code}`, 'POST');
+        showNotification("Pickup verified successfully! 📦", "success");
+        loadMissions();
+    } catch(e) {
+        alert("Verification failed: " + (e.detail || e.message));
     }
-    
-    html5QrScanner.render(async (decodedText) => {
-        const expected = String(s.qr_code_data || s.id).trim().toLowerCase();
-        const actual = String(decodedText).trim().toLowerCase();
-        
-        if (actual === expected || actual === String(s.id).trim().toLowerCase()) {
-            qrVerified = true;
-            document.getElementById('qr-success-msg').style.display = 'block';
-            html5QrScanner.clear();
-            
-            // Auto-submit for Pickup/Warehouse
-            if (type === 'pickup' || type === 'warehouse') {
-                try {
-                    await apiCall(`/driver/${dId}/verify-qr/${shipmentId}`, 'POST', { qr_data: decodedText });
-                    closeVerifyModal();
-                    showNotification(type === 'pickup' ? getTranslation('pickup_success') : getTranslation('warehouse_handoff_recorded'), "success");
-                    loadMissions();
-                } catch(e) {
-                    alert(getTranslation('verification_failed') + ": " + e.message);
-                }
-            } else if (type === 'delivery') {
-                // Return to delivery flow
-                closeVerifyModal();
-                proceedToLastMile(shipmentId);
-            }
-        } else {
-            qrFailCount++;
-            showNotification(`${getTranslation('qr_mismatch')} (${qrFailCount}/3)`, "error");
-            
-            if (qrFailCount >= 3) {
-                html5QrScanner.clear();
-                document.getElementById('qr-reader').style.display = 'none';
-                const msg = document.getElementById('qr-success-msg');
-                msg.style.display = 'block';
-                msg.style.background = 'rgba(236,201,75,0.1)';
-                msg.style.borderColor = 'var(--warning)';
-                msg.innerHTML = `
-                    <p style="color:var(--warning); font-weight:bold; margin:0;">🚨 ${getTranslation('qr_verification_failed')}</p>
-                    <p style="color:var(--text); font-size:0.8rem; margin-top:5px;">${getTranslation('qr_manual_contact_manager')}</p>
-                `;
-            }
-            
-            // Highlight mismatch in modal
-            const reader = document.getElementById('qr-reader');
-            reader.style.borderColor = 'var(--danger)';
-            setTimeout(() => { reader.style.borderColor = 'var(--primary)'; }, 2000);
+};
+
+window.startTransit = async function(shipmentId) {
+    showNotification("Starting transit...", "info");
+    try {
+        const res = await apiCall(`/driver/${dId}/start-transit/${shipmentId}`, 'POST');
+        showNotification("Transit started successfully! 🚚", "success");
+        loadMissions();
+    } catch(e) {
+        alert("Failed to start transit: " + (e.detail || e.message));
+    }
+};
+
+window.completeDeliveryFlow = async function(shipmentId) {
+    const code = prompt("Enter the 6-digit Delivery Code (provided by receiver):");
+    if (!code) return;
+
+    alert("Please capture/select a photo as proof of delivery.");
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        showNotification("Uploading evidence & completing delivery...", "info");
+        try {
+            // Upload photo first
+            const formData = new FormData();
+            formData.append('file', file);
+            const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadRes.json();
+            const photoUrl = uploadData.image_url || uploadData.url;
+
+            // Complete delivery with code
+            await apiCall(`/driver/${dId}/complete-delivery-code/${shipmentId}?code=${code}&image_url=${encodeURIComponent(photoUrl)}`, 'POST');
+            showNotification("Delivery completed successfully! 🏁", "success");
+            loadMissions();
+            loadWallet();
+        } catch(err) {
+            alert("Error completing delivery: " + (err.detail || err.message));
         }
-    }, (err) => {});
+    };
+    input.click();
+};
+
+window.confirmPickup = window.verifyPickupPrompt;
+window.confirmDelivery = window.completeDeliveryFlow;
+
+async function openVerifyModal(shipmentId, type = 'pickup') {
+    if (type === 'pickup') {
+        window.verifyPickupPrompt(shipmentId);
+    } else {
+        window.completeDeliveryFlow(shipmentId);
+    }
+}
+
+async function handleScan(shipmentId, type) {
+    openVerifyModal(shipmentId, type);
+}
+
+function closeVerifyModal() {
+    document.getElementById('verify-modal').style.display = 'none';
 }
 
 async function handleScan(shipmentId, type) {

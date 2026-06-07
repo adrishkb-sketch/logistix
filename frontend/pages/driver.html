@@ -175,7 +175,6 @@
                 <button class="tab-btn" id="btn-tab-active" onclick="switchDriverTab('active')" data-layout-id="tab-live">🗺️ <span data-i18n="tab_live_route">Live Route</span></button>
                 <button class="tab-btn" id="btn-tab-chat" onclick="switchDriverTab('chat')" data-layout-id="tab-chat">💬 <span data-i18n="tab_chat">Chat</span> <span id="chat-badge" style="display:none; width:8px; height:8px; background:var(--danger); border-radius:50%;"></span></button>
                 <button class="tab-btn" id="btn-tab-completed" onclick="switchDriverTab('completed')" data-layout-id="tab-history">📜 <span data-i18n="tab_history">History</span></button>
-                <button class="tab-btn" id="btn-tab-contracts" onclick="switchDriverTab('contracts')">⛓️ <span data-i18n="tab_contracts">Contracts</span></button>
                 <button class="tab-btn" id="btn-tab-wallet" onclick="switchDriverTab('wallet')" data-layout-id="tab-wallet">💰 <span data-i18n="tab_wallet">Wallet</span></button>
                 <button class="tab-btn" id="btn-tab-profile" onclick="switchDriverTab('profile')" data-layout-id="tab-account">👤 <span data-i18n="tab_account">Account</span></button>
             </div>
@@ -232,23 +231,7 @@
                     </div>
                 </div>
             </div>
-
-            <div id="contracts-tab" style="display:none;">
-                <div class="glass-card" style="padding:24px; border-top:4px solid var(--accent); margin-bottom:20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin:0;" data-i18n="active_smart_contracts">📜 Active Smart Contracts</h3>
-                        <div style="text-align:right;">
-                            <small style="color:var(--text-muted)" data-i18n="unclaimed_rewards">Unclaimed Rewards</small>
-                            <div id="contract-points-total" style="font-size:1.5rem; font-weight:800; color:var(--accent);">0 pts</div>
-                        </div>
-                    </div>
-                </div>
-                <div id="contracts-list" style="display:flex; flex-direction:column; gap:15px;">
-                    <!-- Injected via JS -->
-                </div>
-            </div>
-
-            <div id="dash-tab" style="display:block;" data-layout-container="dash-content">
+<div id="dash-tab" style="display:block;" data-layout-container="dash-content">
                 <div id="driver-notifications-container" style="display:none; margin-bottom:1.5rem;"></div>
                 <div class="stats-grid" data-layout-id="dash-stats" data-layout-container="dash-stats-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
                     <div class="glass-card" data-layout-id="stat-points" style="padding:1rem; border-top:4px solid var(--accent); text-align:center;">
