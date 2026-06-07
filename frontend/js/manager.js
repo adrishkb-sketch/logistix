@@ -4323,8 +4323,30 @@ async function loadWeatherFleetData() {
                 const listContainer = document.getElementById('sim-affected-list');
                 if (listContainer) {
                     if (data.affected_list && data.affected_list.length > 0) {
-                        listContainer.innerHTML = data.affected_list.map(s => `
-                            <div style="font-size:0.75rem; margin-bottom:10px; padding:8px; background:rgba(255,255,255,0.05); border-radius:4px; border-left:3px solid var(--warning);">
+                        listContainer.innerHTML = data.affected_list.map(s => {
+                            const stage = (s.stage || '').toLowerCase();
+                            const aiDiverted = stage.includes('diverted: safe hub');
+                            const aiHalted   = stage.includes('halted: calamity') || stage.includes('halted: disaster');
+                            const aiReturned = stage.includes('returned:');
+                            const aiHandled  = aiDiverted || aiHalted || aiReturned;
+
+                            let aiStatusBadge = '';
+                            if (aiDiverted) {
+                                aiStatusBadge = `<div style="margin-top:5px; display:inline-flex; align-items:center; gap:4px; background:rgba(72,187,120,0.15); border:1px solid var(--success); border-radius:20px; padding:3px 10px; font-size:0.7rem; color:var(--success); font-weight:700;">✅ Rerouted by AI — ${s.stage}</div>`;
+                            } else if (aiHalted) {
+                                aiStatusBadge = `<div style="margin-top:5px; display:inline-flex; align-items:center; gap:4px; background:rgba(245,101,101,0.15); border:1px solid var(--danger,#f56565); border-radius:20px; padding:3px 10px; font-size:0.7rem; color:var(--danger,#f56565); font-weight:700;">🚨 Emergency Halt — AI Decision Active</div>`;
+                            } else if (aiReturned) {
+                                aiStatusBadge = `<div style="margin-top:5px; display:inline-flex; align-items:center; gap:4px; background:rgba(237,137,54,0.15); border:1px solid var(--warning); border-radius:20px; padding:3px 10px; font-size:0.7rem; color:var(--warning); font-weight:700;">📋 Returning to Sender — AI Initiated</div>`;
+                            }
+
+                            const manualBtns = aiHandled ? '' : `
+                                <div style="margin-top:5px; display:flex; gap:5px;">
+                                    <button style="padding:2px 6px; font-size:0.7rem; background:var(--primary); border:none; color:white; border-radius:3px; cursor:pointer;" onclick="executeAIAction('${s.id}')">Apply AI Solution</button>
+                                    <button style="padding:2px 6px; font-size:0.7rem; background:rgba(255,255,255,0.1); border:1px solid white; color:white; border-radius:3px; cursor:pointer;" onclick="manualDivert('${s.id}')">Manual Divert</button>
+                                </div>`;
+
+                            return `
+                            <div style="font-size:0.75rem; margin-bottom:10px; padding:8px; background:rgba(255,255,255,0.05); border-radius:4px; border-left:3px solid ${aiHandled ? 'var(--success)' : 'var(--warning)'};">
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                                     <strong>${s.description}</strong>
                                     <span style="color:var(--accent);">${s.id.substring(0,8)}</span>
@@ -4334,12 +4356,10 @@ async function loadWeatherFleetData() {
                                 </div>
                                 <div style="color:var(--success); font-weight:600;">AI Solution: ${s.ai_action}${s.condition ? ' <span style="font-weight:400;color:var(--text-muted);">[' + s.condition + ']</span>' : ''}</div>
                                 <div style="font-style:italic; font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.driver_instruction}</div>
-                                <div style="margin-top:5px; display:flex; gap:5px;">
-                                    <button style="padding:2px 6px; font-size:0.7rem; background:var(--primary); border:none; color:white; border-radius:3px; cursor:pointer;" onclick="executeAIAction('${s.id}')">Apply AI Solution</button>
-                                    <button style="padding:2px 6px; font-size:0.7rem; background:rgba(255,255,255,0.1); border:1px solid white; color:white; border-radius:3px; cursor:pointer;" onclick="manualDivert('${s.id}')">Manual Divert</button>
-                                </div>
-                            </div>
-                        `).join('');
+                                ${aiStatusBadge}
+                                ${manualBtns}
+                            </div>`;
+                        }).join('');
                     } else {
                         listContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.75rem;">No active shipments in path.</p>';
                     }

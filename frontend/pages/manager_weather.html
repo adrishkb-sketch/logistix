@@ -1694,19 +1694,45 @@ async function loadWeatherFleetData() {
 
             const listEl = document.getElementById('res-affected-list');
             listEl.innerHTML = (data.affected_list || []).map(s => {
-                const buttonText = (s.alert_status === "active" || s.alert_id) ? "Verify & Approve" : "Verified";
+                // Determine if AI has already automatically handled this shipment
+                const stage = (s.stage || '').toLowerCase();
+                const aiDiverted  = stage.includes('diverted: safe hub');
+                const aiHalted    = stage.includes('halted: calamity') || stage.includes('halted: disaster');
+                const aiReturned  = stage.includes('returned:');
+                const aiHandled   = aiDiverted || aiHalted || aiReturned;
+
+                // AI status badge — shown instead of buttons when AI already acted
+                let aiStatusBadge = '';
+                if (aiDiverted) {
+                    aiStatusBadge = `<div style="margin-top:6px; display:inline-flex; align-items:center; gap:6px; background:rgba(72,187,120,0.12); border:1px solid var(--success); border-radius:20px; padding:4px 12px; font-size:0.75rem; color:var(--success); font-weight:700;">
+                        ✅ Rerouted by AI — ${s.stage || 'Safe Hub'}
+                    </div>`;
+                } else if (aiHalted) {
+                    aiStatusBadge = `<div style="margin-top:6px; display:inline-flex; align-items:center; gap:6px; background:rgba(245,101,101,0.12); border:1px solid var(--danger); border-radius:20px; padding:4px 12px; font-size:0.75rem; color:var(--danger); font-weight:700;">
+                        🚨 Emergency Halt — AI Decision Active
+                    </div>`;
+                } else if (aiReturned) {
+                    aiStatusBadge = `<div style="margin-top:6px; display:inline-flex; align-items:center; gap:6px; background:rgba(237,137,54,0.12); border:1px solid var(--warning); border-radius:20px; padding:4px 12px; font-size:0.75rem; color:var(--warning); font-weight:700;">
+                        📋 Returning to Sender — AI Initiated
+                    </div>`;
+                }
+
+                const buttonText     = (s.alert_status === "active" || s.alert_id) ? "Verify & Approve" : "Verified";
                 const buttonDisabled = (s.alert_status === "active" || s.alert_id) ? "" : "disabled";
-                const buttonStyle = (s.alert_status === "active" || s.alert_id) ? "" : "background-color: var(--muted); opacity: 0.6; cursor: not-allowed;";
+                const buttonStyle    = (s.alert_status === "active" || s.alert_id) ? "" : "background-color: var(--muted); opacity: 0.6; cursor: not-allowed;";
+
                 return `
                 <div class="affected-item" data-alert-id="${s.alert_id}" data-shipment-id="${s.id}">
                     <div class="a-title">${s.description}</div>
                     <div class="a-sub">Driver: ${s.driver_name} · ${s.vehicle_plate}</div>
                     <div class="a-action">💡 ${s.ai_action}</div>
                     <div style="font-size:0.68rem; color:var(--muted); margin-top:2px; font-style:italic;">${s.driver_instruction}</div>
-                    <div class="a-btns">
+                    ${aiStatusBadge}
+                    ${aiHandled ? '' : `
+                    <div class="a-btns" style="margin-top:8px;">
                         <button class="a-btn-ai" onclick="executeAIAction('${s.id}', '${s.alert_id}')" ${buttonDisabled} style="${buttonStyle}">${buttonText}</button>
-                        <button class="a-btn-manual" onclick="manualDivert('${s.id}')">Divert</button>
-                    </div>
+                        <button class="a-btn-manual" onclick="manualDivert('${s.id}')">Manual Divert</button>
+                    </div>`}
                 </div>
                 `;
             }).join('');

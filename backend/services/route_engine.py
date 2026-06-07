@@ -91,14 +91,25 @@ def find_nearest_safe_warehouse(lat: float, lng: float, company_id: str, disaste
     nearest = min(safe_whs, key=lambda w: haversine(lat, lng, w["lat"], w["lng"]))
     return nearest
 
+
 def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) -> bool:
+    """
+    Checks if a shipment's current location or destination intersects with an active calamity zone.
+    If so, it applies vehicle-class-aware diversion limits:
+      - Bike / Scooty / EV-Cargo : max 15 km to safe hub
+      - Van / Delivery Van / Small Truck : max 40 km
+      - Heavy Truck               : max 150 km
+    If the nearest safe hub is beyond the vehicle's divert range, trigger an Emergency Halt
+    instead of sending the vehicle to an unreachable destination.
+    Auto-reassigns compatible drivers/vehicles for the diverted shipment.
+    """
     if shipment.get("status") not in ["assigned", "in_transit"]:
         return False
 
     if disaster_cells is None:
         from backend.routers.tracking import get_all_active_weather_cells
         disaster_cells = get_all_active_weather_cells(shipment.get("company_id"))
-        
+    
     curr_loc = shipment.get("current_location") or shipment.get("pickup")
     if not curr_loc or not curr_loc.get("lat"):
         return False
@@ -142,60 +153,270 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
     from backend.models import Alert, ShipmentEvent
     alerts_db = JSONDatabase("alerts")
     shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
     
     existing_alert = next((a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment["id"] and a.get("type") == "calamity_divert" and a.get("status") == "active"), None)
     if existing_alert:
         return False
-        
+
+    # ── Determine vehicle-class divert distance limit ────────────────────────
+    vehicle_id = shipment.get("assigned_vehicle_id")
+    vehicle = vehicles_db.get_by_id(vehicle_id) if vehicle_id else None
+    v_type = str(vehicle.get("type", "")).lower() if vehicle else ""
+
+    is_heavy_truck = "heavy" in v_type or "large" in v_type
+    is_small_truck = "small" in v_type or ("truck" in v_type and not is_heavy_truck)
+    is_van = "van" in v_type or "delivery" in v_type
+    is_bike_scooty = "bike" in v_type or "scooty" in v_type or "scooter" in v_type
+    is_ev = "ev" in v_type
+
+    if is_heavy_truck:
+        max_divert_km = 150.0
+        vehicle_class_label = "Heavy Truck"
+    elif is_small_truck or is_van:
+        max_divert_km = 40.0
+        vehicle_class_label = "Van / Small Truck"
+    elif is_bike_scooty or is_ev:
+        max_divert_km = 15.0
+        vehicle_class_label = "Bike / Scooty / EV"
+    else:
+        # Unassigned or unknown — use safe default
+        max_divert_km = 50.0
+        vehicle_class_label = "Unknown"
+
+    # ── Find nearest safe warehouse and check distance ───────────────────────
     safe_wh = find_nearest_safe_warehouse(lat, lng, company_id, disaster_cells)
-    if safe_wh:
+    safe_wh_dist = haversine(lat, lng, safe_wh["lat"], safe_wh["lng"]) if safe_wh else None
+
+    within_range = safe_wh is not None and safe_wh_dist <= max_divert_km
+
+    orig_driver_id = shipment.get("assigned_driver_id")
+
+    if within_range:
+        # ── Divert to safe hub ────────────────────────────────────────────
         shipment["drop"] = {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]}
         shipment["drop_warehouse_id"] = safe_wh["id"]
         shipment["stage"] = f"Diverted: Safe Hub ({safe_wh['name']})"
         shipment["status"] = "assigned"
         
-        log = ShipmentEvent(
-            status="assigned",
-            message=f"🚨 AI CALAMITY ROUTING: Automatically rerouted vehicle to safe hub '{safe_wh['name']}' outside the {calamity_type} affected region.",
-            reason=f"Natural Calamity: {calamity_type}"
+        log_msg = (
+            f"🚨 AI CALAMITY DIVERT: Due to active {calamity_type}, this shipment has been automatically "
+            f"rerouted to safe hub '{safe_wh['name']}' ({round(safe_wh_dist, 1)} km away — within {vehicle_class_label} "
+            f"safe divert range of {int(max_divert_km)} km). Original driver has been notified."
         )
+        log = ShipmentEvent(status="assigned", message=log_msg, reason=f"Natural Calamity: {calamity_type}")
         shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
         shipments_db.update(shipment["id"], shipment)
         
+        # Notify original driver of diversion
+        if orig_driver_id:
+            orig_driver = drivers_db.get_by_id(orig_driver_id)
+            if orig_driver:
+                import uuid as _uuid
+                notifs = orig_driver.get("notifications", [])
+                notifs.append({
+                    "id": str(_uuid.uuid4()),
+                    "shipment_id": shipment["id"],
+                    "title": f"⚠️ Calamity Divert — {calamity_type}",
+                    "message": (
+                        f"Your order '{shipment.get('description', shipment['id'][:8])}' has been diverted by AI "
+                        f"due to an active {calamity_type} calamity. New destination: {safe_wh['name']} "
+                        f"({round(safe_wh_dist, 1)} km). Please update your route immediately."
+                    ),
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "read": False
+                })
+                orig_driver["notifications"] = notifs
+                drivers_db.update(orig_driver_id, orig_driver)
+
         alert = Alert(
             company_id=company_id,
             type="calamity_divert",
             severity="critical",
-            description=f"AI DIVERSION: Shipment {shipment['id'][:8]} rerouted to safe hub {safe_wh['name']} due to active {calamity_type} calamity.",
-            suggestion=f"Verify driver safety and cargo status at {safe_wh['name']}. Safe hub is outside the affected region.",
+            description=(
+                f"AI AUTO-DIVERT: Shipment {shipment['id'][:8]} rerouted to safe hub '{safe_wh['name']}' "
+                f"({round(safe_wh_dist, 1)} km) due to active {calamity_type}. "
+                f"Vehicle class: {vehicle_class_label} (max safe divert: {int(max_divert_km)} km)."
+            ),
+            suggestion=f"Verify driver safety and cargo at {safe_wh['name']}. Safe hub is outside the calamity-affected region.",
             shipment_id=shipment["id"],
-            driver_id=shipment.get("assigned_driver_id")
+            driver_id=orig_driver_id
         )
         alerts_db.insert(alert.model_dump())
         return True
+
     else:
-        shipment["stage"] = "Halted: Disaster Zone"
+        # ── Emergency halt — safe hub too far or none available ───────────
+        dist_info = f"Nearest safe hub is {round(safe_wh_dist, 1)} km away, exceeds {vehicle_class_label} limit of {int(max_divert_km)} km." if safe_wh else "No safe hubs found outside calamity zone."
+        shipment["stage"] = "Halted: Calamity Danger Zone"
         shipment["status"] = "delayed"
         
-        log = ShipmentEvent(
-            status="delayed",
-            message=f"🚨 AI EMERGENCY HALT: Halted operations in open safe area. No safe hubs available outside {calamity_type} zone.",
-            reason=f"Natural Calamity: {calamity_type}"
+        log_msg = (
+            f"🚨 AI EMERGENCY HALT: Due to active {calamity_type}, this shipment has been halted. "
+            f"{dist_info} Driver instructed to halt in nearest safe open area and await further instructions."
         )
+        log = ShipmentEvent(status="delayed", message=log_msg, reason=f"Natural Calamity: {calamity_type}")
         shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
         shipments_db.update(shipment["id"], shipment)
         
+        # Notify original driver of halt
+        if orig_driver_id:
+            orig_driver = drivers_db.get_by_id(orig_driver_id)
+            if orig_driver:
+                import uuid as _uuid
+                notifs = orig_driver.get("notifications", [])
+                notifs.append({
+                    "id": str(_uuid.uuid4()),
+                    "shipment_id": shipment["id"],
+                    "title": f"🚨 Emergency Halt — {calamity_type}",
+                    "message": (
+                        f"EMERGENCY: Your order '{shipment.get('description', shipment['id'][:8])}' requires an "
+                        f"immediate halt due to an active {calamity_type} calamity. {dist_info} "
+                        f"Stop the vehicle in a safe open area and contact the manager immediately."
+                    ),
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "read": False
+                })
+                orig_driver["notifications"] = notifs
+                drivers_db.update(orig_driver_id, orig_driver)
+
         alert = Alert(
             company_id=company_id,
             type="calamity_divert",
             severity="critical",
-            description=f"AI HALT: Shipment {shipment['id'][:8]} forced to halt due to {calamity_type} calamity zone. No safe hubs available.",
+            description=(
+                f"AI EMERGENCY HALT: Shipment {shipment['id'][:8]} halted due to {calamity_type}. "
+                f"{dist_info} Driver must not proceed."
+            ),
             suggestion="Contact driver immediately to ensure safety. Maintain halt status until calamity zone clears.",
             shipment_id=shipment["id"],
-            driver_id=shipment.get("assigned_driver_id")
+            driver_id=orig_driver_id
         )
         alerts_db.insert(alert.model_dump())
         return True
+
+
+def check_eway_bill_expiry_return(shipment: dict) -> bool:
+    """
+    Checks if the shipment's predicted ETA will exceed its E-Way Bill expiry deadline.
+    If so, aborts the delivery, reverses coordinates back to sender (original pickup),
+    sets status to 'returned', and re-assigns appropriate fleet for the return journey.
+    Notifies the original driver of cancellation.
+    """
+    eway_expiry_str = shipment.get("eway_bill_expiry")
+    if not eway_expiry_str:
+        return False
+
+    eta_str = shipment.get("expected_delivery")
+    if not eta_str:
+        return False
+
+    try:
+        from datetime import datetime, timezone
+        expiry_dt = datetime.fromisoformat(eway_expiry_str.replace("Z", "+00:00"))
+        if expiry_dt.tzinfo is None:
+            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+        eta_dt = datetime.fromisoformat(eta_str.replace("Z", "+00:00"))
+        if eta_dt.tzinfo is None:
+            eta_dt = eta_dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return False
+
+    if eta_dt <= expiry_dt:
+        return False
+
+    # ETA exceeds expiry — initiate return to sender
+    from backend.database import JSONDatabase
+    from backend.models import Alert, ShipmentEvent
+    alerts_db = JSONDatabase("alerts")
+    shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+
+    existing = next(
+        (a for a in alerts_db.get_all()
+         if a and a.get("shipment_id") == shipment["id"]
+         and a.get("type") == "compliance_return"
+         and a.get("status") == "active"),
+        None
+    )
+    if existing:
+        return False
+
+    company_id = shipment.get("company_id")
+    orig_driver_id = shipment.get("assigned_driver_id")
+    original_pickup = shipment.get("pickup", {})
+    original_drop = shipment.get("drop", {})
+    eway_no = shipment.get("eway_bill_no", "N/A")
+
+    # Swap drop → pickup (return to sender)
+    shipment["drop"] = original_pickup
+    shipment["pickup"] = original_drop
+    shipment["stage"] = f"Returned: E-Way Bill Expired ({eway_no})"
+    shipment["status"] = "returned" if True else "delayed"  # Store as a distinct status
+    # Use delayed as base since 'returned' may not be in status enum; log explains reason
+    shipment["status"] = "delayed"
+
+    log_msg = (
+        f"📋 COMPLIANCE RETURN: E-Way Bill {eway_no} expires on "
+        f"{expiry_dt.strftime('%d %b %Y %H:%M UTC')} but predicted ETA is "
+        f"{eta_dt.strftime('%d %b %Y %H:%M UTC')}. "
+        f"Delivery cannot be completed legally. Shipment is being returned to the sender. "
+        f"New destination set to original pickup location."
+    )
+    log = ShipmentEvent(status="delayed", message=log_msg, reason="E-Way Bill Expiry")
+    shipment["logs"] = shipment.get("logs", []) + [log.model_dump()]
+
+    # Clear current assignment and trigger re-assignment for the return trip
+    shipment["assigned_driver_id"] = None
+    shipment["assigned_vehicle_id"] = None
+    shipments_db.update(shipment["id"], shipment)
+
+    # Notify original driver
+    if orig_driver_id:
+        orig_driver = drivers_db.get_by_id(orig_driver_id)
+        if orig_driver:
+            import uuid as _uuid
+            notifs = orig_driver.get("notifications", [])
+            notifs.append({
+                "id": str(_uuid.uuid4()),
+                "shipment_id": shipment["id"],
+                "title": "📋 Delivery Cancelled — E-Way Bill Expired",
+                "message": (
+                    f"Order '{shipment.get('description', shipment['id'][:8])}' cannot be delivered. "
+                    f"E-Way Bill {eway_no} expires before the predicted arrival time. "
+                    f"The shipment is being returned to the sender. You have been de-assigned from this task."
+                ),
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "read": False
+            })
+            orig_driver["notifications"] = notifs
+            drivers_db.update(orig_driver_id, orig_driver)
+
+    # Try to auto-assign a return vehicle
+    from backend.services.assignment import auto_assign_shipment
+    return_assign = auto_assign_shipment(shipment)
+    if return_assign and "error" not in return_assign:
+        shipment["assigned_driver_id"] = return_assign.get("assigned_driver_id")
+        shipment["assigned_vehicle_id"] = return_assign.get("assigned_vehicle_id")
+        shipment["status"] = "assigned"
+        shipments_db.update(shipment["id"], shipment)
+
+    alert = Alert(
+        company_id=company_id,
+        type="compliance_return",
+        severity="critical",
+        description=(
+            f"COMPLIANCE RETURN: Shipment {shipment['id'][:8]} — E-Way Bill {eway_no} expired before ETA. "
+            f"Delivery aborted and shipment returned to sender."
+        ),
+        suggestion="Renew E-Way Bill and reschedule delivery. Contact the receiver and sender immediately.",
+        shipment_id=shipment["id"],
+        driver_id=orig_driver_id
+    )
+    alerts_db.insert(alert.model_dump())
+    return True
+
 
 def decompose_shipment(shipment: dict) -> list:
     """

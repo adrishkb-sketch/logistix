@@ -1747,6 +1747,34 @@ window.openShipmentDetailModal = function(id) {
         }
     }
 
+    // Context-aware fallback labels — never show raw "N/A"
+    const _isCalamityDiverted = s.stage && (
+        s.stage.includes('Diverted: Safe Hub') ||
+        s.stage.includes('Halted: Calamity') ||
+        s.stage.includes('Halted: Disaster')
+    );
+    const _isIntermediateLeg = s.is_leg && s.leg_order > 1 && s.leg_type !== 'last_mile';
+    const _isDelivered = s.status === 'delivered';
+    const _isReturned = s.stage && s.stage.includes('Returned:');
+
+    function _pickupLabel(code) {
+        if (code) return `<span style="font-family:monospace;font-weight:bold;color:var(--accent);font-size:1.1rem;">${code}</span>`;
+        if (_isDelivered) return `<span style="color:var(--success);font-size:0.82rem;">✅ Used &amp; Verified</span>`;
+        if (_isCalamityDiverted) return `<span style="color:var(--warning);font-size:0.82rem;">⚠️ Suspended — Calamity Divert / Halt</span>`;
+        if (_isReturned) return `<span style="color:var(--warning);font-size:0.82rem;">📋 Suspended — Shipment Returning to Sender</span>`;
+        if (_isIntermediateLeg) return `<span style="color:var(--muted);font-size:0.82rem;">🏭 Not required — Hub gate check-in used for this leg</span>`;
+        return `<span style="color:var(--muted);font-size:0.82rem;">⏳ Pending — Appears after driver assignment</span>`;
+    }
+
+    function _deliveryLabel(code) {
+        if (code) return `<span style="font-family:monospace;font-weight:bold;color:var(--accent);font-size:1.1rem;">${code}</span>`;
+        if (_isDelivered) return `<span style="color:var(--success);font-size:0.82rem;">✅ Used &amp; Verified by Receiver</span>`;
+        if (_isCalamityDiverted) return `<span style="color:var(--warning);font-size:0.82rem;">⚠️ Suspended — Calamity Divert / Halt</span>`;
+        if (_isReturned) return `<span style="color:var(--warning);font-size:0.82rem;">📋 Suspended — Shipment Returning to Sender</span>`;
+        if (_isIntermediateLeg) return `<span style="color:var(--muted);font-size:0.82rem;">🏭 Not required — Final leg not yet reached</span>`;
+        return `<span style="color:var(--muted);font-size:0.82rem;">⏳ Pending — Shared with receiver after payment</span>`;
+    }
+
     contentHtml += `
         <div class="intel-block" style="margin-top:20px; background:rgba(79, 140, 255, 0.05); border:1px solid rgba(79, 140, 255, 0.2); padding: 15px; border-radius: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1754,8 +1782,8 @@ window.openShipmentDetailModal = function(id) {
                 <button class="btn-action-pill" onclick="toggleVerificationCodesDisplay(this)">👁️ Show Codes</button>
             </div>
             <div id="sd-verification-codes" style="display:none; margin-top:10px; font-size:0.85rem;">
-                <div><b>Pickup Code (First Point):</b> <span style="font-family:monospace; font-weight:bold; color:var(--accent); font-size:1.1rem;">${p_code || 'N/A'}</span></div>
-                <div style="margin-top:6px;"><b>Delivery Code (Receiver):</b> <span style="font-family:monospace; font-weight:bold; color:var(--accent); font-size:1.1rem;">${d_code || 'N/A'}</span></div>
+                <div><b>Pickup Code (First Point):</b> ${_pickupLabel(p_code)}</div>
+                <div style="margin-top:6px;"><b>Delivery Code (Receiver):</b> ${_deliveryLabel(d_code)}</div>
             </div>
         </div>
     `;

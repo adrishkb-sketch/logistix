@@ -212,6 +212,87 @@ def _wmo_to_weather_cell(wmo_code, lat, lng, label, cell_index, cloud_cover=None
 
 import time
 
+
+def _calculate_risk_score(
+    wmo: int,
+    temp,
+    wind_speed,
+    wind_gusts,
+    precipitation,
+    us_aqi,
+) -> float:
+    """
+    Calculates a 0–100 risk score with proper calamity weighting:
+      - Active calamity conditions  → 85.0 – 100.0
+      - Adverse weather (grounds bikes/drones) → 55.0 – 70.0
+      - Normal conditions           → incremental formula (0–50)
+    """
+    # ── CALAMITY tier: 85–100 ──────────────────────────────────────────────
+    # Extreme heatwave
+    if temp is not None and temp >= 45.0:
+        excess = min(15.0, (temp - 45.0) * 1.0)
+        return round(85.0 + excess, 1)
+
+    # Cyclone / Hurricane warning
+    if (wind_speed is not None and wind_speed >= 60.0) or (wind_gusts is not None and wind_gusts >= 70.0):
+        spd = wind_speed or 0.0
+        gst = wind_gusts or 0.0
+        excess = min(15.0, max(spd - 60.0, gst - 70.0) * 0.5)
+        return round(85.0 + excess, 1)
+
+    # Heavy flooding (WMO 65, 82 or precip ≥ 15mm)
+    if wmo in (65, 82) or (precipitation is not None and precipitation >= 15.0):
+        excess = min(10.0, (precipitation - 15.0) * 0.5) if precipitation and precipitation >= 15.0 else 0.0
+        return round(87.0 + excess, 1)
+
+    # Severe hailstorm
+    if wmo in (96, 99):
+        return 90.0
+
+    # ── ADVERSE WEATHER tier: 55–70 ────────────────────────────────────────
+    # Violent thunderstorm (WMO 95)
+    if wmo == 95:
+        return 70.0
+
+    # Rain (moderate-to-heavy)
+    if wmo in (53, 55, 63, 65, 80, 81, 82):
+        return 60.0
+
+    # Light rain / drizzle
+    if wmo in (51, 61):
+        return 55.0
+
+    # Snow
+    if wmo in (71, 73, 75, 77, 85, 86):
+        return round(55.0 + min(15.0, wmo * 0.15), 1)
+
+    # Fog
+    if wmo in (45, 48):
+        return 57.0
+
+    # Moderately high temp (35–44°C) or moderately high wind (28–59 km/h)
+    if temp is not None and temp >= 35.0:
+        return round(min(55.0, (temp - 35.0) * 2.5 + 30.0), 1)
+
+    if wind_speed is not None and wind_speed >= 28.0:
+        return round(min(55.0, (wind_speed - 28.0) * 0.8 + 30.0), 1)
+
+    # ── STANDARD incremental formula (0–50) ────────────────────────────────
+    risk = 0.0
+    if precipitation is not None:
+        risk += min(30.0, precipitation * 5.0)
+    if wind_speed is not None:
+        risk += min(25.0, (wind_speed / 50.0) * 25.0)
+    if temp is not None:
+        if temp > 35.0:
+            risk += min(25.0, (temp - 35.0) * 2.5)
+        elif temp < 5.0:
+            risk += min(20.0, (5.0 - temp) * 2.0)
+    if us_aqi is not None and us_aqi > 100:
+        risk += min(20.0, ((us_aqi - 100) / 400.0) * 20.0)
+    return round(risk, 1)
+
+
 _WEATHER_CACHE_DURATION = 300  # Cache for 5 minutes
 _LAST_WEATHER_FETCH = 0.0
 _CACHED_WEATHER_CELLS = [
@@ -389,18 +470,7 @@ def fetch_real_weather(points: list[dict]) -> dict:
             cells.append(cell)
 
         # Build detailed telemetry for all points (even non-adverse ones)
-        risk = 0.0
-        if precipitation is not None:
-            risk += min(30.0, precipitation * 5.0)
-        if wind_speed is not None:
-            risk += min(25.0, (wind_speed / 50.0) * 25.0)
-        if temp is not None:
-            if temp > 35.0:
-                risk += min(25.0, (temp - 35.0) * 2.5)
-            elif temp < 5.0:
-                risk += min(20.0, (5.0 - temp) * 2.0)
-        if us_aqi is not None and us_aqi > 100:
-            risk += min(20.0, ((us_aqi - 100) / 400.0) * 20.0)
+        risk = _calculate_risk_score(wmo, temp, wind_speed, wind_gusts, precipitation, us_aqi)
 
         telemetry.append({
             "name": point.get("label", "Unknown"),
@@ -522,11 +592,17 @@ def get_fleet_weather(company_id: str):
     adverse weather code is actually occurring — never hardcoded.
     """
     from backend.database import JSONDatabase
-    from backend.services.route_engine import haversine
+    from backend.services.route_engine import haversine, check_eway_bill_expiry_return
     from backend.routers.driver import check_and_run_dynamic_reassignment
-    
+
     check_and_run_dynamic_reassignment(company_id)
-    
+
+    # Run E-Way Bill expiry return check for all active shipments
+    _eway_check_db = JSONDatabase("shipments")
+    for _s in _eway_check_db.get_filtered({"company_id": company_id}):
+        if _s and _s.get("status") in ("assigned", "in_transit") and _s.get("eway_bill_expiry"):
+            check_eway_bill_expiry_return(_s)
+
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
     vehicles_db = JSONDatabase("vehicles")
@@ -872,19 +948,8 @@ def get_weather_at(lat: float, lng: float, company_id: str):
                 s_copy["distance_to_click_km"] = round(dist, 1)
                 nearby_shipments.append(s_copy)
 
-    # Calculate Risk Score
-    risk = 0.0
-    if precipitation is not None:
-        risk += min(30.0, precipitation * 5.0)
-    if wind_speed is not None:
-        risk += min(25.0, (wind_speed / 50.0) * 25.0)
-    if temp is not None:
-        if temp > 35.0:
-            risk += min(25.0, (temp - 35.0) * 2.5)
-        elif temp < 5.0:
-            risk += min(20.0, (5.0 - temp) * 2.0)
-    if us_aqi is not None and us_aqi > 100:
-        risk += min(20.0, ((us_aqi - 100) / 400.0) * 20.0)
+    # Calculate Risk Score — calamity-aware tiered formula
+    risk = _calculate_risk_score(wmo, temp, wind_speed, wind_gusts, precipitation, us_aqi)
 
     return {
         "weather": {
