@@ -47,7 +47,7 @@ def run_tests():
         "company_id": company_id,
         "name": "Pune Hub",
         "lat": 18.5000,
-        "lng": 74.1000,
+        "lng": 74.1600,
         "max_capacity": 300,
         "has_drone_pad": True
     }
@@ -187,8 +187,8 @@ def run_tests():
     shipment_lm = {
         "id": "ship_last_mile",
         "company_id": company_id,
-        "pickup": {"lat": 18.5000, "lng": 74.1000, "address": "Pune Hub"},
-        "drop": {"lat": 18.5100, "lng": 74.1100, "address": "Pune Target"},
+        "pickup": {"lat": 18.5000, "lng": 74.1600, "address": "Pune Hub"},
+        "drop": {"lat": 18.5100, "lng": 74.1700, "address": "Pune Target"},
         "weight": 2,
         "is_leg": True,
         "leg_type": "last_mile",
@@ -219,7 +219,7 @@ def run_tests():
         "company_id": company_id,
         "type": "storm", # storm grounds drones/bikes without pausing deliveries
         "lat": 18.5000,
-        "lng": 74.1000,
+        "lng": 74.1600,
         "radius": 10,
         "shapeType": "circle",
         "severity": "critical",

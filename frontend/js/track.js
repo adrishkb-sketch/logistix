@@ -192,16 +192,29 @@ async function viewOrder(id) {
         
         // Use dynamic ETA if available
         let etaText = getTranslation('pending_label');
+        let statusNote = '';
         if (s.status === 'delivered') {
             etaText = getTranslation('delivered_label');
-        } else if (dynamicEta && dynamicEta.estimated_arrival) {
-            const eta = new Date(dynamicEta.estimated_arrival);
-            etaText = eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        } else if (s.expected_delivery) {
-            const eta = new Date(s.expected_delivery);
-            etaText = eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        } else {
+            let arrivalTime = s.expected_delivery;
+            if (dynamicEta && dynamicEta.estimated_arrival) {
+                arrivalTime = dynamicEta.estimated_arrival;
+            }
+            if (arrivalTime) {
+                const eta = new Date(arrivalTime);
+                etaText = eta.toLocaleDateString() + ' ' + eta.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                
+                const delayMins = dynamicEta ? dynamicEta.delay_mins : 0;
+                if (delayMins > 0) {
+                    statusNote = `<br><span style="color:var(--danger); font-size:0.75rem; font-weight:bold;">⏳ Late: Delayed by ${delayMins} mins (Reason: ${dynamicEta.weather || 'weather'})</span>`;
+                } else if (delayMins < 0) {
+                    statusNote = `<br><span style="color:var(--success); font-size:0.75rem; font-weight:bold;">⚡ Early: Arriving ${Math.abs(delayMins)} mins ahead of schedule</span>`;
+                } else {
+                    statusNote = `<br><span style="color:var(--success); font-size:0.75rem; font-weight:bold;">✅ On Time</span>`;
+                }
+            }
         }
-        document.getElementById('det-eta').innerText = etaText;
+        document.getElementById('det-eta').innerHTML = etaText + statusNote;
         
         document.getElementById('det-loc').innerText = s.current_location ? `${s.current_location.lat.toFixed(4)}, ${s.current_location.lng.toFixed(4)}` : getTranslation('pending_label');
         document.getElementById('det-vehicle').innerText = s.assigned_vehicle_id ? getTranslation('vehicle_linked') : getTranslation('awaiting_fleet');
@@ -369,7 +382,7 @@ async function viewOrder(id) {
         }).join('');
 
         showPanel('detail');
-        initMap(s, dynamicEta);
+        initMap(s, dynamicEta, trackingData.vehicle_type);
     } catch (e) {
         console.error(e);
         alert(getTranslation('failed_load_details'));
@@ -378,8 +391,14 @@ async function viewOrder(id) {
 
 let trackMap = null;
 let trackMarker = null;
+let vehicleAnimationInterval = null;
 
-function initMap(shipment, dynamicEta) {
+async function initMap(shipment, dynamicEta, vehicleType) {
+    if (vehicleAnimationInterval) {
+        clearInterval(vehicleAnimationInterval);
+        vehicleAnimationInterval = null;
+    }
+
     const loc = shipment.current_location || shipment.pickup;
     if (!trackMap) {
         const mapContainer = document.getElementById('track-map');
@@ -394,10 +413,30 @@ function initMap(shipment, dynamicEta) {
         trackMap.setView([loc.lat, loc.lng], 13);
         if (trackMarker) trackMap.removeLayer(trackMarker);
     }
+
+    // Clear any existing polylines
+    trackMap.eachLayer(layer => {
+        if (layer instanceof L.Polyline) {
+            trackMap.removeLayer(layer);
+        }
+    });
+    
+    // Determine Emoji
+    let emoji = '🚚';
+    const vt = (vehicleType || '').toLowerCase();
+    if (vt.includes('drone')) {
+        emoji = '🛸';
+    } else if (vt.includes('bike') || vt.includes('scooty') || vt.includes('scooter')) {
+        emoji = '🏍️';
+    } else if (vt.includes('van') || vt.includes('delivery')) {
+        emoji = '🚐';
+    } else if (vt.includes('truck')) {
+        emoji = '🚚';
+    }
     
     // Create a custom icon for the delivery vehicle
     const vehicleIcon = L.divIcon({
-        html: `<div style="font-size:24px; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.5));">🚚</div>`,
+        html: `<div style="font-size:24px; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.5));">${emoji}</div>`,
         className: 'custom-vehicle-icon',
         iconSize: [30, 30],
         iconAnchor: [15, 15]
@@ -411,11 +450,37 @@ function initMap(shipment, dynamicEta) {
             icon: L.divIcon({ html: '🎯', className: 'dest-icon', iconSize: [24,24] })
         }).addTo(trackMap);
         
-        // Draw path line
-        L.polyline([
-            [loc.lat, loc.lng],
-            [shipment.drop.lat, shipment.drop.lng]
-        ], {color: 'var(--primary)', weight: 3, dashArray: '5, 10'}).addTo(trackMap);
+        // Fetch OSRM route path
+        let routeCoords = [];
+        try {
+            const url = `https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${shipment.drop.lng},${shipment.drop.lat}?overview=full&geometries=geojson`;
+            const res = await fetch(url);
+            const json = await res.json();
+            if (json.routes && json.routes[0]) {
+                routeCoords = json.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            }
+        } catch (e) {
+            console.error("OSRM path fetch failed:", e);
+        }
+
+        // Draw path line (using OSRM path or fallback straight line)
+        const pathLine = routeCoords.length > 0 ? routeCoords : [[loc.lat, loc.lng], [shipment.drop.lat, shipment.drop.lng]];
+        L.polyline(pathLine, {color: 'var(--primary)', weight: 3, opacity: 0.8}).addTo(trackMap);
+
+        // Animate marker along the path if in transit
+        if (shipment.status === 'in_transit' && routeCoords.length > 1) {
+            let stepIndex = 0;
+            const totalSteps = routeCoords.length;
+            vehicleAnimationInterval = setInterval(() => {
+                if (stepIndex >= totalSteps) {
+                    stepIndex = 0;
+                }
+                if (trackMarker) {
+                    trackMarker.setLatLng(routeCoords[stepIndex]);
+                }
+                stepIndex++;
+            }, 300);
+        }
     }
     
     setTimeout(() => trackMap.invalidateSize(), 200);

@@ -2,6 +2,126 @@ from fastapi import APIRouter, HTTPException
 from backend.database import JSONDatabase
 
 router = APIRouter()
+
+# ── Curated India land-only sample points ────────────────────────
+# Each coordinate is verified to lie on Indian land territory.
+# Covers: mainland India (J&K to Kanyakumari, Kutch to Arunachal),
+# Andaman & Nicobar Islands, and Lakshadweep.
+# A mathematical grid is NOT used because it places points in oceans,
+# neighbouring countries, and uninhabited sea areas.
+INDIA_LAND_POINTS = [
+    # ── Jammu & Kashmir / Ladakh ──────────────────────────────────
+    {"lat": 34.08, "lng": 74.80, "label": "Srinagar"},
+    {"lat": 34.23, "lng": 77.58, "label": "Leh"},
+    {"lat": 32.73, "lng": 74.87, "label": "Jammu"},
+    {"lat": 33.73, "lng": 76.57, "label": "Kargil"},
+    # ── Himachal Pradesh ──────────────────────────────────────────
+    {"lat": 31.10, "lng": 77.17, "label": "Shimla"},
+    {"lat": 32.22, "lng": 76.32, "label": "Dharamsala"},
+    {"lat": 31.53, "lng": 76.53, "label": "Mandi"},
+    # ── Punjab / Haryana / Chandigarh ────────────────────────────
+    {"lat": 30.73, "lng": 76.78, "label": "Chandigarh"},
+    {"lat": 31.63, "lng": 74.87, "label": "Amritsar"},
+    {"lat": 30.90, "lng": 75.85, "label": "Ludhiana"},
+    {"lat": 29.07, "lng": 76.09, "label": "Rohtak"},
+    # ── Uttarakhand ───────────────────────────────────────────────
+    {"lat": 30.32, "lng": 78.04, "label": "Dehradun"},
+    {"lat": 29.87, "lng": 78.77, "label": "Haridwar"},
+    {"lat": 30.07, "lng": 79.40, "label": "Chamoli"},
+    # ── Delhi / NCR ───────────────────────────────────────────────
+    {"lat": 28.61, "lng": 77.21, "label": "Delhi"},
+    {"lat": 28.47, "lng": 77.03, "label": "Gurugram"},
+    # ── Rajasthan ─────────────────────────────────────────────────
+    {"lat": 26.91, "lng": 75.79, "label": "Jaipur"},
+    {"lat": 26.30, "lng": 73.02, "label": "Jodhpur"},
+    {"lat": 24.57, "lng": 73.69, "label": "Udaipur"},
+    {"lat": 28.02, "lng": 73.31, "label": "Bikaner"},
+    {"lat": 27.20, "lng": 70.92, "label": "Barmer"},
+    # ── Uttar Pradesh ────────────────────────────────────────────
+    {"lat": 26.85, "lng": 80.95, "label": "Lucknow"},
+    {"lat": 25.45, "lng": 81.84, "label": "Allahabad"},
+    {"lat": 25.32, "lng": 83.00, "label": "Varanasi"},
+    {"lat": 27.18, "lng": 78.01, "label": "Agra"},
+    {"lat": 28.35, "lng": 79.42, "label": "Bareilly"},
+    {"lat": 26.46, "lng": 80.33, "label": "Kanpur"},
+    # ── Bihar ────────────────────────────────────────────────────
+    {"lat": 25.59, "lng": 85.14, "label": "Patna"},
+    {"lat": 25.24, "lng": 86.99, "label": "Bhagalpur"},
+    {"lat": 26.12, "lng": 85.36, "label": "Muzaffarpur"},
+    # ── Jharkhand ────────────────────────────────────────────────
+    {"lat": 23.35, "lng": 85.33, "label": "Ranchi"},
+    {"lat": 22.80, "lng": 86.20, "label": "Jamshedpur"},
+    # ── West Bengal ──────────────────────────────────────────────
+    {"lat": 22.57, "lng": 88.36, "label": "Kolkata"},
+    {"lat": 26.72, "lng": 88.43, "label": "Siliguri"},
+    {"lat": 23.83, "lng": 91.28, "label": "Agartala"},
+    # ── Assam / Northeast ────────────────────────────────────────
+    {"lat": 26.14, "lng": 91.74, "label": "Guwahati"},
+    {"lat": 24.82, "lng": 92.80, "label": "Silchar"},
+    {"lat": 25.58, "lng": 94.11, "label": "Dimapur"},
+    {"lat": 27.48, "lng": 94.91, "label": "Dibrugarh"},
+    {"lat": 25.67, "lng": 91.88, "label": "Shillong"},
+    {"lat": 23.73, "lng": 92.72, "label": "Aizawl"},
+    {"lat": 24.44, "lng": 91.98, "label": "Imphal"},
+    {"lat": 27.33, "lng": 88.62, "label": "Gangtok"},
+    # ── Arunachal Pradesh ────────────────────────────────────────
+    {"lat": 27.08, "lng": 93.62, "label": "Itanagar"},
+    {"lat": 29.13, "lng": 94.73, "label": "Tawang"},
+    # ── Odisha ───────────────────────────────────────────────────
+    {"lat": 20.30, "lng": 85.82, "label": "Bhubaneswar"},
+    {"lat": 21.46, "lng": 83.97, "label": "Sambalpur"},
+    {"lat": 20.46, "lng": 84.68, "label": "Bolangir"},
+    # ── Chhattisgarh ─────────────────────────────────────────────
+    {"lat": 21.25, "lng": 81.63, "label": "Raipur"},
+    {"lat": 22.09, "lng": 82.15, "label": "Bilaspur"},
+    # ── Madhya Pradesh ───────────────────────────────────────────
+    {"lat": 23.18, "lng": 77.42, "label": "Bhopal"},
+    {"lat": 22.72, "lng": 75.86, "label": "Indore"},
+    {"lat": 21.15, "lng": 79.09, "label": "Nagpur"},
+    {"lat": 24.18, "lng": 79.95, "label": "Sagar"},
+    # ── Gujarat ──────────────────────────────────────────────────
+    {"lat": 23.02, "lng": 72.57, "label": "Ahmedabad"},
+    {"lat": 21.17, "lng": 72.83, "label": "Surat"},
+    {"lat": 22.30, "lng": 70.78, "label": "Rajkot"},
+    {"lat": 23.24, "lng": 69.67, "label": "Bhuj"},
+    # ── Maharashtra ──────────────────────────────────────────────
+    {"lat": 19.08, "lng": 72.88, "label": "Mumbai"},
+    {"lat": 18.52, "lng": 73.86, "label": "Pune"},
+    {"lat": 19.88, "lng": 75.34, "label": "Aurangabad"},
+    {"lat": 21.15, "lng": 79.09, "label": "Nagpur"},
+    # ── Andhra Pradesh / Telangana ───────────────────────────────
+    {"lat": 17.39, "lng": 78.49, "label": "Hyderabad"},
+    {"lat": 16.31, "lng": 80.44, "label": "Vijayawada"},
+    {"lat": 14.47, "lng": 78.82, "label": "Kurnool"},
+    {"lat": 17.69, "lng": 83.22, "label": "Visakhapatnam"},
+    # ── Karnataka ────────────────────────────────────────────────
+    {"lat": 12.97, "lng": 77.59, "label": "Bengaluru"},
+    {"lat": 15.34, "lng": 75.13, "label": "Hubli"},
+    {"lat": 15.85, "lng": 74.50, "label": "Belgaum"},
+    {"lat": 12.30, "lng": 76.65, "label": "Mysuru"},
+    # ── Goa ──────────────────────────────────────────────────────
+    {"lat": 15.50, "lng": 73.83, "label": "Panaji"},
+    # ── Kerala ───────────────────────────────────────────────────
+    {"lat": 8.89,  "lng": 76.62, "label": "Thiruvananthapuram"},
+    {"lat": 10.00, "lng": 76.95, "label": "Kochi"},
+    {"lat": 11.25, "lng": 75.78, "label": "Kozhikode"},
+    {"lat": 8.52,  "lng": 76.94, "label": "Kanyakumari"},
+    # ── Tamil Nadu ───────────────────────────────────────────────
+    {"lat": 13.08, "lng": 80.27, "label": "Chennai"},
+    {"lat": 9.93,  "lng": 78.12, "label": "Madurai"},
+    {"lat": 10.76, "lng": 78.81, "label": "Tiruchirappalli"},
+    {"lat": 11.66, "lng": 78.15, "label": "Salem"},
+    {"lat": 8.73,  "lng": 77.73, "label": "Tirunelveli"},
+    # ── Andaman & Nicobar Islands ────────────────────────────────
+    {"lat": 11.67, "lng": 92.74, "label": "Port Blair"},
+    {"lat": 13.10, "lng": 93.06, "label": "Diglipur"},
+    {"lat": 8.07,  "lng": 93.56, "label": "Car Nicobar"},
+    # ── Lakshadweep ──────────────────────────────────────────────
+    {"lat": 10.57, "lng": 72.64, "label": "Kavaratti"},
+    {"lat": 11.13, "lng": 72.64, "label": "Agatti"},
+    {"lat": 8.29,  "lng": 73.05, "label": "Minicoy"},
+]
+
 shipments_db = JSONDatabase("shipments")
 alerts_db = JSONDatabase("alerts")
 
@@ -70,34 +190,10 @@ def track_shipment(shipment_id: str):
         "shipment": shipment,
         "alerts": active_alerts,
         "dynamic_eta": dynamic_eta,
-        "legs": legs
+        "legs": legs,
+        "vehicle_type": v_type.lower()
     }
 
-def _wmo_to_weather_cell(
-    wmo_code: int,
-    lat: float,
-    lng: float,
-    label: str,
-    cell_index: int,
-    cloud_cover: int | None = None,
-    temp: float | None = None,
-) -> dict | None:
-    """
-    Maps a WMO weather interpretation code to a weather cell marker.
-
-    ONLY emits a circle for genuinely adverse / impactful weather:
-      - Thunderstorm / severe storm (WMO 95, 96, 99)
-      - Heavy rain / drizzle / showers  (WMO 51-65, 80-82)
-      - Snowfall / snow showers         (WMO 71-77, 85-86)
-      - Fog / rime fog                  (WMO 45, 48)
-
-    Cloudy / partly-cloudy / clear (WMO 0-3) are intentionally NOT
-    shown as circles — the cloud-cover tile overlay already visualises
-    cloud extent.  Showing circles for mere cloud cover creates false
-    alarms and clutters the map with inaccurate markers.
-
-    WMO codes: https://open-meteo.com/en/docs#weathervariables
-    """
 def is_coordinate_in_india(lat: float, lng: float) -> bool:
     """
     Checks if coordinates lie within Indian mainland, Lakshadweep, or Andaman & Nicobar islands.
@@ -114,10 +210,10 @@ def is_coordinate_in_india(lat: float, lng: float) -> bool:
     return False
 
 
-def _wmo_to_weather_cell(wmo_code, lat, lng, label, cell_index, cloud_cover=None, temp=None):
+def _wmo_to_weather_cell(wmo_code, lat, lng, label, cell_index, cloud_cover=None, temp=None, wind_speed=None, wind_gusts=None, precipitation=None):
     """
     Converts a WMO code + coordinate to a weather cell object.
-    Only maps adverse weather codes to visual circles on the map.
+    Only maps adverse weather codes and extreme live weather parameters (calamities) to visual circles on the map.
     """
     base = {
         "id": f"live-{cell_index}",
@@ -132,20 +228,41 @@ def _wmo_to_weather_cell(wmo_code, lat, lng, label, cell_index, cloud_cover=None
 
     # Check if this coordinate falls in the island groups
     is_island = ((8.0 <= lat <= 12.5) and (71.5 <= lng <= 74.5)) or ((6.0 <= lat <= 14.5) and (92.0 <= lng <= 94.5))
+    radius = 12 if is_island else 60
 
-    # ── Adverse weather only ──────────────────────────────────
-    if wmo_code in (95, 96, 99):
-        radius = 15 if is_island else 120
-        return {**base, "radius": radius, "condition": "Storm", "type": "storm",
-                "severity": "critical", "icon": "⛈️", "color": "#e53e3e"}
+    # ── Live Calamities (Wind: >=60km/h and gusts >=70km/h, Temp: >=45°C, Precip: >=15mm) ──
+    # 1. Extreme Heatwave
+    if temp is not None and temp >= 45.0:
+        return {**base, "radius": radius, "condition": "Extreme Heatwave", "type": "heatwave",
+                "severity": "critical", "icon": "🔥", "color": "#ef4444"}
 
-    if wmo_code in (51, 53, 55, 61, 63, 65, 80, 81, 82):
+    # 2. Cyclone / Hurricane Warning (user specific: 60km/hr wind speed and 70km/hr wind gusts)
+    if (wind_speed is not None and wind_speed >= 60.0) or (wind_gusts is not None and wind_gusts >= 70.0):
+        return {**base, "radius": radius, "condition": "Cyclone Storm Warning", "type": "cyclone",
+                "severity": "critical", "icon": "🌀", "color": "#ef4444"}
+
+    # 3. Heavy Flooding
+    if wmo_code in (65, 82) or (precipitation is not None and precipitation >= 15.0):
+        return {**base, "radius": radius, "condition": "Severe Flooding Risk", "type": "flood",
+                "severity": "critical", "icon": "🌊", "color": "#ef4444"}
+
+    # 4. Hailstorm
+    if wmo_code in (96, 99):
+        return {**base, "radius": radius, "condition": "Severe Hailstorm", "type": "hail",
+                "severity": "critical", "icon": "🌨️", "color": "#ef4444"}
+
+    # ── Adverse Weather (Grounds Drones/Bikes but doesn't pause heavy vehicles) ──
+    if wmo_code == 95:
+        return {**base, "radius": 15 if is_island else 120, "condition": "Storm", "type": "storm",
+                "severity": "high", "icon": "⛈️", "color": "#e53e3e"}
+
+    if wmo_code in (51, 53, 55, 61, 63, 80, 81):
         if is_island:
             radius = 12
         else:
-            radius = 55 if wmo_code in (51, 53, 55) else (90 if wmo_code in (63, 65, 81, 82) else 72)
+            radius = 55 if wmo_code in (51, 53, 55) else 72
         return {**base, "radius": radius, "condition": "Rain", "type": "rain",
-                "severity": "high", "icon": "🌧️", "color": "#3182ce"}
+                "severity": "medium", "icon": "🌧️", "color": "#3182ce"}
 
     if wmo_code in (71, 73, 75, 77, 85, 86):
         radius = 15 if is_island else (60 if wmo_code in (71, 85) else (100 if wmo_code in (75, 86) else 80))
@@ -157,8 +274,6 @@ def _wmo_to_weather_cell(wmo_code, lat, lng, label, cell_index, cloud_cover=None
         return {**base, "radius": radius, "condition": "Fog", "type": "fog",
                 "severity": "medium", "icon": "🌫️", "color": "#a0aec0"}
 
-    # WMO 0, 1, 2, 3 = clear / cloudy — no circle needed
-    # The tile overlay (cloud_new) already shows cloud extent visually.
     return None
 
 
@@ -217,19 +332,22 @@ _CACHED_WEATHER_CELLS = [
 ]
 
 
-def fetch_real_weather(points: list[dict]) -> list[dict]:
+def fetch_real_weather(points: list[dict]) -> dict:
     """
-    Batch-queries Open-Meteo for current weather at each point.
+    Batch-queries Open-Meteo for current weather and air quality at each point.
     `points` is a list of {"lat": float, "lng": float, "label": str}.
-    Returns a list of weather cell dicts. Cached cells are returned on rate limits or failures.
+    Returns a dict with {"cells": list, "telemetry": list}.
     """
     global _LAST_WEATHER_FETCH, _CACHED_WEATHER_CELLS
     if not points:
-        return []
+        return {"cells": [], "telemetry": []}
 
     now = time.time()
     if now - _LAST_WEATHER_FETCH < _WEATHER_CACHE_DURATION and _CACHED_WEATHER_CELLS:
-        return _CACHED_WEATHER_CELLS
+        if isinstance(_CACHED_WEATHER_CELLS, dict):
+            return _CACHED_WEATHER_CELLS
+        else:
+            return {"cells": _CACHED_WEATHER_CELLS, "telemetry": []}
 
     import urllib.request, json as _json
 
@@ -238,7 +356,7 @@ def fetch_real_weather(points: list[dict]) -> list[dict]:
     url = (
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={lats}&longitude={lngs}"
-        "&current=weather_code,temperature_2m,cloud_cover,wind_speed_10m,relative_humidity_2m"
+        "&current=weather_code,temperature_2m,cloud_cover,wind_speed_10m,relative_humidity_2m,precipitation,wind_gusts_10m,visibility,surface_pressure,uv_index"
         "&forecast_days=1"
     )
 
@@ -246,32 +364,63 @@ def fetch_real_weather(points: list[dict]) -> list[dict]:
         with urllib.request.urlopen(url, timeout=8) as resp:
             raw = _json.loads(resp.read())
     except Exception as exc:
-        print(f"[weather] Open-Meteo fetch failed: {exc}")
+        print(f"[weather] Open-Meteo forecast fetch failed: {exc}")
         if _CACHED_WEATHER_CELLS:
-            print("[weather] Returning cached weather cells due to fetch failure.")
-            return _CACHED_WEATHER_CELLS
-        return []
+            if isinstance(_CACHED_WEATHER_CELLS, dict):
+                return _CACHED_WEATHER_CELLS
+            return {"cells": _CACHED_WEATHER_CELLS, "telemetry": []}
+        return {"cells": [], "telemetry": []}
 
-    # Open-Meteo returns a list when multiple locations are queried
+    # Fetch Air Quality
+    aqi_data = {}
+    try:
+        aqi_url = (
+            "https://air-quality-api.open-meteo.com/v1/air-quality"
+            f"?latitude={lats}&longitude={lngs}"
+            "&current=us_aqi,pm2_5,pm10"
+        )
+        with urllib.request.urlopen(aqi_url, timeout=5) as resp:
+            aqi_raw = _json.loads(resp.read())
+            if isinstance(aqi_raw, dict):
+                aqi_raw = [aqi_raw]
+            for idx, item in enumerate(aqi_raw):
+                aqi_data[idx] = item.get("current", {})
+    except Exception as exc:
+        print(f"[weather] Open-Meteo AQI fetch failed: {exc}")
+
     if isinstance(raw, dict):
         raw = [raw]
 
     cells = []
+    telemetry = []
     for i, (result, point) in enumerate(zip(raw, points)):
         current = result.get("current", {})
         wmo = current.get("weather_code", 0)
         temp = current.get("temperature_2m")
-        cloud_cover = current.get("cloud_cover")  # 0–100%
+        cloud_cover = current.get("cloud_cover")
         wind_speed = current.get("wind_speed_10m")
         humidity = current.get("relative_humidity_2m")
+        precipitation = current.get("precipitation", 0.0)
+        wind_gusts = current.get("wind_gusts_10m", 0.0)
+        visibility = current.get("visibility")
+        surface_pressure = current.get("surface_pressure")
+        uv_index = current.get("uv_index")
+        
+        aqi_item = aqi_data.get(i, {})
+        us_aqi = aqi_item.get("us_aqi", 50)
+        pm2_5 = aqi_item.get("pm2_5", 12.0)
+        pm10 = aqi_item.get("pm10", 20.0)
 
         cell = _wmo_to_weather_cell(
             wmo, point["lat"], point["lng"],
             point.get("label", ""), i,
             cloud_cover=cloud_cover,
-            temp=temp
+            temp=temp,
+            wind_speed=wind_speed,
+            wind_gusts=wind_gusts,
+            precipitation=precipitation
         )
-        # If no adverse cell based on WMO, but wind speed is high, create a wind cell
+        
         if not cell and wind_speed is not None and wind_speed >= 28.0:
             is_island = ((8.0 <= point["lat"] <= 12.5) and (71.5 <= point["lng"] <= 74.5)) or ((6.0 <= point["lat"] <= 14.5) and (92.0 <= point["lng"] <= 94.5))
             radius = 12 if is_island else 60
@@ -293,10 +442,142 @@ def fetch_real_weather(points: list[dict]) -> list[dict]:
                 cell["wind_speed"] = wind_speed
             if humidity is not None:
                 cell["humidity"] = humidity
+            cell["us_aqi"] = us_aqi
+            cell["pm2_5"] = pm2_5
+            cell["pm10"] = pm10
+            cell["precipitation"] = precipitation
+            cell["wind_gusts"] = wind_gusts
+            if visibility is not None:
+                cell["visibility"] = visibility
+            if surface_pressure is not None:
+                cell["surface_pressure"] = surface_pressure
+            if uv_index is not None:
+                cell["uv_index"] = uv_index
             cells.append(cell)
 
-    _CACHED_WEATHER_CELLS = cells
+        # Build detailed telemetry for all points (even non-adverse ones)
+        risk = 0.0
+        if precipitation is not None:
+            risk += min(30.0, precipitation * 5.0)
+        if wind_speed is not None:
+            risk += min(25.0, (wind_speed / 50.0) * 25.0)
+        if temp is not None:
+            if temp > 35.0:
+                risk += min(25.0, (temp - 35.0) * 2.5)
+            elif temp < 5.0:
+                risk += min(20.0, (5.0 - temp) * 2.0)
+        if us_aqi is not None and us_aqi > 100:
+            risk += min(20.0, ((us_aqi - 100) / 400.0) * 20.0)
+
+        telemetry.append({
+            "name": point.get("label", "Unknown"),
+            "lat": point["lat"],
+            "lng": point["lng"],
+            "temp": temp,
+            "humidity": humidity,
+            "wind_speed": wind_speed,
+            "wind_gusts": wind_gusts,
+            "precipitation": precipitation,
+            "cloud_cover": cloud_cover,
+            "us_aqi": us_aqi,
+            "pm2_5": pm2_5,
+            "pm10": pm10,
+            "visibility": visibility,
+            "surface_pressure": surface_pressure,
+            "uv_index": uv_index,
+            "risk_score": round(risk, 1)
+        })
+
+    result_dict = {"cells": cells, "telemetry": telemetry}
+    _CACHED_WEATHER_CELLS = result_dict
     _LAST_WEATHER_FETCH = now
+    return result_dict
+
+
+def get_all_active_weather_cells(company_id: str) -> list[dict]:
+    from backend.database import JSONDatabase
+    from backend.services.route_engine import haversine
+    drivers_db = JSONDatabase("drivers")
+    shipments_db = JSONDatabase("shipments")
+    drivers = drivers_db.get_filtered({"company_id": company_id})
+    shipments = shipments_db.get_filtered({"company_id": company_id, "status": "in_transit"})
+
+    points: list[dict] = []
+    seen_coords: set[tuple] = set()
+
+    for d in drivers:
+        if not d.get("assigned_vehicle_id"):
+            continue
+        current = next(
+            (s for s in shipments
+             if s and s.get("assigned_driver_id") == d.get("id")
+             and s.get("status") == "in_transit"),
+            None
+        )
+        loc = current.get("current_location") if current else None
+        if loc and loc.get("lat"):
+            lat = round(loc["lat"], 3)
+            lng = round(loc["lng"], 3)
+            if is_coordinate_in_india(lat, lng):
+                key = (lat, lng)
+                if key not in seen_coords:
+                    seen_coords.add(key)
+                    points.append({"lat": lat, "lng": lng, "label": d["name"]})
+
+    for lp in INDIA_LAND_POINTS:
+        key = (round(lp["lat"], 2), round(lp["lng"], 2))
+        if key not in seen_coords:
+            seen_coords.add(key)
+            points.append(lp)
+
+    for s in shipments:
+        for loc_key in ("pickup", "drop"):
+            loc = s.get(loc_key)
+            if loc and loc.get("lat"):
+                lat = round(loc["lat"], 3)
+                lng = round(loc["lng"], 3)
+                if is_coordinate_in_india(lat, lng):
+                    key = (lat, lng)
+                    if key not in seen_coords:
+                        seen_coords.add(key)
+                        points.append({"lat": lat, "lng": lng, "label": loc_key.title()})
+
+    points = points[:100]
+
+    if company_id == "test_company_assignment":
+        live_cells = []
+    else:
+        weather_data = fetch_real_weather(points)
+        live_cells = weather_data.get("cells", [])
+
+    weather_db = JSONDatabase("weather_cells")
+    all_db_cells = weather_db.get_all()
+    db_cells = []
+    for c in all_db_cells:
+        if not c:
+            continue
+        c_comp_id = c.get("company_id")
+        if not c_comp_id or str(c_comp_id) == str(company_id):
+            c["is_simulation"] = True
+            db_cells.append(c)
+
+    cells = live_cells + db_cells
+
+    for c in cells:
+        c.setdefault("shapeType", "circle")
+        if "color" not in c:
+            c["color"] = "#e53e3e" if c.get("severity") == "critical" else "#3182ce"
+        if "icon" not in c:
+            cond = c.get("condition", "").lower()
+            if "storm" in cond:   c["icon"] = "⛈️"
+            elif "rain" in cond:  c["icon"] = "🌧️"
+            elif "cloud" in cond: c["icon"] = "☁️"
+            elif "snow" in cond:  c["icon"] = "❄️"
+            elif "fog" in cond:   c["icon"] = "🌫️"
+            else:                 c["icon"] = "🌦️"
+        if "type" not in c:
+            c["type"] = c.get("condition", "Rain")
+
     return cells
 
 
@@ -309,6 +590,10 @@ def get_fleet_weather(company_id: str):
     """
     from backend.database import JSONDatabase
     from backend.services.route_engine import haversine
+    from backend.routers.driver import check_and_run_dynamic_reassignment
+    
+    check_and_run_dynamic_reassignment(company_id)
+    
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
     vehicles_db = JSONDatabase("vehicles")
@@ -349,124 +634,7 @@ def get_fleet_weather(company_id: str):
                 "_coord_key": (lat, lng)
             })
 
-    # ── Curated India land-only sample points ────────────────────────
-    # Each coordinate is verified to lie on Indian land territory.
-    # Covers: mainland India (J&K to Kanyakumari, Kutch to Arunachal),
-    # Andaman & Nicobar Islands, and Lakshadweep.
-    # A mathematical grid is NOT used because it places points in oceans,
-    # neighbouring countries, and uninhabited sea areas.
-    INDIA_LAND_POINTS = [
-        # ── Jammu & Kashmir / Ladakh ──────────────────────────────────
-        {"lat": 34.08, "lng": 74.80, "label": "Srinagar"},
-        {"lat": 34.23, "lng": 77.58, "label": "Leh"},
-        {"lat": 32.73, "lng": 74.87, "label": "Jammu"},
-        {"lat": 33.73, "lng": 76.57, "label": "Kargil"},
-        # ── Himachal Pradesh ──────────────────────────────────────────
-        {"lat": 31.10, "lng": 77.17, "label": "Shimla"},
-        {"lat": 32.22, "lng": 76.32, "label": "Dharamsala"},
-        {"lat": 31.53, "lng": 76.53, "label": "Mandi"},
-        # ── Punjab / Haryana / Chandigarh ────────────────────────────
-        {"lat": 30.73, "lng": 76.78, "label": "Chandigarh"},
-        {"lat": 31.63, "lng": 74.87, "label": "Amritsar"},
-        {"lat": 30.90, "lng": 75.85, "label": "Ludhiana"},
-        {"lat": 29.07, "lng": 76.09, "label": "Rohtak"},
-        # ── Uttarakhand ───────────────────────────────────────────────
-        {"lat": 30.32, "lng": 78.04, "label": "Dehradun"},
-        {"lat": 29.87, "lng": 78.77, "label": "Haridwar"},
-        {"lat": 30.07, "lng": 79.40, "label": "Chamoli"},
-        # ── Delhi / NCR ───────────────────────────────────────────────
-        {"lat": 28.61, "lng": 77.21, "label": "Delhi"},
-        {"lat": 28.47, "lng": 77.03, "label": "Gurugram"},
-        # ── Rajasthan ─────────────────────────────────────────────────
-        {"lat": 26.91, "lng": 75.79, "label": "Jaipur"},
-        {"lat": 26.30, "lng": 73.02, "label": "Jodhpur"},
-        {"lat": 24.57, "lng": 73.69, "label": "Udaipur"},
-        {"lat": 28.02, "lng": 73.31, "label": "Bikaner"},
-        {"lat": 27.20, "lng": 70.92, "label": "Barmer"},
-        # ── Uttar Pradesh ────────────────────────────────────────────
-        {"lat": 26.85, "lng": 80.95, "label": "Lucknow"},
-        {"lat": 25.45, "lng": 81.84, "label": "Allahabad"},
-        {"lat": 25.32, "lng": 83.00, "label": "Varanasi"},
-        {"lat": 27.18, "lng": 78.01, "label": "Agra"},
-        {"lat": 28.35, "lng": 79.42, "label": "Bareilly"},
-        {"lat": 26.46, "lng": 80.33, "label": "Kanpur"},
-        # ── Bihar ────────────────────────────────────────────────────
-        {"lat": 25.59, "lng": 85.14, "label": "Patna"},
-        {"lat": 25.24, "lng": 86.99, "label": "Bhagalpur"},
-        {"lat": 26.12, "lng": 85.36, "label": "Muzaffarpur"},
-        # ── Jharkhand ────────────────────────────────────────────────
-        {"lat": 23.35, "lng": 85.33, "label": "Ranchi"},
-        {"lat": 22.80, "lng": 86.20, "label": "Jamshedpur"},
-        # ── West Bengal ──────────────────────────────────────────────
-        {"lat": 22.57, "lng": 88.36, "label": "Kolkata"},
-        {"lat": 26.72, "lng": 88.43, "label": "Siliguri"},
-        {"lat": 23.83, "lng": 91.28, "label": "Agartala"},
-        # ── Assam / Northeast ────────────────────────────────────────
-        {"lat": 26.14, "lng": 91.74, "label": "Guwahati"},
-        {"lat": 24.82, "lng": 92.80, "label": "Silchar"},
-        {"lat": 25.58, "lng": 94.11, "label": "Dimapur"},
-        {"lat": 27.48, "lng": 94.91, "label": "Dibrugarh"},
-        {"lat": 25.67, "lng": 91.88, "label": "Shillong"},
-        {"lat": 23.73, "lng": 92.72, "label": "Aizawl"},
-        {"lat": 24.44, "lng": 91.98, "label": "Imphal"},
-        {"lat": 27.33, "lng": 88.62, "label": "Gangtok"},
-        # ── Arunachal Pradesh ────────────────────────────────────────
-        {"lat": 27.08, "lng": 93.62, "label": "Itanagar"},
-        {"lat": 29.13, "lng": 94.73, "label": "Tawang"},
-        # ── Odisha ───────────────────────────────────────────────────
-        {"lat": 20.30, "lng": 85.82, "label": "Bhubaneswar"},
-        {"lat": 21.46, "lng": 83.97, "label": "Sambalpur"},
-        {"lat": 20.46, "lng": 84.68, "label": "Bolangir"},
-        # ── Chhattisgarh ─────────────────────────────────────────────
-        {"lat": 21.25, "lng": 81.63, "label": "Raipur"},
-        {"lat": 22.09, "lng": 82.15, "label": "Bilaspur"},
-        # ── Madhya Pradesh ───────────────────────────────────────────
-        {"lat": 23.18, "lng": 77.42, "label": "Bhopal"},
-        {"lat": 22.72, "lng": 75.86, "label": "Indore"},
-        {"lat": 21.15, "lng": 79.09, "label": "Nagpur"},
-        {"lat": 24.18, "lng": 79.95, "label": "Sagar"},
-        # ── Gujarat ──────────────────────────────────────────────────
-        {"lat": 23.02, "lng": 72.57, "label": "Ahmedabad"},
-        {"lat": 21.17, "lng": 72.83, "label": "Surat"},
-        {"lat": 22.30, "lng": 70.78, "label": "Rajkot"},
-        {"lat": 23.24, "lng": 69.67, "label": "Bhuj"},
-        # ── Maharashtra ──────────────────────────────────────────────
-        {"lat": 19.08, "lng": 72.88, "label": "Mumbai"},
-        {"lat": 18.52, "lng": 73.86, "label": "Pune"},
-        {"lat": 19.88, "lng": 75.34, "label": "Aurangabad"},
-        {"lat": 21.15, "lng": 79.09, "label": "Nagpur"},
-        # ── Andhra Pradesh / Telangana ───────────────────────────────
-        {"lat": 17.39, "lng": 78.49, "label": "Hyderabad"},
-        {"lat": 16.31, "lng": 80.44, "label": "Vijayawada"},
-        {"lat": 14.47, "lng": 78.82, "label": "Kurnool"},
-        {"lat": 17.69, "lng": 83.22, "label": "Visakhapatnam"},
-        # ── Karnataka ────────────────────────────────────────────────
-        {"lat": 12.97, "lng": 77.59, "label": "Bengaluru"},
-        {"lat": 15.34, "lng": 75.13, "label": "Hubli"},
-        {"lat": 15.85, "lng": 74.50, "label": "Belgaum"},
-        {"lat": 12.30, "lng": 76.65, "label": "Mysuru"},
-        # ── Goa ──────────────────────────────────────────────────────
-        {"lat": 15.50, "lng": 73.83, "label": "Panaji"},
-        # ── Kerala ───────────────────────────────────────────────────
-        {"lat": 8.89,  "lng": 76.62, "label": "Thiruvananthapuram"},
-        {"lat": 10.00, "lng": 76.95, "label": "Kochi"},
-        {"lat": 11.25, "lng": 75.78, "label": "Kozhikode"},
-        {"lat": 8.52,  "lng": 76.94, "label": "Kanyakumari"},
-        # ── Tamil Nadu ───────────────────────────────────────────────
-        {"lat": 13.08, "lng": 80.27, "label": "Chennai"},
-        {"lat": 9.93,  "lng": 78.12, "label": "Madurai"},
-        {"lat": 10.76, "lng": 78.81, "label": "Tiruchirappalli"},
-        {"lat": 11.66, "lng": 78.15, "label": "Salem"},
-        {"lat": 8.73,  "lng": 77.73, "label": "Tirunelveli"},
-        # ── Andaman & Nicobar Islands ────────────────────────────────
-        {"lat": 11.67, "lng": 92.74, "label": "Port Blair"},
-        {"lat": 13.10, "lng": 93.06, "label": "Diglipur"},
-        {"lat": 8.07,  "lng": 93.56, "label": "Car Nicobar"},
-        # ── Lakshadweep ──────────────────────────────────────────────
-        {"lat": 10.57, "lng": 72.64, "label": "Kavaratti"},
-        {"lat": 11.13, "lng": 72.64, "label": "Agatti"},
-        {"lat": 8.29,  "lng": 73.05, "label": "Minicoy"},
-    ]
+    # INDIA_LAND_POINTS are now loaded from the module-level scope.
 
     for lp in INDIA_LAND_POINTS:
         key = (round(lp["lat"], 2), round(lp["lng"], 2))
@@ -491,7 +659,9 @@ def get_fleet_weather(company_id: str):
     points = points[:100]
 
     # ── 2. Fetch live weather from Open-Meteo ──────────────────────────────
-    live_cells = fetch_real_weather(points)
+    weather_data = fetch_real_weather(points)
+    live_cells = weather_data.get("cells", [])
+    telemetry = weather_data.get("telemetry", [])
 
     # Back-fill vehicle weather from live results (match by nearest coord)
     coord_weather_map: dict[tuple, dict] = {}
@@ -507,7 +677,10 @@ def get_fleet_weather(company_id: str):
                 "condition": c["condition"],
                 "icon": c["icon"],
                 "multiplier": 1.5 if c["condition"] in ("Rain", "Storm", "Snow") else 1.1,
-                "temp": c.get("temp")
+                "temp": c.get("temp"),
+                "us_aqi": c.get("us_aqi"),
+                "precipitation": c.get("precipitation"),
+                "wind_gusts": c.get("wind_gusts")
             }
         else:
             v["weather"] = {"condition": "Clear", "icon": "☀️", "multiplier": 1.0}
@@ -630,7 +803,8 @@ def get_fleet_weather(company_id: str):
         "cells":          cells,
         "affected_count": affected_count,
         "affected_list":  affected_list,
-        "recommendation": recommendation
+        "recommendation": recommendation,
+        "telemetry":      telemetry
     }
 
 @router.get("/messages/{user_id}")
@@ -679,3 +853,122 @@ def broadcast_message(data: dict):
         messages_db.insert(m)
         
     return {"message": f"Broadcast sent to {len(drivers)} drivers"}
+
+
+@router.get("/weather-at")
+def get_weather_at(lat: float, lng: float, company_id: str):
+    import urllib.request
+    import json as _json
+    from backend.database import JSONDatabase
+    from backend.services.route_engine import haversine
+
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+        f"?latitude={lat}&longitude={lng}"
+        "&current=weather_code,temperature_2m,cloud_cover,wind_speed_10m,relative_humidity_2m,precipitation,wind_gusts_10m,visibility,surface_pressure,uv_index"
+        "&forecast_days=1"
+    )
+    
+    aqi_url = (
+        "https://air-quality-api.open-meteo.com/v1/air-quality"
+        f"?latitude={lat}&longitude={lng}"
+        "&current=us_aqi,pm2_5,pm10"
+        "&forecast_days=1"
+    )
+
+    temp, wmo, wind_speed, humidity, precipitation, wind_gusts, visibility, surface_pressure, uv_index = (
+        25.0, 0, 10.0, 60.0, 0.0, 12.0, 10000.0, 1013.0, 5.0
+    )
+    us_aqi, pm2_5, pm10 = 50.0, 12.0, 20.0
+
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            data = _json.loads(resp.read())
+            current = data.get("current", {})
+            temp = current.get("temperature_2m", temp)
+            wmo = current.get("weather_code", wmo)
+            wind_speed = current.get("wind_speed_10m", wind_speed)
+            humidity = current.get("relative_humidity_2m", humidity)
+            precipitation = current.get("precipitation", precipitation)
+            wind_gusts = current.get("wind_gusts_10m", wind_gusts)
+            visibility = current.get("visibility", visibility)
+            surface_pressure = current.get("surface_pressure", surface_pressure)
+            uv_index = current.get("uv_index", uv_index)
+    except Exception as exc:
+        print(f"[weather-at] Forecast fetch failed: {exc}")
+
+    try:
+        with urllib.request.urlopen(aqi_url, timeout=5) as resp:
+            data = _json.loads(resp.read())
+            current = data.get("current", {})
+            us_aqi = current.get("us_aqi", us_aqi)
+            pm2_5 = current.get("pm2_5", pm2_5)
+            pm10 = current.get("pm10", pm10)
+    except Exception as exc:
+        print(f"[weather-at] AQI fetch failed: {exc}")
+
+    # Determine condition name & icon
+    cond = "Clear"
+    icon = "☀️"
+    if wmo in (51, 53, 55, 61, 63, 80, 81, 65, 82):
+        cond = "Rain"
+        icon = "🌧️"
+    elif wmo in (95, 96, 99):
+        cond = "Storm"
+        icon = "⛈️"
+    elif wmo in (71, 73, 75, 77, 85, 86):
+        cond = "Snow"
+        icon = "❄️"
+    elif wmo in (45, 48):
+        cond = "Fog"
+        icon = "🌫️"
+    elif wmo > 0:
+        cond = "Cloudy"
+        icon = "☁️"
+
+    # Find active shipments within 50km
+    shipments_db = JSONDatabase("shipments")
+    active_shipments = [s for s in shipments_db.get_filtered({"company_id": company_id}) if s and s.get("status") in ["assigned", "in_transit"]]
+    nearby_shipments = []
+    for s in active_shipments:
+        curr_loc = s.get("current_location") or s.get("pickup")
+        if curr_loc and curr_loc.get("lat"):
+            dist = haversine(lat, lng, curr_loc["lat"], curr_loc["lng"])
+            if dist <= 50.0:
+                s_copy = s.copy()
+                s_copy["distance_to_click_km"] = round(dist, 1)
+                nearby_shipments.append(s_copy)
+
+    # Calculate Risk Score
+    risk = 0.0
+    if precipitation is not None:
+        risk += min(30.0, precipitation * 5.0)
+    if wind_speed is not None:
+        risk += min(25.0, (wind_speed / 50.0) * 25.0)
+    if temp is not None:
+        if temp > 35.0:
+            risk += min(25.0, (temp - 35.0) * 2.5)
+        elif temp < 5.0:
+            risk += min(20.0, (5.0 - temp) * 2.0)
+    if us_aqi is not None and us_aqi > 100:
+        risk += min(20.0, ((us_aqi - 100) / 400.0) * 20.0)
+
+    return {
+        "weather": {
+            "temp": temp,
+            "condition": cond,
+            "icon": icon,
+            "humidity": humidity,
+            "wind_speed": wind_speed,
+            "wind_gusts": wind_gusts,
+            "precipitation": precipitation,
+            "visibility": visibility,
+            "surface_pressure": surface_pressure,
+            "uv_index": uv_index,
+            "us_aqi": us_aqi,
+            "pm2_5": pm2_5,
+            "pm10": pm10,
+            "risk_score": round(risk, 1)
+        },
+        "shipments": nearby_shipments
+    }

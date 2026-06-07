@@ -133,14 +133,17 @@ const smartConfig = {
 
 async function loadShipments() {
     try {
-        const [shipments, drivers, vehicles] = await Promise.all([
-            apiCall(`/shipments/?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`),
-            apiCall(`/manager/vehicles?company_id=${localStorage.getItem('manager_id')}`)
+        const companyId = localStorage.getItem('manager_id');
+        const [shipments, drivers, vehicles, activeAlerts] = await Promise.all([
+            apiCall(`/shipments/?company_id=${companyId}`),
+            apiCall(`/manager/drivers?company_id=${companyId}`),
+            apiCall(`/manager/vehicles?company_id=${companyId}`),
+            apiCall(`/tracking/alerts/active?company_id=${companyId}`)
         ]);
         globalShipments = shipments;
         globalDrivers = drivers;
         globalVehicles = vehicles;
+        window.globalActiveAlerts = activeAlerts || [];
         
         applyShipmentFilters();
     } catch(e) {
@@ -226,6 +229,22 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                 performanceMsg = `<div style="color:var(--danger); font-size:0.7rem;">⏰ ${getTranslation('delayed')}: ${diffMins}m</div>`;
             }
 
+            const affectedAlert = (window.globalActiveAlerts || []).find(al => al.shipment_id === s.id);
+            let calamityBadge = '';
+            if (affectedAlert) {
+                calamityBadge = `
+                    <div style="background:rgba(239, 68, 68, 0.15); border:1px solid var(--danger); color:var(--danger); font-size:0.7rem; font-weight:bold; padding:4px 8px; border-radius:6px; margin-top:5px; display:inline-block;">
+                        ⚠️ Calamity: ${affectedAlert.type ? affectedAlert.type.toUpperCase() : 'Hazard'}
+                    </div>
+                `;
+            } else if (s.stage && (s.stage.includes('Halted: Disaster Zone') || s.stage.includes('Diverted: Safe Hub'))) {
+                calamityBadge = `
+                    <div style="background:rgba(239, 68, 68, 0.15); border:1px solid var(--danger); color:var(--danger); font-size:0.7rem; font-weight:bold; padding:4px 8px; border-radius:6px; margin-top:5px; display:inline-block;">
+                        ⚠️ Halted by AI
+                    </div>
+                `;
+            }
+
             tr.className = rowClass;
             tr.innerHTML = `
                 <td>
@@ -243,6 +262,7 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     <span class="status-pill status-${s.status}" style="font-size:0.7rem;">${getTranslation(s.status + '_label') || s.status}</span>
                     <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.stage ? (getTranslation(s.stage.toLowerCase().replace(/ /g, '_')) || s.stage) : '---'}</div>
                     ${performanceMsg}
+                    ${calamityBadge}
                 </td>
                 <td>
                     <div style="font-size:0.8rem; font-weight:600;">${getTranslation('eway_label')}: ${s.eway_bill_no || getTranslation('na')}</div>
@@ -280,10 +300,29 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     const lDriverName = (ld && ld.name) ? ld.name : getTranslation('unassigned');
                     const lPlate = (lv && lv.number_plate) ? lv.number_plate : getTranslation('no_vehicle');
 
+                    const legAffectedAlert = (window.globalActiveAlerts || []).find(al => al.shipment_id === leg.id);
+                    let legCalamityBadge = '';
+                    if (legAffectedAlert) {
+                        legCalamityBadge = `
+                            <div style="background:rgba(239, 68, 68, 0.15); border:1px solid var(--danger); color:var(--danger); font-size:0.65rem; font-weight:bold; padding:2px 4px; border-radius:4px; margin-top:2px;">
+                                ⚠️ ${legAffectedAlert.type ? legAffectedAlert.type.toUpperCase() : 'Hazard'}
+                            </div>
+                        `;
+                    } else if (leg.stage && (leg.stage.includes('Halted: Disaster Zone') || leg.stage.includes('Diverted: Safe Hub'))) {
+                        legCalamityBadge = `
+                            <div style="background:rgba(239, 68, 68, 0.15); border:1px solid var(--danger); color:var(--danger); font-size:0.65rem; font-weight:bold; padding:2px 4px; border-radius:4px; margin-top:2px;">
+                                ⚠️ Halted by AI
+                            </div>
+                        `;
+                    }
+
                     lTr.innerHTML = `
                         <td style="padding-left:30px; font-size:0.8rem; color:var(--text-muted);">↳ Leg ${leg.leg_order}: ${leg.description}</td>
                         <td>---</td>
-                        <td><span class="status-pill status-${leg.status}" style="font-size:0.6rem;">${leg.status.toUpperCase()}</span></td>
+                        <td>
+                            <span class="status-pill status-${leg.status}" style="font-size:0.6rem;">${leg.status.toUpperCase()}</span>
+                            ${legCalamityBadge}
+                        </td>
                         <td>
                             <div style="font-size:0.75rem; color:var(--text-muted);">${getTranslation('eway_label')}: ${leg.eway_bill_no || getTranslation('na')}</div>
                         </td>
@@ -1633,6 +1672,8 @@ window.openShipmentDetailModal = function(id) {
             </div>
         </div>
 
+        <div id="sd-weather-alert-block" style="display:none; margin-bottom:20px;"></div>
+
         <div class="intel-block" style="background:rgba(255,255,255,0.03); padding:15px; border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">
             <label style="font-size:0.7rem; color:var(--muted); text-transform:uppercase;">Assigned Fleet Intel</label>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
@@ -1663,6 +1704,63 @@ window.openShipmentDetailModal = function(id) {
     }
 
     document.getElementById('sd-content').innerHTML = contentHtml;
+
+    // Check for calamity weather safety alert conditions
+    const affectedAlert = (window.globalActiveAlerts || []).find(al => al.shipment_id === s.id);
+    const hasCalamity = affectedAlert || (s.stage && (s.stage.includes('Halted: Disaster Zone') || s.stage.includes('Diverted: Safe Hub')));
+    
+    if (hasCalamity) {
+        document.getElementById('sd-weather-alert-block').style.display = 'block';
+        document.getElementById('sd-weather-alert-block').innerHTML = `
+            <div class="glass-card" style="padding: 15px; border: 1px dashed var(--danger); background: rgba(239, 68, 68, 0.05); border-radius: 12px; margin-bottom: 20px;">
+                <h4 style="color: var(--danger); margin: 0 0 10px 0; font-size: 0.95rem; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                    ⚠️ Weather & Route Safety Alert
+                </h4>
+                <div id="sd-weather-details" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); text-align: left;">
+                    Loading live weather conditions at shipment location...
+                </div>
+                <div style="margin-top: 12px; display: flex; gap: 10px; justify-content: flex-start;">
+                    <button class="btn-primary" onclick="window.location.href='manager_weather.html'" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        🗺️ View Weather Map
+                    </button>
+                    <button class="btn-primary" onclick="openManualSplit('${s.id}')" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--warning); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                        🔀 Manual Divert
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        const loc = s.current_location && s.current_location.lat ? s.current_location : s.pickup;
+        apiCall(`/tracking/weather-at?lat=${loc.lat}&lng=${loc.lng}&company_id=${localStorage.getItem('manager_id')}`)
+            .then(w => {
+                const temp = w.temp !== undefined ? `${w.temp}°C` : 'N/A';
+                const aqi = w.us_aqi !== undefined ? `${w.us_aqi} AQI` : 'N/A';
+                const wind = w.wind_speed !== undefined ? `${w.wind_speed} km/h` : 'N/A';
+                const cond = w.condition || 'N/A';
+                const icon = w.icon || '🌡️';
+                
+                document.getElementById('sd-weather-details').innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                        <div>🌡️ <b>Temp:</b> ${temp}</div>
+                        <div>💨 <b>Wind:</b> ${wind}</div>
+                        <div>🌫️ <b>AQI:</b> ${aqi}</div>
+                        <div>${icon} <b>Cond:</b> ${cond}</div>
+                    </div>
+                    <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; font-weight: bold; color: var(--danger); font-size: 0.8rem;">
+                        Status: ${affectedAlert ? affectedAlert.message : (s.stage || 'Halted due to calamity warning.')}
+                    </div>
+                `;
+            })
+            .catch(err => {
+                console.error("Failed to load modal weather", err);
+                document.getElementById('sd-weather-details').innerHTML = `
+                    <span style="color: var(--danger);">Failed to query live weather details.</span>
+                    <div style="margin-top: 8px; font-weight: bold; color: var(--danger); font-size: 0.8rem;">
+                        Status: ${affectedAlert ? affectedAlert.message : (s.stage || 'Halted due to calamity warning.')}
+                    </div>
+                `;
+            });
+    }
 
     const isMultiLegParent = !s.is_leg && (s.status === 'split' || s.route_type === 'multi-leg');
     

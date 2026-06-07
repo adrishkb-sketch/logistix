@@ -6,19 +6,15 @@ drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")
 
 def check_calamity_zone(lat: float, lng: float, company_id: str) -> Optional[Dict[str, Any]]:
-    from backend.database import JSONDatabase
     from backend.services.route_engine import haversine
-    weather_db = JSONDatabase("weather_cells")
-    cells = weather_db.get_all()
+    from backend.routers.tracking import get_all_active_weather_cells
+    cells = get_all_active_weather_cells(company_id)
     for cell in cells:
         if not cell:
             continue
-        c_comp_id = cell.get("company_id")
-        if c_comp_id and str(c_comp_id) != str(company_id):
-            continue
         
         # Only natural calamities pause deliveries
-        calamities = ["cyclone", "flood", "earthquake", "hail", "riot"]
+        calamities = ["cyclone", "flood", "earthquake", "hail", "riot", "heatwave"]
         c_type = str(cell.get("type", "")).lower()
         if not any(c in c_type for c in calamities):
             continue
@@ -35,15 +31,11 @@ def check_calamity_zone(lat: float, lng: float, company_id: str) -> Optional[Dic
     return None
 
 def check_any_weather_cell(lat: float, lng: float, company_id: str) -> Optional[Dict[str, Any]]:
-    from backend.database import JSONDatabase
     from backend.services.route_engine import haversine
-    weather_db = JSONDatabase("weather_cells")
-    cells = weather_db.get_all()
+    from backend.routers.tracking import get_all_active_weather_cells
+    cells = get_all_active_weather_cells(company_id)
     for cell in cells:
         if not cell:
-            continue
-        c_comp_id = cell.get("company_id")
-        if c_comp_id and str(c_comp_id) != str(company_id):
             continue
             
         if cell.get("shapeType") == "polyline":
@@ -61,7 +53,7 @@ def is_weather_disrupted(lat: float, lng: float, company_id: str) -> bool:
     cell = check_any_weather_cell(lat, lng, company_id)
     if cell:
         c_type = str(cell.get("type", "")).lower()
-        if any(c in c_type for c in ["rain", "storm", "snow", "fog", "wind", "cyclone", "flood", "hail", "earthquake", "riot"]):
+        if any(c in c_type for c in ["rain", "storm", "snow", "fog", "wind", "cyclone", "flood", "hail", "earthquake", "riot", "heatwave"]):
             return True
             
     from backend.services.route_engine import predict_weather_impact
@@ -334,48 +326,130 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, Any]):
     from backend.database import JSONDatabase
+    from backend.services.route_engine import haversine
     from datetime import datetime
+    import uuid
+
     shipments_db = JSONDatabase("shipments")
     vehicles_db = JSONDatabase("vehicles")
     drivers_db = JSONDatabase("drivers")
+    warehouses_db = JSONDatabase("warehouses")
     
     all_shipments = shipments_db.get_all()
     broken_shipments = [s for s in all_shipments if s and s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit"]]
     
-    if not broken_shipments: return None
+    if not broken_shipments:
+        return None
     
     driver = drivers_db.get_by_id(driver_id)
     company_id = driver.get("company_id")
     total_weight = sum(s.get("weight", 0) for s in broken_shipments)
     
-    potential_rescuers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id and d.get("id") != driver_id]
+    # Get broken vehicle type and category
+    broken_vehicle = vehicles_db.get_by_id(vehicle_id)
+    if not broken_vehicle:
+        return None
+    
+    broken_type = broken_vehicle.get("type", "").lower()
+    is_heavy = "heavy" in broken_type or "large" in broken_type
+    is_small = "small" in broken_type or ("truck" in broken_type and not is_heavy)
+    is_van = "van" in broken_type or "delivery" in broken_type
+    is_bike = "bike" in broken_type or "scooty" in broken_type or "scooter" in broken_type
+    is_ev = "ev" in broken_type
+    is_drone = "drone" in broken_type
+
+    # Sort warehouses by distance from breakdown location
+    warehouses = warehouses_db.get_all()
+    warehouses.sort(key=lambda w: haversine(location["lat"], location["lng"], w["lat"], w["lng"]))
+
     rescue_pair = None
-    for d in potential_rescuers:
-        if d.get("assigned_vehicle_id") and d.get("verification_status") == "verified":
+    for wh in warehouses:
+        potential_drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id and d.get("id") != driver_id and d.get("status") in ("available", "on_duty") and d.get("assigned_vehicle_id")]
+        for d in potential_drivers:
             v = vehicles_db.get_by_id(d["assigned_vehicle_id"])
-            if v and v.get("status") == "available" and v.get("capacity", 0) >= total_weight:
+            if not v or v.get("status") != "available" or v.get("is_operational") == False:
+                continue
+            
+            # Check if vehicle is present at this warehouse
+            v_wh = v.get("present_warehouse_id") or v.get("current_warehouse_id") or v.get("base_warehouse_id")
+            if v_wh != wh["id"]:
+                continue
+            
+            # Check type match
+            t = v.get("type", "").lower()
+            matches = False
+            if is_heavy: matches = ("heavy" in t or "large" in t)
+            elif is_small: matches = ("small" in t or ("truck" in t and not ("heavy" in t or "large" in t)))
+            elif is_van: matches = ("van" in t or "delivery" in t)
+            elif is_bike: matches = ("bike" in t or "scooty" in t or "scooter" in t)
+            elif is_ev: matches = ("ev" in t)
+            elif is_drone: matches = ("drone" in t)
+            
+            if matches and v.get("capacity", 0) >= total_weight:
                 rescue_pair = (d, v)
                 break
-                
+        if rescue_pair:
+            break
+
     if rescue_pair:
         new_d, new_v = rescue_pair
+        
+        # Calculate ratio and split wages
+        total_original_wage = 0.0
+        ratios = []
+        
         for s in broken_shipments:
+            p_lat, p_lng = s["pickup"]["lat"], s["pickup"]["lng"]
+            d_lat, d_lng = s["drop"]["lat"], s["drop"]["lng"]
+            b_lat, b_lng = location["lat"], location["lng"]
+            
+            total_dist = haversine(p_lat, p_lng, d_lat, d_lng)
+            completed_dist = haversine(p_lat, p_lng, b_lat, b_lng)
+            
+            ratio = 0.0
+            if total_dist > 0:
+                ratio = min(1.0, max(0.0, completed_dist / total_dist))
+            ratios.append(ratio)
+            
+            finance = s.get("finance", {})
+            orig_wage = finance.get("driver_wage", 0.0)
+            total_original_wage += orig_wage
+            
+            rescue_wage = round(orig_wage * (1.0 - ratio), 2)
+            
+            # Update shipment to rescue driver/vehicle and rescue wage
+            new_finance = finance.copy()
+            new_finance["driver_wage"] = rescue_wage
+            
             shipments_db.update(s["id"], {
                 "assigned_driver_id": new_d["id"],
                 "assigned_vehicle_id": new_v["id"],
-                "status": "assigned"
+                "status": "assigned",
+                "finance": new_finance
             })
+            
             logs = s.get("logs", [])
             logs.append({
                 "status": "assigned",
-                "message": f"🚑 RESCUE: Shipments transferred to {new_d['name']} due to vehicle breakdown.",
+                "message": f"🚑 RESCUE: Shipments transferred to {new_d['name']} due to vehicle breakdown. Payout split ratio: {round(ratio * 100, 1)}% original driver, {round((1.0 - ratio) * 100, 1)}% rescue driver.",
                 "reason": "Automatic rescue initiated.",
                 "location": location,
                 "timestamp": datetime.utcnow().isoformat() + "Z"
             })
             shipments_db.update(s["id"], {"logs": logs})
+            
         vehicles_db.update(new_v["id"], {"status": "assigned"})
-        return {"driver_name": new_d["name"], "vehicle_id": new_v["id"]}
+        
+        avg_ratio = sum(ratios) / len(ratios) if ratios else 0.0
+        
+        return {
+            "driver_name": new_d["name"],
+            "vehicle_id": new_v["id"],
+            "ratio": avg_ratio,
+            "original_wage_total": total_original_wage,
+            "split_wage": round(total_original_wage * avg_ratio, 2)
+        }
+        
     return None
 
 def reoptimize_driver_route(driver_id: str):

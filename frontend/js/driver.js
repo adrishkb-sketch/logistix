@@ -345,6 +345,30 @@ async function loadDashStats() {
         document.getElementById('d-stat-ontime').innerText = `${stats.timely_percent}%`;
         document.getElementById('d-stat-safety').innerText = (5 - (stats.fatigue_score/100)).toFixed(1);
 
+        // Populate Driver Notifications Banner
+        const notifContainer = document.getElementById('driver-notifications-container');
+        if (notifContainer) {
+            const unread = (stats.notifications || []).filter(n => !n.read);
+            if (unread.length > 0) {
+                notifContainer.style.display = 'block';
+                notifContainer.innerHTML = unread.map(n => `
+                    <div class="glass-card" style="padding: 1rem; border-left: 4px solid var(--warning); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.05); border-radius: 12px;">
+                        <div style="font-size: 0.85rem; color: var(--text); text-align: left;">
+                            <div style="font-weight: bold; color: var(--warning); margin-bottom: 4px;">⚠️ ${n.title || 'Notification'}</div>
+                            <div>${n.message || ''}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">${n.timestamp ? new Date(n.timestamp).toLocaleString() : ''}</div>
+                        </div>
+                        <button class="btn-primary" onclick="markDriverNotifRead('${n.id}')" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--warning); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 15px;">
+                            Mark Read
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                notifContainer.style.display = 'none';
+                notifContainer.innerHTML = '';
+            }
+        }
+
         // Populate Last Trip Breakdown
         const summaryBox = document.getElementById('last-trip-summary');
         const summaryContent = document.getElementById('trip-breakdown-content');
@@ -1998,6 +2022,18 @@ window.switchDriverTab = switchDriverTab;
 window.toggleDuty = typeof toggleDuty !== 'undefined' ? toggleDuty : undefined;
 window.toggleWatchSync = typeof toggleWatchSync !== 'undefined' ? toggleWatchSync : undefined;
 window.startRest = startRest;
+
+window.markDriverNotifRead = async function(notifId) {
+    try {
+        const dId = localStorage.getItem('driver_id');
+        await apiCall(`/driver/${dId}/notifications/read`, 'POST', { notification_id: notifId });
+        showNotification("Notification marked as read.", "success");
+        loadDashStats(); // refresh
+    } catch(e) {
+        console.error("Failed to mark notification as read", e);
+        showNotification("Failed to mark notification as read", "error");
+    }
+};
 
 
 function openIncidentModal() {

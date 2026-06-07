@@ -43,6 +43,9 @@ alerts_db = JSONDatabase("alerts")
 @router.get("/{driver_id}/shipments")
 def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(driver_id, x_logistix_context)
+    driver = drivers_db.get_by_id(driver_id)
+    if driver and driver.get("company_id"):
+        check_and_run_dynamic_reassignment(driver["company_id"])
     from backend.services.cold_chain import calculate_shipment_vitality
     assigned = shipments_db.get_filtered({"assigned_driver_id": driver_id})
     
@@ -673,6 +676,11 @@ def get_driver_stats(driver_id: str):
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
         
+    if driver.get("company_id"):
+        check_and_run_dynamic_reassignment(driver["company_id"])
+        # Reload driver after potential notifications update
+        driver = drivers_db.get_by_id(driver_id)
+
     my_ships = shipments_db.get_filtered({"assigned_driver_id": driver_id})
     
     delivered = [s for s in my_ships if s.get("status") == "delivered"]
@@ -719,7 +727,8 @@ def get_driver_stats(driver_id: str):
         "fatigue_score": driver.get("fatigue_score", 0),
         "perf_history": perf_history,
         "vehicle_health": vehicle_health,
-        "fuel_efficiency": fuel_efficiency
+        "fuel_efficiency": fuel_efficiency,
+        "notifications": driver.get("notifications", [])
     }
 
 @router.post("/{driver_id}/health")
@@ -884,6 +893,22 @@ def report_breakdown(driver_id: str, location: Dict[str, Any]):
     
     from backend.services.assignment import assign_rescue_vehicle
     res = assign_rescue_vehicle(driver_id, vehicle_id, location)
+    
+    if res:
+        breakdowns_db = JSONDatabase("breakdowns")
+        breakdowns_db.insert({
+            "id": str(uuid.uuid4()),
+            "driver_id": driver_id,
+            "vehicle_id": vehicle_id,
+            "original_wage_total": res["original_wage_total"],
+            "split_wage": res["split_wage"],
+            "ratio": res["ratio"],
+            "coordinates": location,
+            "status": "pending_repair",
+            "company_id": driver["company_id"],
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        
     return {"message": "Breakdown reported and rescue initiated", "rescue": res}
 
 @router.post("/{driver_id}/maintenance-complete")
@@ -893,8 +918,47 @@ def maintenance_complete(driver_id: str):
         raise HTTPException(status_code=404, detail="Driver or vehicle not found")
         
     vehicle_id = driver["assigned_vehicle_id"]
-    vehicles_db.update(vehicle_id, {"status": "available"})
-    return {"message": "Vehicle is now available for duty"}
+    vehicle = vehicles_db.get_by_id(vehicle_id)
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+
+    # Find pending breakdowns for this vehicle
+    breakdowns_db = JSONDatabase("breakdowns")
+    pending = [b for b in breakdowns_db.get_all() if b and b.get("vehicle_id") == vehicle_id and b.get("status") == "pending_repair"]
+    
+    for bk in pending:
+        orig_driver_id = bk["driver_id"]
+        orig_driver = drivers_db.get_by_id(orig_driver_id)
+        if orig_driver:
+            split_wage = bk.get("split_wage", 0.0)
+            new_bal = orig_driver.get("wallet_balance", 0.0) + split_wage
+            new_total = orig_driver.get("total_earnings", 0.0) + split_wage
+            drivers_db.update(orig_driver_id, {
+                "wallet_balance": round(new_bal, 2),
+                "total_earnings": round(new_total, 2)
+            })
+            
+            # Log as Expense in Ledger
+            ledger_db = JSONDatabase("ledger")
+            ledger_db.insert({
+                "type": "EXPENSE",
+                "desc": f"Driver Payout (Breakdown Share): {orig_driver.get('name')} for breakdown split (Wage: {bk.get('original_wage_total')}, Ratio: {round(bk.get('ratio', 0) * 100, 1)}%)",
+                "amount": split_wage,
+                "timestamp": datetime.utcnow().isoformat(),
+                "company_id": orig_driver["company_id"]
+            })
+            
+        bk["status"] = "resolved"
+        breakdowns_db.update(bk["id"], bk)
+
+    base_wh = vehicle.get("base_warehouse_id")
+    vehicles_db.update(vehicle_id, {
+        "status": "available",
+        "present_warehouse_id": base_wh,
+        "current_warehouse_id": base_wh
+    })
+    
+    return {"message": "Vehicle maintenance complete. Original driver paid out (if split), vehicle present warehouse reset to base hub."}
 
 @router.get("/wallet/{driver_id}")
 def get_driver_wallet(driver_id: str):
@@ -1255,4 +1319,137 @@ def end_rest(driver_id: str):
         "fatigue_at_drive_start": 0.0
     })
     return {"message": "Rest period completed successfully."}
+
+
+def check_and_run_dynamic_reassignment(company_id: str):
+    from backend.database import JSONDatabase
+    from backend.services.assignment import auto_assign_shipment, check_calamity_zone, is_weather_disrupted
+    from datetime import datetime
+    import uuid
+
+    shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+
+    all_shipments = shipments_db.get_filtered({"company_id": company_id, "status": "assigned"})
+    for s in all_shipments:
+        if s.get("status") != "assigned":
+            continue
+        
+        driver_id = s.get("assigned_driver_id")
+        vehicle_id = s.get("assigned_vehicle_id")
+        if not driver_id or not vehicle_id:
+            continue
+
+        # Check if weather/calamity disrupts this assignment
+        p_lat, p_lng = s["pickup"]["lat"], s["pickup"]["lng"]
+        d_lat, d_lng = s["drop"]["lat"], s["drop"]["lng"]
+
+        # 1. Calamity check
+        p_calamity = check_calamity_zone(p_lat, p_lng, company_id)
+        d_calamity = check_calamity_zone(d_lat, d_lng, company_id)
+
+        disrupted = False
+        reason = ""
+
+        if p_calamity:
+            disrupted = True
+            reason = f"Active calamity ({p_calamity.get('type', 'disaster').upper()}) in pickup area."
+        elif d_calamity:
+            disrupted = True
+            reason = f"Active calamity ({d_calamity.get('type', 'disaster').upper()}) in destination area."
+        else:
+            # 2. Vehicle-specific weather check
+            vehicles_db = JSONDatabase("vehicles")
+            vehicle = vehicles_db.get_by_id(vehicle_id)
+            if vehicle:
+                v_type = str(vehicle.get("type", "")).lower()
+                is_bike_scooty = "bike" in v_type or "scooty" in v_type or "scooter" in v_type
+                is_drone = "drone" in v_type
+                if is_bike_scooty or is_drone:
+                    weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id) or is_weather_disrupted(d_lat, d_lng, company_id)
+                    if weather_disrupted:
+                        disrupted = True
+                        reason = f"Weather disruption makes vehicle type '{v_type}' unsuitable."
+
+        if disrupted:
+            # Perform re-assignment
+            s_temp = s.copy()
+            s_temp["assigned_driver_id"] = None
+            s_temp["assigned_vehicle_id"] = None
+            s_temp["status"] = "pending"
+            
+            res = auto_assign_shipment(s_temp)
+            new_driver_id = None
+            new_vehicle_id = None
+            
+            if res and "error" not in res:
+                new_driver_id = res.get("assigned_driver_id")
+                new_vehicle_id = res.get("assigned_vehicle_id")
+                
+            # If the reassignment changed the driver
+            if new_driver_id != driver_id:
+                # Notify original driver
+                orig_driver = drivers_db.get_by_id(driver_id)
+                if orig_driver:
+                    notifications = orig_driver.get("notifications", [])
+                    notifications.append({
+                        "id": str(uuid.uuid4()),
+                        "shipment_id": s["id"],
+                        "message": f"Shipment '{s.get('description', s['id'])}' was deassigned from you due to: {reason}",
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "read": False
+                    })
+                    orig_driver["notifications"] = notifications
+                    drivers_db.update(driver_id, orig_driver)
+                
+                # Apply new assignment
+                if new_driver_id:
+                    s["assigned_driver_id"] = new_driver_id
+                    s["assigned_vehicle_id"] = new_vehicle_id
+                    s["status"] = "assigned"
+                    s["stage"] = "Assigned to Driver"
+                    s["logs"] = s.get("logs", []) + [{
+                        "status": "assigned",
+                        "message": f"🔄 Dynamic Reassignment: Driver changed due to weather disruption.",
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }]
+                else:
+                    # No new driver could be assigned
+                    s["assigned_driver_id"] = None
+                    s["assigned_vehicle_id"] = None
+                    s["status"] = "pending"
+                    s["stage"] = "Awaiting AI/Manual Assignment"
+                    s["logs"] = s.get("logs", []) + [{
+                        "status": "pending",
+                        "message": f"⚠️ Shipment deassigned due to: {reason}. Reset to pending.",
+                        "timestamp": datetime.utcnow().isoformat() + "Z"
+                    }]
+                
+                shipments_db.update(s["id"], s)
+
+
+@router.get("/{driver_id}/notifications")
+def get_driver_notifications(driver_id: str):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    return driver.get("notifications", [])
+
+
+@router.post("/{driver_id}/notifications/read")
+def mark_notifications_read(driver_id: str, data: dict):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    notif_id = data.get("notification_id")
+    notifications = driver.get("notifications", [])
+    
+    for n in notifications:
+        if notif_id is None or n.get("id") == notif_id:
+            n["read"] = True
+            
+    driver["notifications"] = notifications
+    drivers_db.update(driver_id, driver)
+    return {"message": "Notifications updated successfully."}
 

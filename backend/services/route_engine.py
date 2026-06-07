@@ -96,71 +96,8 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
         return False
 
     if disaster_cells is None:
-        from backend.database import JSONDatabase
-        disaster_cells = JSONDatabase("weather_cells").get_all() or []
-        
-        # Also query Open-Meteo for live weather at current location and destination
-        # to detect live calamities (storms, high winds/cyclones, extreme rain/floods, heatwaves)
-        curr_loc = shipment.get("current_location") or shipment.get("pickup")
-        dest = shipment.get("drop")
-        if curr_loc and curr_loc.get("lat") and dest and dest.get("lat"):
-            try:
-                import urllib.request
-                import json as _json
-                lats = f"{round(curr_loc['lat'], 4)},{round(dest['lat'], 4)}"
-                lngs = f"{round(curr_loc['lng'], 4)},{round(dest['lng'], 4)}"
-                url = (
-                    "https://api.open-meteo.com/v1/forecast"
-                    f"?latitude={lats}&longitude={lngs}"
-                    "&current=weather_code,temperature_2m,cloud_cover,wind_speed_10m"
-                    "&forecast_days=1"
-                )
-                with urllib.request.urlopen(url, timeout=3) as resp:
-                    raw = _json.loads(resp.read())
-                if isinstance(raw, dict):
-                    raw = [raw]
-                
-                for i, result in enumerate(raw):
-                    current = result.get("current", {})
-                    wmo = current.get("weather_code", 0)
-                    temp = current.get("temperature_2m")
-                    wind_speed = current.get("wind_speed_10m")
-                    
-                    loc = curr_loc if i == 0 else dest
-                    
-                    # Map severe weather codes or wind speed to live calamities
-                    c_type = None
-                    c_cond = None
-                    c_icon = None
-                    
-                    if wmo in (95, 96, 99):
-                        c_type = "storm"
-                        c_cond = "Severe Storm"
-                        c_icon = "⛈️"
-                    elif wmo in (65, 82) or (wind_speed is not None and wind_speed >= 40.0):
-                        c_type = "flood" if wmo in (65, 82) else "cyclone"
-                        c_cond = "Heavy Flooding" if wmo in (65, 82) else "Cyclone Wind Warning"
-                        c_icon = "🌊" if wmo in (65, 82) else "🌀"
-                    elif temp is not None and temp >= 45.0:
-                        c_type = "heatwave"
-                        c_cond = "Extreme Heatwave"
-                        c_icon = "🔥"
-                        
-                    if c_type:
-                        disaster_cells.append({
-                            "id": f"live-detected-{shipment['id']}-{i}",
-                            "type": c_type,
-                            "condition": c_cond,
-                            "icon": c_icon,
-                            "lat": loc["lat"],
-                            "lng": loc["lng"],
-                            "radius": 40.0, # 40km warning radius for live detected hazards
-                            "shapeType": "circle",
-                            "severity": "critical",
-                            "is_simulation": False
-                        })
-            except Exception as e:
-                print(f"[Calamity Detection] Failed to fetch live weather for routing check: {e}")
+        from backend.routers.tracking import get_all_active_weather_cells
+        disaster_cells = get_all_active_weather_cells(shipment.get("company_id"))
         
     curr_loc = shipment.get("current_location") or shipment.get("pickup")
     if not curr_loc or not curr_loc.get("lat"):

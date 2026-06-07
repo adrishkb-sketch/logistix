@@ -1478,8 +1478,8 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
     from backend.services.route_engine import haversine
     all_shipments = shipments_db.get_all()
     
-    L_MILE_TYPES = ["EV-Cargo", "Bike/Scooty", "Delivery Van", "Scooty", "Bike"]
-    M_MILE_TYPES = ["Large Truck", "Small Truck", "Truck (Heavy)"]
+    L_MILE_TYPES = ["ev-cargo", "bike/scooty", "delivery van", "scooty", "bike"]
+    M_MILE_TYPES = ["large truck", "small truck", "truck (heavy)"]
 
     for d in drivers:
         v_id = d.get("assigned_vehicle_id")
@@ -1487,7 +1487,7 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
         v = next((veh for veh in vehicles if veh["id"] == v_id), None)
         if not v: continue
         
-        v_type = v.get("type", "")
+        v_type = v.get("type", "").lower()
         v_base = v.get("base_warehouse_id")
 
         # 1. Filter by Vehicle Type Rules
@@ -1497,7 +1497,7 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
             if not any(t in v_type for t in M_MILE_TYPES): continue
         
         # 2. Weather Filter
-        if bad_weather and any(t in v_type for t in ["Bike", "Scooty"]): continue
+        if bad_weather and any(t in v_type for t in ["bike", "scooty"]): continue
 
         # 3. Capacity Check (Current load + this shipment)
         active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == v["id"] and s.get("status") in ["assigned", "in_transit"]]
