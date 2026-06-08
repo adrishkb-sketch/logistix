@@ -14,6 +14,9 @@ app = FastAPI(title="Logistix API", version="1.0.0")
 
 @app.on_event("startup")
 def startup_migration():
+    if os.environ.get("VERCEL") == "1":
+        print("[Migration] Skipping startup migration on Vercel to prevent gateway timeouts.")
+        return
     try:
         from backend.services.finance_engine import migrate_all_shipment_finances
         migrate_all_shipment_finances()

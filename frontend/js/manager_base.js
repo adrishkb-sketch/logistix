@@ -469,7 +469,6 @@ if (typeof L !== 'undefined') {
         modal.style.opacity = '1';
     };
 
-    window.closeZoomModal = function() {
         const modal = document.getElementById('image-zoom-modal');
         if (modal) {
             modal.style.opacity = '0';
@@ -477,4 +476,191 @@ if (typeof L !== 'undefined') {
         }
     };
 }
+
+window.fintechChart = null;
+
+window.initFintechOracle = async function() {
+    try {
+        const mId = localStorage.getItem('manager_id');
+        const stats = await apiCall(`/manager/fintech-stats?company_id=${mId}`);
+        const pl = await apiCall(`/manager/finance/p-and-l?company_id=${mId}`);
+        
+        // Update Overview Cards
+        const updateVal = (id, val, prefix='₹ ') => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = prefix + (val || 0).toLocaleString();
+        };
+
+        updateVal('fintech-daily-revenue', stats.daily_revenue);
+        updateVal('fintech-total-revenue', stats.total_revenue);
+        updateVal('fintech-total-expenses', stats.total_expenses);
+        updateVal('fintech-cod', stats.digital_escrow);
+        updateVal('fintech-profit', stats.net_profit);
+
+        // Render Settlements (Timeline of past 5 transactions)
+        const sList = document.getElementById('fintech-settlement-list');
+        if (sList) {
+            sList.innerHTML = stats.recent_settlements.length ? stats.recent_settlements.map(s => `
+                <div class="glass-card" style="padding:14px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div style="width:36px; height:36px; border-radius:10px; background:${s.type === 'REVENUE' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
+                            ${s.type === 'REVENUE' ? '💰' : '💸'}
+                        </div>
+                        <div>
+                            <div style="font-weight:700; font-size:0.9rem; color:var(--text);">${s.desc}</div>
+                            <small style="color:var(--text-muted);">${new Date(s.timestamp).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'})}</small>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="color:${s.type === 'REVENUE' ? 'var(--success)' : 'var(--danger)'}; font-weight:800; font-size:1rem;">
+                            ${s.type === 'REVENUE' ? '+' : '-'}₹${s.amount.toLocaleString()}
+                        </div>
+                        <small style="color:var(--text-muted); text-transform:uppercase; font-size:0.65rem; letter-spacing:1px;">${s.type}</small>
+                    </div>
+                </div>
+            `).join('') : '<p style="text-align:center; color:var(--text-muted);">No recent settlements</p>';
+        }
+
+        // Payout Table (Drivers with pending balance)
+        const pTable = document.getElementById('fintech-payout-table');
+        if (pTable) {
+            const allDrivers = await apiCall(`/manager/drivers?company_id=${mId}`);
+            const pending = allDrivers.filter(d => (d.wallet_balance || 0) > 0);
+            pTable.innerHTML = pending.length ? pending.map(d => `
+                <tr>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05);">
+                            <div>
+                                <div style="font-weight:700;">${d.name}</div>
+                                <small style="color:var(--text-muted);">${d.license_type} • ${d.login_id}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color:var(--success); font-weight:800; font-size:1.1rem;">₹${(d.wallet_balance || 0).toLocaleString()}</td>
+                    <td>
+                        <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:#10b981; border-radius:8px;" onclick="settlePayout('${d.id}')">
+                            Release Funds
+                        </button>
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="3" style="text-align:center; padding:30px; color:var(--text-muted);">No pending driver payouts</td></tr>';
+        }
+
+        // Payment Audit (Unpaid/Paid status monitoring)
+        const paTable = document.getElementById('fintech-payment-audit-table');
+        if (paTable) {
+            const allShips = await apiCall(`/shipments?company_id=${mId}`);
+            const recentShips = allShips.filter(s => !s.is_leg).slice(-20).reverse();
+            paTable.innerHTML = recentShips.length ? recentShips.map(s => `
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">${s.description}</div>
+                        <small style="color:var(--text-muted); font-family:monospace;">ID: ${s.id.substring(0,8)}</small>
+                    </td>
+                    <td style="font-weight:700;">₹${(s.finance?.suggested_price || 0).toLocaleString()}</td>
+                    <td>
+                        <span class="status-pill status-${s.payment_status}" style="font-size:0.65rem;">
+                            ${s.payment_status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td>
+                        ${s.payment_status === 'unpaid' ? `
+                            <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:var(--accent); border-radius:8px;" onclick="confirmCustomerPayment('${s.id}')">
+                                Manual Pay
+                            </button>
+                        ` : '<span style="color:var(--success); font-weight:bold;">✓ Verified</span>'}
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">No shipment history</td></tr>';
+        }
+
+        // Escrow Table (Active Smart Contracts)
+        const eTable = document.getElementById('fintech-escrow-table');
+        if (eTable) {
+            eTable.innerHTML = stats.escrow_contracts.length ? stats.escrow_contracts.map(c => `
+                <tr>
+                    <td style="font-family:monospace; font-size:0.8rem; color:var(--primary); font-weight:700;">${c.id}</td>
+                    <td><b>${c.counterparty}</b></td>
+                    <td style="font-weight:700;">₹${c.value.toLocaleString()}</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <div style="width:8px; height:8px; border-radius:50%; background:${c.status.includes('LOCKED') ? '#f59e0b' : '#3b82f6'};"></div>
+                            <span style="font-size:0.75rem; font-weight:bold; color:var(--text);">${c.status}</span>
+                        </div>
+                    </td>
+                    <td style="font-size:0.85rem; color:var(--text-muted);">
+                        ${c.status.includes('AWAITING') ? `
+                            <button class="btn-primary" style="padding:4px 10px; font-size:0.7rem; background:var(--warning); color:#000; border-radius:6px; font-weight:800;" onclick="confirmShipmentPayment('${c.shipment_id}')">
+                                Confirm Payment 💰
+                            </button>
+                        ` : c.eta}
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">No active smart contracts in escrow</td></tr>';
+        }
+
+        // Fund Requests Table
+        const frTable = document.getElementById('fintech-fund-requests-table');
+        if (frTable) {
+            const fundRequests = await apiCall(`/manager/finance/fund-requests?company_id=${mId}`);
+            frTable.innerHTML = fundRequests.length ? fundRequests.map(r => `
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">${r.driver_name}</div>
+                        <small style="color:var(--text-muted);">ID: ${r.driver_id.substring(0,5)}</small>
+                    </td>
+                    <td style="color:var(--warning); font-weight:800; font-size:1.1rem;">₹${r.amount.toLocaleString()}</td>
+                    <td>
+                        <div style="font-weight:700;">${r.fund_type.toUpperCase()}</div>
+                        <small style="color:var(--accent); font-weight:bold;">${r.distance} KM (Leg)</small>
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:var(--success); border-radius:8px;" onclick="approveFundRequest('${r.alert_id}')">Approve</button>
+                            <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:var(--danger); border-radius:8px;" onclick="rejectFundRequest('${r.alert_id}')">Reject</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('') : '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No pending requests</td></tr>';
+        }
+
+        // Revenue Velocity Chart
+        const chartEl = document.getElementById('fintechRevenueChart');
+        if (chartEl && typeof Chart !== 'undefined') {
+            const ctx = chartEl.getContext('2d');
+            if (window.fintechChart) window.fintechChart.destroy();
+            window.fintechChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: stats.chart_data.labels,
+                    datasets: [{
+                        label: 'Revenue Flow',
+                        data: stats.chart_data.values,
+                        borderColor: '#10b981',
+                        borderWidth: 3,
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9aa4b2', font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { color: '#9aa4b2', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+    } catch (e) { console.error("Fintech Oracle Error:", e); }
+};
+
+window.initFintechOracle = window.initFintechOracle;
+const initFintechOracle = window.initFintechOracle;
+
 

@@ -2032,3 +2032,52 @@ def approve_checkup(vehicle_id: str, x_logistix_context: Optional[str] = Header(
             alerts_db.update(a["id"], {"status": "resolved"})
             
     return {"message": "Vehicle checkup approved. Health restored to 100%.", "vehicle_health_score": 100.0}
+
+# Gemini AI Assistant Router
+@router.post("/ai/chat")
+def manager_ai_chat(data: dict):
+    from backend.services.gemini_service import call_gemini
+    prompt = data.get("prompt", "")
+    role = data.get("role", "manager")
+    
+    system_instruction = (
+        "You are Logistix AI, a senior logistics operations consultant and ESG coordinator. "
+        "Provide professional, concise advice to the warehouse manager or driver regarding routes, "
+        "safety protocols, carbon footprints, or general fleet operations. Be specific and helpful. "
+        "Do not write overly long essays. Use bullet points."
+    )
+    
+    response_text = call_gemini(prompt, system_instruction)
+    return {"response": response_text}
+
+@router.post("/ai/esg-audit")
+def manager_esg_audit(data: dict):
+    from backend.services.gemini_service import call_gemini
+    company_id = data.get("company_id")
+    # Fetch current carbon stats, EV fleets, etc.
+    from backend.database import JSONDatabase
+    vehicles_db = JSONDatabase("vehicles")
+    shipments_db = JSONDatabase("shipments")
+    
+    all_vehicles = vehicles_db.get_filtered({"company_id": company_id})
+    all_ships = shipments_db.get_filtered({"company_id": company_id})
+    
+    total_vehicles = len(all_vehicles)
+    ev_vehicles = len([v for v in all_vehicles if "ev" in v.get("type", "").lower() or "battery" in v.get("type", "").lower() or "drone" in v.get("type", "").lower()])
+    total_ships = len(all_ships)
+    perishables = len([s for s in all_ships if s.get("is_perishable")])
+    
+    prompt = (
+        f"Perform an ESG (Environmental, Social, Governance) audit for a logistics company with the following metrics:\n"
+        f"- Total Fleet Size: {total_vehicles} vehicles\n"
+        f"- EV & Clean Energy Fleet: {ev_vehicles} vehicles\n"
+        f"- Total Shipments Processed: {total_ships}\n"
+        f"- Cold Chain (Perishable) Cargo: {perishables}\n\n"
+        f"Provide a structured audit report with 'Environmental Impact Rating', 'Key Risks', 'Eco-Efficiency Suggestions', "
+        f"and alignment with UN SDGs (Goal 7, 9, 11, 13)."
+    )
+    
+    system_instruction = "You are a professional ESG Strategy Lead. Output a clean markdown audit report."
+    response_text = call_gemini(prompt, system_instruction)
+    return {"audit": response_text}
+
