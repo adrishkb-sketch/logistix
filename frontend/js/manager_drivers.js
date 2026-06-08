@@ -483,6 +483,17 @@ window.autoAssignFleet = async function() {
     }
 };
 
+window.unlinkAllIdleFleet = async function() {
+    if (!confirm("Are you sure you want to unlink all drivers and vehicles that are currently NOT assigned to an active shipment?")) return;
+    try {
+        const res = await apiCall(`/manager/unlink-idle-fleet?company_id=${companyId}`, 'POST');
+        alert(res.message);
+        loadDriversAndVehicles();
+    } catch (e) {
+        console.error("Unlink all idle fleet failed:", e);
+    }
+};
+
 // ── CRUD Listeners ──────────────────────────────────────────────────────────
 
 function setupFormListeners() {

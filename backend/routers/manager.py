@@ -1162,6 +1162,47 @@ def unlink_vehicle(driver_id: str):
         
     return {"message": "Unlinked successfully"}
 
+@router.post("/unlink-idle-fleet")
+def unlink_idle_fleet(company_id: str):
+    all_drivers = drivers_db.get_all()
+    all_vehicles = vehicles_db.get_all()
+    all_shipments = shipments_db.get_all()
+    
+    # Active shipments (not delivered or cancelled)
+    active_shipments = [s for s in all_shipments if s and s.get("company_id") == company_id and s.get("status") not in ["delivered", "cancelled"]]
+    
+    active_driver_ids = {s.get("assigned_driver_id") for s in active_shipments if s.get("assigned_driver_id")}
+    active_vehicle_ids = {s.get("assigned_vehicle_id") for s in active_shipments if s.get("assigned_vehicle_id")}
+    
+    unlinked_drivers = 0
+    unlinked_vehicles = 0
+    modified_drivers = False
+    modified_vehicles = False
+    
+    for d in all_drivers:
+        if d and d.get("company_id") == company_id and d.get("assigned_vehicle_id"):
+            v_id = d.get("assigned_vehicle_id")
+            if d.get("id") not in active_driver_ids and v_id not in active_vehicle_ids:
+                d["assigned_vehicle_id"] = None
+                d["verification_status"] = "unverified"
+                unlinked_drivers += 1
+                modified_drivers = True
+
+    for v in all_vehicles:
+        if v and v.get("company_id") == company_id and v.get("assigned_driver_id"):
+            d_id = v.get("assigned_driver_id")
+            if v.get("id") not in active_vehicle_ids and d_id not in active_driver_ids:
+                v["assigned_driver_id"] = None
+                unlinked_vehicles += 1
+                modified_vehicles = True
+                
+    if modified_drivers:
+        drivers_db.write(all_drivers)
+    if modified_vehicles:
+        vehicles_db.write(all_vehicles)
+        
+    return {"message": f"Successfully unlinked {unlinked_drivers} drivers and {unlinked_vehicles} vehicles that were idle."}
+
 @router.post("/verify-driver/{driver_id}")
 def manual_verify_driver(driver_id: str, status: str, vehicle_id: Optional[str] = None):
     if status not in ["verified", "unverified"]:

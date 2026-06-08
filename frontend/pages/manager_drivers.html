@@ -341,7 +341,10 @@
 <div class="glass-card section-card" data-layout-id="drivers-link">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
 <h3 data-i18n="link_driver_vehicle_title" style="margin:0;">Link Driver to Vehicle</h3>
-<button class="btn-primary" data-i18n="btn_auto_assign_all" onclick="autoAssignFleet()" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;">🚀 Auto Assign All</button>
+<div style="display:flex; gap:10px;">
+    <button class="btn-primary" data-i18n="btn_unlink_all_idle" onclick="unlinkAllIdleFleet()" style="width:auto; padding:8px 16px; background:var(--danger); font-size:0.85rem;">🔗 Unlink All Idle</button>
+    <button class="btn-primary" data-i18n="btn_auto_assign_all" onclick="autoAssignFleet()" style="width:auto; padding:8px 16px; background:var(--accent); font-size:0.85rem;">🚀 Auto Assign All</button>
+</div>
 </div>
 <p class="subtitle" data-i18n="link_driver_vehicle_desc">Assign a driver to a vehicle based on license compatibility.</p>
 <form class="form-grid" id="link-form">
