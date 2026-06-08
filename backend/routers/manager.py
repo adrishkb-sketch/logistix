@@ -1102,58 +1102,57 @@ def link_driver_to_vehicle(
     
     return {"message": "Linked successfully"}
 
-import re
-
-def _normalize_type(t):
-    if not t:
-        return ""
-    # Lowercase, remove non-alphanumeric characters
-    norm = re.sub(r'[^a-z0-9]', '', str(t).lower())
-    # Fix common typos observed in user data
-    norm = norm.replace('derlivery', 'delivery')
-    norm = norm.replace('scooty', '')
-    
-    # Normalize truck types to match across drivers and vehicles
-    if norm in ['largetruck', 'truckheavy']:
-        return 'heavytruck'
-    if norm in ['smalltruck', 'trucksmall']:
-        return 'smalltruck'
-        
-    return norm
-
 @router.post("/auto-assign-fleet")
 def auto_assign_fleet(company_id: str):
-    # Fetch all data to perform in-memory bulk updates
-    all_drivers = drivers_db.get_all()
+    """
+    Auto-pair unlinked drivers and vehicles.
+    Matching rules (both must be true):
+      1. Same base_warehouse_id
+      2. Vehicle type == Driver license_type  (strict exact string match)
+    If no vehicle matches a driver exactly, the driver is left unlinked.
+    """
+    all_drivers  = drivers_db.get_all()
     all_vehicles = vehicles_db.get_all()
-    
-    # Filter for unassigned for this company
-    drivers = [d for d in all_drivers if d and d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
-    vehicles = [v for v in all_vehicles if v and v.get("company_id") == company_id and v.get("status") == "available" and not v.get("assigned_driver_id")]
-    
+
+    # Only consider truly unlinked items for this company
+    unlinked_drivers  = [d for d in all_drivers  if d and d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
+    unlinked_vehicles = [v for v in all_vehicles if v and v.get("company_id") == company_id and not v.get("assigned_driver_id")]
+
+    # Build a pool index: (hub_id, type) -> list of vehicles  for O(1) lookup
+    pool: dict = {}
+    for v in unlinked_vehicles:
+        key = (v.get("base_warehouse_id", ""), (v.get("type") or "").strip())
+        pool.setdefault(key, []).append(v)
+
+    # Track which records were mutated so we can do targeted DB writes
+    driver_updates:  list = []   # (driver_id, {fields})
+    vehicle_updates: list = []   # (vehicle_id, {fields})
     assigned_count = 0
-    modified = False
-    
-    for d in drivers:
-        # Find matching vehicle: same hub AND robust type matching
-        match = next((v for v in vehicles if v.get("base_warehouse_id") == d.get("base_warehouse_id") and _normalize_type(v.get("type")) == _normalize_type(d.get("license_type"))), None)
-        
-        if match:
-            # Update the dictionaries directly in memory
-            d["assigned_vehicle_id"] = match["id"]
-            d["verification_status"] = "unverified"
-            match["assigned_driver_id"] = d["id"]
-            
-            # Remove from pool to prevent double assignment
-            vehicles.remove(match)
-            assigned_count += 1
-            modified = True
-            
-    # Save the updated data back to the database in a single write operation
-    if modified:
-        drivers_db.write(all_drivers)
-        vehicles_db.write(all_vehicles)
-            
+
+    for d in unlinked_drivers:
+        hub   = d.get("base_warehouse_id", "")
+        dtype = (d.get("license_type") or "").strip()   # exact match required
+        key   = (hub, dtype)
+
+        candidates = pool.get(key, [])
+        if not candidates:
+            continue  # No exact match — leave driver unlinked
+
+        match = candidates.pop(0)   # Take first available vehicle
+        if not candidates:
+            pool.pop(key, None)     # Clean up empty slot
+
+        # Record updates (do NOT write to DB inside the loop)
+        driver_updates.append((d["id"],       {"assigned_vehicle_id": match["id"], "verification_status": "unverified"}))
+        vehicle_updates.append((match["id"],  {"assigned_driver_id":  d["id"]}))
+        assigned_count += 1
+
+    # Flush all changes to DB using individual updates (safe for Turso + large datasets)
+    for driver_id, fields in driver_updates:
+        drivers_db.update(driver_id, fields)
+    for vehicle_id, fields in vehicle_updates:
+        vehicles_db.update(vehicle_id, fields)
+
     return {"message": f"Successfully auto-assigned {assigned_count} driver-vehicle pairs.", "count": assigned_count}
 
 @router.post("/unlink-vehicle")
@@ -1171,44 +1170,60 @@ def unlink_vehicle(driver_id: str):
 
 @router.post("/unlink-idle-fleet")
 def unlink_idle_fleet(company_id: str):
-    all_drivers = drivers_db.get_all()
-    all_vehicles = vehicles_db.get_all()
+    """
+    Unlink drivers and vehicles that are NOT currently assigned to an active shipment.
+    Single-pass in-memory batch: read all once, mutate in-memory, write once per table.
+    O(1) disk operations regardless of fleet size.
+    """
+    # ── Batch read ──────────────────────────────────────────────────────────
     all_shipments = shipments_db.get_all()
-    
-    # Active shipments (not delivered or cancelled)
-    active_shipments = [s for s in all_shipments if s and s.get("company_id") == company_id and s.get("status") not in ["delivered", "cancelled"]]
-    
-    active_driver_ids = {s.get("assigned_driver_id") for s in active_shipments if s.get("assigned_driver_id")}
+    all_drivers   = drivers_db.get_all()
+    all_vehicles  = vehicles_db.get_all()
+
+    active_shipments = [
+        s for s in all_shipments
+        if s and s.get("company_id") == company_id
+        and s.get("status") not in ["delivered", "cancelled"]
+    ]
+    active_driver_ids  = {s.get("assigned_driver_id")  for s in active_shipments if s.get("assigned_driver_id")}
     active_vehicle_ids = {s.get("assigned_vehicle_id") for s in active_shipments if s.get("assigned_vehicle_id")}
-    
-    unlinked_drivers = 0
+
+    unlinked_drivers  = 0
     unlinked_vehicles = 0
-    modified_drivers = False
+    modified_drivers  = False
     modified_vehicles = False
-    
+
+    # ── In-memory mutations (zero DB I/O inside loop) ────────────────────────
     for d in all_drivers:
-        if d and d.get("company_id") == company_id and d.get("assigned_vehicle_id"):
-            v_id = d.get("assigned_vehicle_id")
-            if d.get("id") not in active_driver_ids and v_id not in active_vehicle_ids:
-                d["assigned_vehicle_id"] = None
-                d["verification_status"] = "unverified"
-                unlinked_drivers += 1
-                modified_drivers = True
+        if not d or d.get("company_id") != company_id:
+            continue
+        if not d.get("assigned_vehicle_id"):
+            continue  # already unlinked
+        if d["id"] not in active_driver_ids and d["assigned_vehicle_id"] not in active_vehicle_ids:
+            d["assigned_vehicle_id"] = None
+            d["verification_status"] = "unverified"
+            unlinked_drivers += 1
+            modified_drivers  = True
 
     for v in all_vehicles:
-        if v and v.get("company_id") == company_id and v.get("assigned_driver_id"):
-            d_id = v.get("assigned_driver_id")
-            if v.get("id") not in active_vehicle_ids and d_id not in active_driver_ids:
-                v["assigned_driver_id"] = None
-                unlinked_vehicles += 1
-                modified_vehicles = True
-                
+        if not v or v.get("company_id") != company_id:
+            continue
+        if not v.get("assigned_driver_id"):
+            continue  # already unlinked
+        if v["id"] not in active_vehicle_ids and v["assigned_driver_id"] not in active_driver_ids:
+            v["assigned_driver_id"] = None
+            unlinked_vehicles += 1
+            modified_vehicles  = True
+
+    # ── Single batch write per table ─────────────────────────────────────────
     if modified_drivers:
         drivers_db.write(all_drivers)
     if modified_vehicles:
         vehicles_db.write(all_vehicles)
-        
-    return {"message": f"Successfully unlinked {unlinked_drivers} drivers and {unlinked_vehicles} vehicles that were idle."}
+
+    return {
+        "message": f"Successfully unlinked {unlinked_drivers} drivers and {unlinked_vehicles} vehicles that were idle."
+    }
 
 @router.post("/verify-driver/{driver_id}")
 def manual_verify_driver(driver_id: str, status: str, vehicle_id: Optional[str] = None):
