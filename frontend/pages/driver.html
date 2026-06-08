@@ -293,7 +293,6 @@
                 </div>
             </div>
 
-
             <div id="active-tab" style="display:none;" data-layout-container="active-content">
                 <div id="instruction-banner" class="instruction-banner" data-layout-id="active-instruction">
                     <!-- Injected via JS -->
@@ -311,7 +310,6 @@
                 
                 <div id="alert-container"></div>
             </div>
-
 
             <div id="chat-tab" style="display:none;">
                 <div class="glass-card section-card" style="padding:1.5rem; border-left:4px solid var(--accent);">
@@ -470,7 +468,6 @@
         </div>
     </div>
 
-
     <!-- Automated Control Guide Modal -->
     <div id="voice-help-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10010; width:90%; max-width:450px; padding:24px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); border:1px solid var(--primary);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -514,26 +511,8 @@
         <button class="btn-primary" style="margin-top:20px; width:100%;" onclick="document.getElementById('voice-help-modal').style.display='none'" data-i18n="btn_close">Close Guide</button>
     </div>
 
-    <!-- Verification Modal (QR + Photo) -->
-    <div id="verify-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:95%; max-width:500px; padding:24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); border:1px solid var(--primary);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 id="verify-modal-title" style="margin:0; font-weight:800;" data-i18n="security_verification">Verification Required</h3>
-            <button onclick="closeVerifyModal()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
-        </div>
-        
-        <div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden; border:2px solid var(--primary); background:#000;"></div>
-        
-        <div id="qr-success-msg" style="display:none; margin-top:15px; padding:15px; background:rgba(72,187,120,0.1); border:1px solid var(--success); border-radius:10px; text-align:center;">
-            <p style="color:var(--success); font-weight:bold; margin:0;" data-i18n="qr_matched">✅ QR Code Verified Successfully!</p>
-        </div>
-
-        <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
-            <button id="btn-submit-verify" class="btn-primary" style="width:100%; display:none;" onclick="closeVerifyModal()" data-i18n="btn_done">Done</button>
-            <button id="btn-manual-verify" class="btn-primary" style="width:100%; display:none; background:var(--warning); color:#000;" onclick="manualVerify(currentVerifyId, 'pickup')" data-i18n="btn_manual_verify">⚠️ Verify Manually (Audit Required)</button>
-        </div>
-        
-        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted); text-align:center;" data-i18n="camera_qr_msg">Point your camera at the shipment's QR code to proceed.</p>
-    </div>
+    <!-- OTP Verification handled dynamically via openDriverOTPModal() in driver.js -->
+</div>
 
     <!-- Health Vitals Modal -->
     <div id="health-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
@@ -562,8 +541,7 @@
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="../js/translator.js?v=2.2"></script>
+<script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
     <script src="../js/voice.js?v=2.2"></script>
     <script src="../js/api.js?v=2.2"></script>

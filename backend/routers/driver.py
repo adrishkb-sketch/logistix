@@ -1080,9 +1080,19 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
     
-    qr_input = data.get("qr_data")
-    if shipment.get("qr_code_data") != qr_input and qr_input != "MANUAL_OVERRIDE":
-        raise HTTPException(status_code=400, detail="Invalid QR Code")
+    qr_input = str(data.get("qr_data", "")).strip()
+    valid_codes = ["MANUAL_OVERRIDE"]
+    if shipment.get("pickup_code"):
+        valid_codes.append(str(shipment["pickup_code"]).strip())
+    if shipment.get("delivery_code"):
+        valid_codes.append(str(shipment["delivery_code"]).strip())
+    if shipment.get("delivery_otp"):
+        valid_codes.append(str(shipment["delivery_otp"]).strip())
+    if shipment.get("qr_code_data"):
+        valid_codes.append(str(shipment["qr_code_data"]).strip())
+
+    if qr_input not in valid_codes:
+        raise HTTPException(status_code=400, detail="Invalid Verification OTP Code")
 
     # SEQUENTIAL LEG ENFORCEMENT
     if shipment.get("is_leg"):

@@ -223,11 +223,6 @@
 </div>
 </div>
 
-
-
-
-
-
 <!-- Persistent Report Issue Button -->
 <button data-i18n="btn_report_issue" id="report-issue-btn" onclick="openIncidentModal()" style="display:none; position:fixed; bottom:20px; right:20px; background:var(--danger); color:white; border:none; padding:14px 24px; border-radius:30px; font-weight:bold; font-size:1rem; cursor:pointer; box-shadow:0 10px 25px rgba(229,62,62,0.4); z-index:1000; transition:all 0.2s ease;">
         🚨 Report Issue
@@ -313,21 +308,7 @@
 </div>
 <button class="btn-primary" data-i18n="btn_close" onclick="document.getElementById('voice-help-modal').style.display='none'" style="margin-top:20px; width:100%;">Close Guide</button>
 </div>
-<!-- Verification Modal (QR + Photo) -->
-<div class="glass-card" id="verify-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10005; width:95%; max-width:500px; padding:24px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); border:1px solid var(--primary);">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-<h3 data-i18n="security_verification" id="verify-modal-title" style="margin:0; font-weight:800;">Verification Required</h3>
-<button onclick="closeVerifyModal()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">✖</button>
-</div>
-<div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden; border:2px solid var(--primary); background:#000;"></div>
-<div id="qr-success-msg" style="display:none; margin-top:15px; padding:15px; background:rgba(72,187,120,0.1); border:1px solid var(--success); border-radius:10px; text-align:center;">
-<p data-i18n="qr_matched" style="color:var(--success); font-weight:bold; margin:0;">✅ QR Code Verified Successfully!</p>
-</div>
-<div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
-<button class="btn-primary" data-i18n="btn_done" id="btn-submit-verify" onclick="closeVerifyModal()" style="width:100%; display:none;">Done</button>
-<button class="btn-primary" data-i18n="btn_manual_verify" id="btn-manual-verify" onclick="manualVerify(currentVerifyId, 'pickup')" style="width:100%; display:none; background:var(--warning); color:#000;">⚠️ Verify Manually (Audit Required)</button>
-</div>
-<p data-i18n="camera_qr_msg" style="margin-top:15px; font-size:0.8rem; color:var(--text-muted); text-align:center;">Point your camera at the shipment's QR code to proceed.</p>
+<!-- OTP Verification handled dynamically via openDriverOTPModal() in driver.js -->
 </div>
 <!-- Health Vitals Modal -->
 <div class="glass-card" id="health-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999; width:90%; max-width:400px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
@@ -362,7 +343,6 @@
 </div> <!-- end driver-layout -->
 <!-- Scripts -->
 <script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
 <script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
 <script src="../js/voice.js?v=2.2"></script>

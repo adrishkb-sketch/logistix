@@ -543,6 +543,55 @@ def update_shipment(shipment_id: str, data: dict):
     stage_changed = data.get("stage") and data["stage"] != shipment.get("stage")
     
     if status_changed or stage_changed:
+        if status_changed and data.get("status") == "delivered" and shipment.get("is_leg"):
+            from backend.database import JSONDatabase
+            drop_wh_id = shipment.get('drop_warehouse_id')
+            driver_id = shipment.get("assigned_driver_id")
+            
+            # Update Driver and Vehicle current location
+            if driver_id:
+                drivers_db = JSONDatabase("drivers")
+                vehicles_db = JSONDatabase("vehicles")
+                driver = drivers_db.get_by_id(driver_id)
+                v_id = shipment.get("assigned_vehicle_id")
+                if driver and v_id:
+                    vehicle = vehicles_db.get_by_id(v_id)
+                    if vehicle:
+                        v_type = (vehicle.get("type") or "").lower()
+                        is_truck = "truck" in v_type
+                        target_wh = drop_wh_id if is_truck else vehicle.get("base_warehouse_id")
+                        
+                        drivers_db.update(driver_id, {"current_warehouse_id": target_wh})
+                        vehicles_db.update(v_id, {
+                            "current_warehouse_id": target_wh,
+                            "present_warehouse_id": target_wh
+                        })
+
+                # CREDIT DRIVER WALLET & POINTS
+                if driver:
+                    leg_cost = shipment.get("finance", {}).get("suggested_price", 0)
+                    driver_share = round(leg_cost * 0.4, 2) # 40% share
+                    drivers_db.update(driver_id, {
+                        "wallet_balance": driver.get("wallet_balance", 0) + driver_share,
+                        "reward_points": driver.get("reward_points", 0) + 10,
+                        "total_earnings": driver.get("total_earnings", 0) + driver_share
+                    })
+                    
+            # Check if there are more legs or if parent should move to next stage
+            p_id = shipment.get("parent_id")
+            if p_id:
+                all_ships = shipments_db.get_filtered({"parent_id": p_id})
+                parent = shipments_db.get_by_id(p_id)
+                legs = sorted(all_ships, key=lambda x: x.get("leg_order", 0))
+                
+                curr_leg_idx = next((i for i, l in enumerate(legs) if l["id"] == shipment_id), -1)
+                if curr_leg_idx < len(legs) - 1:
+                    next_leg = legs[curr_leg_idx + 1]
+                    shipments_db.update(next_leg["id"], {"status": "pending", "stage": "Awaiting Pickup from Hub"})
+                    shipments_db.update(p_id, {"stage": f"Transferring: Leg {curr_leg_idx + 2} in progress"})
+                else:
+                    shipments_db.update(p_id, {"status": "in_transit", "stage": "Out for Final Delivery"})
+
         msg = data.get("stage", shipment.get("stage", "Updated"))
         if data.get("status") == "delivered":
             msg = "Shipment delivered successfully."
@@ -1012,6 +1061,14 @@ def _perform_assignment(shipment_id: str, driver_id: Optional[str], vehicle_id: 
     if not shipment:
         return None
         
+    # Release previous driver/vehicle if they exist and are being changed
+    old_driver_id = shipment.get("assigned_driver_id")
+    old_vehicle_id = shipment.get("assigned_vehicle_id")
+    if old_driver_id and old_driver_id != driver_id:
+        JSONDatabase("drivers").update(old_driver_id, {"status": "available", "current_shipment_id": None})
+    if old_vehicle_id and old_vehicle_id != vehicle_id:
+        JSONDatabase("vehicles").update(old_vehicle_id, {"status": "available"})
+
     d = JSONDatabase("drivers").get_by_id(driver_id) if driver_id else None
     v = JSONDatabase("vehicles").get_by_id(vehicle_id)
     driver_name = d.get("name", "Unknown") if d else "Unknown"
@@ -1082,6 +1139,77 @@ def _perform_assignment(shipment_id: str, driver_id: Optional[str], vehicle_id: 
     except: pass
     
     return updated
+
+class EmergencyReassignRequest(BaseModel):
+    driver_id: str
+    vehicle_id: str
+
+@router.post("/{shipment_id}/emergency-reassign")
+def emergency_reassign(shipment_id: str, data: EmergencyReassignRequest):
+    from backend.database import JSONDatabase
+    from backend.models import ShipmentEvent
+    
+    shipments_db = JSONDatabase("shipments")
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        # Try finding by prefix match
+        all_ships = shipments_db.get_all()
+        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+        
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    target_id = shipment["id"]
+    
+    # If parent shipment has legs, find the active leg (in_transit or assigned or pending)
+    if not shipment.get("is_leg") and (shipment.get("status") == "split" or shipment.get("route_type") == "multi-leg"):
+        all_legs = shipments_db.get_filtered({"parent_id": shipment["id"]})
+        active_leg = next((l for l in all_legs if l.get("status") in ["assigned", "in_transit"]), None)
+        if not active_leg:
+            # Fallback to the first pending leg
+            sorted_legs = sorted(all_legs, key=lambda x: x.get("leg_order", 0))
+            active_leg = next((l for l in sorted_legs if l.get("status") == "pending"), None)
+            
+        if active_leg:
+            target_id = active_leg["id"]
+            shipment = active_leg
+            
+    old_driver_id = shipment.get("assigned_driver_id")
+    old_vehicle_id = shipment.get("assigned_vehicle_id")
+    
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    # Release old driver/vehicle
+    if old_driver_id:
+        drivers_db.update(old_driver_id, {"status": "available", "current_shipment_id": None})
+    if old_vehicle_id:
+        vehicles_db.update(old_vehicle_id, {"status": "available"})
+        
+    # Bind new driver/vehicle
+    drivers_db.update(data.driver_id, {"status": "on_duty", "current_shipment_id": target_id})
+    vehicles_db.update(data.vehicle_id, {"status": "on_duty"})
+    
+    new_driver = drivers_db.get_by_id(data.driver_id)
+    new_vehicle = vehicles_db.get_by_id(data.vehicle_id)
+    
+    driver_name = new_driver.get("name", "Unknown") if new_driver else "Unknown"
+    plate = new_vehicle.get("number_plate", "Unknown") if new_vehicle else "Unknown"
+    
+    log_event = ShipmentEvent(
+        status=shipment.get("status", "assigned"),
+        message=f"⚡ EMERGENCY REASSIGNMENT: Swapped driver to {driver_name} & vehicle to {plate} in real-time.",
+        reason="Forced operational reassignment to meet E-Way bill deadline or resolve alert."
+    )
+    
+    shipments_db.update(target_id, {
+        "assigned_driver_id": data.driver_id,
+        "assigned_vehicle_id": data.vehicle_id,
+        "logs": shipment.get("logs", []) + [log_event.model_dump()],
+        "stage": "Assigned to Driver (Emergency Reassign)"
+    })
+    
+    return {"message": "Emergency reassignment complete", "target_shipment_id": target_id}
 
 @router.post("/{shipment_id}/assign")
 def manual_assign(shipment_id: str, data: ManualAssignRequest):
@@ -1509,8 +1637,8 @@ def _generate_legs(parent_shipment, leg_data):
         distance_km_sum += finance.get("distance_km", 0.0)
 
         # Set codes specifically for Leg 1 and Final Leg
-        leg_pickup_code = p_code if i == 0 else None
-        leg_delivery_code = d_code if i == len(leg_data) - 1 else None
+        leg_pickup_code = p_code if i == 0 else str(random.randint(100000, 999999))
+        leg_delivery_code = d_code if i == len(leg_data) - 1 else str(random.randint(100000, 999999))
 
         l_id = str(uuid.uuid4())
         leg_shipment = Shipment(
@@ -1527,7 +1655,7 @@ def _generate_legs(parent_shipment, leg_data):
             route_type="direct",
             expected_delivery=expected_time.isoformat() + "Z",
             pickup_deadline=p_deadline.isoformat() + "Z",
-            delivery_otp=p_dict.get("delivery_otp"),
+            delivery_otp=leg_delivery_code,
             pickup_code=leg_pickup_code,
             delivery_code=leg_delivery_code,
             logs=[leg_log],

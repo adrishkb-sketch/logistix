@@ -2437,163 +2437,117 @@ setInterval(async () => {
     }
 }, 10000);
 
+// === PREMIUM GLASSMORPHIC OTP VERIFICATION SYSTEM (replaces QR scan) ===
+window.openDriverOTPModal = function(shipmentId, type = 'pickup') {
+    const titleText = type === 'pickup' ? 'Verify Shipment Pickup' : 'Verify Shipment Delivery';
+    const descText = type === 'pickup' 
+        ? 'Enter the 6-digit pickup OTP code provided by the warehouse or sender.' 
+        : 'Enter the 6-digit delivery OTP code provided by the receiver.';
+    const confirmBtnText = type === 'pickup' ? '✓ Verify Pickup' : '✓ Verify Delivery';
 
+    const overlay = document.createElement('div');
+    overlay.className = 'driver-otp-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,15,30,0.9);backdrop-filter:blur(15px);z-index:99999;display:flex;align-items:center;justify-content:center;color:white;';
+    overlay.innerHTML = `
+        <div class="glass-card" style="border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:32px;max-width:400px;width:90%;box-shadow:0 30px 60px rgba(0,0,0,0.6);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);background:#0f172a;text-align:center;">
+            <div style="font-size:3rem;margin-bottom:12px;">${type === 'pickup' ? '📦' : '🏁'}</div>
+            <h3 style="margin:0;font-size:1.3rem;color:var(--primary);font-weight:800;">${titleText}</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin:10px 0 24px 0;line-height:1.5;">${descText}</p>
+            
+            <div style="margin-bottom:20px;text-align:left;">
+                <label style="font-size:0.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:1px;">Enter 6-Digit Code</label>
+                <input id="dr-otp-input" type="text" maxlength="6" pattern="[0-9]*" inputmode="numeric"
+                    placeholder="000000"
+                    style="width:100%;margin-top:8px;font-family:monospace;font-size:1.8rem;font-weight:800;letter-spacing:8px;text-align:center;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:2px solid var(--border);color:var(--text);outline:none;transition:border-color 0.3s;"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6);"/>
+            </div>
+            
+            <div style="display:flex;gap:12px;">
+                <button onclick="this.closest('.driver-otp-overlay').remove()" 
+                    style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:white;font-weight:700;cursor:pointer;transition:background 0.2s;">
+                    Cancel
+                </button>
+                <button id="dr-otp-confirm" onclick="submitDriverOTP('${shipmentId}', '${type}', this)"
+                    style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--primary);color:white;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(79,140,255,0.3);transition:transform 0.2s;">
+                    ${confirmBtnText}
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => document.getElementById('dr-otp-input')?.focus(), 150);
+};
 
-let html5QrScanner = null;
-let currentVerifyId = null;
-let qrVerified = false;
-let qrFailCount = 0;
-
-async function manualVerify(shipmentId, type) {
-    if (!confirm(getTranslation('manual_override_confirm'))) return;
-    try {
-        await apiCall(`/driver/${dId}/verify-qr/${shipmentId}`, 'POST', { qr_data: "MANUAL_OVERRIDE" });
-        closeVerifyModal();
-        showNotification(getTranslation('manual_verification_success'), "success");
-        qrFailCount = 0;
-        loadMissions();
-        if (type === 'delivery') proceedToLastMile(shipmentId);
-    } catch(e) {
-        alert(getTranslation('manual_verification_failed') + ": " + e.message);
+window.submitDriverOTP = async function(shipmentId, type, btn) {
+    const dId = localStorage.getItem('driver_id');
+    const inputEl = document.getElementById('dr-otp-input');
+    const enteredOTP = inputEl?.value?.trim();
+    if (!enteredOTP || enteredOTP.length !== 6) {
+        inputEl.style.border = '2px solid var(--danger)';
+        inputEl.placeholder = 'Must be 6 digits!';
+        return;
     }
-}
-
-window.verifyPickupPrompt = async function(shipmentId) {
-    const code = prompt("Enter the 6-digit Pickup Verification Code:");
-    if (!code) return;
     
-    showNotification("Verifying pickup code...", "info");
+    btn.disabled = true;
+    btn.innerText = 'Verifying...';
+    
     try {
-        const res = await apiCall(`/driver/${dId}/verify-pickup/${shipmentId}?code=${code}`, 'POST');
-        showNotification("Pickup verified successfully! 📦", "success");
-        loadMissions();
+        if (type === 'pickup') {
+            const res = await apiCall(`/driver/${dId}/verify-pickup/${shipmentId}?code=${enteredOTP}`, 'POST');
+            document.querySelector('.driver-otp-overlay')?.remove();
+            showNotification("Pickup verified successfully! 📦", "success");
+            loadMissions();
+        } else {
+            document.querySelector('.driver-otp-overlay')?.remove();
+            
+            alert(getTranslation('capture_photo_at_location') || "Please capture/select a photo as proof of delivery.");
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.capture = 'environment';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) {
+                    showNotification("Proof of delivery photo is required to complete delivery.", "error");
+                    return;
+                }
+                
+                showNotification("Uploading evidence & completing delivery...", "info");
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const uploadData = await uploadRes.json();
+                    const photoUrl = uploadData.image_url || uploadData.url;
+                    
+                    await apiCall(`/driver/${dId}/complete-delivery-code/${shipmentId}?code=${enteredOTP}&image_url=${encodeURIComponent(photoUrl)}`, 'POST');
+                    showNotification("Delivery completed successfully! 🏁", "success");
+                    loadMissions();
+                    loadWallet();
+                } catch(err) {
+                    alert("Error completing delivery: " + (err.detail || err.message));
+                }
+            };
+            input.click();
+        }
     } catch(e) {
+        if (inputEl) inputEl.style.border = '2px solid var(--danger)';
         alert("Verification failed: " + (e.detail || e.message));
+        btn.disabled = false;
+        btn.innerText = type === 'pickup' ? '✓ Verify Pickup' : '✓ Verify Delivery';
     }
 };
 
-window.startTransit = async function(shipmentId) {
-    showNotification("Starting transit...", "info");
-    try {
-        const res = await apiCall(`/driver/${dId}/start-transit/${shipmentId}`, 'POST');
-        showNotification("Transit started successfully! 🚚", "success");
-        loadMissions();
-    } catch(e) {
-        alert("Failed to start transit: " + (e.detail || e.message));
-    }
+window.verifyPickupPrompt = function(shipmentId) {
+    window.openDriverOTPModal(shipmentId, 'pickup');
 };
 
-window.completeDeliveryFlow = async function(shipmentId) {
-    const code = prompt("Enter the 6-digit Delivery Code (provided by receiver):");
-    if (!code) return;
-
-    alert("Please capture/select a photo as proof of delivery.");
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        showNotification("Uploading evidence & completing delivery...", "info");
-        try {
-            // Upload photo first
-            const formData = new FormData();
-            formData.append('file', file);
-            const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
-                method: 'POST',
-                body: formData
-            });
-            const uploadData = await uploadRes.json();
-            const photoUrl = uploadData.image_url || uploadData.url;
-
-            // Complete delivery with code
-            await apiCall(`/driver/${dId}/complete-delivery-code/${shipmentId}?code=${code}&image_url=${encodeURIComponent(photoUrl)}`, 'POST');
-            showNotification("Delivery completed successfully! 🏁", "success");
-            loadMissions();
-            loadWallet();
-        } catch(err) {
-            alert("Error completing delivery: " + (err.detail || err.message));
-        }
-    };
-    input.click();
+window.completeDeliveryFlow = function(shipmentId) {
+    window.openDriverOTPModal(shipmentId, 'delivery');
 };
-
-window.confirmPickup = window.verifyPickupPrompt;
-window.confirmDelivery = window.completeDeliveryFlow;
-
-async function openVerifyModal(shipmentId, type = 'pickup') {
-    if (type === 'pickup') {
-        window.verifyPickupPrompt(shipmentId);
-    } else {
-        window.completeDeliveryFlow(shipmentId);
-    }
-}
-
-async function handleScan(shipmentId, type) {
-    openVerifyModal(shipmentId, type);
-}
-
-function closeVerifyModal() {
-    document.getElementById('verify-modal').style.display = 'none';
-}
-
-async function handleScan(shipmentId, type) {
-    openVerifyModal(shipmentId, type);
-}
-
-async function completeDeliveryFlow(shipmentId) {
-    // Step 1: Scan QR
-    handleScan(shipmentId, 'delivery');
-}
-
-async function proceedToLastMile(shipmentId) {
-    // Step 2: OTP
-    const otp = prompt(getTranslation('enter_delivery_otp'));
-    if (!otp) return;
-
-    // Step 3: Photo
-    alert(getTranslation('capture_photo_at_location'));
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'environment';
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        showNotification(getTranslation('completing_delivery'), "info");
-        
-        try {
-            // Upload photo first
-            const formData = new FormData();
-            formData.append('file', file);
-            const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
-                method: 'POST',
-                body: formData
-            });
-            const uploadData = await uploadRes.json();
-            const photoUrl = uploadData.image_url || uploadData.url;
-
-            // Complete delivery
-            await apiCall(`/driver/${dId}/complete-delivery/${shipmentId}?otp=${otp}&image_url=${encodeURIComponent(photoUrl)}`, 'POST');
-            showNotification(getTranslation('delivery_successful'), "success");
-            loadMissions();
-            loadWallet();
-        } catch(e) {
-            alert(getTranslation('error_label') + ": " + e.message + ". " + getTranslation('check_payment_status'));
-        }
-    };
-    input.click();
-}
-
-function closeVerifyModal() {
-    if (html5QrScanner) html5QrScanner.clear();
-    document.getElementById('verify-modal').style.display = 'none';
-    document.getElementById('btn-manual-verify').style.display = 'none';
-    qrFailCount = 0;
-}
 
 
 async function uploadFile(file) {

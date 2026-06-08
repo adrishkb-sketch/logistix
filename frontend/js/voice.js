@@ -190,6 +190,59 @@ class AutomatedControl {
                 role: "driver",
                 desc: "food_check",
                 action: () => this.triggerDhabaSearch()
+            },
+            "generate_report": {
+                role: "manager",
+                desc: "generate_report",
+                action: () => {
+                    // Open the last viewed shipment's report, or nudge the user
+                    if (typeof window.lastViewedShipmentId !== 'undefined' && window.lastViewedShipmentId) {
+                        if (typeof window.generateShipmentReport === 'function') {
+                            window.generateShipmentReport(window.lastViewedShipmentId);
+                        }
+                    } else {
+                        this.showSection('shipments');
+                    }
+                }
+            },
+            "assign_driver": {
+                role: "manager",
+                desc: "assign_driver",
+                action: () => {
+                    if (typeof window.lastViewedShipmentId !== 'undefined' && window.lastViewedShipmentId) {
+                        if (typeof window.openManualAssignModal === 'function') {
+                            window.openManualAssignModal(window.lastViewedShipmentId);
+                        }
+                    } else {
+                        this.showSection('shipments');
+                    }
+                }
+            },
+            "verify_shipment": {
+                role: "manager",
+                desc: "verify_shipment",
+                action: () => {
+                    if (typeof window.lastViewedShipmentId !== 'undefined' && window.lastViewedShipmentId) {
+                        if (typeof window.managerManualVerify === 'function') {
+                            window.managerManualVerify(window.lastViewedShipmentId);
+                        }
+                    } else {
+                        this.showSection('verifications');
+                    }
+                }
+            },
+            "show_certificate": {
+                role: "manager",
+                desc: "show_certificate",
+                action: () => {
+                    if (typeof window.lastViewedShipmentId !== 'undefined' && window.lastViewedShipmentId) {
+                        if (typeof window.downloadShipmentEsgCertificate === 'function') {
+                            window.downloadShipmentEsgCertificate(window.lastViewedShipmentId);
+                        }
+                    } else {
+                        this.showSection('shipments');
+                    }
+                }
             }
         };
 
@@ -245,7 +298,20 @@ class AutomatedControl {
                 "telemetry status": "status_check",
                 "find dhabas": "food_check",
                 "find food": "food_check",
-                "food points": "food_check"
+                "food points": "food_check",
+                "generate report": "generate_report",
+                "full report": "generate_report",
+                "shipment report": "generate_report",
+                "assign driver": "assign_driver",
+                "driver assign": "assign_driver",
+                "ai assign": "assign_driver",
+                "verify shipment": "verify_shipment",
+                "manual verify": "verify_shipment",
+                "otp override": "verify_shipment",
+                "show certificate": "show_certificate",
+                "green certificate": "show_certificate",
+                "esg certificate": "show_certificate"
+
             },
             hi: {
                 "समस्या": "report_issue",

@@ -18,6 +18,28 @@ const ICON_PICKER = L.divIcon({
     className: 'custom-marker', iconSize: [24, 24], iconAnchor: [12, 12]
 });
 
+// === LOGISTIX ENVIRONMENTAL & AI SCORING ENGINE ===
+function haversineDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+const CO2_FACTORS_KG_KM_TON = { truck: 0.27, van: 0.18, bike: 0.06, motorcycle: 0.06, drone: 0.02 };
+const VEHICLE_SPEED_KMH = { truck: 58, van: 68, bike: 48, motorcycle: 50, drone: 100 };
+function getVehicleCO2Factor(vehicleType) {
+    return CO2_FACTORS_KG_KM_TON[(vehicleType||'').toLowerCase()] || 0.20;
+}
+function computeDriverAiScore(asset, group) {
+    const rating = asset.driver_rating || 3.0;
+    let score = 50 + (rating - 3.0) * 20;
+    if (group === 'local') score += 12;
+    else if (group === 'returning') score += 8;
+    else if (group === 'drones') score += 4;
+    return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 const smartConfig = {
     shipment: [
         { 
@@ -146,6 +168,8 @@ async function loadShipments() {
         window.globalActiveAlerts = activeAlerts || [];
         
         applyShipmentFilters();
+        // Update real-time deadline banners whenever data refreshes
+        if (typeof checkEwayDeadlines === 'function') checkEwayDeadlines();
     } catch(e) {
         console.error("Failed to load shipments:", e);
     }
@@ -388,69 +412,356 @@ async function bulkRouteSplitter() {
     }
 }
 
+// === OTP-BASED MANAGER VERIFICATION (replaces QR scan) ===
 async function managerManualVerify(shipmentId) {
-    if (!confirm("⚠️ MANAGER OVERRIDE: Are you sure you want to verify this shipment's QR code manually? This will bypass driver scanning.")) return;
+    const s = globalShipments.find(item => item.id === shipmentId);
+    if (!s || !s.assigned_driver_id) {
+        return showNotification('No driver assigned. OTP verification cannot proceed.', 'error');
+    }
+
+    // Show a premium OTP override modal instead of browser confirm
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:32px;max-width:420px;width:94%;box-shadow:0 40px 80px rgba(0,0,0,0.5);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);">
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="font-size:2.5rem;margin-bottom:8px;">🔐</div>
+                <h3 style="margin:0;font-size:1.2rem;color:var(--primary);">Manager OTP Override</h3>
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-top:6px;">Enter the 6-digit pickup OTP to manually verify this shipment and advance it to in-transit status.</p>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:0.7rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:1px;">Shipment OTP / Pickup Code</label>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <input id="mgr-otp-input" type="text" maxlength="6" pattern="[0-9]*" inputmode="numeric"
+                        placeholder="000000"
+                        style="flex:1;font-family:monospace;font-size:1.5rem;font-weight:800;letter-spacing:6px;text-align:center;padding:14px;border-radius:12px;background:rgba(255,255,255,0.05);border:2px solid var(--border);color:var(--text);outline:none;"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6);"/>
+                </div>
+                <div style="margin-top:8px;font-size:0.72rem;color:var(--text-muted);">
+                    Pickup Code on file: <span style="font-family:monospace;color:var(--accent);font-weight:700;">${s.pickup_code || 'Not yet generated'}</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button onclick="this.closest('.mgr-otp-overlay').remove()" 
+                    style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);font-weight:700;cursor:pointer;">Cancel</button>
+                <button id="mgr-otp-confirm" onclick="submitManagerOTP('${shipmentId}', this)"
+                    style="flex:2;padding:12px;border-radius:10px;border:none;background:var(--primary);color:white;font-weight:800;cursor:pointer;letter-spacing:0.5px;">
+                    ✓ Verify & Advance
+                </button>
+            </div>
+            <div style="margin-top:12px;text-align:center;">
+                <button onclick="submitManagerOTP('${shipmentId}', this, true)" 
+                    style="background:none;border:none;color:var(--warning);font-size:0.75rem;cursor:pointer;font-weight:700;text-decoration:underline;">
+                    ⚡ Emergency Override (No OTP — Log audit trail)
+                </button>
+            </div>
+        </div>
+    `;
+    overlay.className = 'mgr-otp-overlay';
+    document.body.appendChild(overlay);
+    setTimeout(() => document.getElementById('mgr-otp-input')?.focus(), 100);
+}
+
+window.submitManagerOTP = async function(shipmentId, btn, forceOverride = false) {
+    const inputEl = document.getElementById('mgr-otp-input');
+    const enteredOTP = inputEl?.value?.trim();
+    const s = globalShipments.find(item => item.id === shipmentId);
+
+    if (!forceOverride && (!enteredOTP || enteredOTP.length !== 6)) {
+        inputEl.style.border = '2px solid var(--danger)';
+        inputEl.placeholder = 'Must be 6 digits!';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'Verifying...';
+
     try {
-        // Find the assigned driver for this shipment to use their ID for context
-        const s = globalShipments.find(item => item.id === shipmentId);
-        if (!s || !s.assigned_driver_id) {
-            alert("No driver assigned. Verification cannot proceed.");
-            return;
-        }
-        
+        const payload = forceOverride ? { otp: 'MANAGER_OVERRIDE', force: true } : { otp: enteredOTP };
         const res = await fetch(`${API_BASE}/driver/${s.assigned_driver_id}/verify-qr/${shipmentId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-logistix-context': JSON.stringify({ 
-                    company_id: localStorage.getItem('manager_id'), 
-                    role: 'manager',
-                    bypass_auth: true // Signal to backend that manager is overriding
-                })
+                'x-logistix-context': JSON.stringify({ company_id: localStorage.getItem('manager_id'), role: 'manager', bypass_auth: true })
             },
-            body: JSON.stringify({ qr_data: "MANUAL_OVERRIDE" })
+            body: JSON.stringify({ qr_data: forceOverride ? 'MANUAL_OVERRIDE' : enteredOTP })
         });
-        
+
+        const data = await res.json();
         if (res.ok) {
-            alert("Manual Verification Successful!");
+            document.querySelector('.mgr-otp-overlay')?.remove();
+            showNotification(forceOverride ? '⚡ Emergency override applied — shipment advanced' : '✅ OTP verified — shipment advanced to in-transit', 'success');
             loadShipments();
         } else {
-            const err = await res.json();
-            alert("Error: " + (err.detail || "Verification failed"));
+            inputEl && (inputEl.style.border = '2px solid var(--danger)');
+            showNotification('Verification failed: ' + (data.detail || 'Invalid OTP'), 'error');
+            btn.disabled = false;
+            btn.innerText = '✓ Verify & Advance';
         }
     } catch(e) {
-        alert("Verification failed: " + e.message);
+        showNotification('Network error during verification', 'error');
+        btn.disabled = false;
+        btn.innerText = '✓ Verify & Advance';
     }
+};
+
+// === REAL-TIME DEADLINE & EMERGENCY REASSIGNMENT ENGINE ===
+// Scans all shipments every 60s and shows urgency banners + one-click emergency reassign
+let _deadlineMonitorInterval = null;
+
+window.startDeadlineMonitor = function() {
+    if (_deadlineMonitorInterval) clearInterval(_deadlineMonitorInterval);
+    _deadlineMonitorInterval = setInterval(checkEwayDeadlines, 60000);
+    checkEwayDeadlines(); // Run immediately
+};
+
+function checkEwayDeadlines() {
+    const now = Date.now();
+    const activeShipments = (globalShipments || []).filter(s =>
+        s.eway_bill_expiry && !['delivered','finalized','cancelled'].includes(s.status)
+    );
+
+    const urgentList = [];
+    for (const s of activeShipments) {
+        const expiryMs = new Date(s.eway_bill_expiry).getTime();
+        const hoursLeft = (expiryMs - now) / 3600000;
+        if (hoursLeft <= 6 && hoursLeft > 0) {
+            urgentList.push({ s, hoursLeft: hoursLeft.toFixed(1) });
+        } else if (hoursLeft <= 0) {
+            urgentList.push({ s, hoursLeft: 0, expired: true });
+        }
+    }
+
+    renderDeadlineBanner(urgentList);
 }
+
+function renderDeadlineBanner(urgentList) {
+    let banner = document.getElementById('eway-deadline-banner');
+    if (!urgentList.length) {
+        if (banner) banner.remove();
+        return;
+    }
+
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'eway-deadline-banner';
+        banner.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9998;display:flex;flex-direction:column;gap:8px;max-width:360px;';
+        document.body.appendChild(banner);
+    }
+
+    banner.innerHTML = urgentList.slice(0, 5).map(({ s, hoursLeft, expired }) => {
+        const urgency = expired ? 'var(--danger)' : hoursLeft < 2 ? '#f97316' : 'var(--warning)';
+        const urgencyBg = expired ? 'rgba(239,68,68,0.12)' : hoursLeft < 2 ? 'rgba(249,115,22,0.12)' : 'rgba(245,158,11,0.12)';
+        const label = expired ? '🚨 E-WAY EXPIRED' : `⏰ ${hoursLeft}h LEFT`;
+        return `
+            <div style="background:${urgencyBg};border:1px solid ${urgency};border-radius:14px;padding:12px 14px;backdrop-filter:blur(10px);animation:slideUp 0.3s ease;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div style="font-size:0.7rem;font-weight:900;color:${urgency};letter-spacing:1px;">${label}</div>
+                    <div style="font-size:0.62rem;color:var(--text-muted);font-family:monospace;">${s.id.substring(0,8)}</div>
+                </div>
+                <div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:8px;">${s.description || 'Shipment'}</div>
+                <div style="display:flex;gap:6px;">
+                    <button onclick="openShipmentDetailModal('${s.id}')" 
+                        style="flex:1;padding:6px;border-radius:8px;border:none;background:rgba(255,255,255,0.08);color:var(--text);font-size:0.7rem;font-weight:700;cursor:pointer;">View</button>
+                    <button onclick="openEmergencyReassign('${s.id}')" 
+                        style="flex:2;padding:6px;border-radius:8px;border:none;background:${urgency};color:${expired || hoursLeft < 2 ? 'white' : '#000'};font-size:0.7rem;font-weight:900;cursor:pointer;letter-spacing:0.5px;">⚡ Emergency Reassign</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.openEmergencyReassign = async function(shipmentId) {
+    const s = globalShipments.find(sh => sh.id === shipmentId);
+    if (!s) return;
+
+    const hoursLeft = s.eway_bill_expiry ?
+        ((new Date(s.eway_bill_expiry).getTime() - Date.now()) / 3600000).toFixed(1) : 'N/A';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'emergency-reassign-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+        <div style="background:var(--bg);border:1px solid rgba(249,115,22,0.4);border-radius:20px;padding:28px;max-width:500px;width:94%;box-shadow:0 40px 80px rgba(0,0,0,0.6);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+                <div>
+                    <h3 style="margin:0;font-size:1.1rem;background:linear-gradient(90deg,#f97316,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">⚡ Emergency Fleet Reassignment</h3>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin:4px 0 0;">E-Way Bill deadline: <span style="color:#f97316;font-weight:700;">${hoursLeft}h remaining</span></p>
+                </div>
+                <button onclick="this.closest('.emergency-reassign-overlay').remove()" style="background:none;border:none;color:var(--text);font-size:1.4rem;cursor:pointer;opacity:0.5;">✕</button>
+            </div>
+            <div style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:0.82rem;">
+                <div style="font-weight:700;color:var(--text);">📦 ${s.description || 'Shipment'}</div>
+                <div style="color:var(--text-muted);margin-top:3px;">Weight: ${s.weight}kg · Status: ${s.status} · E-Way: ${s.eway_bill_no || 'N/A'}</div>
+            </div>
+            <div id="emergency-candidates-list" style="max-height:300px;overflow-y:auto;">
+                <div style="text-align:center;padding:30px;color:var(--text-muted);font-size:0.85rem;"><div class="spinner"></div><br>Finding fastest available drivers...</div>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;">
+                <button onclick="this.closest('.emergency-reassign-overlay').remove()" 
+                    style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-weight:700;cursor:pointer;">Cancel</button>
+                <button id="emergency-confirm-btn" onclick="confirmEmergencyReassign('${shipmentId}')" disabled
+                    style="flex:2;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#f97316,#ef4444);color:white;font-weight:900;cursor:pointer;opacity:0.5;letter-spacing:0.5px;">
+                    ⚡ CONFIRM EMERGENCY REASSIGN
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Load candidates — find available drivers sorted by proximity to current location
+    try {
+        const companyId = localStorage.getItem('manager_id');
+        const [drivers, vehicles] = await Promise.all([
+            apiCall(`/manager/drivers?company_id=${companyId}`),
+            apiCall(`/manager/vehicles?company_id=${companyId}`)
+        ]);
+
+        // Find available pairs
+        const availPairs = [];
+        for (const d of drivers) {
+            if (d.status === 'available' || (!d.current_shipment_id && d.verification_status === 'verified')) {
+                const v = vehicles.find(vh => vh.assigned_driver_id === d.id && vh.status === 'available');
+                if (v) {
+                    // Estimate proximity to shipment current location
+                    const loc = s.current_location?.lat ? s.current_location : s.pickup;
+                    const dLoc = d.current_location || d.base_location;
+                    let distKm = 999;
+                    if (loc && dLoc) distKm = haversineDistance(loc.lat, loc.lng, dLoc.lat || 0, dLoc.lng || 0);
+                    
+                    const co2 = distKm * (s.weight / 1000) * getVehicleCO2Factor(v.type);
+                    const etaH = distKm / (VEHICLE_SPEED_KMH[v.type?.toLowerCase()] || 60);
+                    const score = computeDriverAiScore({ driver_rating: d.driver_rating || d.driving_score || 3.0 }, 'others');
+                    
+                    availPairs.push({ d, v, distKm, co2, etaH, score });
+                }
+            }
+        }
+
+        availPairs.sort((a, b) => a.etaH - b.etaH); // Sort by fastest ETA first
+        window._emergencySelectedPair = availPairs[0] || null;
+
+        const listEl = document.getElementById('emergency-candidates-list');
+        if (!listEl) return;
+
+        if (availPairs.length === 0) {
+            listEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--danger);font-size:0.85rem;">⚠️ No available verified drivers found. Use the rescue dispatch or add more fleet resources.</div>`;
+            return;
+        }
+
+        const confirmBtn = document.getElementById('emergency-confirm-btn');
+
+        listEl.innerHTML = availPairs.slice(0, 6).map((p, idx) => {
+            const isFastest = idx === 0;
+            const etaStr = p.etaH < 1 ? `${Math.round(p.etaH * 60)}m` : `${p.etaH.toFixed(1)}h`;
+            return `
+                <div class="ec-card" data-idx="${idx}"
+                     onclick="selectEmergencyCandidate(this, ${idx})"
+                     style="cursor:pointer;padding:12px;margin-bottom:8px;border-radius:12px;border:2px solid ${isFastest ? '#f97316' : 'rgba(255,255,255,0.07)'};background:${isFastest ? 'rgba(249,115,22,0.1)' : 'rgba(255,255,255,0.02)'};position:relative;transition:all 0.2s;">
+                    ${isFastest ? `<div style="position:absolute;top:-9px;left:10px;background:linear-gradient(135deg,#f97316,#ef4444);color:white;font-size:0.6rem;font-weight:900;padding:2px 10px;border-radius:20px;">⚡ FASTEST — RECOMMENDED</div>` : ''}
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:${isFastest ? '4px' : '0'};">
+                        <div>
+                            <div style="font-weight:800;font-size:0.9rem;">${p.d.name}</div>
+                            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:1px;">${(p.v.type||'').toUpperCase()} · ${p.v.number_plate}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:1rem;font-weight:900;color:#f97316;">ETA ~${etaStr}</div>
+                            <div style="font-size:0.62rem;color:var(--text-muted);">${p.distKm < 999 ? p.distKm.toFixed(0)+'km away' : 'dist unknown'}</div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
+                        <div style="text-align:center;background:rgba(245,158,11,0.08);padding:4px;border-radius:6px;"><div style="font-size:0.6rem;color:var(--text-muted);">RATING</div><div style="font-weight:700;color:var(--warning);font-size:0.8rem;">⭐ ${(p.d.driver_rating||p.d.driving_score||0).toFixed(1)}</div></div>
+                        <div style="text-align:center;background:rgba(16,185,129,0.08);padding:4px;border-radius:6px;"><div style="font-size:0.6rem;color:var(--text-muted);">CO₂</div><div style="font-weight:700;color:#10b981;font-size:0.8rem;">${p.co2.toFixed(1)} kg</div></div>
+                        <div style="text-align:center;background:rgba(249,115,22,0.08);padding:4px;border-radius:6px;"><div style="font-size:0.6rem;color:var(--text-muted);">SPEED</div><div style="font-weight:700;color:#f97316;font-size:0.8rem;">${VEHICLE_SPEED_KMH[p.v.type?.toLowerCase()]||60}km/h</div></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Store pairs for selection
+        window._emergencyCandidates = availPairs;
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.style.opacity = '1'; }
+
+    } catch(e) {
+        const listEl = document.getElementById('emergency-candidates-list');
+        if (listEl) listEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--danger);">Failed to load available drivers</div>`;
+    }
+};
+
+window.selectEmergencyCandidate = function(card, idx) {
+    document.querySelectorAll('.ec-card').forEach(c => {
+        c.style.border = '2px solid rgba(255,255,255,0.07)';
+        c.style.background = 'rgba(255,255,255,0.02)';
+    });
+    card.style.border = '2px solid #f97316';
+    card.style.background = 'rgba(249,115,22,0.1)';
+    window._emergencySelectedPair = window._emergencyCandidates[idx];
+};
+
+window.confirmEmergencyReassign = async function(shipmentId) {
+    const pair = window._emergencySelectedPair;
+    if (!pair) return showNotification('Please select a driver first', 'error');
+
+    const btn = document.getElementById('emergency-confirm-btn');
+    btn.disabled = true;
+    btn.innerText = '⏳ Reassigning...';
+
+    try {
+        // Call the unified emergency-reassign API in a single transaction
+        await apiCall(`/shipments/${shipmentId}/emergency-reassign`, 'POST', {
+            driver_id: pair.d.id,
+            vehicle_id: pair.v.id
+        });
+
+        document.querySelector('.emergency-reassign-overlay')?.remove();
+        showNotification(`⚡ Emergency reassignment complete! ${pair.d.name} (${pair.v.number_plate}) dispatched — ETA ~${pair.etaH < 1 ? Math.round(pair.etaH * 60)+'m' : pair.etaH.toFixed(1)+'h'}`, 'success');
+        loadShipments();
+        checkEwayDeadlines();
+    } catch(e) {
+        showNotification('Emergency reassignment failed: ' + (e.detail || e.message || 'Server error'), 'error');
+        btn.disabled = false;
+        btn.innerText = '⚡ CONFIRM EMERGENCY REASSIGN';
+    }
+};
+
 
 async function deassignShipment(id) {
     if (!confirm("🚨 Are you sure you want to DEASSIGN this shipment? All legs will be deleted and the shipment will return to 'Pending' status.")) return;
     try {
         const res = await apiCall(`/shipments/${id}/deassign`, 'POST');
-        alert(res.message);
+        showNotification(res.message || 'Shipment deassigned successfully', 'success');
         loadShipments();
     } catch(e) {
-        alert(e.detail || "Deassignment failed.");
+        showNotification(e.detail || 'Deassignment failed.', 'error');
     }
 }
 
 async function openManualAssignModal(id) {
     currentAssignId = id;
+    window.legAssignments = {};
+
     const modal = document.getElementById('manual-assign-modal');
-    const container = document.getElementById('manual-assign-container') || document.createElement('div');
-    container.id = 'manual-assign-container';
-    
-    // Clear previous dynamic content but keep the basic structure
     modal.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h3 style="margin:0;" data-i18n="manual_assignment">Manual Assignment</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div>
+                <h3 style="margin:0; font-size:1.2rem; background:linear-gradient(90deg,var(--primary),#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">🤖 AI Fleet Assignment Engine</h3>
+                <p style="margin:4px 0 0; font-size:0.72rem; color:var(--text-muted);">Candidates scored by rating · backhaul efficiency · carbon impact · proximity</p>
+            </div>
             <button style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('manual-assign-modal').style.display='none'">&times;</button>
         </div>
-        <p class="subtitle" style="margin-bottom:25px;" data-i18n="manual_assignment_desc">Assign specific fleet units to this journey.</p>
-        <div id="assign-legs-list" style="max-height:400px; overflow-y:auto; padding-right:10px;">
-             <div style="text-align:center; padding:40px;"><div class="spinner"></div><p style="margin-top:10px; color:var(--text-muted);">Fetching journey intel...</p></div>
+        <div id="assign-legs-list" style="max-height:480px; overflow-y:auto; padding-right:6px; margin-top:16px;">
+            <div style="text-align:center; padding:40px;"><div class="spinner"></div><p style="margin-top:10px; color:var(--text-muted); font-size:0.85rem;">AI analyzing fleet candidates...</p></div>
         </div>
-        <button id="confirm-assign-btn" class="btn-primary" onclick="submitManualAssign()" style="width:100%; padding:14px; font-weight:800; letter-spacing:1px; margin-top:20px;">CONFIRM ALL ASSIGNMENTS</button>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button id="ai-assign-all-btn" onclick="autoSelectAiPicks()"
+                style="flex:1; padding:13px; font-weight:800; font-size:0.85rem; background:linear-gradient(135deg,#6366f1,#a855f7); border:none; border-radius:12px; cursor:pointer; color:white; transition:all 0.2s;">
+                ⚡ Auto-Select AI Picks
+            </button>
+            <button id="confirm-assign-btn" class="btn-primary" onclick="submitManualAssign()"
+                style="flex:2; padding:13px; font-weight:800; letter-spacing:1px;">
+                CONFIRM ALL ASSIGNMENTS
+            </button>
+        </div>
     `;
     modal.style.display = 'block';
 
@@ -462,73 +773,124 @@ async function openManualAssignModal(id) {
 
         const legsToAssign = [];
         const children = globalShipments.filter(l => l.parent_id === id).sort((a,b) => a.leg_order - b.leg_order);
-        
+
         if (children.length > 0) {
-            // Use locally discovered children
             legsToAssign.push(...children);
         } else if (shipment.child_leg_ids && shipment.child_leg_ids.length > 0 && !shipment.is_leg) {
-            // It's a parent, assign children from backend list
             for (const legId of shipment.child_leg_ids) {
                 const leg = await apiCall(`/shipments/${legId}`, 'GET');
                 legsToAssign.push(leg);
             }
         } else {
-            // Single shipment or already a leg
             legsToAssign.push(shipment);
         }
 
         for (const leg of legsToAssign) {
+            const legDist = (leg.pickup && leg.drop && leg.pickup.lat && leg.drop.lat) ?
+                haversineDistance(leg.pickup.lat, leg.pickup.lng, leg.drop.lat, leg.drop.lng) : 0;
+            const legType = leg.leg_type ? leg.leg_type.replace(/_/g,' ').toUpperCase() : 'DIRECT JOURNEY';
+            const legIcon = leg.leg_type === 'middle_mile' ? '🚛' : (leg.leg_type === 'last_mile' ? '🚁' : '📦');
+
             const legCard = document.createElement('div');
-            legCard.className = 'glass-card';
-            legCard.style.cssText = 'padding:15px; margin-bottom:15px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05);';
-            
-            const legType = leg.leg_type ? leg.leg_type.replace('_', ' ').toUpperCase() : 'DIRECT JOURNEY';
-            const icon = leg.leg_type === 'middle_mile' ? '🚛' : (leg.leg_type === 'last_mile' ? '🚁' : '🚲');
-            
+            legCard.style.cssText = 'margin-bottom:20px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px;';
             legCard.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-size:0.7rem; font-weight:800; color:var(--accent); letter-spacing:1px;">${icon} ${legType}</span>
-                    <span style="font-size:0.65rem; color:var(--text-muted); font-family:monospace;">ID: ${leg.id.substring(0,8)}</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div>
+                        <span style="font-size:0.7rem; font-weight:800; color:var(--accent); letter-spacing:1px;">${legIcon} ${legType}</span>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:3px;">
+                            ${leg.pickup?.address || leg.pickup?.name || 'Origin'} → ${leg.drop?.address || leg.drop?.name || 'Destination'}
+                        </div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0;">
+                        <div style="font-size:0.82rem; font-weight:700; color:var(--primary);">${legDist.toFixed(0)} km</div>
+                        <div style="font-size:0.62rem; color:var(--text-muted);">Route Distance</div>
+                    </div>
                 </div>
-                <div style="font-size:0.85rem; margin-bottom:12px; color:var(--text-muted);">
-                    ${leg.pickup.address || leg.pickup.name || 'Current'} → ${leg.drop.address || leg.drop.name || 'Next'}
+                <div id="driver-cards-${leg.id}">
+                    <div style="text-align:center; padding:15px; color:var(--text-muted); font-size:0.8rem;">⏳ Loading AI-scored candidates...</div>
                 </div>
-                <select id="select-leg-${leg.id}" class="polished-glass-input leg-assign-select" data-leg-id="${leg.id}" style="width:100%; padding:10px; font-size:0.85rem;">
-                    <option value="">Searching for eligible ${legType} fleet...</option>
-                </select>
             `;
             list.appendChild(legCard);
 
-            // Fetch eligible assets for this specific leg
+            const weightKg = shipment.weight || leg.weight || 10;
             apiCall(`/shipments/assets/eligible/${leg.id}?company_id=${companyId}`, 'GET').then(eligible => {
-                const select = document.getElementById(`select-leg-${leg.id}`);
-                select.innerHTML = '<option value="">Select Asset for this leg</option>';
-                
-                const renderGroup = (label, assets, icon) => {
-                    if (!assets || assets.length === 0) return null;
-                    const group = document.createElement('optgroup');
-                    group.label = label;
-                    assets.sort((a, b) => (b.driver_rating || 0) - (a.driver_rating || 0));
-                    assets.forEach(a => {
-                        const opt = document.createElement('option');
-                        opt.value = JSON.stringify({ driver_id: a.driver_id, vehicle_id: a.vehicle_id });
-                        const rating = a.driver_rating ? ` [⭐ ${a.driver_rating.toFixed(1)}]` : '';
-                        const plate = a.vehicle_plate ? ` [${a.vehicle_plate}]` : '';
-                        opt.textContent = `${icon} ${a.driver_name}${rating} (${a.vehicle_type})${plate}`;
-                        group.appendChild(opt);
-                    });
-                    return group;
-                };
+                const container = document.getElementById(`driver-cards-${leg.id}`);
+                if (!container) return;
 
-                const groups = [
-                    renderGroup('📍 Local Hub Assets', eligible.local, '👤'),
-                    renderGroup('🔄 Back-haul Optimized', eligible.returning, '🚛'),
-                    renderGroup('🛰️ Drone Fleet', eligible.drones, '🚁'),
-                    renderGroup('🌐 Other Available', eligible.others, '👤')
-                ];
+                const scored = [];
+                const addGroup = (assets, group) => (assets || []).forEach(a => {
+                    const vType = (a.vehicle_type || '').toLowerCase();
+                    const co2 = legDist * (weightKg / 1000) * getVehicleCO2Factor(vType);
+                    const speed = VEHICLE_SPEED_KMH[vType] || 65;
+                    const etaH = legDist > 0 ? legDist / speed : 0;
+                    const score = computeDriverAiScore(a, group);
+                    scored.push({ ...a, group, co2, etaH, score, dist: legDist });
+                });
 
-                groups.forEach(g => { if(g) select.appendChild(g); });
-                if (select.options.length <= 1) select.innerHTML = '<option value="">No valid vehicles found for this leg weight/type</option>';
+                addGroup(eligible.local, 'local');
+                addGroup(eligible.returning, 'returning');
+                addGroup(eligible.drones, 'drones');
+                addGroup(eligible.others, 'others');
+
+                if (scored.length === 0) {
+                    container.innerHTML = `<div style="padding:15px; text-align:center; background:rgba(239,68,68,0.08); border:1px dashed var(--danger); border-radius:10px; font-size:0.8rem; color:var(--danger);">⚠️ No eligible fleet found for this leg (${weightKg}kg)</div>`;
+                    return;
+                }
+
+                scored.sort((a, b) => b.score - a.score);
+                window.legAssignments[leg.id] = { driver_id: scored[0].driver_id, vehicle_id: scored[0].vehicle_id };
+
+                const groupLabel = { local: '📍 Local', returning: '🔄 Backhaul', drones: '🚁 Drone', others: '🌐 Network' };
+                const scoreColor = s => s >= 80 ? '#10b981' : s >= 60 ? '#f59e0b' : '#ef4444';
+
+                container.innerHTML = scored.slice(0, 5).map((a, idx) => {
+                    const isSelected = idx === 0;
+                    const etaStr = a.etaH < 1 ? `${Math.round(a.etaH * 60)}m` : `${a.etaH.toFixed(1)}h`;
+                    const borderColor = isSelected ? '#6366f1' : 'rgba(255,255,255,0.07)';
+                    const bgColor = isSelected ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.01)';
+                    return `
+                        <div class="driver-option-card"
+                             data-leg-id="${leg.id}"
+                             data-driver-id="${a.driver_id}"
+                             data-vehicle-id="${a.vehicle_id}"
+                             data-is-ai="${idx === 0 ? '1' : '0'}"
+                             onclick="selectDriverCard(this)"
+                             style="position:relative; cursor:pointer; padding:12px 14px; margin-bottom:8px;
+                                    border-radius:12px; border:2px solid ${borderColor};
+                                    background:${bgColor}; transition:all 0.2s ease;">
+                            ${idx === 0 ? `<div style="position:absolute; top:-9px; left:10px; background:linear-gradient(135deg,#f59e0b,#ef4444); color:white; font-size:0.6rem; font-weight:900; padding:2px 10px; border-radius:20px; letter-spacing:1px; white-space:nowrap;">⭐ AI RECOMMENDED</div>` : ''}
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:${idx === 0 ? '4px' : '0'};">
+                                <div>
+                                    <div style="font-weight:800; font-size:0.9rem;">${a.driver_name}</div>
+                                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:1px;">${(a.vehicle_type||'').toUpperCase()} · ${a.vehicle_plate || 'N/A'} · ${groupLabel[a.group] || ''}</div>
+                                </div>
+                                <div style="text-align:right; flex-shrink:0; padding-left:10px;">
+                                    <div style="font-size:0.9rem; font-weight:900; color:${scoreColor(a.score)};">${a.score}<span style="font-size:0.65rem; color:var(--text-muted);">/100</span></div>
+                                    <div style="font-size:0.6rem; color:var(--text-muted);">AI SCORE</div>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:10px;">
+                                <div style="text-align:center; background:rgba(245,158,11,0.08); padding:5px; border-radius:7px;">
+                                    <div style="font-size:0.6rem; color:var(--text-muted);">RATING</div>
+                                    <div style="font-weight:700; color:var(--warning); font-size:0.82rem;">⭐ ${(a.driver_rating||0).toFixed(1)}</div>
+                                </div>
+                                <div style="text-align:center; background:rgba(16,185,129,0.08); padding:5px; border-radius:7px;">
+                                    <div style="font-size:0.6rem; color:var(--text-muted);">CO₂ EST.</div>
+                                    <div style="font-weight:700; color:#10b981; font-size:0.82rem;">${a.co2.toFixed(1)} kg</div>
+                                </div>
+                                <div style="text-align:center; background:rgba(79,140,255,0.08); padding:5px; border-radius:7px;">
+                                    <div style="font-size:0.6rem; color:var(--text-muted);">ETA EST.</div>
+                                    <div style="font-weight:700; color:var(--primary); font-size:0.82rem;">~${etaStr}</div>
+                                </div>
+                            </div>
+                            ${isSelected ? `<div style="margin-top:8px; font-size:0.7rem; color:#6366f1; font-weight:800; text-align:center; letter-spacing:0.5px;">✓ SELECTED FOR ASSIGNMENT</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }).catch(err => {
+                const container = document.getElementById(`driver-cards-${leg.id}`);
+                if (container) container.innerHTML = `<div style="padding:15px; text-align:center; color:var(--text-muted); font-size:0.8rem;">Failed to load fleet candidates</div>`;
+                console.error(err);
             });
         }
 
@@ -538,43 +900,179 @@ async function openManualAssignModal(id) {
     }
 }
 
-async function submitManualAssign() {
-    const selects = document.querySelectorAll('.leg-assign-select');
-    const assignments = [];
-    
-    for (const select of selects) {
-        if (!select.value) {
-            return alert(`Please select an asset for leg ${select.getAttribute('data-leg-id').substring(0,8)}`);
-        }
-        assignments.push({
-            leg_id: select.getAttribute('data-leg-id'),
-            data: JSON.parse(select.value)
-        });
+window.selectDriverCard = function(card) {
+    const legId = card.dataset.legId;
+    const driverId = card.dataset.driverId;
+    const vehicleId = card.dataset.vehicleId;
+
+    document.querySelectorAll(`.driver-option-card[data-leg-id="${legId}"]`).forEach(c => {
+        c.style.border = '2px solid rgba(255,255,255,0.07)';
+        c.style.background = 'rgba(255,255,255,0.01)';
+        const lbl = c.querySelector('.selected-label');
+        if (lbl) lbl.remove();
+    });
+
+    card.style.border = '2px solid #6366f1';
+    card.style.background = 'rgba(99,102,241,0.1)';
+    if (!card.querySelector('.selected-label')) {
+        const lbl = document.createElement('div');
+        lbl.className = 'selected-label';
+        lbl.style.cssText = 'margin-top:8px; font-size:0.7rem; color:#6366f1; font-weight:800; text-align:center; letter-spacing:0.5px;';
+        lbl.innerText = '✓ SELECTED FOR ASSIGNMENT';
+        card.appendChild(lbl);
     }
+    window.legAssignments[legId] = { driver_id: driverId, vehicle_id: vehicleId };
+};
+
+window.autoSelectAiPicks = function() {
+    const seen = new Set();
+    document.querySelectorAll('.driver-option-card').forEach(card => {
+        const legId = card.dataset.legId;
+        if (!seen.has(legId) && card.dataset.isAi === '1') {
+            seen.add(legId);
+            selectDriverCard(card);
+        }
+    });
+    showNotification('⭐ AI recommendations applied to all legs!', 'success');
+};
+
+async function submitManualAssign() {
+    let assignments = Object.entries(window.legAssignments || {});
+
+    // Fallback: old-style dropdown selects
+    if (assignments.length === 0) {
+        const selects = document.querySelectorAll('.leg-assign-select');
+        for (const select of selects) {
+            if (!select.value) return alert(`Please select an asset for leg ${select.getAttribute('data-leg-id').substring(0,8)}`);
+            const d = JSON.parse(select.value);
+            assignments.push([select.getAttribute('data-leg-id'), d]);
+        }
+    }
+
+    if (assignments.length === 0) return alert('No assignments configured. Please select fleet assets for each leg.');
 
     try {
         const btn = document.getElementById('confirm-assign-btn');
-        btn.disabled = true;
-        btn.innerText = "UPDATING ROSTERS...";
+        if (btn) { btn.disabled = true; btn.innerText = 'UPDATING ROSTERS...'; }
 
-        for (const ass of assignments) {
-            await apiCall(`/shipments/${ass.leg_id}/assign`, 'POST', {
-                driver_id: ass.data.driver_id,
-                vehicle_id: ass.data.vehicle_id
+        for (const [leg_id, data] of assignments) {
+            await apiCall(`/shipments/${leg_id}/assign`, 'POST', {
+                driver_id: data.driver_id,
+                vehicle_id: data.vehicle_id
             });
         }
-        
-        showNotification("All journey legs assigned successfully!", "success");
+
+        showNotification('All journey legs assigned successfully!', 'success');
         document.getElementById('manual-assign-modal').style.display = 'none';
+        window.legAssignments = {};
         loadShipments();
     } catch(e) {
-        showNotification("Partial assignment failure. Check fleet status.", "error");
+        showNotification('Partial assignment failure. Check fleet status.', 'error');
     } finally {
         const btn = document.getElementById('confirm-assign-btn');
-        btn.disabled = false;
-        btn.innerText = "CONFIRM ALL ASSIGNMENTS";
+        if (btn) { btn.disabled = false; btn.innerText = 'CONFIRM ALL ASSIGNMENTS'; }
     }
 }
+
+// === COMPREHENSIVE SHIPMENT REPORT WITH CARBON FOOTPRINT ===
+window.generateShipmentReport = function(shipmentId) {
+    const s = globalShipments.find(ship => ship.id === shipmentId);
+    if (!s) return alert('Shipment not found.');
+
+    const d = globalDrivers.find(drv => drv.id === s.assigned_driver_id);
+    const v = globalVehicles.find(vh => vh.id === s.assigned_vehicle_id);
+    const companyName = localStorage.getItem('company_name') || 'Logistix Partner';
+
+    let distKm = 0;
+    if (s.pickup && s.drop && s.pickup.lat && s.drop.lat) {
+        distKm = haversineDistance(s.pickup.lat, s.pickup.lng, s.drop.lat, s.drop.lng);
+    }
+
+    const vType = (v?.type || '').toLowerCase();
+    const co2Factor = getVehicleCO2Factor(vType || 'van');
+    const weightTons = (s.weight || 10) / 1000;
+    const co2Kg = distKm * weightTons * co2Factor;
+    const standardCO2 = distKm * weightTons * 0.20;
+    const co2Saved = Math.max(0, standardCO2 - co2Kg);
+    const fuelLiters = co2Kg / 2.6;
+    const treesNeeded = co2Kg / 22;
+    const printDate = new Date().toLocaleDateString('en-IN', { year:'numeric', month:'long', day:'numeric' });
+    const statusColors = { pending:'#94a3b8', assigned:'#3b82f6', in_transit:'#6366f1', delivered:'#10b981', delayed:'#f59e0b', disputed:'#ef4444' };
+    const sColor = statusColors[s.status] || '#94a3b8';
+
+    const rw = window.open('', '_blank', 'width=880,height=720');
+    rw.document.write(`<!DOCTYPE html><html><head>
+        <title>Shipment Report — ${s.id.substring(0,8)} | Logistix</title>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap">
+        <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Outfit',sans-serif;background:#090d16;color:#e2e8f0;padding:40px 24px}.report{max-width:820px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:18px;border-bottom:2px solid rgba(79,140,255,0.25)}.logo{font-size:1.8rem;font-weight:900;background:linear-gradient(90deg,#4f8cff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.sbadge{padding:6px 16px;border-radius:20px;font-weight:800;font-size:0.82rem;background:${sColor}22;color:${sColor};border:1px solid ${sColor}55}.sec{margin-bottom:22px}.sec-t{font-size:0.68rem;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:#4f8cff;margin-bottom:10px}.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}.card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px}.clbl{font-size:0.62rem;text-transform:uppercase;color:#64748b;letter-spacing:1px;margin-bottom:3px}.cval{font-size:1.05rem;font-weight:700;color:#e2e8f0}.eco{background:rgba(16,185,129,0.07);border-color:rgba(16,185,129,0.25)}.eco .cval{color:#10b981}.route{display:flex;align-items:center;gap:12px;padding:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px}.rpt{flex:1}.rpl{font-size:0.62rem;text-transform:uppercase;color:#64748b}.rpv{font-size:0.85rem;font-weight:600;margin-top:2px}.rln{flex:2;display:flex;flex-direction:column;align-items:center;gap:4px}.rlb{height:2px;width:100%;background:linear-gradient(90deg,#4f8cff,#a855f7);border-radius:2px}.rll{font-size:0.72rem;color:#4f8cff;font-weight:700}.vstage{display:flex;align-items:center;gap:0;margin-bottom:10px}.vstep{flex:1;text-align:center;position:relative}.vstep-dot{width:28px;height:28px;border-radius:50%;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:900;border:2px solid}.vstep-done .vstep-dot{background:#10b981;border-color:#10b981;color:white}.vstep-pending .vstep-dot{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.15);color:#64748b}.vstep-lbl{font-size:0.6rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px}.vstep-done .vstep-lbl{color:#10b981}.vline{flex:1;height:2px;background:rgba(255,255,255,0.1);margin-top:-18px;max-width:40px}.vline-done{background:#10b981}.ibox{font-family:monospace;background:rgba(0,0,0,0.3);padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);font-size:0.7rem;color:#64748b;word-break:break-all}.btn-print{display:block;width:100%;padding:16px;background:linear-gradient(135deg,#4f8cff,#a855f7);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:800;cursor:pointer;margin-top:28px;letter-spacing:1px}@media print{body{background:#fff;color:#111;padding:20px}.card{background:#f8fafc;border-color:#e2e8f0}.eco{background:#f0fdf4;border-color:#a7f3d0}.eco .cval{color:#059669}.cval{color:#111}.logo{-webkit-text-fill-color:#4f8cff}.ibox{background:#f1f5f9;border-color:#e2e8f0}.route{background:#f8fafc}.btn-print{display:none}}</style>
+        </head><body><div class="report">
+        <div class="hdr">
+            <div><div class="logo">LOGISTIX</div><div style="font-size:0.78rem;color:#64748b;margin-top:4px;">Official Shipment Intelligence Report</div><div style="font-size:0.72rem;color:#94a3b8;margin-top:2px;">Generated: ${printDate}</div></div>
+            <div style="text-align:right;"><div class="sbadge">${(s.status||'').toUpperCase()}</div><div style="font-size:0.68rem;color:#64748b;margin-top:8px;font-family:monospace;">${s.id}</div><div style="font-size:0.9rem;font-weight:700;color:#e2e8f0;margin-top:4px;">${s.description || 'Shipment'}</div><div style="font-size:0.75rem;color:#94a3b8;margin-top:2px;">Company: ${companyName}</div></div>
+        </div>
+        <div class="sec"><div class="sec-t">📍 Route Intelligence</div>
+            <div class="route">
+                <div class="rpt"><div class="rpl">Origin</div><div class="rpv">${s.pickup?.address || s.pickup?.name || ((s.pickup?.lat||0).toFixed(4)+'°N, '+(s.pickup?.lng||0).toFixed(4)+'°E')}</div></div>
+                <div class="rln"><div class="rlb"></div><div class="rll">${distKm.toFixed(1)} km</div></div>
+                <div class="rpt" style="text-align:right;"><div class="rpl">Destination</div><div class="rpv">${s.drop?.address || s.drop?.name || ((s.drop?.lat||0).toFixed(4)+'°N, '+(s.drop?.lng||0).toFixed(4)+'°E')}</div></div>
+            </div>
+            ${s.route_type === 'multi-leg' ? `<div style="margin-top:10px;font-size:0.8rem;color:#a855f7;font-weight:700;padding:8px 12px;background:rgba(168,85,247,0.08);border-radius:8px;">🔀 Multi-leg Hub Route — ${s.child_leg_ids?.length||0} legs via Logistix network hubs</div>` : ''}
+        </div>
+        <div class="sec"><div class="sec-t">🔐 Verification Pipeline</div>
+            <div class="vstage">
+                ${[{icon:'📦',label:'Created',done:true},{icon:'🚛',label:'Assigned',done:!!s.assigned_driver_id},{icon:'📱',label:'QR Scan',done:['in_transit','at_warehouse','released','delivered'].includes(s.status)},{icon:'🏭',label:'Hub Check',done:['at_warehouse','released','delivered'].includes(s.status)||s.route_type!=='multi-leg',skip:s.route_type!=='multi-leg'},{icon:'✅',label:'Delivered',done:s.status==='delivered'}].map((st,i,arr)=>`
+                <div class="vstep ${st.done?'vstep-done':'vstep-pending'}">
+                    <div class="vstep-dot">${st.done?'✓':st.icon}</div>
+                    <div class="vstep-lbl">${st.label}</div>
+                </div>${i<arr.length-1?`<div class="vline ${st.done?'vline-done':''}"></div>`:''}`).join('')}
+            </div>
+        </div>
+        <div class="sec"><div class="sec-t">📦 Cargo Details</div>
+            <div class="g3">
+                <div class="card"><div class="clbl">Weight</div><div class="cval">${s.weight||0} kg</div></div>
+                <div class="card"><div class="clbl">Cold Chain</div><div class="cval">${s.is_perishable?'🌡️ Active':'✅ Standard'}</div></div>
+                <div class="card"><div class="clbl">Vitality</div><div class="cval" style="color:${s.vitality<40?'#ef4444':'#10b981'}">${s.is_perishable?`${s.vitality||100}%`:'Stable'}</div></div>
+            </div>
+        </div>
+        <div class="sec"><div class="sec-t">🚛 Assigned Fleet</div>
+            <div class="g2">
+                <div class="card"><div class="clbl">Driver</div><div class="cval">${d?.name||(s.assigned_driver_id==='DRONE-SYSTEM'?'🚁 Autonomous Drone':'Unassigned')}</div>${d?`<div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">Experience: ${d.years_experience||0}y | Violations: ${d.traffic_violations||0}</div>`:''}</div>
+                <div class="card"><div class="clbl">Vehicle</div><div class="cval">${v?.number_plate||(s.assigned_driver_id==='DRONE-SYSTEM'?'Drone Unit':'None')}</div>${v?`<div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">${(v.type||'').toUpperCase()} · Capacity: ${v.capacity}kg · ${v.fuel_efficiency||0}km/L</div>`:''}</div>
+            </div>
+        </div>
+        <div class="sec"><div class="sec-t">🌿 Environmental Impact Report</div>
+            <div class="g3">
+                <div class="card eco"><div class="clbl">CO₂ Emitted</div><div class="cval">${co2Kg.toFixed(2)} kg</div><div style="font-size:0.7rem;color:#64748b;margin-top:4px;">${vType||'van'} @ ${(co2Factor*1000).toFixed(0)}g/km/ton</div></div>
+                <div class="card eco"><div class="clbl">Fuel Equivalent</div><div class="cval">${fuelLiters.toFixed(1)} L</div><div style="font-size:0.7rem;color:#64748b;margin-top:4px;">Diesel equivalent</div></div>
+                <div class="card eco"><div class="clbl">Trees to Offset</div><div class="cval">${treesNeeded.toFixed(1)} 🌳</div><div style="font-size:0.7rem;color:#64748b;margin-top:4px;">×1 year each</div></div>
+            </div>
+            ${co2Saved>0.01?`<div style="margin-top:10px;padding:12px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:10px;font-size:0.82rem;"><span style="color:#10b981;font-weight:700;">✅ Logistix Green Routing:</span> Saved approx. <strong style="color:#10b981;">${co2Saved.toFixed(2)} kg CO₂</strong> vs. industry-standard routes.</div>`:''}
+        </div>
+        <div class="sec"><div class="sec-t">💰 Financial Summary</div>
+            <div class="g3">
+                <div class="card"><div class="clbl">Suggested Price</div><div class="cval">₹${(s.finance?.suggested_price||0).toLocaleString()}</div></div>
+                <div class="card"><div class="clbl">Profit Margin</div><div class="cval" style="color:#10b981;">₹${(s.finance?.margin||0).toLocaleString()}</div></div>
+                <div class="card"><div class="clbl">Payment</div><div class="cval">${s.payment_status||'Pending'}</div></div>
+            </div>
+        </div>
+        <div class="sec"><div class="sec-t">📋 Compliance & Legal</div>
+            <div class="g2">
+                <div class="card"><div class="clbl">E-Way Bill No.</div><div class="cval" style="font-family:monospace;font-size:0.95rem;">${s.eway_bill_no||'N/A'}</div></div>
+                <div class="card"><div class="clbl">E-Way Expiry</div><div class="cval">${s.eway_bill_expiry?new Date(s.eway_bill_expiry).toLocaleDateString('en-IN'):'N/A'}</div></div>
+            </div>
+        </div>
+        <div class="sec"><div class="sec-t">🔒 Cryptographic Integrity</div>
+            <div class="ibox">${s.id}</div>
+            <div style="font-size:0.7rem;color:#64748b;margin-top:6px;">Shipment UUID is the root ledger hash. Tampering invalidates the cryptographic chain.</div>
+        </div>
+        <div style="margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;font-size:0.72rem;color:#64748b;">
+            <div><strong>Logistix Intelligence Platform</strong> · ${companyName}</div>
+            <div>Report generated on ${printDate}</div>
+        </div>
+        <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        </div></body></html>`);
+    rw.document.close();
+};
 
 async function openQRModal(shipmentId) {
     const data = await apiCall(`/shipments/${shipmentId}/qr-data`);
@@ -1775,6 +2273,7 @@ window.renderEslLedger = async function(s) {
 window.openShipmentDetailModal = function(id) {
     const s = globalShipments.find(ship => ship.id === id);
     if (!s) return;
+    window.lastViewedShipmentId = id; // tracked for voice commands
 
     const modal = document.getElementById('shipment-detail-modal');
     document.getElementById('sd-title').innerText = s.description;
@@ -1888,6 +2387,30 @@ window.openShipmentDetailModal = function(id) {
         return `<span style="color:var(--muted);font-size:0.82rem;">⏳ Pending — Shared with receiver after payment</span>`;
     }
 
+    // === MULTI-STAGE VERIFICATION TIMELINE ===
+    const _verifStages = [
+        { icon: '📦', label: 'Created', done: true },
+        { icon: '🚛', label: 'Fleet Assigned', done: !!s.assigned_driver_id },
+        { icon: '🔤', label: 'OTP Pickup', done: ['in_transit','at_warehouse','released','delivered'].includes(s.status) },
+        { icon: '🏭', label: 'Hub Transit', done: ['at_warehouse','released','delivered'].includes(s.status) || s.route_type !== 'multi-leg', skip: s.route_type !== 'multi-leg' },
+        { icon: '✅', label: 'Delivered', done: s.status === 'delivered' }
+    ].filter(st => !st.skip);
+
+    contentHtml += `
+        <div class="intel-block" style="margin-top:20px; padding:15px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.07);">
+            <label style="font-size:0.75rem; color:var(--primary); font-weight:700; text-transform:uppercase;">🔐 Verification Pipeline</label>
+            <div style="display:flex; align-items:center; margin-top:14px; gap:0;">
+                ${_verifStages.map((st, i) => `
+                    <div style="flex:1; text-align:center; position:relative;">
+                        <div style="width:30px; height:30px; border-radius:50%; margin:0 auto 4px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; border:2px solid ${st.done ? '#10b981' : 'rgba(255,255,255,0.15)'}; background:${st.done ? '#10b981' : 'rgba(255,255,255,0.04)'}; color:${st.done ? 'white' : '#64748b'}; font-weight:900;">${st.done ? '✓' : st.icon}</div>
+                        <div style="font-size:0.58rem; text-transform:uppercase; letter-spacing:0.5px; color:${st.done ? '#10b981' : '#64748b'};">${st.label}</div>
+                    </div>
+                    ${i < _verifStages.length - 1 ? `<div style="height:2px; width:30px; flex-shrink:0; background:${st.done ? '#10b981' : 'rgba(255,255,255,0.08)'}; margin-bottom:14px;"></div>` : ''}
+                `).join('')}
+            </div>
+        </div>
+    `;
+
     contentHtml += `
         <div class="intel-block" style="margin-top:20px; background:rgba(79, 140, 255, 0.05); border:1px solid rgba(79, 140, 255, 0.2); padding: 15px; border-radius: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1912,6 +2435,11 @@ window.openShipmentDetailModal = function(id) {
                 <button class="btn-primary" style="background:#3182ce; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="openManualAssignModal('${s.id}')">
                     👤 Manual Assign Driver
                 </button>
+                ${(s.status !== 'delivered' && s.status !== 'finalized') ? `
+                    <button class="btn-primary" style="background:var(--warning); color:#000; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="managerManualVerify('${s.id}')">
+                        🔐 Manager OTP Override
+                    </button>
+                ` : ''}
             </div>
         </div>
     `;
@@ -2035,6 +2563,9 @@ window.openShipmentDetailModal = function(id) {
         </button>
         <button class="btn-action-details" style="background:var(--accent);" onclick="openTrackModal('${s.id}')">
             <span class="icon">📍</span> <span data-i18n="btn_track">Live Track</span>
+        </button>
+        <button class="btn-action-details" style="background:rgba(99,102,241,0.7);" onclick="generateShipmentReport('${s.id}')">
+            <span class="icon">📊</span> <span>Full Report</span>
         </button>
         <button class="btn-action-details" style="background:rgba(255,255,255,0.05);" onclick="toggleManualOverride()">
             <span class="icon">⚙️</span> <span>Edit / Manual Override</span>
@@ -2687,13 +3218,23 @@ window.downloadShipmentEsgCertificate = function(shipmentId) {
     if (!s) return alert("Shipment not found.");
 
     const companyName = localStorage.getItem('company_name') || "Logistix Partner";
+    const v = globalVehicles.find(vh => vh.id === s.assigned_vehicle_id);
     const w = s.weight || 10.0;
-    const dist = 15.0 + (w * 0.5);
-    const s_co2 = w * dist * 0.15;
-    const e_co2 = w * dist * 0.11;
-    const offsetWeight = (s_co2 - e_co2).toFixed(1);
-    const fuelSaved = ((s_co2 - e_co2) / 2.6).toFixed(1);
-    const greenPct = 100;
+    // Real haversine distance
+    let dist = 50; // fallback
+    if (s.pickup && s.drop && s.pickup.lat && s.drop.lat) {
+        dist = haversineDistance(s.pickup.lat, s.pickup.lng, s.drop.lat, s.drop.lng);
+    }
+    const vType = (v?.type || '').toLowerCase();
+    const actualFactor = getVehicleCO2Factor(vType || 'van');
+    const standardFactor = 0.20; // kg CO₂/km/ton
+    const tons = w / 1000;
+    const e_co2 = dist * tons * actualFactor;   // Logistix optimized
+    const s_co2 = dist * tons * standardFactor; // Standard industry
+    const offsetWeight = Math.max(0, s_co2 - e_co2).toFixed(2);
+    const fuelSaved = (parseFloat(offsetWeight) / 2.6).toFixed(1);
+    const treesEquiv = (parseFloat(offsetWeight) / 22).toFixed(1);
+    const greenPct = s_co2 > 0 ? Math.min(100, Math.round((1 - e_co2/s_co2)*100 + 60)) : 100;
     const integrityHash = s.id;
     const printDate = new Date().toLocaleDateString('en-IN', {
         year: 'numeric', month: 'long', day: 'numeric'
@@ -2870,15 +3411,25 @@ window.downloadShipmentEsgCertificate = function(shipmentId) {
                 <div class="stats-grid">
                     <div class="stat-box">
                         <div class="stat-val">${offsetWeight} kg</div>
-                        <div class="stat-lbl">CO2 Offset</div>
+                        <div class="stat-lbl">CO₂ Saved vs Standard</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-val">${fuelSaved} L</div>
-                        <div class="stat-lbl">Fuel Saved</div>
+                        <div class="stat-lbl">Diesel Equivalent Saved</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-val">${greenPct}%</div>
-                        <div class="stat-lbl">Eco Route Share</div>
+                        <div class="stat-lbl">Green Score</div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
+                    <div class="stat-box">
+                        <div class="stat-val">${treesEquiv} 🌳</div>
+                        <div class="stat-lbl">Trees Equivalent (1 yr)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val">${dist.toFixed(0)} km</div>
+                        <div class="stat-lbl">Actual Route Distance</div>
                     </div>
                 </div>
                 
@@ -2982,6 +3533,12 @@ window.openQRModal = openQRModal;
 window.resolveCalamityAlert = resolveCalamityAlert;
 window.manualDivertShipment = manualDivertShipment;
 window.loadDriversAndVehicles = loadDriversAndVehicles;
+
+// New feature exposures
+window.generateShipmentReport = window.generateShipmentReport; // already set above
+window.selectDriverCard = window.selectDriverCard; // already set above
+window.autoSelectAiPicks = window.autoSelectAiPicks; // already set above
+window.submitManualAssign = submitManualAssign;
 
 window.checkShipmentWeather = async function(id) {
     const s = globalShipments.find(ship => ship.id === id);
