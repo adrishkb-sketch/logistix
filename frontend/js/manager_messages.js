@@ -129,7 +129,7 @@ async function loadMessages() {
                           onclick="selectDriverChat('${d.id}')"
                           style="padding:16px 24px; cursor:pointer; border-bottom:1px solid var(--border); transition:0.2s; background:${isSelected ? 'rgba(79, 140, 255, 0.1)' : 'transparent'};">
                          <div style="display:flex; gap:12px; align-items:center;">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(d.name)}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
                             <div style="flex:1; overflow:hidden;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                                     <b style="font-size:0.9rem; font-weight:${unread ? '800' : '500'}; color:${unread ? 'var(--text)' : (isSelected ? 'var(--primary)' : 'var(--text)')}">${d.name}</b>
@@ -186,7 +186,7 @@ function selectDriverChat(driverId) {
     
     const driver = window.globalDrivers.find(d => d.id === driverId);
     if (driver) {
-        document.getElementById('chat-driver-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
+        document.getElementById('chat-driver-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(driver.name)}`;
     }
 
     // Mobile: slide to chat panel

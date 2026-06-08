@@ -2134,7 +2134,7 @@ async function loadProfileData() {
     if (p.profile_pic) {
         document.getElementById('profile-img').src = p.profile_pic;
     } else {
-        document.getElementById('profile-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+        document.getElementById('profile-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.name)}`;
     }
 }
 

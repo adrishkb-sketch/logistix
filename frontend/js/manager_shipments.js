@@ -3095,7 +3095,7 @@ window.openMessageModal = async function(shipmentId, driverId) {
 
     popup.style.display = 'flex';
     document.getElementById('mini-chat-name').innerText = driver.name;
-    document.getElementById('mini-chat-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
+    document.getElementById('mini-chat-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(driver.name)}`;
     miniChatMediaData = null;
     document.getElementById('mini-chat-media-preview').style.display = 'none';
     document.getElementById('mini-chat-media-preview').innerHTML = '';

@@ -1039,7 +1039,7 @@ async function viewFullProfile(type, id) {
             </svg>`;
             profilePic = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
         } else {
-            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.name)}`;
         }
         
         document.getElementById('prof-image').src = profilePic;

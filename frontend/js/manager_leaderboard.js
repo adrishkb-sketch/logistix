@@ -46,7 +46,7 @@ async function loadLeaderboard() {
                 <td>#${index + 1}</td>
                 <td>
                     <div style="display:flex; gap:10px; align-items:center; cursor:pointer;" onclick="viewFullProfile('${category}', '${item.id}')">
-                        <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name || item.number_plate}`}" style="width:30px; height:30px; border-radius:50%;">
+                        <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.name || item.number_plate)}`}" style="width:30px; height:30px; border-radius:50%;">
                         <div>
                             <strong>${item.name || item.number_plate}</strong>
                             ${category === 'driver' ? `<br><small style="color:var(--text-muted)">${getTranslation('stat_deliveries') || 'Deliveries'}: ${item.deliveries_completed || 0}</small>` : ''}
@@ -101,7 +101,7 @@ async function viewFullProfile(type, id) {
             </svg>`;
             profilePic = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
         } else {
-            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.name)}`;
         }
         
         document.getElementById('prof-image').src = profilePic;
@@ -362,7 +362,7 @@ async function openDriverProfile(id) {
 
     document.getElementById('dp-name').innerText = d.name;
     document.getElementById('dp-id').innerText = `ID: ${d.system_id || d.id.slice(0,8)}`;
-    document.getElementById('dp-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}`;
+    document.getElementById('dp-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(d.name)}`;
     
     // Status & Duty
     const dutyBadge = document.getElementById('dp-duty-badge');

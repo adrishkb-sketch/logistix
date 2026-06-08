@@ -1283,7 +1283,7 @@ window.loadLeaderboard = async function() {
                 <td style="padding:12px;">#${index + 1}</td>
                 <td style="padding:12px;">
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name || item.number_plate}`}" style="width:30px; height:30px; border-radius:50%;">
+                        <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.name || item.number_plate)}`}" style="width:30px; height:30px; border-radius:50%;">
                         <div>
                             <strong>${item.name || item.number_plate}</strong>
                         </div>
@@ -1613,7 +1613,7 @@ async function viewFullProfile(type, id) {
             </svg>`;
             profilePic = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
         } else {
-            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.name)}`;
         }
         
         document.getElementById('prof-image').src = profilePic;

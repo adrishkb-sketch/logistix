@@ -551,7 +551,7 @@ window.initFintechOracle = async function() {
                 <tr>
                     <td>
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05);">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(d.name)}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05);">
                             <div>
                                 <div style="font-weight:700;">${d.name}</div>
                                 <small style="color:var(--text-muted);">${d.license_type} • ${d.login_id}</small>

@@ -75,7 +75,7 @@ async function loadSafetyCenter() {
             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                 <td style="padding:12px;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${i.driver?.name || 'sys'}" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.05);">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(i.driver?.name || 'sys')}" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.05);">
                         <div>
                             <b>${i.driver ? i.driver.name : 'Automated System'}</b>
                             <br><small style="color:var(--text-muted)">${i.shipment.id.substring(0,8)}</small>

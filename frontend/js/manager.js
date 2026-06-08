@@ -1288,7 +1288,7 @@ async function loadSafetyCenter() {
             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                 <td style="padding:12px;">
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${i.driver?.name || 'sys'}" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.05);">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(i.driver?.name || 'sys')}" style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.05);">
                         <div>
                             <b>${i.driver ? i.driver.name : 'Automated System'}</b>
                             <br><small style="color:var(--text-muted)">${i.shipment.id.substring(0,8)}</small>
@@ -3202,7 +3202,7 @@ async function openMessageModal(shipmentId, driverId) {
 
     popup.style.display = 'flex';
     document.getElementById('mini-chat-name').innerText = driver.name;
-    document.getElementById('mini-chat-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
+    document.getElementById('mini-chat-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(driver.name)}`;
     miniChatMediaData = null;
     document.getElementById('mini-chat-media-preview').style.display = 'none';
     document.getElementById('mini-chat-media-preview').innerHTML = '';
@@ -4470,7 +4470,7 @@ async function loadMessages() {
                          onclick="selectDriverChat('${d.id}')"
                          style="padding:16px 24px; cursor:pointer; border-bottom:1px solid var(--border); transition:0.2s; background:${isSelected ? 'rgba(79, 140, 255, 0.1)' : 'transparent'};">
                         <div style="display:flex; gap:12px; align-items:center;">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(d.name)}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1);">
                             <div style="flex:1; overflow:hidden;">
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                                     <b style="font-size:0.9rem; color:${isSelected ? 'var(--primary)' : 'var(--text)'}">${d.name}</b>
@@ -4511,7 +4511,7 @@ function selectDriverChat(driverId) {
     
     const driver = globalDrivers.find(d => d.id === driverId);
     if (driver) {
-        document.getElementById('chat-driver-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.name}`;
+        document.getElementById('chat-driver-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(driver.name)}`;
     }
 
     // Mobile: slide to chat panel
@@ -4718,7 +4718,7 @@ async function loadLeaderboard() {
                 <td>#${index + 1}</td>
                 <td>
                     <div style="display:flex; gap:10px; align-items:center; cursor:pointer;" onclick="viewFullProfile('${category}', '${item.id}')">
-                        <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.name || item.number_plate}`}" style="width:30px; height:30px; border-radius:50%;">
+                        <img src="${item.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(item.name || item.number_plate)}`}" style="width:30px; height:30px; border-radius:50%;">
                         <div>
                             <strong>${item.name || item.number_plate}</strong>
                             ${category === 'driver' ? `<br><small style="color:var(--text-muted)">${getTranslation('stat_deliveries') || 'Deliveries'}: ${item.deliveries_completed || 0}</small>` : ''}
@@ -4773,7 +4773,7 @@ async function viewFullProfile(type, id) {
             </svg>`;
             profilePic = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
         } else {
-            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`;
+            profilePic = p.profile_pic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(p.name)}`;
         }
         
         document.getElementById('prof-image').src = profilePic;
@@ -6355,7 +6355,7 @@ async function initFintechOracle() {
                 <tr>
                     <td>
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05);">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(d.name)}" style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05);">
                             <div>
                                 <div style="font-weight:700;">${d.name}</div>
                                 <small style="color:var(--text-muted);">${d.license_type} • ${d.login_id}</small>
@@ -6921,7 +6921,7 @@ async function openDriverProfile(id) {
 
     document.getElementById('dp-name').innerText = d.name;
     document.getElementById('dp-id').innerText = `ID: ${d.system_id || d.id.slice(0,8)}`;
-    document.getElementById('dp-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.name}`;
+    document.getElementById('dp-img').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(d.name)}`;
     
     // Status & Duty
     const dutyBadge = document.getElementById('dp-duty-badge');
