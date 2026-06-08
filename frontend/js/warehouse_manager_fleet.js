@@ -24,9 +24,13 @@ let currentSmartData = {};
 
 // Table limits
 window.tableLimits = {
-    drivers: 5,
-    vehicles: 5,
-    drones: 5
+    shipments: 10,
+    drivers: 10,
+    vehicles: 10,
+    drones: 10,
+    'linked-pairs': 10,
+    warehouses: 100,
+    nr: 10
 };
 
 const smartConfig = {
@@ -275,26 +279,46 @@ window.renderTableControls = function(tableKey, dataLength, currentLimit, update
         const tableBody = document.getElementById(`${tableKey}-table-body`);
         const table = tableBody?.closest('table');
         if (!table) return;
+        
+        // Fix: Insert the controls after the wrapper so it doesn't scroll horizontally with the table
+        const tableWrapper = table.closest('.table-container') || table;
+        
         container = document.createElement('div');
         container.id = containerId;
         container.className = 'table-controls-container';
         container.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; background:rgba(255,255,255,0.03); border-radius:0 0 12px 12px; border-top:1px solid var(--border); margin-top:-1px;';
-        table.parentNode.insertBefore(container, table.nextSibling);
+        tableWrapper.parentNode.insertBefore(container, tableWrapper.nextSibling);
     }
 
-    if (dataLength <= 5 && currentLimit <= 5) {
+    if (dataLength <= 10 && currentLimit <= 10) {
         container.style.display = 'none';
         return;
     }
     container.style.display = 'flex';
+    
+    const selectId = `${tableKey}-show-more-select`;
+    // Preserve the current selected value if it exists
+    let currentSelectVal = '10';
+    const existingSelect = document.getElementById(selectId);
+    if (existingSelect) {
+        currentSelectVal = existingSelect.value;
+    }
 
     container.innerHTML = `
         <div style="font-size:0.75rem; color:var(--text-muted);">
             Showing ${Math.min(currentLimit, dataLength)} of ${dataLength}
         </div>
-        <div style="display:flex; gap:8px;">
-            ${currentLimit > 5 ? `<button class="btn-primary" style="padding:6px 14px; font-size:0.75rem; background:rgba(var(--primary-rgb), 0.1); color:var(--primary); border:1px solid rgba(var(--primary-rgb), 0.4); font-weight:600; border-radius:6px; cursor:pointer;" onclick="tableLimits['${tableKey}'] -= 5; ${updateFn}()">${getTranslation('btn_show_less')}</button>` : ''}
-            ${currentLimit < dataLength ? `<button class="btn-primary" style="padding:6px 14px; font-size:0.75rem; background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:white; border:none; font-weight:600; border-radius:6px; cursor:pointer; box-shadow:0 4px 12px rgba(var(--primary-rgb),0.3);" onclick="tableLimits['${tableKey}'] += 5; ${updateFn}()">${getTranslation('btn_show_more')}</button>` : ''}
+        <div style="display:flex; gap:8px; align-items:center;">
+            ${currentLimit > 10 ? `<button class="btn-primary" style="padding:6px 14px; font-size:0.75rem; background:rgba(var(--primary-rgb), 0.1); color:var(--primary); border:1px solid rgba(var(--primary-rgb), 0.4); font-weight:600; border-radius:6px; cursor:pointer;" onclick="tableLimits['${tableKey}'] = 10; ${updateFn}()">${getTranslation('btn_show_less') || 'Show Less'}</button>` : ''}
+            ${currentLimit < dataLength ? `
+                <select id="${selectId}" style="padding:6px; font-size:0.75rem; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:6px; outline:none; cursor:pointer;">
+                    <option value="10" ${currentSelectVal === '10' ? 'selected' : ''}>10</option>
+                    <option value="25" ${currentSelectVal === '25' ? 'selected' : ''}>25</option>
+                    <option value="50" ${currentSelectVal === '50' ? 'selected' : ''}>50</option>
+                    <option value="100" ${currentSelectVal === '100' ? 'selected' : ''}>100</option>
+                </select>
+                <button class="btn-primary" style="padding:6px 14px; font-size:0.75rem; background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:white; border:none; font-weight:600; border-radius:6px; cursor:pointer; box-shadow:0 4px 12px rgba(var(--primary-rgb),0.3);" onclick="tableLimits['${tableKey}'] += parseInt(document.getElementById('${selectId}').value, 10); ${updateFn}()">${getTranslation('btn_show_more') || 'Show More'}</button>
+            ` : ''}
         </div>
     `;
 };
