@@ -107,13 +107,40 @@ def _ensure_companies_table():
         )
     }])
     try:
+        # Seed from local JSON file if exists
+        import json
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = os.path.dirname(os.path.dirname(current_dir))
+        local_path = os.path.join(base_dir, "data", "companies.json")
+        if os.path.exists(local_path):
+            with open(local_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if content:
+                    local_items = json.loads(content)
+                    if isinstance(local_items, list) and len(local_items) > 0:
+                        insert_stmts = []
+                        for item in local_items:
+                            insert_stmts.append({
+                                "sql": "INSERT OR IGNORE INTO companies (id, name, email, password) "
+                                       "VALUES (:id, :name, :email, :password)",
+                                "args": {
+                                    "id": str(item.get("id", "")),
+                                    "name": str(item.get("name", "")),
+                                    "email": str(item.get("email", "")),
+                                    "password": str(item.get("password", ""))
+                                }
+                            })
+                        if insert_stmts:
+                            _execute(insert_stmts)
+                        _TABLE_CREATED = True
+                        return
         _execute([{
             "sql": "INSERT OR IGNORE INTO companies (id, name, email, password) "
                    "VALUES (:id, :name, :email, :password)",
             "args": _DEFAULT_COMPANY
         }])
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[TursoDB] Failed to seed companies: {e}")
     _TABLE_CREATED = True
 
 
