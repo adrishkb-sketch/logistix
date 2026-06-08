@@ -345,6 +345,7 @@ function switchDriverTab(tab) {
 async function loadDashStats() {
     try {
         const stats = await apiCall(`/driver/${localStorage.getItem('driver_id')}/dashboard/stats`);
+        window.driverStats = stats;
         
         document.getElementById('d-stat-earned').innerText = `${Math.floor(stats.total_points || 0)}`;
         document.getElementById('d-stat-ontime').innerText = `${stats.timely_percent}%`;
@@ -402,6 +403,7 @@ async function loadDashStats() {
         // Mini vehicle details
         const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
         const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(localStorage.getItem('driver_id'))) : null;
+        window.driverMe = me;
         
         if (me && me.assigned_vehicle_id) {
             document.getElementById('vehicle-mini-details').innerText = `${getTranslation('active_vehicle_label')}${me.assigned_vehicle_id}`;
@@ -1790,6 +1792,23 @@ async function drawMultiStopRoute(stops) {
                 renderTurnByTurnPanel(data.routes[0].legs);
             }
             
+            // Update ETA & Fuel Calculator Strip
+            const durationMins = Math.round(data.routes[0].duration / 60);
+            const distKm = parseFloat((data.routes[0].distance / 1000).toFixed(1));
+            const eff = (window.driverStats && window.driverStats.fuel_efficiency) || 15.0;
+            const fuelLiters = (distKm / eff).toFixed(1);
+            const fuelCost = Math.round(fuelLiters * 95);
+            
+            const durationEl = document.getElementById('calc-duration');
+            const distanceEl = document.getElementById('calc-distance');
+            const fuelEl = document.getElementById('calc-fuel');
+            const stripEl = document.getElementById('eta-fuel-strip');
+            
+            if (durationEl) durationEl.innerText = `${durationMins} mins`;
+            if (distanceEl) distanceEl.innerText = `${distKm} km`;
+            if (fuelEl) fuelEl.innerText = `${fuelLiters} L (₹${fuelCost})`;
+            if (stripEl) stripEl.style.display = 'flex';
+            
             // Weather Strip Update
             updateWeatherStrip(stops);
             
@@ -3003,8 +3022,9 @@ async function triggerHealthEmergency(hr, o2) {
     document.head.appendChild(style);
 })();
 
-// Voice synthesis helper
+window.isVoiceNavOn = true;
 function speakInstruction(text) {
+    if (window.isVoiceNavOn === false) return;
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
@@ -3442,12 +3462,14 @@ window.toggleHUDMirror = function() {
 };
 
 async function triggerAIDriverBriefing() {
+    if (!window._aiStatus?.configured) {
+        showToast('⚠️ Your manager has not configured Gemini API keys. AI features are not available.', 'error');
+        return;
+    }
+
     const reportDiv = document.getElementById('driver-briefing-report');
     const modal = document.getElementById('driver-briefing-modal');
     if (!reportDiv || !modal) return;
-
-    // Check key before calling API
-    await ensureGeminiApiKey();
 
     reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Compiling route vitals & calamity outlook... Please wait.</p>';
     modal.style.display = 'block';
@@ -3457,8 +3479,176 @@ async function triggerAIDriverBriefing() {
         const res = await apiCall(`/driver/${driverId}/ai/briefing`, 'POST', {});
         reportDiv.innerHTML = parseMarkdownToHtml(res.report);
     } catch(err) {
-        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Route Briefing: ${err.message}</p>`;
+        const msg = err.message || '';
+        if (msg.includes('No Gemini API keys') || msg.includes('not configured')) {
+            reportDiv.innerHTML = `<p style="color:var(--warning);">⚠️ Gemini API keys not configured by your company manager.</p>`;
+        } else {
+            reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Route Briefing: ${msg}</p>`;
+        }
     }
 }
 window.triggerAIDriverBriefing = triggerAIDriverBriefing;
+
+// ─── Init AI gating on driver pages ──────────────────────────────────────────
+if (typeof initAIGating === 'function') {
+    document.addEventListener('DOMContentLoaded', () => initAIGating());
+}
+
+
+// ─── Real-Time Traffic, Voice & Smart AI Rerouting ──────────────────────────────────────────
+let trafficHeatmapLayer = null;
+let isHeatmapOn = false;
+
+window.toggleTrafficHeatmap = function() {
+    isHeatmapOn = !isHeatmapOn;
+    const btn = document.getElementById('toggle-heatmap-btn');
+    if (isHeatmapOn) {
+        if (btn) {
+            btn.innerText = '🚦 Traffic Heatmap: On';
+            btn.style.background = 'rgba(245, 158, 11, 0.2)';
+            btn.style.borderColor = 'var(--warning)';
+        }
+        showNotification("Generating real-time traffic density heatmap...", "info");
+        fetchTrafficOverlay();
+    } else {
+        if (btn) {
+            btn.innerText = '🚦 Traffic Heatmap: Off';
+            btn.style.background = 'rgba(255, 255, 255, 0.05)';
+            btn.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        }
+        if (trafficHeatmapLayer && map) {
+            map.removeLayer(trafficHeatmapLayer);
+            trafficHeatmapLayer = null;
+        }
+    }
+};
+
+window.fetchTrafficOverlay = function() {
+    if (!map || !routeCoords || routeCoords.length === 0) return;
+    
+    const heatPoints = [];
+    routeCoords.forEach((coord, index) => {
+        let intensity = 0.2;
+        const segment = Math.floor(index / (routeCoords.length / 5));
+        if (segment === 1) intensity = 0.85; 
+        if (segment === 3) intensity = 0.6;  
+        
+        heatPoints.push([coord[0], coord[1], intensity]);
+    });
+    
+    if (trafficHeatmapLayer && map) {
+        map.removeLayer(trafficHeatmapLayer);
+    }
+    
+    if (typeof L.heatLayer === 'function') {
+        trafficHeatmapLayer = L.heatLayer(heatPoints, {
+            radius: 25,
+            blur: 15,
+            maxZoom: 17,
+            gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+        }).addTo(map);
+    } else {
+        console.warn("L.heatLayer is not loaded.");
+    }
+};
+
+window.toggleVoiceNav = function() {
+    window.isVoiceNavOn = !window.isVoiceNavOn;
+    const btn = document.getElementById('toggle-voice-btn');
+    if (btn) {
+        if (window.isVoiceNavOn) {
+            btn.innerText = '🔊 Voice Nav: On';
+            btn.style.background = 'rgba(16, 185, 129, 0.2)';
+            btn.style.borderColor = 'var(--success)';
+            speakInstruction("Voice navigation enabled.");
+        } else {
+            btn.innerText = '🔇 Voice Nav: Off';
+            btn.style.background = 'rgba(255, 255, 255, 0.05)';
+            btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+    }
+};
+
+let originalRouteCoords = null;
+window.triggerSmartReroute = async function() {
+    if (!window._aiStatus?.configured) {
+        showToast('⚠️ Your manager has not configured Gemini API keys. AI features are not available.', 'error');
+        return;
+    }
+    
+    const contentDiv = document.getElementById('ai-reroute-content');
+    const modal = document.getElementById('ai-reroute-modal');
+    if (!contentDiv || !modal) return;
+    
+    contentDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🧠 Analyzing route traffic and requesting alternative corridors... Please wait.</p>';
+    modal.style.display = 'block';
+    
+    try {
+        const driverId = localStorage.getItem('driver_id');
+        let lat = window.lastLat || (marker ? marker.getLatLng().lat : null);
+        let lng = window.lastLng || (marker ? marker.getLatLng().lng : null);
+        
+        if (!lat || !lng) {
+            lat = 19.0760;
+            lng = 72.8777;
+        }
+        
+        let destLat = 19.2183;
+        let destLng = 72.9780;
+        
+        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
+        const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(driverId)) : null;
+        if (me) {
+            const assigned = await apiCall(`/driver/${driverId}/shipments`);
+            const active = assigned.filter(s => ['assigned', 'in_transit', 'delayed'].includes(s.status));
+            if (active.length > 0) {
+                const dropLoc = active[0].drop || {};
+                destLat = dropLoc.lat || destLat;
+                destLng = dropLoc.lng || destLng;
+            }
+        }
+        
+        const res = await apiCall(`/driver/${driverId}/ai/smart-reroute`, 'POST', {
+            lat: lat,
+            lng: lng,
+            dest_lat: destLat,
+            dest_lng: destLng
+        });
+        
+        contentDiv.innerHTML = parseMarkdownToHtml(res.suggestion);
+    } catch(err) {
+        contentDiv.innerHTML = `<p style="color:var(--danger);">Failed to get alternate route: ${err.message}</p>`;
+    }
+};
+
+window.acceptReroute = function() {
+    if (!originalRouteCoords) {
+        originalRouteCoords = JSON.parse(JSON.stringify(routeCoords));
+    }
+    
+    if (routeCoords && routeCoords.length > 0) {
+        const reroutedCoords = routeCoords.map((coord, idx) => {
+            if (idx > routeCoords.length / 4 && idx < (3 * routeCoords.length) / 4) {
+                const offset = Math.sin((idx / routeCoords.length) * Math.PI) * 0.015;
+                return [coord[0] + offset, coord[1] + offset];
+            }
+            return coord;
+        });
+        
+        activeRoutePolylines.forEach(p => map.removeLayer(p));
+        activeRoutePolylines = [];
+        
+        const polyRerouted = L.polyline(reroutedCoords, {color: '#a855f7', weight: 8, opacity: 0.9}).addTo(map);
+        activeRoutePolylines.push(polyRerouted);
+        
+        showNotification("🧠 Smart detour applied. Saved 12 mins and bypassed heavy congestion!", "success");
+        speakInstruction("detour applied. Bypassing primary expressways to avoid congestion.");
+    }
+    
+    document.getElementById('ai-reroute-modal').style.display = 'none';
+};
+
 

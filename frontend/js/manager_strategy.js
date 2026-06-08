@@ -82,17 +82,59 @@ async function loadActiveStrategy() {
 }
 
 async function clearActiveStrategy() {
-    if (!confirm("Are you sure you want to clear your current strategy plan? This will stop all active target tracking.")) return;
+    if (!await window.confirmAsync("Are you sure you want to clear your current strategy plan? This will stop all active target tracking.", { danger: true })) return;
     try {
         await apiCall('/simulation/strategy/active?company_id=' + localStorage.getItem('manager_id'), 'DELETE');
-        alert("Strategy plan cleared.");
-        loadStrategyPlan();
+        showToast("Strategy plan cleared.", 'success');
+        loadActiveStrategy();
     } catch(e) {
-        alert("Failed to clear strategy.");
+        showToast("Failed to clear strategy.", 'error');
+    }
+}
+
+// ─── AI Strategy Optimizer ────────────────────────────────────────────────────
+async function runStrategyOptimizer() {
+    if (!window._aiStatus?.configured) {
+        showToast('⚠️ Add Gemini API keys in System Settings to use AI features.', 'error');
+        return;
+    }
+
+    const loadingEl = document.getElementById('strategy-optimizer-loading');
+    const resultEl = document.getElementById('strategy-optimizer-result');
+    const bodyEl = document.getElementById('strategy-optimizer-body');
+    const btn = document.getElementById('run-strategy-optimizer-btn');
+
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Analyzing...'; }
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (resultEl) resultEl.style.display = 'none';
+
+    try {
+        const mId = localStorage.getItem('manager_id');
+        const res = await apiCall(`/manager/ai/strategy-optimizer?company_id=${mId}`, 'POST', {}, false);
+        
+        if (bodyEl) {
+            bodyEl.innerHTML = parseMarkdownToHtml(res.report || res.recommendation || 'No report generated.');
+        }
+        if (resultEl) resultEl.style.display = 'block';
+        if (loadingEl) loadingEl.style.display = 'none';
+        showToast('✅ AI Strategy Report generated!', 'success');
+
+    } catch (err) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        const msg = err.message || 'Unknown error';
+        if (msg.includes('No Gemini API keys') || msg.includes('not configured')) {
+            showToast('⚠️ Configure Gemini API keys in System Settings first.', 'error');
+        } else {
+            showToast('AI analysis failed: ' + msg, 'error');
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🚀 Run AI Strategy Analysis'; enforceAIButtonState(window._aiStatus?.configured); }
     }
 }
 
 async function initPage() {
+    // Init AI gating first so buttons are correctly blurred
+    await initAIGating();
     loadActiveStrategy();
 }
 

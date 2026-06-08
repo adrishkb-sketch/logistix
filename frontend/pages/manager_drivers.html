@@ -581,9 +581,44 @@
 
 
 
+<!-- AI Fleet & Driver Audit Section -->
+<section class="section-content" id="ai-fleet-audit">
+<div class="glass-card section-card" style="border-top: 3px solid var(--primary);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+        <div>
+            <h2 style="color:var(--primary); margin:0; display:flex; align-items:center; gap:10px;">
+                🤖 AI Fleet & Driver Audit
+                <span style="font-size:0.65rem; padding:3px 10px; border-radius:20px; background:rgba(79,140,255,0.15); color:#60a5fa; border:1px solid rgba(96,165,250,0.3); font-weight:800;">POWERED BY GEMINI</span>
+            </h2>
+            <p class="subtitle" style="margin:6px 0 0 0;">Run a full AI audit of your entire driver pool, vehicle fleet, fatigue scores, safety compliance, and recommend optimizations.</p>
+        </div>
+        <button class="btn-primary ai-gated-btn" id="run-fleet-audit-btn" onclick="runFleetAudit()" 
+                style="width:auto; padding:14px 28px; font-weight:800; background:linear-gradient(135deg, #1d4ed8, #3b82f6); box-shadow: 0 4px 20px rgba(59,130,246,0.35); border-radius:14px; font-size:0.95rem;">
+            🔍 Run AI Fleet Audit
+        </button>
+    </div>
+    
+    <div id="fleet-audit-loading" style="display:none; text-align:center; padding:40px;">
+        <div style="width:40px; height:40px; border:3px solid rgba(59,130,246,0.3); border-top-color:#3b82f6; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 15px;"></div>
+        <p style="color:var(--text-muted);">🤖 Gemini is auditing your fleet and driver pool...</p>
+    </div>
+    
+    <div id="fleet-audit-result" style="display:none; margin-top:25px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; color:var(--primary);">📊 Fleet Audit Report</h3>
+            <button onclick="document.getElementById('fleet-audit-result').style.display='none'" 
+                    style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-muted); border-radius:8px; padding:6px 14px; cursor:pointer; font-size:0.8rem;">✖ Close</button>
+        </div>
+        <div id="fleet-audit-body" style="background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:24px; line-height:1.8; font-size:0.9rem; max-height:70vh; overflow-y:auto;">
+        </div>
+    </div>
+</div>
+</section>
+
 <!-- Safety Center Section -->
 
 </main>
+
 </div>
 <div id="alert-container"></div>
 <!-- Manual Assignment Modal -->

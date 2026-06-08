@@ -1868,30 +1868,76 @@ def mark_notifications_read(driver_id: str, data: dict):
     return {"message": "Notifications updated successfully."}
 
 
+@router.get("/ai/status")
+def driver_ai_status(x_logistix_context: Optional[str] = Header(None)):
+    """Return AI configuration status for the driver's company."""
+    company_id = None
+    if x_logistix_context:
+        try:
+            import json
+            ctx = json.loads(x_logistix_context)
+            driver_id = ctx.get("driver_id")
+            if driver_id:
+                d = drivers_db.get_by_id(driver_id)
+                if d:
+                    company_id = d.get("company_id")
+            if not company_id:
+                company_id = ctx.get("company_id")
+        except Exception:
+            # Raw driver_id string
+            d = drivers_db.get_by_id(x_logistix_context)
+            if d:
+                company_id = d.get("company_id")
+
+    if not company_id:
+        return {"configured": False, "status": "Not Configured 🔴", "key_count": 0}
+
+    from backend.database import JSONDatabase
+    cfg = JSONDatabase("config").get_by_id(company_id)
+    if cfg and cfg.get("gemini_keys"):
+        keys = [k.strip() for k in cfg.get("gemini_keys").split(",") if k.strip()]
+        if keys:
+            masked = [f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "invalid" for k in keys]
+            return {
+                "configured": True,
+                "status": "Connected 🟢",
+                "key_count": len(keys),
+                "masked_keys": masked
+            }
+    return {"configured": False, "status": "Not Configured 🔴", "key_count": 0}
+
+
 @router.post("/{driver_id}/ai/briefing")
-def driver_ai_briefing(driver_id: str, data: Optional[dict] = None, x_gemini_api_key: Optional[str] = Header(None)):
+def driver_ai_briefing(driver_id: str, data: Optional[dict] = None, x_logistix_context: Optional[str] = Header(None)):
     driver = drivers_db.get_by_id(driver_id)
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
-        
+
+    # Load keys from company config DB
+    company_id = driver.get("company_id")
+    api_keys = None
+    if company_id:
+        from backend.database import JSONDatabase
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+
     v_id = driver.get("assigned_vehicle_id")
     vehicle = vehicles_db.get_by_id(v_id) if v_id else None
     v_health = vehicle.get("vehicle_health_score", 100.0) if vehicle else 100.0
-    
+
     assigned = shipments_db.get_filtered({"assigned_driver_id": driver_id})
     active_ships = [s for s in assigned if s.get("status") in ["assigned", "in_transit", "delayed"]]
-    
+
     dest_name = "No active destination"
     origin_name = "N/A"
     weather_cond = "Clear"
     traffic_level = "Light"
-    
+
     if active_ships:
         s = active_ships[0]
         dest_name = (s.get("drop") or {}).get("address", "Final Destination")
         origin_name = (s.get("pickup") or {}).get("address", "Origin")
-        
-        # Predict weather & traffic if we have coords
         curr_loc = s.get("current_location") or s.get("pickup") or {}
         lat = curr_loc.get("lat")
         lng = curr_loc.get("lng")
@@ -1904,7 +1950,7 @@ def driver_ai_briefing(driver_id: str, data: Optional[dict] = None, x_gemini_api
                 traffic_level = traffic.get("level", "Light")
             except Exception as e:
                 print(f"[Driver AI Briefing] Location check failed: {e}")
-            
+
     prompt = (
         f"Generate a personalized route briefing and calamity outlook for Driver '{driver.get('name', 'Unknown Driver')}':\n"
         f"- Active Shipment Route: {origin_name} -> {dest_name}\n"
@@ -1914,10 +1960,67 @@ def driver_ai_briefing(driver_id: str, data: Optional[dict] = None, x_gemini_api
         f"Provide a structured driver route briefing report with 'Calamity Outlook', 'Safe Havens on Route', "
         f"'Personal Health & Vitals Advisory', and 'Alternative Navigation recommendation'. Keep it under 200 words."
     )
-    
+
     system_instruction = "You are a professional driver route assistant and dispatcher in India. Output a professional markdown briefing report. Keep it under 200 words."
     from backend.services.gemini_service import call_gemini
-    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {"report": response_text}
+
+
+@router.post("/{driver_id}/ai/smart-reroute")
+def driver_ai_smart_reroute(driver_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    company_id = driver.get("company_id")
+    api_keys = None
+    if company_id:
+        from backend.database import JSONDatabase
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    lat = data.get("lat")
+    lng = data.get("lng")
+    dest_lat = data.get("dest_lat")
+    dest_lng = data.get("dest_lng")
+    
+    weather_cond = "Clear"
+    traffic_level = "Heavy Congestion"
+    if lat and lng:
+        try:
+            from backend.services.route_engine import predict_weather_impact, simulate_traffic
+            weather = predict_weather_impact(lat, lng)
+            traffic = simulate_traffic(lat, lng)
+            weather_cond = weather.get("condition", "Clear")
+            traffic_level = traffic.get("level", "Heavy")
+        except Exception:
+            pass
+            
+    prompt = (
+        f"Generate a Smart AI Rerouting recommendation for Driver '{driver.get('name')}' who is currently stuck in traffic/weather:\n"
+        f"- Current Location: Latitude {lat}, Longitude {lng}\n"
+        f"- Destination Location: Latitude {dest_lat}, Longitude {dest_lng}\n"
+        f"- Local Environmental Conditions: Weather: {weather_cond}, Traffic: {traffic_level}\n\n"
+        f"Analyze these conditions and suggest a rerouting plan. Your suggestion should include:\n"
+        f"1. A description of the alternative route (e.g. bypassing primary expressways, taking state highways, or shifting routes)\n"
+        f"2. Reason for rerouting (e.g. avoiding heavy congestion, escaping adverse weather gridlocks)\n"
+        f"3. Expected optimization (e.g. estimated time/fuel savings, lower stress/fatigue)\n\n"
+        f"Output in clean, structured Markdown, formatted beautifully for a driver's mobile display."
+    )
+    
+    system_instruction = "You are a professional AI routing assistant for truck drivers in India. Provide a concise, actionable, and encouraging markdown reroute proposal. Keep it under 150 words."
+    from backend.services.gemini_service import call_gemini
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"suggestion": response_text}
+
+
 
 

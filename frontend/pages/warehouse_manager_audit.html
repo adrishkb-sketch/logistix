@@ -330,6 +330,54 @@
 <!-- Daily Audit Tab -->
 <section class="tab-content" id="audit-tab">
 <div data-layout-container="audit-content">
+    
+<!-- AI Hub Command Center Section -->
+<div class="glass-card section-card" id="ai-command-center-card" style="margin-bottom: 32px; border: 1px solid rgba(168, 85, 247, 0.25); background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+        <div>
+            <h2 style="margin:0; font-size:1.6rem; color:var(--primary); display:flex; align-items:center; gap:10px;">🤖 AI Hub Command Center</h2>
+            <p class="subtitle" style="margin-top:4px;">Generate intelligent operational forecasts, safety reports, and daily briefs.</p>
+        </div>
+    </div>
+    
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+        <button class="btn-primary ai-gated-btn" onclick="runDailyBriefing()" style="background: linear-gradient(135deg, #4f8cff 0%, #6366f1 100%); display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px; border-radius:16px; height:auto; text-align:center;">
+            <span style="font-size:1.8rem;">🔮</span>
+            <span style="font-weight:700; font-size:0.95rem;">AI Daily Briefing</span>
+            <span style="font-size:0.75rem; opacity:0.8; font-weight:normal;">Morning operational summary</span>
+        </button>
+        <button class="btn-primary ai-gated-btn" onclick="runDemandForecast()" style="background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px; border-radius:16px; height:auto; text-align:center;">
+            <span style="font-size:1.8rem;">📦</span>
+            <span style="font-weight:700; font-size:0.95rem;">AI Demand Forecast</span>
+            <span style="font-size:0.75rem; opacity:0.8; font-weight:normal;">Inbound volume & resources</span>
+        </button>
+        <button class="btn-primary ai-gated-btn" onclick="runFatigueReport()" style="background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%); display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px; border-radius:16px; height:auto; text-align:center;">
+            <span style="font-size:1.8rem;">🧑‍🔧</span>
+            <span style="font-weight:700; font-size:0.95rem;">AI Driver Fatigue Report</span>
+            <span style="font-size:0.75rem; opacity:0.8; font-weight:normal;">Fatigue & safety risk analysis</span>
+        </button>
+        <button class="btn-primary ai-gated-btn" onclick="triggerAIWarehouseReadiness()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px; border-radius:16px; height:auto; text-align:center;">
+            <span style="font-size:1.8rem;">🏢</span>
+            <span style="font-weight:700; font-size:0.95rem;">AI Hub Readiness Audit</span>
+            <span style="font-size:0.75rem; opacity:0.8; font-weight:normal;">Depot fitness & bottlenecks</span>
+        </button>
+    </div>
+
+    <!-- AI Output Panel -->
+    <div id="ai-command-center-report-wrapper" style="display:none; margin-top:20px; border-top:1px solid rgba(255,255,255,0.08); padding-top:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h4 id="ai-report-title" style="margin:0; color:var(--accent); font-size:1.05rem;">🔮 Generated AI Insights</h4>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-outline-v3" onclick="copyAIReport()" style="padding:4px 10px; font-size:0.75rem; border-radius:8px;">📋 Copy</button>
+                <button class="btn-outline-v3" onclick="collapseAIReport()" style="padding:4px 10px; font-size:0.75rem; border-radius:8px;">✕ Close</button>
+            </div>
+        </div>
+        <div class="glass-card" id="ai-command-center-report" style="background:rgba(0,0,0,0.25); max-height:400px; overflow-y:auto; padding:20px; font-size:0.9rem; line-height:1.6; border:1px solid rgba(255,255,255,0.05); color:#e2e8f0;">
+            <!-- Report details will be generated here -->
+        </div>
+    </div>
+</div>
+
 <div class="glass-card section-card">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
 <div>
@@ -524,6 +572,21 @@
 <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-drone-bulk-btn" onclick="confirmDroneBulk()">Confirm Upload</button></div>
 </div>
 </div>
+
+<!-- Warehouse Hub Readiness Modal -->
+<div class="glass-card modal-glass" id="wh-readiness-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:650px; max-width:90vw; padding:30px; border:1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 40px 80px rgba(0,0,0,0.4); background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(25px); border-radius: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="margin:0; font-size:1.4rem; color:var(--primary);">🏢 AI Hub Readiness Audit</h2>
+        <button onclick="document.getElementById('wh-readiness-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; opacity:0.6;">&times;</button>
+    </div>
+    <div id="wh-readiness-report" style="max-height:60vh; overflow-y:auto; font-size:0.9rem; line-height:1.6; padding-right:10px;">
+        <!-- Injected via JS -->
+    </div>
+    <div style="margin-top:25px; text-align:right;">
+        <button class="btn-primary" onclick="document.getElementById('wh-readiness-modal').style.display='none'" style="width:auto; padding:10px 24px; border-radius:12px; font-weight:bold;">Close Audit</button>
+    </div>
+</div>
+
 <script src="../js/api.js"></script>
 <script src="../js/translator.js"></script>
 <script src="../js/logo.js"></script>

@@ -36,3 +36,52 @@ def verify_context(context_id: str, x_logistix_context: Optional[str] = Header(N
             )
     
     return True
+
+
+def get_company_id_from_context(x_logistix_context: Optional[str]) -> Optional[str]:
+    """
+    Resolves the company_id from the X-Logistix-Context header.
+    Supports JSON context or raw string IDs (company_id, driver_id, or warehouse_id).
+    """
+    if not x_logistix_context:
+        return None
+        
+    # 1. Parse JSON context if applicable
+    try:
+        ctx = json.loads(x_logistix_context)
+        if isinstance(ctx, dict):
+            if ctx.get("company_id"):
+                return ctx.get("company_id")
+            if ctx.get("driver_id"):
+                from backend.database import JSONDatabase
+                d = JSONDatabase("drivers").get_by_id(ctx["driver_id"])
+                if d:
+                    return d.get("company_id")
+    except Exception:
+        pass
+
+    # 2. Parse leg/legacy string context ID
+    val = x_logistix_context.strip()
+    if not val or val == "null" or val == "undefined":
+        return None
+
+    # Check if this val matches a company ID
+    from backend.services.turso_db import TursoCompaniesDB
+    c = TursoCompaniesDB().get_by_id(val)
+    if c:
+        return val
+
+    # Check if it matches a driver ID
+    from backend.database import JSONDatabase
+    d = JSONDatabase("drivers").get_by_id(val)
+    if d:
+        return d.get("company_id")
+
+    # Check if it matches a warehouse ID
+    w = JSONDatabase("warehouses").get_by_id(val)
+    if w:
+        return w.get("company_id")
+
+    # Return val as fallback
+    return val
+

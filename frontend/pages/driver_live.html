@@ -188,6 +188,33 @@
 <button class="btn-primary" data-i18n="btn_fullscreen" id="fullscreen-btn" onclick="toggleFullscreen()" style="display:none; position:absolute; top:10px; right:10px; z-index:1000; padding:5px 10px; font-size:0.8rem; width:auto;">Fullscreen</button>
 </div>
 
+<!-- ETA & Fuel Calculator Strip -->
+<div id="eta-fuel-strip" style="display: none; align-items: center; justify-content: space-between; margin-top: 15px; padding: 16px 20px; border-radius: 16px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.85rem; color: white; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; width:100%; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.2rem;">⏱️</span>
+            <div>
+                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Est. Duration</div>
+                <div id="calc-duration" style="font-weight:700; font-size:0.9rem;">-- mins</div>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.2rem;">📏</span>
+            <div>
+                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Distance</div>
+                <div id="calc-distance" style="font-weight:700; font-size:0.9rem;">-- km</div>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.2rem;">⛽</span>
+            <div>
+                <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Fuel Estimate</div>
+                <div id="calc-fuel" style="font-weight:700; font-size:0.9rem;">-- L (₹--)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Route Weather Strip -->
 <div id="route-weather-strip" style="display: none; align-items: center; justify-content: space-between; margin-top: 15px; padding: 12px 16px; border-radius: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.8rem; color: white;">
     <div style="display:flex; align-items:center; gap:8px;">
@@ -195,6 +222,28 @@
         <span id="weather-text" style="font-weight:600;">Clear Weather Along Route</span>
     </div>
     <div id="weather-temp" style="font-family:monospace; opacity:0.8;">28°C</div>
+</div>
+
+<!-- AI & Real-time Routing Controls -->
+<div id="ai-routing-controls" style="display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px;">
+    <button id="toggle-heatmap-btn" class="poi-toggle-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="toggleTrafficHeatmap()">🚦 Traffic Heatmap: Off</button>
+    <button id="toggle-voice-btn" class="poi-toggle-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="toggleVoiceNav()">🔊 Voice Nav: On</button>
+    <button id="ai-reroute-btn-new" class="poi-toggle-btn ai-gated-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="triggerSmartReroute()">🧠 Smart AI Reroute</button>
+</div>
+
+<!-- AI Rerouting Modal -->
+<div class="glass-card modal-glass" id="ai-reroute-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:90%; max-width:500px; padding:28px; border:1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 40px 80px rgba(0,0,0,0.5); background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(25px); border-radius: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="margin:0; font-size:1.3rem; color:var(--primary); display:flex; align-items:center; gap:8px;">🔄 Smart AI Rerouting</h2>
+        <button onclick="document.getElementById('ai-reroute-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; opacity:0.6;">&times;</button>
+    </div>
+    <div id="ai-reroute-content" style="max-height:50vh; overflow-y:auto; font-size:0.9rem; line-height:1.6; padding-right:10px; color:#e2e8f0;">
+        <!-- Injected via JS -->
+    </div>
+    <div style="margin-top:25px; text-align:right; display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn-primary" onclick="acceptReroute()" style="width:auto; padding:10px 24px; border-radius:12px; font-weight:bold;">Apply Alternate Route</button>
+        <button class="btn-primary" onclick="document.getElementById('ai-reroute-modal').style.display='none'" style="width:auto; padding:10px 24px; border-radius:12px; font-weight:bold; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:white;">Dismiss</button>
+    </div>
 </div>
 
 <!-- Nearby POI Toggles -->
@@ -339,6 +388,7 @@
 </div> <!-- end driver-layout -->
 <!-- Scripts -->
 <script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
 <script src="../js/voice.js?v=2.2"></script>

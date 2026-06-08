@@ -1076,7 +1076,16 @@ def get_cascading_impact(company_id: str, x_logistix_context: Optional[str] = He
                 f"Weather: {item['weather']}. "
                 f"Traffic: {item['traffic']}.\n"
             )
-        recommendation = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+        api_keys = None
+        if company_id:
+            from backend.database import JSONDatabase
+            cfg = JSONDatabase("config").get_by_id(company_id)
+            if cfg:
+                api_keys = cfg.get("gemini_keys")
+        try:
+            recommendation = call_gemini(prompt, system_instruction, api_key=api_keys)
+        except ValueError as e:
+            recommendation = f"Mitigation advice unavailable: {str(e)}"
     else:
         recommendation = "System stable. No immediate mitigation required."
         
@@ -2250,9 +2259,130 @@ def approve_checkup(vehicle_id: str, x_logistix_context: Optional[str] = Header(
             
     return {"message": "Vehicle checkup approved. Health restored to 100%.", "vehicle_health_score": 100.0}
 
+# Gemini API Key Database Settings Endpoints
+@router.get("/system/get-gemini-keys")
+def get_gemini_keys(x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context)
+    if not company_id:
+        raise HTTPException(status_code=401, detail="Unauthorized: Context missing")
+    
+    from backend.database import JSONDatabase
+    config_db = JSONDatabase("config")
+    cfg = config_db.get_by_id(company_id)
+    if cfg and cfg.get("gemini_keys"):
+        keys = [k.strip() for k in cfg.get("gemini_keys").split(",") if k.strip()]
+        masked = [f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "invalid" for k in keys]
+        return {"key_count": len(keys), "masked_keys": masked}
+    return {"key_count": 0, "masked_keys": []}
+
+class SaveGeminiKeysRequest(BaseModel):
+    keys: str   # single key or comma-separated
+    mode: str = "append"  # 'append' | 'replace'
+
+@router.post("/system/save-gemini-keys")
+def save_gemini_keys(data: SaveGeminiKeysRequest, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context)
+    if not company_id:
+        raise HTTPException(status_code=401, detail="Unauthorized: Context missing")
+    
+    # Parse incoming keys
+    new_keys = [k.strip() for k in data.keys.split(",") if k.strip()]
+    if not new_keys:
+        raise HTTPException(status_code=400, detail="No valid keys provided")
+        
+    from backend.database import JSONDatabase
+    config_db = JSONDatabase("config")
+    
+    if data.mode == "append":
+        cfg = config_db.get_by_id(company_id)
+        existing = []
+        if cfg and cfg.get("gemini_keys"):
+            existing = [k.strip() for k in cfg.get("gemini_keys").split(",") if k.strip()]
+        combined = existing + [k for k in new_keys if k not in existing]
+        keys_str = ",".join(combined)
+    else:
+        keys_str = ",".join(new_keys)
+    
+    config_db.insert({"id": company_id, "gemini_keys": keys_str})
+    count = len(keys_str.split(","))
+    return {"message": f"✅ Key added! Pool now has {count} key(s)."}
+
+class DeleteGeminiKeyRequest(BaseModel):
+    index: int
+
+@router.post("/system/delete-gemini-key")
+def delete_gemini_key(data: DeleteGeminiKeyRequest, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context)
+    if not company_id:
+        raise HTTPException(status_code=401, detail="Unauthorized: Context missing")
+    
+    from backend.database import JSONDatabase
+    config_db = JSONDatabase("config")
+    cfg = config_db.get_by_id(company_id)
+    if not cfg or not cfg.get("gemini_keys"):
+        raise HTTPException(status_code=404, detail="No keys configured")
+    
+    keys = [k.strip() for k in cfg.get("gemini_keys").split(",") if k.strip()]
+    if data.index < 0 or data.index >= len(keys):
+        raise HTTPException(status_code=400, detail="Invalid key index")
+    
+    keys.pop(data.index)
+    if keys:
+        config_db.insert({"id": company_id, "gemini_keys": ",".join(keys)})
+    else:
+        # No keys left — clear the entry
+        config_db.delete(company_id)
+    return {"message": f"Key removed. {len(keys)} key(s) remaining."}
+
+@router.post("/system/clear-gemini-keys")
+def clear_gemini_keys(x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context)
+    if not company_id:
+        raise HTTPException(status_code=401, detail="Unauthorized: Context missing")
+        
+    from backend.database import JSONDatabase
+    config_db = JSONDatabase("config")
+    config_db.delete(company_id)
+    return {"message": "Gemini API Keys cleared successfully"}
+
+@router.get("/ai/status")
+def get_ai_status(x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context)
+    if not company_id:
+        return {"configured": False, "status": "No Context", "key_count": 0}
+        
+    from backend.database import JSONDatabase
+    config_db = JSONDatabase("config")
+    cfg = config_db.get_by_id(company_id)
+    if cfg and cfg.get("gemini_keys"):
+        keys = [k.strip() for k in cfg.get("gemini_keys").split(",") if k.strip()]
+        if keys:
+            masked = [f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "invalid" for k in keys]
+            return {
+                "configured": True,
+                "status": "Connected 🟢",
+                "key_count": len(keys),
+                "masked_keys": masked
+            }
+    return {"configured": False, "status": "Not Configured 🔴", "key_count": 0}
+
 # Gemini AI Assistant Router
 @router.post("/ai/chat")
-def manager_ai_chat(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
+def manager_ai_chat(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+
     from backend.services.gemini_service import call_gemini
     prompt = data.get("prompt", "")
     role = data.get("role", "manager")
@@ -2264,13 +2394,24 @@ def manager_ai_chat(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
         "Do not write overly long essays. Use bullet points."
     )
     
-    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {"response": response_text}
 
 @router.post("/ai/esg-audit")
-def manager_esg_audit(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
+def manager_esg_audit(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+
     from backend.services.gemini_service import call_gemini
-    company_id = data.get("company_id")
     # Fetch current carbon stats, EV fleets, etc.
     from backend.database import JSONDatabase
     vehicles_db = JSONDatabase("vehicles")
@@ -2295,12 +2436,23 @@ def manager_esg_audit(data: dict, x_gemini_api_key: Optional[str] = Header(None)
     )
     
     system_instruction = "You are a professional ESG Strategy Lead. Output a clean markdown audit report."
-    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {"audit": response_text}
 
 @router.post("/ai/safety-audit")
-def manager_safety_audit(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
-    company_id = data.get("company_id")
+def manager_safety_audit(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+
     from backend.database import JSONDatabase
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
@@ -2331,12 +2483,23 @@ def manager_safety_audit(data: dict, x_gemini_api_key: Optional[str] = Header(No
     
     system_instruction = "You are a senior logistics safety auditor in India. Output a professional markdown safety audit report. Keep it under 200 words."
     from backend.services.gemini_service import call_gemini
-    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {"report": response_text}
 
 @router.post("/ai/wh-readiness")
-def manager_wh_readiness(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
-    company_id = data.get("company_id")
+def manager_wh_readiness(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+
     warehouse_id = data.get("warehouse_id")
     
     from backend.database import JSONDatabase
@@ -2382,8 +2545,288 @@ def manager_wh_readiness(data: dict, x_gemini_api_key: Optional[str] = Header(No
     
     system_instruction = "You are a senior logistics hub safety and resource efficiency optimizer. Output a professional markdown readiness audit. Keep it under 200 words."
     from backend.services.gemini_service import call_gemini
-    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     return {"report": response_text}
+
+@router.post("/ai/demand-forecast")
+def manager_demand_forecast(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    
+    api_keys = None
+    if company_id:
+        from backend.database import JSONDatabase
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    warehouse_id = data.get("warehouse_id")
+    
+    from backend.database import JSONDatabase
+    warehouses_db = JSONDatabase("warehouses")
+    shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    wh = warehouses_db.get_by_id(warehouse_id)
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+        
+    all_ships = shipments_db.get_filtered({"company_id": company_id})
+    inbound_ships = [s for s in all_ships if s.get("drop_warehouse_id") == warehouse_id and s.get("status") in ["pending", "assigned", "in_transit"]]
+    
+    local_drivers = drivers_db.get_filtered({"base_warehouse_id": warehouse_id})
+    local_vehicles = vehicles_db.get_filtered({"base_warehouse_id": warehouse_id})
+    
+    total_inbound = len(inbound_ships)
+    high_value_inbound = len([s for s in inbound_ships if s.get("value", 0) > 100000])
+    cold_chain_count = len([s for s in inbound_ships if s.get("is_cold_chain", False)])
+    
+    total_weight = sum([float(s.get("weight", 0.0) or 0.0) for s in inbound_ships])
+    avg_weight = total_weight / total_inbound if total_inbound > 0 else 0.0
+    
+    prompt = (
+        f"Perform an AI Shipment Demand Forecast for hub '{wh.get('name', 'Unknown Hub')}' with the following parameters:\n"
+        f"- Active Inbound Shipments: {total_inbound}\n"
+        f"- Total Inbound Payload Weight: {total_weight:.1f} kg (average {avg_weight:.1f} kg/shipment)\n"
+        f"- Cold-Chain (Temperature-Controlled) Shipments: {cold_chain_count}\n"
+        f"- High-Value Shipments (>₹1,00,000): {high_value_inbound}\n"
+        f"- Available Hub Drivers: {len(local_drivers)}\n"
+        f"- Available Hub Vehicles: {len(local_vehicles)}\n\n"
+        f"Based on this, generate a predictive demand forecast. Provide sections: 'Predictive Volume Forecast', "
+        f"'Predicted Peak Hours & Bottlenecks', 'Driver Resource Needs', and 'Actionable Operational Recommendations'. "
+        f"Output in clean, structured Markdown, formatted beautifully for a manager."
+    )
+    
+    system_instruction = "You are a senior logistics resource planner and demand forecasting expert. Output a clean markdown forecast report. Keep it concise, professional, and under 250 words."
+    from backend.services.gemini_service import call_gemini
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"report": response_text}
+
+@router.post("/ai/fatigue-report")
+def manager_fatigue_report(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    
+    api_keys = None
+    if company_id:
+        from backend.database import JSONDatabase
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    warehouse_id = data.get("warehouse_id")
+    
+    from backend.database import JSONDatabase
+    warehouses_db = JSONDatabase("warehouses")
+    drivers_db = JSONDatabase("drivers")
+    
+    wh = warehouses_db.get_by_id(warehouse_id)
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+        
+    wh_drivers = drivers_db.get_filtered({"base_warehouse_id": warehouse_id})
+    if not wh_drivers:
+        return {"report": "No drivers registered at this hub to analyze."}
+        
+    drivers_data = []
+    for d in wh_drivers:
+        drivers_data.append({
+            "name": d.get("name", "Unknown"),
+            "fatigue_score": d.get("fatigue_score", 0.0),
+            "hours_on_duty": d.get("hours_on_duty", 0.0),
+            "is_fit": d.get("is_fit", True),
+            "telemetry_warnings": d.get("telemetry_warnings", 0)
+        })
+        
+    high_risk = [d for d in drivers_data if d["fatigue_score"] > 60.0]
+    med_risk = [d for d in drivers_data if 30.0 <= d["fatigue_score"] <= 60.0]
+    unfit = [d for d in drivers_data if not d["is_fit"]]
+    
+    drivers_list_str = "\n".join([
+        f"- {d['name']}: Fatigue Score {d['fatigue_score']}%, Hours on Duty {d['hours_on_duty']}h, Fit: {d['is_fit']}, Telemetry Warnings: {d['telemetry_warnings']}"
+        for d in drivers_data[:20]
+    ])
+    
+    prompt = (
+        f"Perform an AI Driver Fatigue & Safety Risk Report for hub '{wh.get('name', 'Unknown Hub')}' with the following parameters:\n"
+        f"- Total Drivers Monitored: {len(drivers_data)}\n"
+        f"- High Fatigue Risk (>60% Score): {len(high_risk)} drivers\n"
+        f"- Medium Fatigue Risk (30-60% Score): {len(med_risk)} drivers\n"
+        f"- Declared Temporarily Unfit (Mandatory Rest): {len(unfit)} drivers\n\n"
+        f"Driver Telemetry Sample:\n{drivers_list_str}\n\n"
+        f"Provide a structured safety audit and risk mitigation report. Sections required: 'Hub Risk Rating', "
+        f"'Critical Fatigue Alerts' (naming drivers at risk if any), 'Mitigation & Rest Scheduling Recommendations', and 'Safety Best Practices'. "
+        f"Output in clean, structured Markdown, formatted beautifully for a manager."
+    )
+    
+    system_instruction = "You are a senior transportation safety supervisor. Output a clean markdown driver safety report. Keep it under 250 words and professional."
+    from backend.services.gemini_service import call_gemini
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"report": response_text}
+
+@router.post("/ai/daily-briefing")
+def manager_daily_briefing(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    
+    api_keys = None
+    if company_id:
+        from backend.database import JSONDatabase
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    warehouse_id = data.get("warehouse_id")
+    
+    from backend.database import JSONDatabase
+    warehouses_db = JSONDatabase("warehouses")
+    shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    weather_db = JSONDatabase("weather_cells")
+    
+    wh = warehouses_db.get_by_id(warehouse_id)
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+        
+    all_ships = shipments_db.get_filtered({"company_id": company_id})
+    inbound_ships = [s for s in all_ships if s.get("drop_warehouse_id") == warehouse_id and s.get("status") in ["pending", "assigned", "in_transit"]]
+    outbound_ships = [s for s in all_ships if s.get("pickup_warehouse_id") == warehouse_id and s.get("status") in ["pending", "assigned"]]
+    
+    local_drivers = drivers_db.get_filtered({"base_warehouse_id": warehouse_id})
+    local_vehicles = vehicles_db.get_filtered({"base_warehouse_id": warehouse_id})
+    
+    weather_cells = weather_db.get_all()
+    active_weather_conditions = [w.get("condition") or w.get("type") or "Storm" for w in weather_cells if w]
+    weather_summary = ", ".join(list(set(active_weather_conditions))) if active_weather_conditions else "No major active weather disturbances"
+    
+    total_drivers = len(local_drivers)
+    active_drivers = len([d for d in local_drivers if d.get("is_on_duty", False)])
+    healthy_vehicles = len([v for v in local_vehicles if v.get("vehicle_health_score", 100.0) >= 80.0])
+    
+    prompt = (
+        f"Perform a Morning Operational AI Daily Briefing for hub '{wh.get('name', 'Unknown Hub')}' with the following parameters:\n"
+        f"- Inbound Backlog Shipments: {len(inbound_ships)}\n"
+        f"- Outbound Backlog Shipments: {len(outbound_ships)}\n"
+        f"- Regional Weather Summary: {weather_summary}\n"
+        f"- Fleet Readiness: {active_drivers}/{total_drivers} drivers on-duty\n"
+        f"- Operational Vehicles: {healthy_vehicles}/{len(local_vehicles)} (>=80% health score)\n\n"
+        f"Generate a daily morning briefing report for the depot manager. Include sections: 'Operational Weather Alert', "
+        f"'Backlog & Congestion Status', 'Fleet Readiness Indicator', and 'Top Priority Action Items for Today'. "
+        f"Output in clean, structured Markdown, formatted beautifully for a manager."
+    )
+    
+    system_instruction = "You are a senior logistics operations director. Output a professional operational morning briefing in clean markdown. Keep it under 250 words."
+    from backend.services.gemini_service import call_gemini
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"report": response_text}
+
+
+@router.post("/ai/fleet-audit")
+def manager_fleet_audit(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="Missing company_id context")
+        
+    from backend.database import JSONDatabase
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    all_drivers = drivers_db.get_filtered({"company_id": company_id})
+    all_vehicles = vehicles_db.get_filtered({"company_id": company_id})
+    
+    high_fatigue = [d for d in all_drivers if d.get("fatigue_score", 0.0) > 60.0]
+    low_health_vehicles = [v for v in all_vehicles if v.get("vehicle_health_score", 100.0) < 80.0]
+    
+    drivers_summary = "\n".join([f"- {d['name']} (ID: {d['id'][:8]}): Fatigue={d.get('fatigue_score')}, Driving Score={d.get('driving_score')}%" for d in all_drivers[:10]])
+    vehicles_summary = "\n".join([f"- Vehicle {v['number_plate']}: Health={v.get('vehicle_health_score')}%, Status={v.get('status')}" for v in all_vehicles[:10]])
+    
+    prompt = (
+        f"Perform a comprehensive Diagnostic Fleet Audit for the following resources:\n\n"
+        f"### Personnel (Drivers)\n"
+        f"{drivers_summary or 'No drivers registered.'}\n\n"
+        f"### Assets (Vehicles)\n"
+        f"{vehicles_summary or 'No vehicles registered.'}\n\n"
+        f"Drivers with critical fatigue (>60): {len(high_fatigue)}\n"
+        f"Vehicles needing immediate service (<80% health): {len(low_health_vehicles)}\n\n"
+        f"Generate a diagnostic markdown report detailing personnel fatigue warnings, vehicle maintenance advice, and direct fleet optimization recommendations."
+    )
+    
+    system_instruction = "You are a professional logistics fleet diagnostic auditor. Output a clean markdown audit report."
+    
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    from backend.services.gemini_service import call_gemini
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    return {"report": response_text}
+
+@router.post("/ai/strategy-optimizer")
+def manager_strategy_optimizer(data: dict, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context) or data.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="Missing company_id context")
+        
+    from backend.database import JSONDatabase
+    plans_db = JSONDatabase("strategy_plans")
+    ledger_db = JSONDatabase("ledger")
+    
+    my_plans = plans_db.get_filtered({"company_id": company_id})
+    my_transactions = ledger_db.get_filtered({"company_id": company_id})
+    
+    active_plans_summary = ""
+    for idx, p in enumerate(my_plans):
+        active_plans_summary += f"Plan #{idx+1} ({p.get('status', 'active')}): predicted_profit_delta={p.get('predicted_profit_delta')}, growth_targets={p.get('growth_targets')}\n"
+        
+    expenses = sum([t.get("amount", 0) for t in my_transactions if t.get("type") == "EXPENSE"])
+    revenue = sum([t.get("amount", 0) for t in my_transactions if t.get("type") == "INCOME"])
+    
+    prompt = (
+        f"Perform an Operational Strategy Audit for a logistics company in India. Current financial summary:\n"
+        f"- Total Revenue generated: ₹{revenue}\n"
+        f"- Total Operating Expenses: ₹{expenses}\n"
+        f"- Active Strategy Plans:\n{active_plans_summary or 'No active strategy plan configured.'}\n\n"
+        f"Suggest exact concrete steps the manager can take to improve profitability, reduce fuel/fleet overheads, and streamline driver payouts."
+    )
+    
+    system_instruction = "You are a senior operational efficiency director in logistics. Output a structured markdown strategy audit report."
+    
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    from backend.services.gemini_service import call_gemini
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    return {"report": response_text}
+
 
 @router.get("/driver_audit_log")
 def get_driver_audit_log(company_id: str, x_logistix_context: Optional[str] = Header(None)):

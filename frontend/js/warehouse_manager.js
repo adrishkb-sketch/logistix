@@ -44,6 +44,9 @@ async function init() {
     renderCharts();
     setupFormListeners();
     setupSmartAssistantListeners();
+    if (typeof initAIGating === 'function') {
+        await initAIGating();
+    }
 }
 
 async function loadWarehouseData() {
@@ -1823,9 +1826,6 @@ async function triggerAIWarehouseReadiness() {
     const modal = document.getElementById('wh-readiness-modal');
     if (!reportDiv || !modal) return;
     
-    // Check key before calling API
-    await ensureGeminiApiKey();
-    
     reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Running AI hub readiness & resource check... Please wait.</p>';
     modal.style.display = 'block';
     
@@ -1840,6 +1840,87 @@ async function triggerAIWarehouseReadiness() {
     }
 }
 window.triggerAIWarehouseReadiness = triggerAIWarehouseReadiness;
+
+async function runDailyBriefing() {
+    const reportWrapper = document.getElementById('ai-command-center-report-wrapper');
+    const reportDiv = document.getElementById('ai-command-center-report');
+    const reportTitle = document.getElementById('ai-report-title');
+    if (!reportWrapper || !reportDiv) return;
+    
+    reportTitle.innerText = "🔮 AI Daily Briefing";
+    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Compiling daily logs and generating operational brief... Please wait.</p>';
+    reportWrapper.style.display = 'block';
+    
+    try {
+        const res = await apiCall(`/manager/ai/daily-briefing`, 'POST', {
+            company_id: companyId,
+            warehouse_id: whId
+        });
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+    } catch(err) {
+        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate brief: ${err.message}</p>`;
+    }
+}
+window.runDailyBriefing = runDailyBriefing;
+
+async function runDemandForecast() {
+    const reportWrapper = document.getElementById('ai-command-center-report-wrapper');
+    const reportDiv = document.getElementById('ai-command-center-report');
+    const reportTitle = document.getElementById('ai-report-title');
+    if (!reportWrapper || !reportDiv) return;
+    
+    reportTitle.innerText = "📦 AI Shipment Demand Forecast";
+    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Loading backlog queue and modeling peak hours... Please wait.</p>';
+    reportWrapper.style.display = 'block';
+    
+    try {
+        const res = await apiCall(`/manager/ai/demand-forecast`, 'POST', {
+            company_id: companyId,
+            warehouse_id: whId
+        });
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+    } catch(err) {
+        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate forecast: ${err.message}</p>`;
+    }
+}
+window.runDemandForecast = runDemandForecast;
+
+async function runFatigueReport() {
+    const reportWrapper = document.getElementById('ai-command-center-report-wrapper');
+    const reportDiv = document.getElementById('ai-command-center-report');
+    const reportTitle = document.getElementById('ai-report-title');
+    if (!reportWrapper || !reportDiv) return;
+    
+    reportTitle.innerText = "🧑‍🔧 AI Driver Fatigue Risk Report";
+    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Fetching duty schedules and safety scores... Please wait.</p>';
+    reportWrapper.style.display = 'block';
+    
+    try {
+        const res = await apiCall(`/manager/ai/fatigue-report`, 'POST', {
+            company_id: companyId,
+            warehouse_id: whId
+        });
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+    } catch(err) {
+        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate fatigue report: ${err.message}</p>`;
+    }
+}
+window.runFatigueReport = runFatigueReport;
+
+function copyAIReport() {
+    const reportDiv = document.getElementById('ai-command-center-report');
+    if (!reportDiv) return;
+    navigator.clipboard.writeText(reportDiv.innerText || reportDiv.textContent);
+    alert("Report copied to clipboard!");
+}
+window.copyAIReport = copyAIReport;
+
+function collapseAIReport() {
+    const reportWrapper = document.getElementById('ai-command-center-report-wrapper');
+    if (reportWrapper) reportWrapper.style.display = 'none';
+}
+window.collapseAIReport = collapseAIReport;
+
 
 
 

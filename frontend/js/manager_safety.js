@@ -247,12 +247,14 @@ async function openLogsModal(shipmentId) {
 }
 
 async function triggerAISafetyAudit() {
+    if (!window._aiStatus?.configured) {
+        showToast('⚠️ Add Gemini API keys in System Settings to use the AI Safety Audit.', 'error');
+        return;
+    }
+
     const reportDiv = document.getElementById('safety-audit-report');
     const modal = document.getElementById('safety-audit-modal');
     if (!reportDiv || !modal) return;
-    
-    // Check key before calling API
-    await ensureGeminiApiKey();
     
     reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Running neural fleet safety audit... Please wait.</p>';
     modal.style.display = 'block';
@@ -262,11 +264,17 @@ async function triggerAISafetyAudit() {
         const res = await apiCall(`/manager/ai/safety-audit`, 'POST', { company_id: companyId });
         reportDiv.innerHTML = parseMarkdownToHtml(res.report);
     } catch(err) {
-        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Safety Report: ${err.message}</p>`;
+        const msg = err.message || '';
+        if (msg.includes('No Gemini API keys') || msg.includes('not configured')) {
+            reportDiv.innerHTML = `<p style="color:var(--warning);">⚠️ Gemini API keys not configured. Please add keys in System Settings.</p>`;
+        } else {
+            reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Safety Report: ${msg}</p>`;
+        }
     }
 }
 
 async function initPage() {
+    await initAIGating();
     loadSafetyCenter();
 }
 

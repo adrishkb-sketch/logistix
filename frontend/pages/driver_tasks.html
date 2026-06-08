@@ -227,7 +227,7 @@
 <div class="glass-card" data-layout-id="dash-ai-briefing" style="padding:1.5rem; margin-bottom:1.5rem; border-left:4px solid var(--accent); background:linear-gradient(135deg, rgba(168, 85, 247, 0.05), transparent);">
     <h4 style="margin:0; font-size:1rem; color:var(--accent);">🔮 Gemini AI Briefing &amp; Outlook</h4>
     <p style="color:var(--text-muted); font-size:0.8rem; margin-top:5px; margin-bottom:12px;">Get a real-time, AI-powered weather threat assessment, road calamity analysis, and personalized safety suggestions for your active route.</p>
-    <button class="btn-primary" onclick="triggerAIDriverBriefing()" style="background:linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border:none; box-shadow:0 4px 15px rgba(168,85,247,0.3); font-weight:bold; width:auto; padding:8px 16px; font-size:0.85rem; border-radius:10px;">
+    <button class="btn-primary ai-gated-btn" id="driver-briefing-btn" onclick="triggerAIDriverBriefing()" style="background:linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border:none; box-shadow:0 4px 15px rgba(168,85,247,0.3); font-weight:bold; width:auto; padding:8px 16px; font-size:0.85rem; border-radius:10px;">
         🔮 Generate AI Route Briefing
     </button>
 </div>
@@ -385,6 +385,8 @@
             if (typeof switchDriverTab === 'function') {
                 switchDriverTab('dash');
             }
+            // Wire AI button gating
+            if (typeof initAIGating === 'function') initAIGating();
         });
     </script>
 <!-- Theme Script -->

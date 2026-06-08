@@ -398,15 +398,30 @@
 </div>
 <button class="btn-primary" data-i18n="btn_reset_all_functions" onclick="systemReset('operations')" style="background:var(--danger); width:auto; padding:12px 24px; font-weight:bold; box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);">RESET ALL FUNCTIONS ⚠️</button>
 </div>
-<div class="glass-card" style="padding:25px; margin-top:30px; border:1px solid var(--primary); background:rgba(79, 140, 255, 0.03);">
-<h4 style="margin:0; color:var(--primary); font-size:1.2rem;">🔮 Gemini AI Configuration</h4>
-<p style="font-size:0.85rem; margin:10px 0 20px 0; color:var(--text-muted);">
-    Input your Google Gemini API Key below. This key will be stored securely in your browser's local storage and used for the <b>Mitigation Center</b>, <b>Safety Center</b>, and <b>ESG Auditor</b>.
+<div class="glass-card" id="gemini-config-card" style="padding:25px; margin-top:30px; border:1px solid var(--primary); background:rgba(79, 140, 255, 0.03);">
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h4 style="margin:0; color:var(--primary); font-size:1.2rem;">🔮 Gemini AI Key Pool</h4>
+    <span id="ai-status-badge" style="font-size:0.75rem; font-weight:800; padding:4px 14px; border-radius:20px; background:rgba(255,70,70,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.3);">Not Configured 🔴</span>
+</div>
+<p style="font-size:0.85rem; margin:12px 0 20px 0; color:var(--text-muted);">
+    Add one or more <b>Google Gemini API keys</b>. The system will rotate through them automatically to stay within free-tier limits.
+    All AI features (Safety Audit, ESG Audit, Fleet Analysis, Strategy Optimizer, Driver Briefing, etc.) will only activate once at least one key is saved.
+    <br/><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary); font-weight:700;">👉 Get free Gemini API key</a>
 </p>
-<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-    <input type="password" id="gemini-api-key-input" placeholder="Enter API Key (AIzaSy...)" style="flex:1; min-width:250px; padding:12px 16px; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,0.3); color:white; font-family:monospace;" />
-    <button class="btn-primary" onclick="saveGeminiApiKey()" style="width:auto; padding:12px 24px; font-weight:bold;">Save API Key</button>
-    <button class="btn-primary btn-danger" onclick="clearGeminiApiKey()" style="width:auto; padding:12px 24px; background:rgba(239, 68, 68, 0.1); border:1px solid var(--danger); color:var(--danger)">Clear Key</button>
+
+<!-- Existing Keys List -->
+<div id="gemini-keys-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px; min-height:40px;">
+    <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:20px;" id="gemini-no-keys-msg">No API keys configured yet.</div>
+</div>
+
+<!-- Add New Key -->
+<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.07); padding-top:18px;">
+    <input type="password" id="gemini-new-key-input" placeholder="Paste new API Key (AIzaSy...)" 
+           style="flex:1; min-width:240px; padding:12px 16px; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,0.3); color:white; font-family:monospace;" 
+           onkeydown="if(event.key==='Enter') addGeminiKey()"/>
+    <button class="btn-primary" onclick="addGeminiKey()" id="add-key-btn" style="width:auto; padding:12px 22px; font-weight:800; background:linear-gradient(135deg,var(--primary),var(--accent));">
+        ➕ Add Key
+    </button>
 </div>
 </div>
 

@@ -40,10 +40,6 @@ async function apiCall(endpoint, method = "GET", body = null, isSilent = false) 
             "X-Logistix-Context": context || ""
         }
     };
-    const geminiKey = localStorage.getItem('gemini_api_key');
-    if (geminiKey) {
-        options.headers["X-Gemini-API-Key"] = geminiKey;
-    }
     if (body) {
         options.body = JSON.stringify(body);
     }
@@ -466,123 +462,160 @@ document.addEventListener('paste', (e) => {
             }
         }
     }
-});
+})
+
+
+// ─── Gemini AI Status & Button Gating (Global) ───────────────────────────────
 
 /**
- * Ensures Gemini API key is present in localStorage.
- * If not, dynamically spawns a high-fidelity glassmorphic key entry modal.
+ * Global AI status cache. Populated on first call and refreshed periodically.
+ * { configured: bool, status: str, key_count: int }
  */
-function ensureGeminiApiKey() {
-    return new Promise((resolve) => {
-        const key = localStorage.getItem('gemini_api_key');
-        if (key && key.trim().length > 0) {
-            resolve(key);
-            return;
+window._aiStatus = { configured: false, status: 'Not Configured 🔴', key_count: 0 };
+window._aiStatusChecked = false;
+
+/**
+ * Fetch AI status from the backend (manager or driver endpoint).
+ * Returns the status object.
+ */
+async function fetchAIStatus() {
+    try {
+        // Determine which endpoint to use based on page type
+        const pathname = window.location.pathname;
+        let endpoint = '/manager/ai/status';
+        if (pathname.includes('/driver') && !pathname.includes('/manager')) {
+            endpoint = '/driver/ai/status';
+        } else if (pathname.includes('/warehouse_manager')) {
+            endpoint = '/manager/ai/status'; // WH managers share company config
         }
+        const res = await apiCall(endpoint, 'GET', null, true);
+        window._aiStatus = res;
+        window._aiStatusChecked = true;
+        return res;
+    } catch (e) {
+        console.warn('[AI Status] Could not fetch AI status:', e.message);
+        window._aiStatus = { configured: false, status: 'Not Configured 🔴', key_count: 0 };
+        window._aiStatusChecked = true;
+        return window._aiStatus;
+    }
+}
 
-        // Key is missing, spawn the modal
-        const overlay = document.createElement('div');
-        overlay.id = 'gemini-key-prompt-modal';
-        overlay.style.cssText = `
-            position: fixed;
-            inset: 0;
-            background: rgba(10, 15, 30, 0.85);
-            backdrop-filter: blur(25px);
-            z-index: 99999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: toast-in 0.3s ease;
-        `;
-
-        overlay.innerHTML = `
-            <div class="glass-card" style="
-                width: 480px;
-                max-width: 90vw;
-                padding: 30px;
-                border: 1px solid rgba(168, 85, 247, 0.4);
-                box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
-                background: rgba(15, 23, 42, 0.98);
-                border-radius: 20px;
-                animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            ">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom: 20px;">
-                    <span style="font-size: 2rem;">🔮</span>
-                    <div>
-                        <h3 style="margin:0; font-size:1.3rem; color:var(--primary); font-weight:800;">Gemini AI Core Activation</h3>
-                        <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">Enter Gemini API Key(s) to unlock real-time intelligence</p>
-                    </div>
-                </div>
-                
-                <p style="font-size:0.85rem; color:var(--text); line-height:1.6; margin-bottom:20px;">
-                    Provide your Google Gemini API key. You can paste **multiple keys** separated by commas to load-balance/rotate requests and multiply your free tier rate limits. 
-                    If skipped, the system runs using the local high-fidelity simulator.
-                </p>
-
-                <div style="margin-bottom:24px;">
-                    <label style="display:block; font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Gemini API Key(s)</label>
-                    <input type="password" id="prompt-gemini-key-input" placeholder="Paste Key(s) (AIzaSy..., AIzaSy...)" style="
-                        width: 100%;
-                        padding: 14px;
-                        border-radius: 12px;
-                        border: 1px solid var(--border);
-                        background: rgba(0,0,0,0.3);
-                        color: white;
-                        font-family: monospace;
-                        font-size: 0.9rem;
-                    " />
-                    <div style="margin-top: 8px; text-align:right;">
-                        <a href="https://aistudio.google.com/" target="_blank" style="color:var(--accent); font-size:0.75rem; text-decoration:none; font-weight:700;">Get a free API key from Google AI Studio ↗</a>
-                    </div>
-                </div>
-
-                <div style="display:flex; gap:12px; justify-content:flex-end;">
-                    <button id="prompt-gemini-skip" class="btn-primary" style="
-                        background: rgba(255, 255, 255, 0.05);
-                        border: 1px solid var(--border);
-                        color: var(--text);
-                        font-weight: 700;
-                        width: auto;
-                        padding: 10px 20px;
-                    ">Use Simulation</button>
-                    
-                    <button id="prompt-gemini-save" class="btn-primary" style="
-                        background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
-                        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-                        font-weight: 800;
-                        width: auto;
-                        padding: 10px 22px;
-                    ">Activate AI</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-        document.getElementById('prompt-gemini-key-input').focus();
-
-        document.getElementById('prompt-gemini-save').onclick = () => {
-            const val = document.getElementById('prompt-gemini-key-input').value.trim();
-            if (val.length === 0) {
-                alert("Please enter a key or click 'Use Simulation'.");
-                return;
-            }
-            localStorage.setItem('gemini_api_key', val);
-            overlay.remove();
-            showToast("Gemini AI Core Activated successfully!", "success");
-            resolve(val);
-        };
-
-        document.getElementById('prompt-gemini-skip').onclick = () => {
-            overlay.remove();
-            showToast("Running in local simulation mode", "info");
-            resolve(null);
-        };
+/**
+ * Apply blur + disabled state to all elements with class .ai-gated-btn
+ * based on current AI status. Call after page load and after status changes.
+ */
+function enforceAIButtonState(configured) {
+    const btns = document.querySelectorAll('.ai-gated-btn');
+    btns.forEach(btn => {
+        if (configured) {
+            btn.disabled = false;
+            btn.style.filter = 'none';
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+            btn.style.cursor = 'pointer';
+            btn.title = '';
+        } else {
+            btn.disabled = true;
+            btn.style.filter = 'blur(2px) grayscale(0.8)';
+            btn.style.opacity = '0.45';
+            btn.style.pointerEvents = 'none';
+            btn.style.cursor = 'not-allowed';
+            btn.title = '⚠️ Add Gemini API keys in System Settings to enable AI features';
+        }
     });
 }
 
 /**
- * Robust, high-fidelity markdown-to-HTML parser for rendering "inch-perfect" reports.
+ * Inject a small AI status pill into the top-bar area (only on manager/driver pages).
  */
+function injectAIStatusWidget(status) {
+    // Don't inject on system settings page (redundant)
+    if (window.location.pathname.includes('manager_system')) return;
+
+    let pill = document.getElementById('ai-status-pill');
+    if (!pill) {
+        pill = document.createElement('span');
+        pill.id = 'ai-status-pill';
+        pill.style.cssText = `
+            font-size: 0.7rem; font-weight: 800; padding: 4px 12px; border-radius: 20px;
+            cursor: default; white-space: nowrap; transition: all 0.3s ease;
+            display: inline-flex; align-items: center; gap: 5px;
+        `;
+        // Try injecting into top-bar
+        const topBar = document.querySelector('.top-bar');
+        if (topBar) {
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display:flex; align-items:center; gap:6px;';
+            wrapper.appendChild(pill);
+            // Insert before theme-toggle or at end
+            const themeToggle = topBar.querySelector('#theme-toggle');
+            if (themeToggle) {
+                topBar.insertBefore(wrapper, themeToggle);
+            } else {
+                topBar.appendChild(wrapper);
+            }
+        }
+    }
+
+    if (status.configured) {
+        pill.textContent = `🟢 AI (${status.key_count})`;
+        pill.style.background = 'rgba(16,185,129,0.15)';
+        pill.style.color = '#34d399';
+        pill.style.border = '1px solid rgba(52,211,153,0.3)';
+        pill.title = `Gemini AI: ${status.key_count} key(s) active`;
+    } else {
+        pill.textContent = '🔴 AI Inactive';
+        pill.style.background = 'rgba(255,70,70,0.1)';
+        pill.style.color = '#f87171';
+        pill.style.border = '1px solid rgba(248,113,113,0.3)';
+        pill.title = 'No Gemini API keys configured. Go to System Settings to add.';
+        pill.onclick = () => {
+            const href = window.location.pathname.includes('/pages/')
+                ? 'manager_system.html'
+                : 'pages/manager_system.html';
+            window.location.href = href;
+        };
+        pill.style.cursor = 'pointer';
+    }
+}
+
+/**
+ * Main initializer. Call this from each page's initPage() to enforce AI state.
+ */
+async function initAIGating() {
+    const status = await fetchAIStatus();
+    enforceAIButtonState(status.configured);
+    injectAIStatusWidget(status);
+
+    // Poll for changes (e.g., if the manager opens settings in another tab)
+    setInterval(async () => {
+        const ts = localStorage.getItem('ai_configured_ts');
+        if (ts !== window._lastAITs) {
+            window._lastAITs = ts;
+            const fresh = await fetchAIStatus();
+            enforceAIButtonState(fresh.configured);
+            injectAIStatusWidget(fresh);
+        }
+    }, 5000);
+
+    return status;
+}
+
+/**
+ * Legacy stub kept for backwards compatibility.
+ * Old code called ensureGeminiApiKey() before AI calls.
+ */
+function ensureGeminiApiKey() {
+    return Promise.resolve(window._aiStatus?.configured ? 'configured' : '');
+}
+
+window.ensureGeminiApiKey = ensureGeminiApiKey;
+window.initAIGating = initAIGating;
+window.enforceAIButtonState = enforceAIButtonState;
+window.fetchAIStatus = fetchAIStatus;
+window.parseMarkdownToHtml = parseMarkdownToHtml;
+
+
 function parseMarkdownToHtml(text) {
     if (!text) return '';
     let formatted = text.trim();

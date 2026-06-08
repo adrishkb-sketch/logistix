@@ -1358,8 +1358,52 @@ window.sendBroadcast = async function() {
 
 // ── DOM Initializer ─────────────────────────────────────────────────────────
 
+// ─── AI Fleet & Driver Audit ─────────────────────────────────────────────────
+async function runFleetAudit() {
+    if (!window._aiStatus?.configured) {
+        showToast('⚠️ Add Gemini API keys in System Settings to use AI features.', 'error');
+        return;
+    }
+
+    const loadingEl = document.getElementById('fleet-audit-loading');
+    const resultEl = document.getElementById('fleet-audit-result');
+    const bodyEl = document.getElementById('fleet-audit-body');
+    const btn = document.getElementById('run-fleet-audit-btn');
+
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Auditing...'; }
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (resultEl) resultEl.style.display = 'none';
+
+    try {
+        const res = await apiCall('/manager/ai/fleet-audit', 'POST', {}, false);
+        if (bodyEl) bodyEl.innerHTML = parseMarkdownToHtml(res.report || res.audit || 'No report generated.');
+        if (resultEl) resultEl.style.display = 'block';
+        if (loadingEl) loadingEl.style.display = 'none';
+        showToast('✅ AI Fleet Audit complete!', 'success');
+    } catch (err) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        const msg = err.message || '';
+        if (msg.includes('No Gemini API keys') || msg.includes('not configured')) {
+            showToast('⚠️ Configure Gemini API keys in System Settings first.', 'error');
+        } else {
+            showToast('Fleet Audit failed: ' + msg, 'error');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '🔍 Run AI Fleet Audit';
+            enforceAIButtonState(window._aiStatus?.configured);
+        }
+    }
+}
+
+async function initWithAI() {
+    // Run normal init and AI gating in parallel
+    await Promise.all([init(), initAIGating()]);
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', initWithAI);
 } else {
-    init();
+    initWithAI();
 }
