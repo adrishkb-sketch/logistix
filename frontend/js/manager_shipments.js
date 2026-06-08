@@ -283,7 +283,14 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     <small style="color:${vColor}; font-weight:bold;">${s.is_perishable ? `${getTranslation('vitality')}: ${vitality}%` : getTranslation('stable')}</small>
                 </td>
                 <td>
-                    <span class="status-pill status-${s.status}" style="font-size:0.7rem;">${getTranslation(s.status + '_label') || s.status}</span>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                        <span class="status-pill status-${s.status}" style="font-size:0.7rem;">${getTranslation(s.status + '_label') || s.status}</span>
+                        ${(() => {
+                            const verified = ['in_transit','at_warehouse','released','delivered'].includes(s.status);
+                            const tip = verified ? 'Pickup OTP verified' : (s.assigned_driver_id ? 'Awaiting OTP verification' : 'Not yet assigned');
+                            return `<span title="${tip}" style="font-size:0.8rem;cursor:default;" aria-label="${tip}">${verified ? '🔓' : '🔒'}</span>`;
+                        })()}
+                    </div>
                     <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${s.stage ? (getTranslation(s.stage.toLowerCase().replace(/ /g, '_')) || s.stage) : '---'}</div>
                     ${performanceMsg}
                     ${calamityBadge}
@@ -450,7 +457,7 @@ async function managerManualVerify(shipmentId) {
                 </button>
             </div>
             <div style="margin-top:12px;text-align:center;">
-                <button onclick="submitManagerOTP('${shipmentId}', this, true)" 
+                <button onclick="openManagerOverrideReasonModal('${shipmentId}')" 
                     style="background:none;border:none;color:var(--warning);font-size:0.75rem;cursor:pointer;font-weight:700;text-decoration:underline;">
                     ⚡ Emergency Override (No OTP — Log audit trail)
                 </button>
@@ -502,6 +509,93 @@ window.submitManagerOTP = async function(shipmentId, btn, forceOverride = false)
         showNotification('Network error during verification', 'error');
         btn.disabled = false;
         btn.innerText = '✓ Verify & Advance';
+    }
+};
+
+// === MANAGER OVERRIDE REASON MODAL ===
+// Collects an audit trail reason before executing a force-override
+window.openManagerOverrideReasonModal = function(shipmentId) {
+    // Close any existing OTP overlay first, keep mgr-otp-overlay open in background (dim it)
+    const otpOverlay = document.querySelector('.mgr-otp-overlay');
+
+    const reasonOverlay = document.createElement('div');
+    reasonOverlay.className = 'mgr-reason-overlay';
+    reasonOverlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);z-index:100000;display:flex;align-items:center;justify-content:center;';
+    reasonOverlay.innerHTML = `
+        <div style="background:var(--bg);border:1px solid rgba(245,158,11,0.35);border-radius:20px;padding:28px;max-width:440px;width:94%;box-shadow:0 40px 80px rgba(0,0,0,0.6);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);">
+            <div style="text-align:center;margin-bottom:18px;">
+                <div style="font-size:2.2rem;margin-bottom:6px;">⚡</div>
+                <h3 style="margin:0;font-size:1.1rem;color:var(--warning);">Emergency Override — Audit Log</h3>
+                <p style="font-size:0.78rem;color:var(--text-muted);margin-top:6px;">This action bypasses OTP verification and is permanently logged. A reason is required.</p>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:0.68rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:1px;">Override Reason <span style="color:var(--danger);">*</span></label>
+                <textarea id="mgr-override-reason" rows="3" maxlength="300" placeholder="e.g. Driver confirmed pickup in person; OTP delivery failed due to SMS outage…"
+                    style="width:100%;margin-top:8px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.05);border:2px solid rgba(245,158,11,0.3);color:var(--text);font-size:0.82rem;resize:vertical;outline:none;font-family:inherit;"></textarea>
+                <div style="text-align:right;font-size:0.65rem;color:var(--text-muted);margin-top:3px;"><span id="reason-char-count">0</span>/300</div>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button onclick="this.closest('.mgr-reason-overlay').remove()"
+                    style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-weight:700;cursor:pointer;">Cancel</button>
+                <button id="mgr-reason-confirm-btn" onclick="confirmManagerOverrideWithReason('${shipmentId}', this)"
+                    style="flex:2;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#f59e0b,#ef4444);color:white;font-weight:900;cursor:pointer;letter-spacing:0.5px;">
+                    ⚡ Log Override & Advance
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(reasonOverlay);
+
+    const ta = document.getElementById('mgr-override-reason');
+    const counter = document.getElementById('reason-char-count');
+    ta.addEventListener('input', () => { counter.textContent = ta.value.length; });
+    setTimeout(() => ta.focus(), 80);
+};
+
+window.confirmManagerOverrideWithReason = async function(shipmentId, btn) {
+    const reason = (document.getElementById('mgr-override-reason')?.value || '').trim();
+    if (!reason || reason.length < 5) {
+        document.getElementById('mgr-override-reason').style.border = '2px solid var(--danger)';
+        showNotification('Please enter a reason (min 5 characters) for the audit log.', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = '⏳ Applying override...';
+
+    const s = globalShipments.find(item => item.id === shipmentId);
+    if (!s) { showNotification('Shipment not found', 'error'); return; }
+
+    try {
+        const res = await fetch(`${API_BASE}/driver/${s.assigned_driver_id}/verify-qr/${shipmentId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-logistix-context': JSON.stringify({
+                    company_id: localStorage.getItem('manager_id'),
+                    role: 'manager',
+                    bypass_auth: true,
+                    override_reason: reason
+                })
+            },
+            body: JSON.stringify({ qr_data: 'MANUAL_OVERRIDE', force: true, override_reason: reason })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            document.querySelector('.mgr-reason-overlay')?.remove();
+            document.querySelector('.mgr-otp-overlay')?.remove();
+            showNotification(`⚡ Emergency override applied — Reason logged: "${reason.substring(0, 50)}${reason.length > 50 ? '…' : ''}"`, 'success');
+            loadShipments();
+        } else {
+            showNotification('Override failed: ' + (data.detail || 'Server error'), 'error');
+            btn.disabled = false;
+            btn.innerText = '⚡ Log Override & Advance';
+        }
+    } catch(e) {
+        showNotification('Network error during override', 'error');
+        btn.disabled = false;
+        btn.innerText = '⚡ Log Override & Advance';
     }
 };
 
