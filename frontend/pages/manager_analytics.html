@@ -331,43 +331,132 @@
 <section class="section-content" data-layout-id="section-analytics" id="analytics">
 <div data-layout-container="analytics-content">
 <!-- Stats Grid -->
-<div class="stats-grid" data-layout-container="stats-grid" data-layout-id="analytics-stats" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:1.5rem; margin-bottom:2rem;">
-<div class="glass-card" data-layout-id="stat-timely-card" style="padding:1.5rem; border-top:4px solid var(--primary);">
-<h4 data-i18n="timely_deliveries" style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Timely Deliveries</h4>
-<div id="stat-timely" style="font-size:2rem; font-weight:bold; margin:10px 0;">0%</div>
-<div data-i18n="stat_timely_change" style="font-size:0.8rem; color:var(--success);">↑ 2.4% from last week</div>
+<!-- ── KPI Stat Cards with Animated Counters + Sparklines ── -->
+<style>
+.kpi-card { padding:1.4rem; border-radius:20px; position:relative; overflow:hidden; transition:transform 0.25s, box-shadow 0.25s; }
+.kpi-card:hover { transform:translateY(-4px); box-shadow:0 20px 40px rgba(0,0,0,0.25); }
+.kpi-label { font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin:0 0 6px 0; }
+.kpi-value { font-size:2.1rem; font-weight:800; line-height:1; margin:4px 0 6px 0; font-variant-numeric:tabular-nums; }
+.kpi-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.kpi-trend { font-size:0.72rem; font-weight:700; display:flex; align-items:center; gap:3px; }
+.kpi-trend.up { color:#10b981; }
+.kpi-trend.down { color:#ef4444; }
+.kpi-trend.neutral { color:var(--text-muted); }
+.kpi-sparkline { width:80px; height:30px; flex-shrink:0; }
+/* New premium KPI row */
+.kpi-co2-row { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:2rem; }
+.kpi-wide-card { padding:1.4rem; border-radius:20px; display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; }
+@media(max-width:600px){ .kpi-co2-row { grid-template-columns:1fr; } }
+</style>
+
+<div class="stats-grid" data-layout-container="stats-grid" data-layout-id="analytics-stats" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1.5rem; margin-bottom:1.5rem;">
+
+<!-- Timely Deliveries -->
+<div class="glass-card kpi-card" data-layout-id="stat-timely-card" style="border-top:4px solid var(--primary);">
+  <p class="kpi-label" data-i18n="timely_deliveries">Timely Deliveries</p>
+  <div id="stat-timely" class="kpi-value" style="color:var(--primary);">0%</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend up" id="kpi-trend-timely">↑ Calculating...</span>
+    <canvas id="sparkline-timely" class="kpi-sparkline"></canvas>
+  </div>
 </div>
-<div class="glass-card" data-layout-id="stat-delay-card" style="padding:1.5rem; border-top:4px solid var(--warning);">
-<h4 data-i18n="avg_delay" style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Avg. Delivery Delay</h4>
-<div id="stat-delay" style="font-size:2rem; font-weight:bold; margin:10px 0;">0m</div>
-<div data-i18n="route_opt_rec" style="font-size:0.8rem; color:var(--danger);">Route optimization recommended</div>
+
+<!-- Avg Delay -->
+<div class="glass-card kpi-card" data-layout-id="stat-delay-card" style="border-top:4px solid var(--warning);">
+  <p class="kpi-label" data-i18n="avg_delay">Avg. Delay</p>
+  <div id="stat-delay" class="kpi-value" style="color:var(--warning);">0m</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend neutral" id="kpi-trend-delay">⏱ Route Opt. Rec.</span>
+    <canvas id="sparkline-delay" class="kpi-sparkline"></canvas>
+  </div>
 </div>
-<div class="glass-card" data-layout-id="stat-active-card" style="padding:1.5rem; border-top:4px solid var(--success);">
-<h4 data-i18n="active_fleet" style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Active Fleet</h4>
-<div id="stat-active" style="font-size:2rem; font-weight:bold; margin:10px 0;">0</div>
-<div data-i18n="in_transit_desc" style="font-size:0.8rem; color:var(--text-muted);">Vehicles currently in-transit</div>
+
+<!-- Active Shipments -->
+<div class="glass-card kpi-card" data-layout-id="stat-active-card" style="border-top:4px solid #10b981;">
+  <p class="kpi-label" data-i18n="active_fleet">Active Shipments</p>
+  <div id="stat-active" class="kpi-value" style="color:#10b981;">0</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend up" id="kpi-trend-active">📦 In-transit</span>
+    <canvas id="sparkline-volume" class="kpi-sparkline"></canvas>
+  </div>
 </div>
-<div class="glass-card" data-layout-id="stat-drivers-card" style="padding:1.5rem; border-top:4px solid var(--accent);">
-<h4 data-i18n="total_drivers" style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Drivers</h4>
-<div id="stat-drivers" style="font-size:2rem; font-weight:bold; margin:10px 0;">0</div>
-<div data-i18n="verified_personnel" style="font-size:0.8rem; color:var(--text-muted);">Verified personnel</div>
+
+<!-- Total Drivers -->
+<div class="glass-card kpi-card" data-layout-id="stat-drivers-card" style="border-top:4px solid var(--accent);">
+  <p class="kpi-label" data-i18n="total_drivers">Total Drivers</p>
+  <div id="stat-drivers" class="kpi-value" style="color:var(--accent);">0</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend neutral" id="kpi-trend-drivers">✅ Verified Personnel</span>
+    <canvas id="sparkline-drivers" class="kpi-sparkline"></canvas>
+  </div>
 </div>
-<div class="glass-card" data-layout-id="stat-warehouses-card" style="padding:1.5rem; border-top:4px solid var(--primary);">
-<h4 data-i18n="total_warehouses" style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Warehouses</h4>
-<div id="stat-warehouses" style="font-size:2rem; font-weight:bold; margin:10px 0;">0</div>
-<div data-i18n="distribution_hubs" style="font-size:0.8rem; color:var(--text-muted);">Distribution hubs</div>
+
+<!-- Warehouses -->
+<div class="glass-card kpi-card" data-layout-id="stat-warehouses-card" style="border-top:4px solid var(--primary);">
+  <p class="kpi-label" data-i18n="total_warehouses">Hubs</p>
+  <div id="stat-warehouses" class="kpi-value" style="color:var(--primary);">0</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend neutral" id="kpi-trend-wh">🏗️ Distribution Hubs</span>
+    <canvas id="sparkline-wh" class="kpi-sparkline"></canvas>
+  </div>
 </div>
-<div class="glass-card" data-layout-id="stat-vehicles-card" style="padding:1.5rem; border-top:4px solid var(--success);">
-<h4 data-i18n="total_vehicles" style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Vehicles</h4>
-<div id="stat-vehicles" style="font-size:2rem; font-weight:bold; margin:10px 0;">0</div>
-<div data-i18n="active_fleet_units" style="font-size:0.8rem; color:var(--text-muted);">Active fleet units</div>
+
+<!-- Vehicles -->
+<div class="glass-card kpi-card" data-layout-id="stat-vehicles-card" style="border-top:4px solid #6366f1;">
+  <p class="kpi-label" data-i18n="total_vehicles">Total Vehicles</p>
+  <div id="stat-vehicles" class="kpi-value" style="color:#6366f1;">0</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend up" id="kpi-trend-veh">🚛 Active Fleet</span>
+    <canvas id="sparkline-veh" class="kpi-sparkline"></canvas>
+  </div>
 </div>
-<div class="glass-card" data-layout-id="stat-profits-card" style="padding:1.5rem; border-top:4px solid #10b981; background:rgba(16,185,129,0.05);">
-<h4 data-i18n="total_profits" style="margin:0; color:var(--text-muted); font-size:0.8rem; text-transform:uppercase;">Total Profits This Month</h4>
-<div id="stat-profits" style="font-size:2rem; font-weight:bold; margin:10px 0; color:#10b981;">₹ 0</div>
-<div data-i18n="net_revenue" style="font-size:0.8rem; color:var(--success);">Net Revenue</div>
+
+<!-- Revenue -->
+<div class="glass-card kpi-card" data-layout-id="stat-profits-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.04);">
+  <p class="kpi-label" data-i18n="total_profits">Net Revenue</p>
+  <div id="stat-profits" class="kpi-value" style="color:#10b981;">₹ 0</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend up" id="kpi-trend-rev">💹 This Month</span>
+    <canvas id="sparkline-revenue" class="kpi-sparkline"></canvas>
+  </div>
 </div>
+
+<!-- Avg. CO2 / km -->
+<div class="glass-card kpi-card" data-layout-id="stat-co2-km-card" style="border-top:4px solid #10b981;">
+  <p class="kpi-label" data-i18n="avg_co2_km">Avg. CO₂ / km</p>
+  <div id="stat-co2-km" class="kpi-value" style="color:#10b981;">0.00 kg</div>
+  <div class="kpi-footer">
+    <span class="kpi-trend down" id="kpi-trend-co2-km">↓ Eco Optimized</span>
+    <canvas id="sparkline-co2-km" class="kpi-sparkline"></canvas>
+  </div>
 </div>
+
+</div>
+
+<!-- CO₂ Trend + Shipments/Day rows -->
+<div class="kpi-co2-row">
+  <div class="glass-card" style="padding:1.4rem; border-top:4px solid #10b981;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+      <div>
+        <p style="margin:0; font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted);">🌿 CO₂ Emissions Trend (7-Day)</p>
+        <div id="stat-co2-total" style="font-size:1.6rem; font-weight:800; color:#10b981; margin-top:4px;">0 kg</div>
+      </div>
+      <span style="font-size:0.72rem; background:rgba(16,185,129,0.15); color:#10b981; padding:4px 10px; border-radius:20px; font-weight:700;">SDG 13</span>
+    </div>
+    <div style="height:80px; position:relative;"><canvas id="co2TrendChart"></canvas></div>
+  </div>
+  <div class="glass-card" style="padding:1.4rem; border-top:4px solid var(--primary);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+      <div>
+        <p style="margin:0; font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted);">📦 Shipments / Day</p>
+        <div id="stat-vol-today" style="font-size:1.6rem; font-weight:800; color:var(--primary); margin-top:4px;">0 today</div>
+      </div>
+      <span style="font-size:0.72rem; background:rgba(79,140,255,0.15); color:var(--primary); padding:4px 10px; border-radius:20px; font-weight:700;">7-Day</span>
+    </div>
+    <div style="height:80px; position:relative;"><canvas id="volumeTrendChart"></canvas></div>
+  </div>
+</div>
+
 <!-- Charts Row -->
 <div class="responsive-grid-2" data-layout-id="analytics-charts" style="margin-bottom:32px; align-items: start;">
 <div class="glass-card">

@@ -369,6 +369,55 @@ if (!document.getElementById('toast-styles')) {
 window.showToast = showToast;
 window.showNotification = showToast;
 
+// ─── Global alert() override — route all bare alert() to branded toasts ───────
+(function() {
+    const _nativeAlert = window.alert.bind(window);
+    window.alert = function(msg) {
+        if (typeof showToast === 'function') {
+            // Detect severity from message content
+            const lower = String(msg).toLowerCase();
+            const type = (lower.includes('error') || lower.includes('fail') || lower.includes('invalid') || lower.includes('🚨'))
+                ? 'error'
+                : (lower.includes('success') || lower.includes('✅') || lower.includes('done') || lower.includes('verified'))
+                ? 'success'
+                : 'info';
+            showToast(String(msg), type);
+        } else {
+            _nativeAlert(msg);
+        }
+    };
+})();
+
+// ─── Global confirm() override — branded modal with promise ──────────────────
+(function() {
+    const _nativeConfirm = window.confirm.bind(window);
+    window.confirm = function(msg) {
+        // If we're in a synchronous context we fall back (rare), else use branded modal
+        // For async usage the caller should use window.confirmAsync()
+        return _nativeConfirm(msg);
+    };
+
+    window.confirmAsync = function(msg, { danger = false } = {}) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);z-index:99998;display:flex;align-items:center;justify-content:center;animation:toast-in 0.25s ease;';
+            const accentColor = danger ? '#ef4444' : 'var(--primary)';
+            overlay.innerHTML = `
+                <div style="background:var(--bg);border:1px solid var(--border);border-top:4px solid ${accentColor};border-radius:20px;padding:28px 32px;max-width:420px;width:94%;box-shadow:0 30px 60px rgba(0,0,0,0.5);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);">
+                    <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:24px;line-height:1.6;">${msg}</div>
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button id="_confirm-cancel" style="padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);font-weight:700;cursor:pointer;font-size:0.85rem;">Cancel</button>
+                        <button id="_confirm-ok" style="padding:10px 22px;border-radius:10px;border:none;background:${accentColor};color:white;font-weight:800;cursor:pointer;font-size:0.85rem;">Confirm</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+            overlay.querySelector('#_confirm-ok').onclick = () => { overlay.remove(); resolve(true); };
+            overlay.querySelector('#_confirm-cancel').onclick = () => { overlay.remove(); resolve(false); };
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+        });
+    };
+})();
+
 /**
  * Global PIN Box Logic
  * Handles auto-focus, backspace, and pasting for .pin-box elements.

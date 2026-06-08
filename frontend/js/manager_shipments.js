@@ -154,6 +154,32 @@ const smartConfig = {
 
 
 async function loadShipments() {
+    // Show skeleton loaders immediately
+    const tbody = document.getElementById('shipments-table-body');
+    if (tbody) {
+        const skeletonRow = `
+            <tr class="skeleton-row">
+                <td><div class="skel" style="width:70%;height:14px;"></div><div class="skel" style="width:40%;height:10px;margin-top:6px;"></div></td>
+                <td><div class="skel" style="width:80px;height:6px;"></div></td>
+                <td><div class="skel" style="width:60px;height:20px;border-radius:20px;"></div></td>
+                <td><div class="skel" style="width:80%;height:12px;"></div></td>
+                <td><div class="skel" style="width:70%;height:12px;"></div></td>
+                <td><div class="skel" style="width:50%;height:12px;"></div></td>
+                <td><div class="skel" style="width:80px;height:28px;border-radius:8px;"></div></td>
+            </tr>`;
+        tbody.innerHTML = Array(6).fill(skeletonRow).join('');
+        if (!document.getElementById('skel-styles')) {
+            const s = document.createElement('style');
+            s.id = 'skel-styles';
+            s.innerHTML = `
+                .skel { background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.05) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; }
+                @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+                body.light-mode .skel { background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.12) 50%, rgba(0,0,0,0.06) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+            `;
+            document.head.appendChild(s);
+        }
+    }
+
     try {
         const companyId = localStorage.getItem('manager_id');
         const [shipments, drivers, vehicles, activeAlerts] = await Promise.all([
@@ -171,6 +197,9 @@ async function loadShipments() {
         // Update real-time deadline banners whenever data refreshes
         if (typeof checkEwayDeadlines === 'function') checkEwayDeadlines();
     } catch(e) {
+        // Clear skeletons on error too
+        const tbody = document.getElementById('shipments-table-body');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--danger);">Failed to load shipments. Please refresh.</td></tr>`;
         console.error("Failed to load shipments:", e);
     }
 }

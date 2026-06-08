@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Receiver Portal: Verify Delivery | Logistix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .portal-layout {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .portal-card {
+            width: 100%;
+            padding: 40px 32px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+            background: var(--card);
+            backdrop-filter: blur(20px);
+            transition: all 0.3s ease;
+        }
+        .portal-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .portal-header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .portal-header p {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin: 0;
+        }
+        .input-group {
+            margin-bottom: 24px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .portal-input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1.5px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+        .portal-input:focus {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 15px rgba(79, 140, 255, 0.15);
+        }
+        .pin-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .pin-box {
+            width: 48px;
+            height: 48px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 800;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .pin-box:focus {
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 10px rgba(79, 140, 255, 0.2);
+        }
+        .btn-confirm {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), #6366f1);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 8px 25px rgba(79, 140, 255, 0.25);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(79, 140, 255, 0.35);
+            filter: brightness(1.1);
+        }
+        .btn-confirm:active {
+            transform: translateY(0);
+        }
+        .btn-confirm:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        .home-link {
+            margin-top: 24px;
+            color: var(--muted);
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .home-link:hover {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-animation"></div>
+    
+    <div class="portal-layout">
+        <a href="../index.html" class="glass-card" style="text-decoration:none; color:var(--text); font-size:1.2rem; width:42px; height:42px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--border); box-shadow:0 4px 12px rgba(0,0,0,0.1); transition:all 0.2s; margin-bottom:24px;" onmouseover="this.style.transform='scale(1.1)'; this.style.borderColor='var(--primary)';" onmouseout="this.style.transform='scale(1)'; this.style.borderColor='var(--border)';">
+            🏠
+        </a>
+
+        <div class="portal-card glass-card">
+            <div class="portal-header">
+                <h1>Receiver Portal</h1>
+                <p>Confirm delivery of your package in real-time</p>
+            </div>
+
+            <form id="verify-form" onsubmit="handleVerification(event)">
+                <div class="input-group">
+                    <label for="shipment-id">Order Number / Shipment ID</label>
+                    <input type="text" id="shipment-id" placeholder="e.g. 557f9b08 or full UUID" required class="portal-input">
+                </div>
+
+                <div class="input-group">
+                    <label>6-Digit Delivery OTP</label>
+                    <div class="pin-row" id="pin-container">
+                        <input class="pin-box" maxlength="1" type="text" inputmode="numeric" required>
+                        <input class="pin-box" maxlength="1" type="text" inputmode="numeric" required>
+                        <input class="pin-box" maxlength="1" type="text" inputmode="numeric" required>
+                        <input class="pin-box" maxlength="1" type="text" inputmode="numeric" required>
+                        <input class="pin-box" maxlength="1" type="text" inputmode="numeric" required>
+                        <input class="pin-box" maxlength="1" type="text" inputmode="numeric" required>
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-confirm">
+                    ✓ Confirm Delivery & Release Funds
+                </button>
+            </form>
+        </div>
+
+        <a href="track.html" class="home-link">
+            🔍 Go to Live Order Tracking
+        </a>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        // Auto pre-fill Shipment ID from URL parameters
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const shipmentId = urlParams.get('id') || urlParams.get('shipment_id');
+            if (shipmentId) {
+                document.getElementById('shipment-id').value = shipmentId;
+                // Shift focus to the first PIN box
+                const firstPin = document.querySelector('.pin-box');
+                if (firstPin) firstPin.focus();
+            }
+
+            // Auto-tabbing for PIN inputs
+            const pinInputs = document.querySelectorAll('.pin-box');
+            pinInputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    e.target.value = value.replace(/[^0-9]/g, '');
+                    if (e.target.value.length === 1 && index < pinInputs.length - 1) {
+                        pinInputs[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                        pinInputs[index - 1].focus();
+                    }
+                });
+
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+                    const numbersOnly = pasteData.replace(/[^0-9]/g, '').slice(0, 6);
+                    
+                    numbersOnly.split('').forEach((char, i) => {
+                        if (pinInputs[i]) {
+                            pinInputs[i].value = char;
+                        }
+                    });
+                    
+                    const nextFocusIndex = Math.min(numbersOnly.length, pinInputs.length - 1);
+                    pinInputs[nextFocusIndex].focus();
+                });
+            });
+        });
+
+        // Form submission handler
+        async function handleVerification(event) {
+            event.preventDefault();
+            const shipmentId = document.getElementById('shipment-id').value.trim();
+            const otp = Array.from(document.querySelectorAll('.pin-box')).map(i => i.value.trim()).join('');
+
+            if (!shipmentId) {
+                showToast('Please enter a valid Shipment ID.', 'error');
+                return;
+            }
+            if (otp.length < 6) {
+                showToast('Please enter the complete 6-digit OTP.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerText = '⏳ Verifying Delivery...';
+
+            try {
+                const res = await apiCall('/auth/customer/verify-delivery', 'POST', {
+                    shipment_id: shipmentId,
+                    otp: otp
+                });
+                
+                showToast('🎉 Delivery verified successfully! Ledger balances updated.', 'success');
+                btn.innerText = '✅ Delivered';
+                
+                // Reset pin boxes
+                document.querySelectorAll('.pin-box').forEach(i => i.value = '');
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerText = '✓ Confirm Delivery & Release Funds';
+                // Branded alert is automatically shown by apiCall
+            }
+        }
+    </script>
+</body>
+</html>

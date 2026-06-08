@@ -845,6 +845,40 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     expenses = sum(float(t.get("amount") or 0) for t in comp_txs if t.get("type") == "EXPENSE")
     net_profit = revenue - expenses
 
+    # 6. 7-day volume_data (real shipment counts per day)
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone.utc).date()
+    volume_data = []
+    co2_trend = []
+    for offset in range(6, -1, -1):
+        day = today - timedelta(days=offset)
+        day_ships = [
+            s for s in shipments
+            if s.get("created_at") and s["created_at"][:10] == str(day)
+        ]
+        volume_data.append(len(day_ships))
+        # CO2 estimate for that day's shipments
+        day_co2 = 0.0
+        for ds in day_ships:
+            dist = 200.0  # default estimate km
+            weight = float(ds.get("weight") or 10.0)
+            vtype = (ds.get("vehicle_type") or "truck").lower()
+            factor = {"truck": 0.27, "van": 0.18, "bike": 0.06, "drone": 0.02}.get(vtype, 0.20)
+            day_co2 += weight * dist * factor / 1000.0  # kg CO2
+        co2_trend.append(round(day_co2, 2))
+
+    total_dist = 0.0
+    total_co2 = 0.0
+    for s in shipments:
+        dist = 200.0  # default estimate km
+        weight = float(s.get("weight") or 10.0)
+        vtype = (s.get("vehicle_type") or "truck").lower()
+        factor = {"truck": 0.27, "van": 0.18, "bike": 0.06, "drone": 0.02}.get(vtype, 0.20)
+        day_co2 = weight * dist * factor / 1000.0
+        total_dist += dist
+        total_co2 += day_co2
+    avg_co2_per_km = (total_co2 / total_dist) if total_dist > 0 else 0.0
+
     return {
         "total_shipments": len(shipments),
         "active_shipments": len([s for s in shipments if s.get("status") != "delivered"]),
@@ -856,7 +890,10 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         "fleet_dist": fleet_dist,
         "revenue": round(revenue, 2),
         "net_profit": round(net_profit, 2),
-        "perf_history": [random.randint(85, 100) for _ in range(7)]
+        "perf_history": [random.randint(85, 100) for _ in range(7)],
+        "volume_data": volume_data,
+        "co2_trend": co2_trend,
+        "avg_co2_per_km": round(avg_co2_per_km, 3),
     }
 
 @router.get("/analytics/esg")
@@ -2080,4 +2117,36 @@ def manager_esg_audit(data: dict):
     system_instruction = "You are a professional ESG Strategy Lead. Output a clean markdown audit report."
     response_text = call_gemini(prompt, system_instruction)
     return {"audit": response_text}
+
+@router.get("/driver_audit_log")
+def get_driver_audit_log(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
+    from backend.database import JSONDatabase
+    audit_db = JSONDatabase("driver_audit_log")
+    logs = audit_db.get_all()
+    
+    drivers_db = JSONDatabase("drivers")
+    company_drivers = {d["id"]: d for d in drivers_db.get_filtered({"company_id": company_id})}
+    
+    shipments_db = JSONDatabase("shipments")
+    
+    filtered_logs = []
+    for log in logs:
+        if not log:
+            continue
+        drv_id = log.get("driver_id")
+        if drv_id in company_drivers:
+            # Enrich log
+            drv = company_drivers[drv_id]
+            log["driver_name"] = drv.get("name", "Unknown")
+            ship_id = log.get("shipment_id")
+            if ship_id:
+                s = shipments_db.get_by_id(ship_id)
+                if s:
+                    log["shipment_description"] = s.get("description", "Unknown")
+                else:
+                    log["shipment_description"] = "Deleted Shipment"
+            filtered_logs.append(log)
+            
+    return sorted(filtered_logs, key=lambda x: x.get("timestamp", ""), reverse=True)
 

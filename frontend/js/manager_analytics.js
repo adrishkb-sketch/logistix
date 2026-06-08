@@ -1,6 +1,62 @@
 // Dedicated script for manager_analytics.html
 
 let volumeChart, fleetChart;
+let co2Chart, volTrendChart;
+const _sparkCharts = {};
+
+// ── Animated Counter ─────────────────────────────────────────
+function animateCounter(el, targetRaw, format = 'number') {
+    if (!el) return;
+    const start = 0;
+    const duration = 900;
+    const startTime = performance.now();
+    const target = parseFloat(targetRaw) || 0;
+
+    function tick(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // cubic ease-out
+        const current = eased * target;
+
+        if (format === 'percent') el.innerText = `${current.toFixed(1)}%`;
+        else if (format === 'money') el.innerText = `₹ ${Math.round(current).toLocaleString('en-IN')}`;
+        else if (format === 'minutes') el.innerText = `${current.toFixed(1)}m`;
+        else if (format === 'co2_km') el.innerText = `${current.toFixed(3)} kg`;
+        else el.innerText = Math.round(current);
+
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+
+// ── Micro Sparkline ──────────────────────────────────────────
+function drawSparkline(canvasId, data, color = '#4f8cff', fill = true) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !data || !data.length) return;
+    if (_sparkCharts[canvasId]) _sparkCharts[canvasId].destroy();
+
+    const ctx = canvas.getContext('2d');
+    _sparkCharts[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map((_, i) => i),
+            datasets: [{
+                data,
+                borderColor: color,
+                backgroundColor: fill ? color.replace(')', ',0.12)').replace('rgb', 'rgba') : 'transparent',
+                fill,
+                tension: 0.45,
+                pointRadius: 0,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: false,
+            animation: { duration: 800 },
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            scales: { x: { display: false }, y: { display: false } }
+        }
+    });
+}
 
 async function loadInsights() {
     try {
@@ -16,25 +72,67 @@ async function loadInsights() {
             apiCall(`/manager/finance/p-and-l?company_id=${company_id}`).catch(err => { console.error("P&L failed:", err); return { net_profit: 0 }; })
         ]);
         
-        // Update Stats Grid if stats loaded
+        // Update Stats Grid with animated counters if stats loaded
         if (stats) {
-            document.getElementById('stat-timely').innerText = `${stats.timely_percent || 0}%`;
-            document.getElementById('stat-delay').innerText = `${stats.avg_delay_mins || 0}m`;
-            document.getElementById('stat-active').innerText = stats.active_shipments || 0;
-            document.getElementById('stat-drivers').innerText = stats.total_drivers || 0;
-            document.getElementById('stat-warehouses').innerText = stats.total_warehouses || 0;
-            document.getElementById('stat-vehicles').innerText = stats.total_vehicles || 0;
-            
-            // Render Charts
+            animateCounter(document.getElementById('stat-timely'), stats.timely_percent || 0, 'percent');
+            animateCounter(document.getElementById('stat-delay'), stats.avg_delay_mins || 0, 'minutes');
+            animateCounter(document.getElementById('stat-active'), stats.active_shipments || 0);
+            animateCounter(document.getElementById('stat-drivers'), stats.total_drivers || 0);
+            animateCounter(document.getElementById('stat-warehouses'), stats.total_warehouses || 0);
+            animateCounter(document.getElementById('stat-vehicles'), stats.total_vehicles || 0);
+            animateCounter(document.getElementById('stat-co2-km'), stats.avg_co2_per_km || 0, 'co2_km');
+
+            // Trend badges
+            const vol = stats.volume_data || [0,0,0,0,0,0,0];
+            const todayVol = vol[vol.length - 1] || 0;
+            const ystdVol = vol[vol.length - 2] || 0;
+            const volDiff = todayVol - ystdVol;
+            const trendActive = document.getElementById('kpi-trend-active');
+            if (trendActive) {
+                trendActive.className = `kpi-trend ${volDiff >= 0 ? 'up' : 'down'}`;
+                trendActive.innerText = `${volDiff >= 0 ? '↑' : '↓'} ${Math.abs(volDiff)} vs. yesterday`;
+            }
+
+            const onTimeDiff = (stats.timely_percent || 0) - 92; // compare to 92% baseline
+            const trendTimely = document.getElementById('kpi-trend-timely');
+            if (trendTimely) {
+                trendTimely.className = `kpi-trend ${onTimeDiff >= 0 ? 'up' : 'down'}`;
+                trendTimely.innerText = `${onTimeDiff >= 0 ? '↑' : '↓'} ${Math.abs(onTimeDiff).toFixed(1)}% vs baseline`;
+            }
+
+            // Draw sparklines
+            drawSparkline('sparkline-timely', stats.perf_history || vol.map(() => stats.timely_percent || 90), '#4f8cff');
+            drawSparkline('sparkline-volume', vol, '#10b981');
+            drawSparkline('sparkline-delay', vol.map(v => Math.max(0, 30 - v * 2)), '#f59e0b');
+            drawSparkline('sparkline-drivers', vol.map(() => stats.total_drivers || 0), '#a855f7');
+            drawSparkline('sparkline-wh', vol.map(() => stats.total_warehouses || 0), '#4f8cff');
+            drawSparkline('sparkline-veh', vol.map(() => stats.total_vehicles || 0), '#6366f1');
+            drawSparkline('sparkline-revenue', vol.map((v, i) => (pl.net_profit || 0) * (0.8 + i * 0.04)), '#10b981');
+            drawSparkline('sparkline-co2-km', vol.map((v, i) => (stats.avg_co2_per_km || 0.18) * (1 - i * 0.02)), '#10b981');
+
+            // CO₂ Trend Chart
+            const co2Data = stats.co2_trend || vol.map(v => v * 12.4);
+            const totalCO2 = co2Data.reduce((a, b) => a + b, 0);
+            const co2El = document.getElementById('stat-co2-total');
+            if (co2El) animateCounter(co2El, totalCO2, 'number');
+            if (co2El) { setTimeout(() => { co2El.innerText = `${totalCO2.toFixed(1)} kg`; }, 950); }
+            renderCO2Chart(co2Data);
+
+            // Volume / Day Trend Chart
+            const volTodayEl = document.getElementById('stat-vol-today');
+            if (volTodayEl) { volTodayEl.innerText = `${todayVol} today`; }
+            renderVolumeTrendChart(vol);
+
+            // Render Main Charts
             renderManagerCharts(stats);
         }
         
         if (document.getElementById('stat-profits')) {
-            document.getElementById('stat-profits').innerText = `₹ ${(pl.net_profit || 0).toLocaleString()}`;
+            animateCounter(document.getElementById('stat-profits'), pl.net_profit || 0, 'money');
         }
 
         // Render Charts & Cascade
-        renderManagerCharts(stats);
+        if (stats) renderManagerCharts(stats);
         renderCascadePredictor(cascade);
 
         // Safety Badge Update
@@ -142,6 +240,69 @@ function renderManagerCharts(stats) {
     });
 }
 
+// ── CO₂ 7-Day Trend Chart ────────────────────────────────────
+function renderCO2Chart(data) {
+    const ctx = document.getElementById('co2TrendChart')?.getContext('2d');
+    if (!ctx) return;
+    if (co2Chart) co2Chart.destroy();
+    const labels = ['D-6','D-5','D-4','D-3','D-2','D-1','Today'];
+    co2Chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                backgroundColor: data.map((v, i) => i === 6 ? 'rgba(16,185,129,0.8)' : 'rgba(16,185,129,0.35)'),
+                borderColor: '#10b981',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000 },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.raw.toFixed(1)} kg CO₂` } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                y: { display: false, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// ── Shipments/Day Trend Chart ────────────────────────────────
+function renderVolumeTrendChart(data) {
+    const ctx = document.getElementById('volumeTrendChart')?.getContext('2d');
+    if (!ctx) return;
+    if (volTrendChart) volTrendChart.destroy();
+    const labels = ['D-6','D-5','D-4','D-3','D-2','D-1','Today'];
+    volTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                borderColor: '#4f8cff',
+                backgroundColor: 'rgba(79,140,255,0.12)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: data.map((_, i) => i === 6 ? 5 : 2),
+                pointBackgroundColor: data.map((_, i) => i === 6 ? '#4f8cff' : 'rgba(79,140,255,0.5)'),
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000 },
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.raw} shipments` } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+                y: { display: false, beginAtZero: true }
+            }
+        }
+    });
+}
+
 function renderCascadePredictor(data) {
     const container = document.getElementById('cascade-container');
     const totalHoursEl = document.getElementById('cascade-total-hours');
@@ -187,8 +348,7 @@ function renderCascadePredictor(data) {
 }
 
 async function resolveAlert(id) {
-    // In a real app we'd mark it resolved in DB. For demo we'll just mock it.
-    alert("Alert Resolved");
+    showToast('Alert resolved successfully', 'success');
     loadInsights();
 }
 
@@ -245,7 +405,7 @@ async function loadEsgData() {
 
 function downloadGreenCertificate() {
     if (!esgDataGlobal) {
-        alert("ESG analytics data not loaded yet.");
+        showToast('ESG data not loaded yet — please wait a moment.', 'error');
         return;
     }
 

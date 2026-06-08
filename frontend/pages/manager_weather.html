@@ -442,6 +442,7 @@ body.light-mode .map-toolbar { background: rgba(255,255,255,0.6); border-color: 
                     <button class="tool-btn tool-btn-ghost active" id="toggle-radar" onclick="toggleRadarOverlay(this)" title="Live radar">📡 Radar</button>
                     <button class="tool-btn tool-btn-ghost active" id="toggle-cloud" onclick="toggleCloudOverlay(this)" title="Cloud cover">☁️ Clouds</button>
                     <button class="tool-btn tool-btn-ghost active" id="toggle-wind" onclick="toggleWindOverlay(this)" title="Wind">💨 Wind</button>
+                    <button class="tool-btn tool-btn-ghost" id="toggle-heatmap" onclick="toggleHeatmapOverlay(this)" title="Live Fleet Heatmap">🔥 Heatmap</button>
                 </div>
             </div>
         </div>
@@ -591,6 +592,7 @@ body.light-mode .map-toolbar { background: rgba(255,255,255,0.6); border-color: 
 
 <!-- Scripts -->
 <script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script src="../js/translator.js?v=2.3"></script>
 <script src="../js/logo.js"></script>
@@ -644,6 +646,7 @@ let baseLayers = {};
 let radarLayer = null;
 let cloudLayer = null;
 let windLayer = null;
+let heatLayer = null;
 let drawControl = null;
 window._soiPatchLayers = [];
 let drawnItems = null;
@@ -849,6 +852,50 @@ function toggleWindOverlay(btn) {
         windLayer.addTo(map);
     } else {
         map.removeLayer(windLayer);
+    }
+}
+
+function toggleHeatmapOverlay(btn) {
+    btn.classList.toggle('active');
+    if (!heatLayer) return;
+    if (btn.classList.contains('active')) {
+        heatLayer.addTo(map);
+    } else {
+        map.removeLayer(heatLayer);
+    }
+}
+
+function updateHeatmap(fleetData) {
+    if (!fleetData || !L.heatLayer) return;
+    const points = fleetData.map(v => {
+        const intensity = (v.fatigue || 0) / 100 + 0.5;
+        return [v.lat, v.lng, intensity];
+    });
+
+    if (heatLayer) {
+        heatLayer.setLatLngs(points);
+    } else {
+        heatLayer = L.heatLayer(points, {
+            radius: 25,
+            blur: 15,
+            maxZoom: 10,
+            gradient: {
+                0.4: 'blue',
+                0.6: 'cyan',
+                0.7: 'lime',
+                0.8: 'yellow',
+                1.0: 'red'
+            }
+        });
+    }
+
+    const isActive = document.getElementById('toggle-heatmap')?.classList.contains('active');
+    if (isActive) {
+        heatLayer.addTo(map);
+    } else {
+        if (map && map.hasLayer(heatLayer)) {
+            map.removeLayer(heatLayer);
+        }
     }
 }
 
@@ -1685,6 +1732,9 @@ async function loadWeatherFleetData() {
                 `);
             weatherMarkers.push(m);
         });
+
+        // Update heatmap
+        updateHeatmap(data.fleet);
 
         // Results Panel
         const resultsPanel = document.getElementById('results-panel');

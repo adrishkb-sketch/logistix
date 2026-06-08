@@ -1094,6 +1094,21 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
     if qr_input not in valid_codes:
         raise HTTPException(status_code=400, detail="Invalid Verification OTP Code")
 
+    # Log manual overrides to driver_audit_log
+    override_reason = data.get("override_reason") or ""
+    if qr_input == "MANUAL_OVERRIDE" or override_reason:
+        import uuid
+        from datetime import datetime
+        audit_db = JSONDatabase("driver_audit_log")
+        audit_db.insert({
+            "id": str(uuid.uuid4()),
+            "driver_id": driver_id,
+            "shipment_id": shipment_id,
+            "reason": override_reason or "Manual override by manager",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "action": "manual_override"
+        })
+
     # SEQUENTIAL LEG ENFORCEMENT
     if shipment.get("is_leg"):
         leg_order = shipment.get("leg_order", 1)

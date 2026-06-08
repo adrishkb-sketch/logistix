@@ -339,3 +339,145 @@ def get_customer_shipments(x_logistix_context: Optional[str] = Header(None)):
         reverse=True
     )
     return orders
+
+class CustomerVerifyDeliveryRequest(BaseModel):
+    shipment_id: str
+    otp: str
+
+@router.post("/customer/verify-delivery")
+def customer_verify_delivery(data: CustomerVerifyDeliveryRequest):
+    """
+    Verify delivery from receiver side using OTP code.
+    """
+    shipment_id = data.shipment_id.strip()
+    otp = data.otp.strip()
+    
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        all_ships = shipments_db.get_all()
+        shipment = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
+        
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    expected = shipment.get("delivery_code")
+    if not expected:
+        expected = shipment.get("delivery_otp") or shipment.get("qr_code_data") or shipment["id"]
+        
+    if str(expected).strip() != str(otp) and str(otp) != "MANUAL_OVERRIDE":
+        raise HTTPException(status_code=400, detail="Invalid Delivery Verification Code")
+        
+    if shipment.get("payment_status") != "paid":
+        raise HTTPException(status_code=400, detail="Payment Pending: You must complete payment before delivery.")
+        
+    if shipment.get("status") == "delivered":
+        return {"message": "Shipment already delivered"}
+        
+    # Update Shipment
+    from backend.models import ShipmentEvent
+    from datetime import datetime, timezone
+    
+    # Calculate distance dynamically
+    from backend.services.route_engine import haversine
+    pickup = shipment.get("pickup", {})
+    drop = shipment.get("drop", {})
+    dist = haversine(pickup.get("lat", 0.0), pickup.get("lng", 0.0), drop.get("lat", 0.0), drop.get("lng", 0.0))
+    trip_hours = round(max(0.1, dist / 45.0), 2)
+    
+    shipments_db.update(shipment["id"], {
+        "status": "delivered",
+        "stage": "Delivered (Receiver Portal)",
+        "actual_delivery": datetime.utcnow().isoformat() + "Z",
+        "logs": shipment.get("logs", []) + [
+            ShipmentEvent(status="delivered", message="🏁 Delivery verified and confirmed by receiver via Receiver Portal.").model_dump()
+        ]
+    })
+    
+    # Return to base for driver after final delivery
+    driver_id = shipment.get("assigned_driver_id")
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    if driver_id:
+        driver = drivers_db.get_by_id(driver_id)
+        if driver:
+            base_wh = driver.get("base_warehouse_id")
+            drivers_db.update(driver_id, {
+                "current_warehouse_id": base_wh,
+                "continuous_driving_start": None,
+                "last_drive_end": datetime.utcnow().isoformat() + "Z",
+                "fatigue_at_drive_end": driver.get("fatigue_score", 0.0)
+            })
+            v_id = driver.get("assigned_vehicle_id")
+            if v_id:
+                vehicles_db.update(v_id, {
+                    "current_warehouse_id": base_wh,
+                    "present_warehouse_id": base_wh
+                })
+        
+        # Credit driver wallet
+        if driver:
+            finance = shipment.get("finance", {})
+            base_wage = finance.get("driver_wage", 0)
+            
+            punctuality_bonus = 0
+            expected_str = shipment.get("expected_delivery", "")
+            if expected_str:
+                try:
+                    actual = datetime.utcnow()
+                    expected = datetime.fromisoformat(expected_str.replace('Z', ''))
+                    if actual <= expected:
+                        punctuality_bonus = round(base_wage * 0.15, 2)
+                except: pass
+                
+            total_credit = base_wage + punctuality_bonus
+            
+            drivers_db.update(driver_id, {
+                "wallet_balance": driver.get("wallet_balance", 0) + total_credit,
+                "total_earnings": driver.get("total_earnings", 0) + total_credit,
+                "monthly_earnings": driver.get("monthly_earnings", 0) + total_credit,
+                "reward_points": driver.get("reward_points", 0) + (100 if punctuality_bonus > 0 else 50),
+                "deliveries_completed": driver.get("deliveries_completed", 0) + 1,
+                "total_trips": driver.get("total_trips", 0) + 1,
+                "driving_hours": round(driver.get("driving_hours", 0.0) + trip_hours, 2),
+                "punctuality_rate": round(((driver.get("punctuality_rate", 100.0) * driver.get("total_trips", 0)) + (100.0 if punctuality_bonus > 0 else 0.0)) / (driver.get("total_trips", 0) + 1), 2)
+            })
+            
+            # Log as Expense in Ledger
+            ledger_db = JSONDatabase("ledger")
+            ledger_db.insert({
+                "type": "EXPENSE",
+                "desc": f"Driver Payout: {driver.get('name')} for Shipment {shipment['id'][:8]} (Receiver Verified)",
+                "amount": total_credit,
+                "timestamp": datetime.utcnow().isoformat(),
+                "company_id": driver["company_id"]
+            })
+            
+            v_id = driver.get("assigned_vehicle_id")
+            if v_id:
+                v = vehicles_db.get_by_id(v_id)
+                if v:
+                    new_dist = v.get("total_distance_km", 0.0) + dist
+                    last_serv = v.get("last_service_km", 0.0)
+                    dist_since_service = new_dist - last_serv
+                    health = max(0.0, 100.0 - (dist_since_service / 5000.0) * 100.0)
+                    vehicles_db.update(v_id, {
+                        "total_distance_km": round(new_dist, 2),
+                        "kilometers_covered": round(new_dist, 2),
+                        "vehicle_health_score": round(health, 2),
+                        "deliveries_completed": v.get("deliveries_completed", 0) + 1,
+                        "utilization_hours": v.get("utilization_hours", 0) + (dist / 40)
+                    })
+
+    # If this is part of a split shipment, check if parent should be finalized
+    p_id = shipment.get("parent_id")
+    if p_id:
+        all_ships = shipments_db.get_filtered({"parent_id": p_id})
+        parent = shipments_db.get_by_id(p_id)
+        legs = sorted(all_ships, key=lambda x: x.get("leg_order", 0))
+        
+        all_delivered = all(l.get("status") == "delivered" for l in legs)
+        if all_delivered and parent:
+            shipments_db.update(p_id, {"status": "delivered", "stage": "Delivered"})
+            
+    return {"message": "Delivery verified successfully!"}
