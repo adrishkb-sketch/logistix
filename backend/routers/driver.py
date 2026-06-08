@@ -1049,7 +1049,7 @@ def get_driver_wallet(driver_id: str):
     vehicle_id = driver.get("assigned_vehicle_id")
     if vehicle_id:
         v = vehicles_db.get_by_id(vehicle_id)
-        if v and v.get("checkup_status") == "pending" or v.get("status") == "maintenance":
+        if v and (v.get("checkup_status") == "pending" or v.get("status") == "maintenance"):
             maintenance_allowed = False
             
     # Check fuel
