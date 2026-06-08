@@ -324,6 +324,7 @@ async function loadWarehousesList(warehouses) {
             <td>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}</td>
             <td>
                 <div style="display:flex; gap:8px;">
+                    <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border:none; box-shadow:0 2px 8px rgba(168,85,247,0.2);" onclick="triggerRegionalAIWarehouseReadiness('${w.id}')">🔮 AI Audit</button>
                     <button class="btn-primary btn-accent" style="padding:6px 12px; font-size:0.75rem;" onclick="openEditWarehouse('${w.id}')">✏️ ${getTranslation('edit')}</button>
                     <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="locateWarehouse('${w.id}')">📍 ${getTranslation('locate')}</button>
                 </div>
@@ -722,3 +723,27 @@ window.toggleWhPass = function(id) {
 window.refreshWarehousesTable = function() {
     loadWarehousesList(globalWarehouses || globalHubs || []);
 };
+
+async function triggerRegionalAIWarehouseReadiness(whId) {
+    const reportDiv = document.getElementById('wh-readiness-report');
+    const modal = document.getElementById('wh-readiness-modal');
+    if (!reportDiv || !modal) return;
+    
+    // Check key before calling API
+    await ensureGeminiApiKey();
+    
+    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Running AI hub readiness & resource check... Please wait.</p>';
+    modal.style.display = 'block';
+    
+    try {
+        const companyId = localStorage.getItem('manager_id');
+        const res = await apiCall(`/manager/ai/wh-readiness`, 'POST', { 
+            company_id: companyId,
+            warehouse_id: whId
+        });
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+    } catch(err) {
+        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Hub Readiness report: ${err.message}</p>`;
+    }
+}
+window.triggerRegionalAIWarehouseReadiness = triggerRegionalAIWarehouseReadiness;

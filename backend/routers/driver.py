@@ -1867,3 +1867,57 @@ def mark_notifications_read(driver_id: str, data: dict):
     drivers_db.update(driver_id, driver)
     return {"message": "Notifications updated successfully."}
 
+
+@router.post("/{driver_id}/ai/briefing")
+def driver_ai_briefing(driver_id: str, data: Optional[dict] = None, x_gemini_api_key: Optional[str] = Header(None)):
+    driver = drivers_db.get_by_id(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+        
+    v_id = driver.get("assigned_vehicle_id")
+    vehicle = vehicles_db.get_by_id(v_id) if v_id else None
+    v_health = vehicle.get("vehicle_health_score", 100.0) if vehicle else 100.0
+    
+    assigned = shipments_db.get_filtered({"assigned_driver_id": driver_id})
+    active_ships = [s for s in assigned if s.get("status") in ["assigned", "in_transit", "delayed"]]
+    
+    dest_name = "No active destination"
+    origin_name = "N/A"
+    weather_cond = "Clear"
+    traffic_level = "Light"
+    
+    if active_ships:
+        s = active_ships[0]
+        dest_name = (s.get("drop") or {}).get("address", "Final Destination")
+        origin_name = (s.get("pickup") or {}).get("address", "Origin")
+        
+        # Predict weather & traffic if we have coords
+        curr_loc = s.get("current_location") or s.get("pickup") or {}
+        lat = curr_loc.get("lat")
+        lng = curr_loc.get("lng")
+        if lat and lng:
+            try:
+                from backend.services.route_engine import predict_weather_impact, simulate_traffic
+                weather = predict_weather_impact(lat, lng)
+                traffic = simulate_traffic(lat, lng)
+                weather_cond = weather.get("condition", "Clear")
+                traffic_level = traffic.get("level", "Light")
+            except Exception as e:
+                print(f"[Driver AI Briefing] Location check failed: {e}")
+            
+    prompt = (
+        f"Generate a personalized route briefing and calamity outlook for Driver '{driver.get('name', 'Unknown Driver')}':\n"
+        f"- Active Shipment Route: {origin_name} -> {dest_name}\n"
+        f"- Assigned Vehicle: {vehicle.get('plate_number', 'None') if vehicle else 'None'} (Health: {v_health:.1f}%)\n"
+        f"- Vitals Telemetry: Heart Rate {driver.get('heart_rate', 75)} bpm, SpO2 {driver.get('oxygen_level', 98)}%, Fatigue Score {driver.get('fatigue_score', 0.0):.1f}%\n"
+        f"- Environment at Current Segments: Weather '{weather_cond}', Traffic flow '{traffic_level}'\n\n"
+        f"Provide a structured driver route briefing report with 'Calamity Outlook', 'Safe Havens on Route', "
+        f"'Personal Health & Vitals Advisory', and 'Alternative Navigation recommendation'. Keep it under 200 words."
+    )
+    
+    system_instruction = "You are a professional driver route assistant and dispatcher in India. Output a professional markdown briefing report. Keep it under 200 words."
+    from backend.services.gemini_service import call_gemini
+    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    return {"report": response_text}
+
+

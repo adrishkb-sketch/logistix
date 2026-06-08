@@ -1818,4 +1818,28 @@ window.viewFullProfile = viewFullProfile;
 window.approveCheckup = approveCheckup;
 window.injectProfileModal = injectProfileModal;
 
+async function triggerAIWarehouseReadiness() {
+    const reportDiv = document.getElementById('wh-readiness-report');
+    const modal = document.getElementById('wh-readiness-modal');
+    if (!reportDiv || !modal) return;
+    
+    // Check key before calling API
+    await ensureGeminiApiKey();
+    
+    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Running AI hub readiness & resource check... Please wait.</p>';
+    modal.style.display = 'block';
+    
+    try {
+        const res = await apiCall(`/manager/ai/wh-readiness`, 'POST', { 
+            company_id: companyId,
+            warehouse_id: whId
+        });
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+    } catch(err) {
+        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Hub Readiness report: ${err.message}</p>`;
+    }
+}
+window.triggerAIWarehouseReadiness = triggerAIWarehouseReadiness;
+
+
 

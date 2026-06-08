@@ -3440,3 +3440,25 @@ window.toggleHUDMirror = function() {
         }
     }
 };
+
+async function triggerAIDriverBriefing() {
+    const reportDiv = document.getElementById('driver-briefing-report');
+    const modal = document.getElementById('driver-briefing-modal');
+    if (!reportDiv || !modal) return;
+
+    // Check key before calling API
+    await ensureGeminiApiKey();
+
+    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Compiling route vitals & calamity outlook... Please wait.</p>';
+    modal.style.display = 'block';
+
+    try {
+        const driverId = localStorage.getItem('driver_id');
+        const res = await apiCall(`/driver/${driverId}/ai/briefing`, 'POST', {});
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+    } catch(err) {
+        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Route Briefing: ${err.message}</p>`;
+    }
+}
+window.triggerAIDriverBriefing = triggerAIDriverBriefing;
+

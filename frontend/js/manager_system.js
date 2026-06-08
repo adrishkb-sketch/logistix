@@ -132,8 +132,33 @@ function startOTPTimer(linkId, valId, retryFn) {
     }, 1000);
 }
 
+function saveGeminiApiKey() {
+    const key = document.getElementById('gemini-api-key-input').value.trim();
+    if (!key) {
+        showToast("Please enter a valid Gemini API Key", "error");
+        return;
+    }
+    localStorage.setItem('gemini_api_key', key);
+    showToast("Gemini API Key saved successfully!", "success");
+}
+
+function clearGeminiApiKey() {
+    localStorage.removeItem('gemini_api_key');
+    document.getElementById('gemini-api-key-input').value = '';
+    showToast("Gemini API Key cleared", "info");
+}
+
+function loadGeminiApiKey() {
+    const key = localStorage.getItem('gemini_api_key');
+    const input = document.getElementById('gemini-api-key-input');
+    if (input && key) {
+        input.value = key;
+    }
+}
+
 async function initPage() {
     initDeletePinListeners();
+    loadGeminiApiKey();
 }
 
 document.addEventListener('DOMContentLoaded', initPage);

@@ -40,6 +40,10 @@ async function apiCall(endpoint, method = "GET", body = null, isSilent = false) 
             "X-Logistix-Context": context || ""
         }
     };
+    const geminiKey = localStorage.getItem('gemini_api_key');
+    if (geminiKey) {
+        options.headers["X-Gemini-API-Key"] = geminiKey;
+    }
     if (body) {
         options.body = JSON.stringify(body);
     }
@@ -463,3 +467,156 @@ document.addEventListener('paste', (e) => {
         }
     }
 });
+
+/**
+ * Ensures Gemini API key is present in localStorage.
+ * If not, dynamically spawns a high-fidelity glassmorphic key entry modal.
+ */
+function ensureGeminiApiKey() {
+    return new Promise((resolve) => {
+        const key = localStorage.getItem('gemini_api_key');
+        if (key && key.trim().length > 0) {
+            resolve(key);
+            return;
+        }
+
+        // Key is missing, spawn the modal
+        const overlay = document.createElement('div');
+        overlay.id = 'gemini-key-prompt-modal';
+        overlay.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(25px);
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: toast-in 0.3s ease;
+        `;
+
+        overlay.innerHTML = `
+            <div class="glass-card" style="
+                width: 480px;
+                max-width: 90vw;
+                padding: 30px;
+                border: 1px solid rgba(168, 85, 247, 0.4);
+                box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+                background: rgba(15, 23, 42, 0.98);
+                border-radius: 20px;
+                animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            ">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom: 20px;">
+                    <span style="font-size: 2rem;">🔮</span>
+                    <div>
+                        <h3 style="margin:0; font-size:1.3rem; color:var(--primary); font-weight:800;">Gemini AI Core Activation</h3>
+                        <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">Enter Gemini API Key(s) to unlock real-time intelligence</p>
+                    </div>
+                </div>
+                
+                <p style="font-size:0.85rem; color:var(--text); line-height:1.6; margin-bottom:20px;">
+                    Provide your Google Gemini API key. You can paste **multiple keys** separated by commas to load-balance/rotate requests and multiply your free tier rate limits. 
+                    If skipped, the system runs using the local high-fidelity simulator.
+                </p>
+
+                <div style="margin-bottom:24px;">
+                    <label style="display:block; font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Gemini API Key(s)</label>
+                    <input type="password" id="prompt-gemini-key-input" placeholder="Paste Key(s) (AIzaSy..., AIzaSy...)" style="
+                        width: 100%;
+                        padding: 14px;
+                        border-radius: 12px;
+                        border: 1px solid var(--border);
+                        background: rgba(0,0,0,0.3);
+                        color: white;
+                        font-family: monospace;
+                        font-size: 0.9rem;
+                    " />
+                    <div style="margin-top: 8px; text-align:right;">
+                        <a href="https://aistudio.google.com/" target="_blank" style="color:var(--accent); font-size:0.75rem; text-decoration:none; font-weight:700;">Get a free API key from Google AI Studio ↗</a>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:12px; justify-content:flex-end;">
+                    <button id="prompt-gemini-skip" class="btn-primary" style="
+                        background: rgba(255, 255, 255, 0.05);
+                        border: 1px solid var(--border);
+                        color: var(--text);
+                        font-weight: 700;
+                        width: auto;
+                        padding: 10px 20px;
+                    ">Use Simulation</button>
+                    
+                    <button id="prompt-gemini-save" class="btn-primary" style="
+                        background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+                        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+                        font-weight: 800;
+                        width: auto;
+                        padding: 10px 22px;
+                    ">Activate AI</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+        document.getElementById('prompt-gemini-key-input').focus();
+
+        document.getElementById('prompt-gemini-save').onclick = () => {
+            const val = document.getElementById('prompt-gemini-key-input').value.trim();
+            if (val.length === 0) {
+                alert("Please enter a key or click 'Use Simulation'.");
+                return;
+            }
+            localStorage.setItem('gemini_api_key', val);
+            overlay.remove();
+            showToast("Gemini AI Core Activated successfully!", "success");
+            resolve(val);
+        };
+
+        document.getElementById('prompt-gemini-skip').onclick = () => {
+            overlay.remove();
+            showToast("Running in local simulation mode", "info");
+            resolve(null);
+        };
+    });
+}
+
+/**
+ * Robust, high-fidelity markdown-to-HTML parser for rendering "inch-perfect" reports.
+ */
+function parseMarkdownToHtml(text) {
+    if (!text) return '';
+    let formatted = text.trim();
+
+    // Escape raw HTML tags to prevent injections (except emojis and tags we generate)
+    formatted = formatted
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // Replace headers: ### text -> <h4 style="...">text</h4>
+    formatted = formatted.replace(/^###\s(.*)/gm, '<h4 style="color:var(--accent); margin: 18px 0 8px 0; font-weight:800; font-size:1.05rem;">$1</h4>');
+    formatted = formatted.replace(/^##\s(.*)/gm, '<h3 style="color:var(--primary); margin: 24px 0 12px 0; font-weight:800; font-size:1.2rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;">$1</h3>');
+    formatted = formatted.replace(/^#\s(.*)/gm, '<h2 style="color:var(--text); margin: 28px 0 16px 0; font-weight:800; font-size:1.4rem;">$1</h2>');
+
+    // Replace bold text **text** -> <strong>text</strong>
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong style="color:white; font-weight:800;">$1</strong>');
+
+    // Replace bullet points: * text or - text -> <li style="...">text</li>
+    formatted = formatted.replace(/^\s*[\*\-]\s(.*)/gm, '<li style="margin-left: 15px; margin-bottom: 6px; list-style-type: disc; color:var(--text);">$1</li>');
+
+    // Convert newlines to breaks
+    formatted = formatted.replace(/\n/g, '<br>');
+
+    // Clean up consecutive breaks around lists and headers
+    formatted = formatted.replace(/(<br>\s*)+<li/g, '<li');
+    formatted = formatted.replace(/<\/li>\s*(<br>\s*)+/g, '</li>');
+    formatted = formatted.replace(/(<br>\s*)+<h/g, '<h');
+    formatted = formatted.replace(/<\/h4>\s*(<br>\s*)+/g, '</h4>');
+    formatted = formatted.replace(/<\/h3>\s*(<br>\s*)+/g, '</h3>');
+    
+    return formatted;
+}
+
+window.ensureGeminiApiKey = ensureGeminiApiKey;
+window.parseMarkdownToHtml = parseMarkdownToHtml;
+

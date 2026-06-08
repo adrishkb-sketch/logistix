@@ -367,6 +367,9 @@
 <h2 data-i18n="safety_center_title" style="color:var(--danger); margin:0; font-size:2rem;">Safety Center 🛡️</h2>
 <div style="width:60px; height:5px; background:var(--danger); margin:18px 0; border-radius:2px;"></div>
 <p class="subtitle" data-i18n="safety_desc" style="margin-bottom:0; font-size:1rem; opacity:0.8;">Automated-monitored safety incidents, fatigue alerts, and Zen Mode activations.</p>
+<button class="btn-primary" onclick="triggerAISafetyAudit()" style="background:linear-gradient(135deg, #ef4444 0%, #a855f7 100%); width:auto; padding:8px 16px; font-weight:bold; border-radius:12px; margin-top:12px; box-shadow:0 4px 15px rgba(239, 68, 68, 0.3);">
+    🔮 AI Safety Strategy Audit
+</button>
 </div>
 <div style="text-align:right;">
 <span data-i18n="fleet_safety_index" style="font-size:0.8rem; color:var(--text-muted);">Fleet Safety Index:</span>
@@ -1088,6 +1091,20 @@ setTheme(localStorage.getItem('theme') || 'dark');
 <button class="btn-primary" onclick="document.getElementById('driver-profile-modal').style.display='none'" style="width:100%;">Close Profile</button>
 </div>
 </div>
+</div>
+
+<!-- Safety Audit Modal -->
+<div class="glass-card modal-glass modal" id="safety-audit-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:600px; max-width:90vw; padding:30px; border:1px solid var(--danger); box-shadow: 0 40px 80px rgba(0,0,0,0.3); background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(20px);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+        <h3 style="margin:0; color:var(--danger); font-size:1.3rem;">🛡️ AI Safety Strategy Audit Report</h3>
+        <button onclick="document.getElementById('safety-audit-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">×</button>
+    </div>
+    <div id="safety-audit-report" style="max-height:60vh; overflow-y:auto; font-size:0.95rem; line-height:1.6; color:var(--text);">
+        <!-- Report content injected -->
+    </div>
+    <div style="margin-top:20px; text-align:right;">
+        <button class="btn-primary" onclick="document.getElementById('safety-audit-modal').style.display='none'" style="width:auto; padding:10px 20px;">Close Report</button>
+    </div>
 </div>
 </body>
 </html>

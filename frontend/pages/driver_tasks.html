@@ -224,7 +224,14 @@
 <div data-i18n="rescue_protocol_active" style="font-weight:bold; color:var(--danger); margin-bottom:5px; font-size:0.9rem;">🚨 Rescue Protocol Active</div>
 <p data-i18n="rescue_initiating" id="rescue-details" style="font-size:0.85rem; color:var(--muted); margin:0;">Initiating emergency shipment transfer...</p>
 </div>
+<div class="glass-card" data-layout-id="dash-ai-briefing" style="padding:1.5rem; margin-bottom:1.5rem; border-left:4px solid var(--accent); background:linear-gradient(135deg, rgba(168, 85, 247, 0.05), transparent);">
+    <h4 style="margin:0; font-size:1rem; color:var(--accent);">🔮 Gemini AI Briefing &amp; Outlook</h4>
+    <p style="color:var(--text-muted); font-size:0.8rem; margin-top:5px; margin-bottom:12px;">Get a real-time, AI-powered weather threat assessment, road calamity analysis, and personalized safety suggestions for your active route.</p>
+    <button class="btn-primary" onclick="triggerAIDriverBriefing()" style="background:linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border:none; box-shadow:0 4px 15px rgba(168,85,247,0.3); font-weight:bold; width:auto; padding:8px 16px; font-size:0.85rem; border-radius:10px;">
+        🔮 Generate AI Route Briefing
+    </button>
 </div>
+
 <div class="glass-card" data-layout-id="dash-active-details" style="padding:1.5rem; text-align:center; background:linear-gradient(135deg, rgba(79, 140, 255, 0.05), transparent);">
 <h4 data-i18n="active_vehicle_details" style="margin:0;">Active vehicle details</h4>
 <div id="vehicle-mini-details" style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">Loading...</div>
@@ -350,6 +357,20 @@
 </form>
 </div> <!-- end main-content -->
 </div> <!-- end driver-layout -->
+<!-- AI Driver Briefing Modal -->
+<div class="glass-card modal-glass" id="driver-briefing-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:500px; max-width:90vw; padding:24px; border:1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4); background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(25px); border-radius: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+        <h3 style="margin:0; font-size:1.2rem; color:var(--primary); font-weight:800;">🔮 AI Route Briefing</h3>
+        <button onclick="document.getElementById('driver-briefing-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; opacity:0.6;">&times;</button>
+    </div>
+    <div id="driver-briefing-report" style="max-height:55vh; overflow-y:auto; font-size:0.9rem; line-height:1.6; color:var(--text); padding-right:5px;">
+        <!-- Injected via JS -->
+    </div>
+    <div style="margin-top:20px; text-align:right; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+        <button class="btn-primary" onclick="document.getElementById('driver-briefing-modal').style.display='none'" style="width:auto; padding:8px 20px; border-radius:10px; font-weight:bold;">Close Briefing</button>
+    </div>
+</div>
+
 <!-- Scripts -->
 <script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="../js/translator.js?v=2.2"></script>

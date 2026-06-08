@@ -246,6 +246,26 @@ async function openLogsModal(shipmentId) {
     }
 }
 
+async function triggerAISafetyAudit() {
+    const reportDiv = document.getElementById('safety-audit-report');
+    const modal = document.getElementById('safety-audit-modal');
+    if (!reportDiv || !modal) return;
+    
+    // Check key before calling API
+    await ensureGeminiApiKey();
+    
+    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Running neural fleet safety audit... Please wait.</p>';
+    modal.style.display = 'block';
+    
+    try {
+        const companyId = localStorage.getItem('manager_id');
+        const res = await apiCall(`/manager/ai/safety-audit`, 'POST', { company_id: companyId });
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+    } catch(err) {
+        reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Safety Report: ${err.message}</p>`;
+    }
+}
+
 async function initPage() {
     loadSafetyCenter();
 }

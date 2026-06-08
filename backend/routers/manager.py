@@ -975,7 +975,7 @@ def get_analytics_esg(company_id: Optional[str] = None, x_logistix_context: Opti
     }
 
 @router.get("/analytics/cascade")
-def get_cascading_impact(company_id: str, x_logistix_context: Optional[str] = Header(None)):
+def get_cascading_impact(company_id: str, x_logistix_context: Optional[str] = Header(None), x_gemini_api_key: Optional[str] = Header(None)):
     verify_context(company_id, x_logistix_context)
     all_shipments = shipments_db.get_all()
     my_ships = [s for s in all_shipments if s and s.get("company_id") == company_id]
@@ -1012,11 +1012,79 @@ def get_cascading_impact(company_id: str, x_logistix_context: Optional[str] = He
             "severity": "high" if delay_mins > 45 else "medium"
         })
         
+    # Preemptive AI Disruption Risk and Resilient Mitigation Strategy
+    from backend.services.gemini_service import call_gemini
+    from backend.services.route_engine import predict_weather_impact, simulate_traffic
+    
+    at_risk_list = []
+    for s in my_ships:
+        if s.get("status") not in ["assigned", "in_transit", "delayed"]:
+            continue
+            
+        driver_id = s.get("assigned_driver_id")
+        driver = drivers_db.get_by_id(driver_id) if driver_id else None
+        fatigue = driver.get("fatigue_score", 0.0) if driver else 0.0
+        
+        vehicle_id = s.get("assigned_vehicle_id")
+        vehicle = vehicles_db.get_by_id(vehicle_id) if vehicle_id else None
+        v_health = vehicle.get("vehicle_health_score", 100.0) if vehicle else 100.0
+        
+        curr_loc = s.get("current_location") or s.get("pickup") or {}
+        lat = curr_loc.get("lat", 0.0)
+        lng = curr_loc.get("lng", 0.0)
+        weather = predict_weather_impact(lat, lng) if lat else {"condition": "Clear"}
+        traffic = simulate_traffic(lat, lng) if lat else {"level": "Light"}
+        
+        delay_mins = (s.get("performance_stats") or {}).get("diff_mins", 0)
+        
+        is_risky = (
+            delay_mins > 30 or 
+            fatigue > 50 or 
+            v_health < 80 or 
+            weather.get("condition") in ["Rain", "Storm"]
+        )
+        
+        if is_risky:
+            at_risk_list.append({
+                "id": s.get("id", ""),
+                "description": s.get("description", "Unnamed Shipment"),
+                "pickup": (s.get("pickup") or {}).get("address", "Start"),
+                "drop": (s.get("drop") or {}).get("address", "End"),
+                "delay_mins": delay_mins,
+                "fatigue": fatigue,
+                "vehicle_health": v_health,
+                "weather": weather.get("condition", "Clear"),
+                "traffic": traffic.get("level", "Light")
+            })
+            
+    if at_risk_list:
+        system_instruction = (
+            "You are Logistix AI, a state-of-the-art logistics and supply chain resilience engine. "
+            "Your goal is to preemptively identify risk cascades and provide precise, actionable, and highly optimized "
+            "mitigation recommendations for a logistics manager in India. "
+            "Provide clear, structured, and professional action items. Format using markdown. "
+            "Keep it concise (maximum 3 bullet points, under 150 words total) to fit the UI widget."
+        )
+        prompt = "Analyze the following active shipments at risk of disruption and provide a resilience mitigation plan:\n"
+        for item in at_risk_list[:5]:  # Limit to 5 for prompt size and efficiency
+            prompt += (
+                f"- Shipment {item['id'][:8]} ({item['description']}): "
+                f"Route {item['pickup']} -> {item['drop']}. "
+                f"Delay: {item['delay_mins']}m. "
+                f"Driver fatigue: {item['fatigue']}. "
+                f"Vehicle health: {item['vehicle_health']}. "
+                f"Weather: {item['weather']}. "
+                f"Traffic: {item['traffic']}.\n"
+            )
+        recommendation = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    else:
+        recommendation = "System stable. No immediate mitigation required."
+        
     return {
         "active_risk_count": len(risks),
         "total_impact_hours": round(total_impact_hours, 1),
         "risks": risks,
-        "recommendation": "Divert high-priority cargo to regional air-legs if delays exceed 90 mins."
+        "recommendation": recommendation
     }
 
 @router.put("/drivers/{driver_id}")
@@ -2184,7 +2252,7 @@ def approve_checkup(vehicle_id: str, x_logistix_context: Optional[str] = Header(
 
 # Gemini AI Assistant Router
 @router.post("/ai/chat")
-def manager_ai_chat(data: dict):
+def manager_ai_chat(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
     from backend.services.gemini_service import call_gemini
     prompt = data.get("prompt", "")
     role = data.get("role", "manager")
@@ -2196,11 +2264,11 @@ def manager_ai_chat(data: dict):
         "Do not write overly long essays. Use bullet points."
     )
     
-    response_text = call_gemini(prompt, system_instruction)
+    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
     return {"response": response_text}
 
 @router.post("/ai/esg-audit")
-def manager_esg_audit(data: dict):
+def manager_esg_audit(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
     from backend.services.gemini_service import call_gemini
     company_id = data.get("company_id")
     # Fetch current carbon stats, EV fleets, etc.
@@ -2227,8 +2295,95 @@ def manager_esg_audit(data: dict):
     )
     
     system_instruction = "You are a professional ESG Strategy Lead. Output a clean markdown audit report."
-    response_text = call_gemini(prompt, system_instruction)
+    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
     return {"audit": response_text}
+
+@router.post("/ai/safety-audit")
+def manager_safety_audit(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
+    company_id = data.get("company_id")
+    from backend.database import JSONDatabase
+    drivers_db = JSONDatabase("drivers")
+    shipments_db = JSONDatabase("shipments")
+    
+    all_drivers = drivers_db.get_filtered({"company_id": company_id})
+    total_drivers = len(all_drivers)
+    high_fatigue = len([d for d in all_drivers if d.get("fatigue_score", 0.0) > 65.0])
+    zen_drivers = len([d for d in all_drivers if d.get("is_zen_mode")])
+    avg_safety = sum([d.get("driving_score", 100.0) for d in all_drivers]) / total_drivers if total_drivers else 100.0
+    
+    all_ships = shipments_db.get_filtered({"company_id": company_id})
+    incidents_count = 0
+    for s in all_ships:
+        for log in s.get("logs", []):
+            if "ISSUE:" in log.get("message", "") or "BREAKDOWN" in log.get("message", "") or log.get("status") in ["delayed", "safety_halt"]:
+                incidents_count += 1
+                
+    prompt = (
+        f"Perform a Safety Audit for a logistics fleet in India with the following telemetry metrics:\n"
+        f"- Total Drivers: {total_drivers}\n"
+        f"- Average Fleet Safety Score: {avg_safety:.1f}%\n"
+        f"- Drivers with Critical Fatigue (>65%): {high_fatigue}\n"
+        f"- Active Zen Mode Sessions: {zen_drivers}\n"
+        f"- Safety Incidents logged today: {incidents_count}\n\n"
+        f"Provide a structured audit report with sections 'Driver Fatigue Analysis', 'Incident Risk Assessment', "
+        f"and 'Operational Safety Playbook Recommendations'."
+    )
+    
+    system_instruction = "You are a senior logistics safety auditor in India. Output a professional markdown safety audit report. Keep it under 200 words."
+    from backend.services.gemini_service import call_gemini
+    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    return {"report": response_text}
+
+@router.post("/ai/wh-readiness")
+def manager_wh_readiness(data: dict, x_gemini_api_key: Optional[str] = Header(None)):
+    company_id = data.get("company_id")
+    warehouse_id = data.get("warehouse_id")
+    
+    from backend.database import JSONDatabase
+    warehouses_db = JSONDatabase("warehouses")
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    shipments_db = JSONDatabase("shipments")
+    
+    wh = warehouses_db.get_by_id(warehouse_id)
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+        
+    wh_drivers = drivers_db.get_filtered({"base_warehouse_id": warehouse_id})
+    wh_vehicles = vehicles_db.get_filtered({"base_warehouse_id": warehouse_id})
+    
+    total_drivers = len(wh_drivers)
+    high_fatigue = len([d for d in wh_drivers if d.get("fatigue_score", 0.0) > 60.0])
+    
+    total_vehicles = len(wh_vehicles)
+    unhealthy_vehicles = len([v for v in wh_vehicles if v.get("vehicle_health_score", 100.0) < 80.0])
+    avg_vehicle_health = sum([v.get("vehicle_health_score", 100.0) for v in wh_vehicles]) / total_vehicles if total_vehicles else 100.0
+    
+    all_ships = shipments_db.get_filtered({"company_id": company_id})
+    inbound_ships = [s for s in all_ships if s.get("drop_warehouse_id") == warehouse_id and s.get("status") in ["pending", "assigned", "in_transit"]]
+    inbound_count = len(inbound_ships)
+    
+    drone_count = wh.get("drone_count", 0) or 0
+    capacity = int(wh.get("capacity", 5)) + drone_count
+    congestion_pct = min(100.0, (inbound_count / capacity) * 100.0) if capacity > 0 else 0.0
+    
+    prompt = (
+        f"Perform an Operational Hub Readiness & Fleet Strategy Audit for depot '{wh.get('name', 'Unknown Hub')}' with the following parameters:\n"
+        f"- Inbound Congestion: {congestion_pct:.1f}% ({inbound_count} shipments inbound, base capacity {capacity})\n"
+        f"- Total Drone Fleet: {drone_count} active drone pads\n"
+        f"- Total Registered Drivers: {total_drivers}\n"
+        f"- High-Fatigue Drivers (>60%): {high_fatigue}\n"
+        f"- Total Vehicles: {total_vehicles}\n"
+        f"- Average Vehicle Health: {avg_vehicle_health:.1f}%\n"
+        f"- Servicing Required (<80% health): {unhealthy_vehicles} vehicles\n\n"
+        f"Provide a structured audit report with sections 'Depot Fitness Score', 'Operational Bottlenecks', "
+        f"'Drone Fleet Readiness', and 'Safety & Fleet Strategy recommendations'."
+    )
+    
+    system_instruction = "You are a senior logistics hub safety and resource efficiency optimizer. Output a professional markdown readiness audit. Keep it under 200 words."
+    from backend.services.gemini_service import call_gemini
+    response_text = call_gemini(prompt, system_instruction, api_key=x_gemini_api_key)
+    return {"report": response_text}
 
 @router.get("/driver_audit_log")
 def get_driver_audit_log(company_id: str, x_logistix_context: Optional[str] = Header(None)):

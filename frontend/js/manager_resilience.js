@@ -1,5 +1,16 @@
 // Dedicated script for manager_resilience.html
 
+function parseMarkdown(text) {
+    if (!text) return '';
+    // Replace markdown bold **text** -> <strong>text</strong>
+    let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Replace markdown bullet points * -> list elements or line breaks
+    formatted = formatted.replace(/^\*\s(.*)/gm, '• $1');
+    // Replace newlines with <br>
+    formatted = formatted.replace(/\n/g, '<br>');
+    return formatted;
+}
+
 async function loadNetworkResilience() {
     try {
         const data = await apiCall(`/manager/analytics/cascade?company_id=${localStorage.getItem('manager_id')}`);
@@ -8,7 +19,7 @@ async function loadNetworkResilience() {
         document.getElementById('nr-total-risk').innerText = `${data.total_impact_hours} hrs`;
         
         // Update Mitigation Text
-        document.getElementById('nr-rec-text').innerText = data.active_risk_count > 0 ? data.recommendation : "System stable. No immediate mitigation required.";
+        document.getElementById('nr-rec-text').innerHTML = data.active_risk_count > 0 ? parseMarkdown(data.recommendation) : "System stable. No immediate mitigation required.";
         
         // Update Matrix (Detailed cards)
         const matrix = document.getElementById('nr-matrix');

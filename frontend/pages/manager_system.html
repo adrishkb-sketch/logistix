@@ -398,7 +398,18 @@
 </div>
 <button class="btn-primary" data-i18n="btn_reset_all_functions" onclick="systemReset('operations')" style="background:var(--danger); width:auto; padding:12px 24px; font-weight:bold; box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);">RESET ALL FUNCTIONS ⚠️</button>
 </div>
+<div class="glass-card" style="padding:25px; margin-top:30px; border:1px solid var(--primary); background:rgba(79, 140, 255, 0.03);">
+<h4 style="margin:0; color:var(--primary); font-size:1.2rem;">🔮 Gemini AI Configuration</h4>
+<p style="font-size:0.85rem; margin:10px 0 20px 0; color:var(--text-muted);">
+    Input your Google Gemini API Key below. This key will be stored securely in your browser's local storage and used for the <b>Mitigation Center</b>, <b>Safety Center</b>, and <b>ESG Auditor</b>.
+</p>
+<div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+    <input type="password" id="gemini-api-key-input" placeholder="Enter API Key (AIzaSy...)" style="flex:1; min-width:250px; padding:12px 16px; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,0.3); color:white; font-family:monospace;" />
+    <button class="btn-primary" onclick="saveGeminiApiKey()" style="width:auto; padding:12px 24px; font-weight:bold;">Save API Key</button>
+    <button class="btn-primary btn-danger" onclick="clearGeminiApiKey()" style="width:auto; padding:12px 24px; background:rgba(239, 68, 68, 0.1); border:1px solid var(--danger); color:var(--danger)">Clear Key</button>
 </div>
+</div>
+
 <hr style="border-color:rgba(255,255,255,0.1); margin:40px 0;"/>
 <div class="glass-card" style="padding:30px; border:1px solid var(--danger); background:rgba(229,62,62,0.05);">
 <h3 data-i18n="danger_zone" style="color:var(--danger)">⚠️ Danger Zone</h3>
