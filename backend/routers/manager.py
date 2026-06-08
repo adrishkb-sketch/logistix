@@ -1104,24 +1104,36 @@ def link_driver_to_vehicle(
 
 @router.post("/auto-assign-fleet")
 def auto_assign_fleet(company_id: str):
-    # Find all unassigned drivers for this company
-    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
-    # Find all available and unassigned vehicles for this company
-    vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id and v.get("status") == "available" and not v.get("assigned_driver_id")]
+    # Fetch all data to perform in-memory bulk updates
+    all_drivers = drivers_db.get_all()
+    all_vehicles = vehicles_db.get_all()
+    
+    # Filter for unassigned for this company
+    drivers = [d for d in all_drivers if d and d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
+    vehicles = [v for v in all_vehicles if v and v.get("company_id") == company_id and v.get("status") == "available" and not v.get("assigned_driver_id")]
     
     assigned_count = 0
+    modified = False
+    
     for d in drivers:
         # Find matching vehicle: same hub AND same type
         match = next((v for v in vehicles if v.get("base_warehouse_id") == d.get("base_warehouse_id") and v.get("type") == d.get("license_type")), None)
         
         if match:
-            # Link
-            drivers_db.update(d["id"], {"assigned_vehicle_id": match["id"], "verification_status": "unverified"})
-            vehicles_db.update(match["id"], {"assigned_driver_id": d["id"]})
+            # Update the dictionaries directly in memory
+            d["assigned_vehicle_id"] = match["id"]
+            d["verification_status"] = "unverified"
+            match["assigned_driver_id"] = d["id"]
             
             # Remove from pool to prevent double assignment
             vehicles.remove(match)
             assigned_count += 1
+            modified = True
+            
+    # Save the updated data back to the database in a single write operation
+    if modified:
+        drivers_db.write(all_drivers)
+        vehicles_db.write(all_vehicles)
             
     return {"message": f"Successfully auto-assigned {assigned_count} driver-vehicle pairs.", "count": assigned_count}
 
