@@ -421,6 +421,7 @@ if (typeof L !== 'undefined') {
             console.warn("Sovereignty overlay failed to load");
         }
     };
+}
 
     window.zoomImage = function(src) {
         if (!src || src === '#') return;
@@ -469,13 +470,13 @@ if (typeof L !== 'undefined') {
         modal.style.opacity = '1';
     };
 
+    window.closeZoomModal = function() {
         const modal = document.getElementById('image-zoom-modal');
         if (modal) {
             modal.style.opacity = '0';
             modal.style.pointerEvents = 'none';
         }
     };
-}
 
 window.fintechChart = null;
 
