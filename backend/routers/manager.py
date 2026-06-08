@@ -628,7 +628,7 @@ def get_warehouses_congestion(company_id: Optional[str] = None, x_logistix_conte
     for w in warehouses:
         w_id = w.get("id")
         drone_count = w.get("drone_count") or 0
-        capacity = 5 + drone_count
+        capacity = int(w.get("capacity", 5)) + drone_count
         
         # Inbound shipments: heading to this warehouse (drop_warehouse_id matches)
         incoming_ships = [

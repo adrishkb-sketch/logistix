@@ -455,6 +455,7 @@ async function openEditWarehouse(id) {
         document.getElementById('edit-wh-contact').value = w.contact_number;
         document.getElementById('edit-wh-email').value = w.manager_email || '';
         document.getElementById('edit-wh-password').value = w.manager_password || '';
+        document.getElementById('edit-wh-capacity').value = w.capacity || 5;
 
         document.getElementById('wh-edit-modal').style.display = 'block';
     } catch(e) {}
@@ -467,6 +468,7 @@ async function submitEditWarehouse() {
     const contact = document.getElementById('edit-wh-contact').value;
     const email = document.getElementById('edit-wh-email').value;
     const password = document.getElementById('edit-wh-password').value;
+    const capacity = parseInt(document.getElementById('edit-wh-capacity').value) || 5;
 
     if (!name || !manager || !contact || !email || !password) return alert("All fields are required.");
 
@@ -476,7 +478,8 @@ async function submitEditWarehouse() {
             manager_name: manager, 
             contact_number: contact,
             manager_email: email,
-            manager_password: password
+            manager_password: password,
+            capacity: capacity
         });
         document.getElementById('wh-edit-modal').style.display = 'none';
         loadMapData();
@@ -515,6 +518,7 @@ async function submitNewWarehouse() {
     const contact = document.getElementById('wh-contact-input').value;
     const email = document.getElementById('wh-email-input').value;
     const password = document.getElementById('wh-password-input').value;
+    const capacity = parseInt(document.getElementById('wh-capacity-input').value) || 5;
     
     if (!pendingWhLoc || isNaN(pendingWhLoc.lat) || isNaN(pendingWhLoc.lng)) {
         return alert("Error: No location selected on the map. Please click the map first.");
@@ -524,7 +528,7 @@ async function submitNewWarehouse() {
         return alert("Error: Warehouse Name, Manager Name, Contact, Email and Password are all required.");
     }
     
-    const success = await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
+    const success = await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password, capacity);
     if (success) {
         document.getElementById('wh-modal').style.display = 'none';
         document.getElementById('wh-name-input').value = '';
@@ -532,10 +536,11 @@ async function submitNewWarehouse() {
         document.getElementById('wh-contact-input').value = '';
         document.getElementById('wh-email-input').value = '';
         document.getElementById('wh-password-input').value = '';
+        document.getElementById('wh-capacity-input').value = '5';
     }
 }
 
-async function createWarehouse(name, lat, lng, manager = '', contact = '', email = '', password = '') {
+async function createWarehouse(name, lat, lng, manager = '', contact = '', email = '', password = '', capacity = 5) {
     try {
         await apiCall('/manager/warehouses', 'POST', {
             company_id: localStorage.getItem('manager_id'),
@@ -543,7 +548,8 @@ async function createWarehouse(name, lat, lng, manager = '', contact = '', email
             manager_name: manager, 
             contact_number: contact,
             manager_email: email,
-            manager_password: password
+            manager_password: password,
+            capacity: capacity
         });
         loadMapData();
         if (typeof loadDriversAndVehicles === 'function') loadDriversAndVehicles();
@@ -564,8 +570,9 @@ async function adoptStrategicLocation() {
         return alert("Error: Manager Name, Contact, Email and Password are required for AI-suggested hubs.");
     }
     const name = prompt("Enter Warehouse Name for Strategic Hub:");
+    const capacity = parseInt(document.getElementById('wh-capacity-input').value) || 5;
     if (name) {
-        const success = await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, manager, contact, email, password);
+        const success = await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, manager, contact, email, password, capacity);
         if (success) {
             document.getElementById('suggestion-modal').style.display = 'none';
             document.getElementById('sug-manager').value = '';
@@ -587,8 +594,9 @@ async function stayWithManualLocation() {
     }
 
     const name = prompt("Enter Warehouse Name for Manual Hub:");
+    const capacity = parseInt(document.getElementById('wh-capacity-input').value) || 5;
     if (name) {
-        const success = await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password);
+        const success = await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password, capacity);
         if (success) {
             document.getElementById('suggestion-modal').style.display = 'none';
             document.getElementById('sug-manager').value = '';

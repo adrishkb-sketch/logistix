@@ -158,6 +158,7 @@ class Warehouse(BaseModel):
     manager_email: Optional[EmailStr] = None
     manager_password: Optional[str] = None
     drone_count: Optional[int] = 0
+    capacity: Optional[int] = 5
 
 class Drone(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
