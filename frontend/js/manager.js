@@ -351,6 +351,10 @@ async function processLocationDeployment(lat, lng) {
             openWhModal(lat, lng);
         }
     } catch(err) {
+        if (err.message && err.message.toLowerCase().includes("water body")) {
+            if (window.tempMarker) map.removeLayer(window.tempMarker);
+            return alert("🚨 " + err.message);
+        }
         openWhModal(lat, lng);
     }
 }

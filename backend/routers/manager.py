@@ -721,6 +721,13 @@ def suggest_warehouse_location(data: dict):
     lng = data.get("lng")
     company_id = data.get("company_id")
     
+    from backend.services.water_check import is_location_in_water
+    if is_location_in_water(lat, lng):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot suggest a location in a water body. Please select a land area."
+        )
+    
     # 1. Get company shipments to find density
     all_shipments = shipments_db.get_all()
     my_ships = [s for s in all_shipments if s and s.get("company_id") == company_id]
