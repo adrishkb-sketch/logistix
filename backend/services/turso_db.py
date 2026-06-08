@@ -269,6 +269,51 @@ class TursoCompaniesDB:
             print(f"[TursoDB] delete error: {e}")
             raise e
 
+    def delete_many(self, filter_column: str, filter_value: Any) -> int:
+        global _DB_CACHE
+        _DB_CACHE.pop("companies", None)
+        if not _is_configured():
+            return self._fallback().delete_many(filter_column, filter_value)
+        try:
+            count_res = _execute([{
+                "sql": f"SELECT COUNT(*) as cnt FROM companies WHERE {filter_column} = :val",
+                "args": {"val": str(filter_value)}
+            }])
+            deleted_count = 0
+            if count_res:
+                rows = count_res[0].get("rows", [])
+                if rows:
+                    cnt_val = rows[0][0]
+                    deleted_count = int(cnt_val["value"] if isinstance(cnt_val, dict) else cnt_val)
+            _execute([{
+                "sql": f"DELETE FROM companies WHERE {filter_column} = :val",
+                "args": {"val": str(filter_value)}
+            }])
+            return deleted_count
+        except Exception as e:
+            print(f"[TursoCompaniesDB] delete_many error: {e}")
+            raise e
+
+    def write(self, data: List[Dict[str, Any]]):
+        global _DB_CACHE
+        _DB_CACHE.pop("companies", None)
+        if not _is_configured():
+            self._fallback().write(data)
+            return
+        try:
+            _execute([{"sql": "DELETE FROM companies"}])
+            for item in data:
+                self.insert(item)
+        except Exception as e:
+            print(f"[TursoCompaniesDB] write error: {e}")
+            raise e
+
+    def clear_all(self):
+        global _DB_CACHE
+        _DB_CACHE.pop("companies", None)
+        self.write([])
+
+
 
 # ============================================================
 # TursoGenericDB - JSON blob store for ANY table

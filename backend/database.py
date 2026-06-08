@@ -26,8 +26,12 @@ class JSONDatabase:
             token = os.environ.get("TURSO_AUTH_TOKEN", "")
             if raw_url and token:
                 self.use_turso = True
-                from backend.services.turso_db import TursoGenericDB
-                self.turso_db = TursoGenericDB(table_name)
+                if table_name == "companies":
+                    from backend.services.turso_db import TursoCompaniesDB
+                    self.turso_db = TursoCompaniesDB()
+                else:
+                    from backend.services.turso_db import TursoGenericDB
+                    self.turso_db = TursoGenericDB(table_name)
                 return
 
         primary_data_dir = os.path.join(base_dir, "data")
