@@ -11,6 +11,7 @@ import re
 import math
 import json
 from backend.services.auth_utils import verify_context
+from backend.services.water_check import is_location_in_water
 
 router = APIRouter()
 companies_db = TursoCompaniesDB()          # ← Turso (persistent on Vercel)
@@ -572,6 +573,12 @@ async def bulk_confirm_drones(drones: List[Drone]):
 # Warehouses CRUD
 @router.post("/warehouses")
 def create_warehouse(warehouse: Warehouse):
+    # Block warehouses in water bodies (oceans, lakes, rivers, etc.)
+    if is_location_in_water(warehouse.lat, warehouse.lng):
+        raise HTTPException(
+            status_code=400,
+            detail="Warehouse cannot be created in a water body. Please choose a valid land location."
+        )
     if warehouse.manager_email:
         existing = warehouses_db.get_filtered({"manager_email": warehouse.manager_email})
         if existing:
