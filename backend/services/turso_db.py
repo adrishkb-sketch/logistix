@@ -301,9 +301,21 @@ class TursoCompaniesDB:
             self._fallback().write(data)
             return
         try:
-            _execute([{"sql": "DELETE FROM companies"}])
+            stmts = [{"sql": "DELETE FROM companies"}]
             for item in data:
-                self.insert(item)
+                stmts.append({
+                    "sql": "INSERT OR REPLACE INTO companies (id, name, email, password) VALUES (:id, :name, :email, :password)",
+                    "args": {
+                        "id": item.get("id", ""),
+                        "name": item.get("name", ""),
+                        "email": item.get("email", ""),
+                        "password": item.get("password", "")
+                    }
+                })
+            
+            chunk_size = 50
+            for i in range(0, len(stmts), chunk_size):
+                _execute(stmts[i:i+chunk_size])
         except Exception as e:
             print(f"[TursoCompaniesDB] write error: {e}")
             raise e
@@ -542,9 +554,19 @@ class TursoGenericDB:
         _DB_CACHE.pop(self.table_name, None)
         
         try:
-            _execute([{"sql": f"DELETE FROM {self.table_name}"}])
+            stmts = [{"sql": f"DELETE FROM {self.table_name}"}]
             for item in data:
-                self.insert(item)
+                stmts.append({
+                    "sql": f"INSERT OR REPLACE INTO {self.table_name} (id, data) VALUES (:id, :data)",
+                    "args": {
+                        "id": str(item.get("id", "")),
+                        "data": json.dumps(item, ensure_ascii=False)
+                    }
+                })
+            
+            chunk_size = 50
+            for i in range(0, len(stmts), chunk_size):
+                _execute(stmts[i:i+chunk_size])
         except Exception as e:
             print(f"[TursoGenericDB:{self.table_name}] write error: {e}")
             raise e

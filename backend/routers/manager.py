@@ -1112,6 +1112,13 @@ def _normalize_type(t):
     # Fix common typos observed in user data
     norm = norm.replace('derlivery', 'delivery')
     norm = norm.replace('scooty', '')
+    
+    # Normalize truck types to match across drivers and vehicles
+    if norm in ['largetruck', 'truckheavy']:
+        return 'heavytruck'
+    if norm in ['smalltruck', 'trucksmall']:
+        return 'smalltruck'
+        
     return norm
 
 @router.post("/auto-assign-fleet")
