@@ -1102,6 +1102,12 @@ def link_driver_to_vehicle(
     
     return {"message": "Linked successfully"}
 
+def is_valid_matching_value(val) -> bool:
+    if not val:
+        return False
+    s = str(val).strip()
+    return s.lower() not in ["", "unknown", "none", "n/a", "null", "undefined"]
+
 @router.post("/auto-assign-fleet")
 def auto_assign_fleet(company_id: str):
     """
@@ -1121,7 +1127,11 @@ def auto_assign_fleet(company_id: str):
     # Build a pool index: (hub_id, type) -> list of vehicles  for O(1) lookup
     pool: dict = {}
     for v in unlinked_vehicles:
-        key = (v.get("base_warehouse_id", ""), (v.get("type") or "").strip())
+        hub = v.get("base_warehouse_id")
+        vtype = v.get("type")
+        if not is_valid_matching_value(hub) or not is_valid_matching_value(vtype):
+            continue
+        key = (str(hub).strip(), str(vtype).strip())
         pool.setdefault(key, []).append(v)
 
     # Track which records were mutated so we can do targeted DB writes
@@ -1130,9 +1140,11 @@ def auto_assign_fleet(company_id: str):
     assigned_count = 0
 
     for d in unlinked_drivers:
-        hub   = d.get("base_warehouse_id", "")
-        dtype = (d.get("license_type") or "").strip()   # exact match required
-        key   = (hub, dtype)
+        hub = d.get("base_warehouse_id")
+        dtype = d.get("license_type")
+        if not is_valid_matching_value(hub) or not is_valid_matching_value(dtype):
+            continue
+        key = (str(hub).strip(), str(dtype).strip())
 
         candidates = pool.get(key, [])
         if not candidates:
@@ -1147,11 +1159,9 @@ def auto_assign_fleet(company_id: str):
         vehicle_updates.append((match["id"],  {"assigned_driver_id":  d["id"]}))
         assigned_count += 1
 
-    # Flush all changes to DB using individual updates (safe for Turso + large datasets)
-    for driver_id, fields in driver_updates:
-        drivers_db.update(driver_id, fields)
-    for vehicle_id, fields in vehicle_updates:
-        vehicles_db.update(vehicle_id, fields)
+    # Flush all changes to DB in batch (extremely fast and safe for Turso + large datasets)
+    drivers_db.update_many(driver_updates)
+    vehicles_db.update_many(vehicle_updates)
 
     return {"message": f"Successfully auto-assigned {assigned_count} driver-vehicle pairs.", "count": assigned_count}
 
@@ -1172,8 +1182,7 @@ def unlink_vehicle(driver_id: str):
 def unlink_idle_fleet(company_id: str):
     """
     Unlink drivers and vehicles that are NOT currently assigned to an active shipment.
-    Single-pass in-memory batch: read all once, mutate in-memory, write once per table.
-    O(1) disk operations regardless of fleet size.
+    Targeted updates: we only mutate the specific drivers and vehicles that changed.
     """
     # ── Batch read ──────────────────────────────────────────────────────────
     all_shipments = shipments_db.get_all()
@@ -1188,38 +1197,40 @@ def unlink_idle_fleet(company_id: str):
     active_driver_ids  = {s.get("assigned_driver_id")  for s in active_shipments if s.get("assigned_driver_id")}
     active_vehicle_ids = {s.get("assigned_vehicle_id") for s in active_shipments if s.get("assigned_vehicle_id")}
 
+    driver_updates = []
+    vehicle_updates = []
     unlinked_drivers  = 0
     unlinked_vehicles = 0
-    modified_drivers  = False
-    modified_vehicles = False
 
-    # ── In-memory mutations (zero DB I/O inside loop) ────────────────────────
+    # ── Identify idle drivers ────────────────────────────────────────
     for d in all_drivers:
         if not d or d.get("company_id") != company_id:
             continue
-        if not d.get("assigned_vehicle_id"):
+        v_id = d.get("assigned_vehicle_id")
+        if not v_id:
             continue  # already unlinked
-        if d["id"] not in active_driver_ids and d["assigned_vehicle_id"] not in active_vehicle_ids:
-            d["assigned_vehicle_id"] = None
-            d["verification_status"] = "unverified"
+        
+        # If driver is not in active shipments and their vehicle is not active
+        if d["id"] not in active_driver_ids and v_id not in active_vehicle_ids:
+            driver_updates.append((d["id"], {"assigned_vehicle_id": None, "verification_status": "unverified"}))
             unlinked_drivers += 1
-            modified_drivers  = True
 
+    # ── Identify idle vehicles ───────────────────────────────────────
     for v in all_vehicles:
         if not v or v.get("company_id") != company_id:
             continue
-        if not v.get("assigned_driver_id"):
+        d_id = v.get("assigned_driver_id")
+        if not d_id:
             continue  # already unlinked
-        if v["id"] not in active_vehicle_ids and v["assigned_driver_id"] not in active_driver_ids:
-            v["assigned_driver_id"] = None
+            
+        # If vehicle is not in active shipments and its driver is not active
+        if v["id"] not in active_vehicle_ids and d_id not in active_driver_ids:
+            vehicle_updates.append((v["id"], {"assigned_driver_id": None}))
             unlinked_vehicles += 1
-            modified_vehicles  = True
 
-    # ── Single batch write per table ─────────────────────────────────────────
-    if modified_drivers:
-        drivers_db.write(all_drivers)
-    if modified_vehicles:
-        vehicles_db.write(all_vehicles)
+    # ── Targeted updates in batch (extremely fast, no bulk deletes/writes) ──
+    drivers_db.update_many(driver_updates)
+    vehicles_db.update_many(vehicle_updates)
 
     return {
         "message": f"Successfully unlinked {unlinked_drivers} drivers and {unlinked_vehicles} vehicles that were idle."

@@ -571,6 +571,49 @@ class TursoGenericDB:
             print(f"[TursoGenericDB:{self.table_name}] write error: {e}")
             raise e
 
+    def update_many(self, items_to_update: List[tuple]) -> int:
+        """
+        items_to_update: list of (item_id, updated_fields_dict)
+        """
+        if not items_to_update:
+            return 0
+            
+        if not _is_configured():
+            fallback_db = self._fallback()
+            data = fallback_db.get_all()
+            data_map = {str(item.get("id")): item for item in data if item}
+            updated_count = 0
+            for item_id, fields in items_to_update:
+                s_id = str(item_id)
+                if s_id in data_map:
+                    data_map[s_id].update(fields)
+                    updated_count += 1
+            fallback_db.write(list(data_map.values()))
+            return updated_count
+
+        global _DB_CACHE
+        _DB_CACHE.pop(self.table_name, None)
+
+        try:
+            stmts = []
+            for item_id, fields in items_to_update:
+                stmts.append({
+                    "sql": f"UPDATE {self.table_name} SET data = json_patch(data, :fields) WHERE id = :id",
+                    "args": {
+                        "fields": json.dumps(fields, ensure_ascii=False),
+                        "id": str(item_id)
+                    }
+                })
+            
+            chunk_size = 50
+            for i in range(0, len(stmts), chunk_size):
+                _execute(stmts[i:i+chunk_size])
+                
+            return len(items_to_update)
+        except Exception as e:
+            print(f"[TursoGenericDB:{self.table_name}] update_many error: {e}")
+            raise e
+
     def clear_all(self):
         global _DB_CACHE
         _DB_CACHE.pop(self.table_name, None)

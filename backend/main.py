@@ -13,13 +13,15 @@ from backend.routers import auth, manager, driver, shipment, tracking, simulatio
 app = FastAPI(title="Logistix API", version="1.0.0")
 
 @app.on_event("startup")
-def startup_migration():
+async def startup_migration():
     if os.environ.get("VERCEL") == "1":
         print("[Migration] Skipping startup migration on Vercel to prevent gateway timeouts.")
         return
     try:
+        import asyncio
+        loop = asyncio.get_event_loop()
         from backend.services.finance_engine import migrate_all_shipment_finances
-        migrate_all_shipment_finances()
+        loop.run_in_executor(None, migrate_all_shipment_finances)
     except Exception as e:
         print(f"[Migration Error] {e}")
 

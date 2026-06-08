@@ -223,6 +223,21 @@ class JSONDatabase:
             return self.turso_db.write(data)
         self._save_local_data(data)
 
+    def update_many(self, items_to_update: List[tuple]) -> int:
+        if self.use_turso:
+            return self.turso_db.update_many(items_to_update)
+        items = self._load_local_data()
+        items_map = {str(item.get("id")): item for item in items if item}
+        updated_count = 0
+        for item_id, fields in items_to_update:
+            s_id = str(item_id)
+            if s_id in items_map:
+                items_map[s_id].update(fields)
+                updated_count += 1
+        if updated_count > 0:
+            self._save_local_data(list(items_map.values()))
+        return updated_count
+
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
         if self.use_turso:
             return self.turso_db.delete_many(filter_column, filter_value)

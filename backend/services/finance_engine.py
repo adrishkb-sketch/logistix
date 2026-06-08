@@ -176,15 +176,23 @@ def migrate_all_shipment_finances():
         
     print(f"[Migration] Starting finance recalculation for {len(all_shipments)} shipments...")
     
+    # Load all vehicles once for fast O(1) in-memory lookup
+    all_vehicles = vehicles_db.get_all()
+    vehicles_map = {v["id"]: v for v in all_vehicles if v and "id" in v}
+    
     # Map for quick leg reference
     legs_map = {}
     legs = [s for s in all_shipments if s and s.get("is_leg")]
+    
+    # We will track which shipments were modified to only update those
+    modified_shipments = []
+    
     for leg in legs:
         leg_id = leg["id"]
         v_id = leg.get("assigned_vehicle_id")
         v_type = "van"
         if v_id:
-            v = vehicles_db.get_by_id(v_id)
+            v = vehicles_map.get(v_id)
             if v:
                 v_type = v.get("type", "van")
         else:
@@ -199,8 +207,13 @@ def migrate_all_shipment_finances():
                 
         leg_finance = estimate_delivery_cost(leg, v_type)
         leg_finance["expected_profit"] = leg_finance.get("projected_profit", 0)
-        leg["finance"] = leg_finance
-        shipments_db.update(leg_id, leg)
+        
+        # Check if changed to avoid redundant writes
+        old_finance = leg.get("finance") or {}
+        if not old_finance or old_finance.get("suggested_price") != leg_finance["suggested_price"]:
+            leg["finance"] = leg_finance
+            modified_shipments.append(leg)
+        
         legs_map[leg_id] = leg
 
     # Recalculate parent shipments and direct shipments
@@ -222,7 +235,7 @@ def migrate_all_shipment_finances():
             projected_profit_sum = sum(l.get("finance", {}).get("projected_profit", 0.0) for l in updated_s_legs)
             distance_km_sum = sum(l.get("finance", {}).get("distance_km", 0.0) for l in updated_s_legs)
             
-            s["finance"] = {
+            new_finance = {
                 "suggested_price": round(suggested_price_sum, 2),
                 "total_cost": round(total_cost_sum, 2),
                 "fuel_budget": round(fuel_budget_sum, 2),
@@ -234,21 +247,34 @@ def migrate_all_shipment_finances():
                 "margin": round(projected_profit_sum, 2),
                 "distance_km": round(distance_km_sum, 2)
             }
-            s["route_type"] = "multi-leg"
-            shipments_db.update(s_id, s)
+            
+            old_finance = s.get("finance") or {}
+            if not old_finance or old_finance.get("suggested_price") != new_finance["suggested_price"] or s.get("route_type") != "multi-leg":
+                s["finance"] = new_finance
+                s["route_type"] = "multi-leg"
+                modified_shipments.append(s)
         else:
             # Standalone direct shipment
             v_id = s.get("assigned_vehicle_id")
             v_type = "van"
             if v_id:
-                v = vehicles_db.get_by_id(v_id)
+                v = vehicles_map.get(v_id)
                 if v:
                     v_type = v.get("type", "van")
                     
             finance = estimate_delivery_cost(s, v_type)
             finance["expected_profit"] = finance.get("projected_profit", 0)
-            s["finance"] = finance
-            s["route_type"] = "direct"
-            shipments_db.update(s_id, s)
+            
+            old_finance = s.get("finance") or {}
+            if not old_finance or old_finance.get("suggested_price") != finance["suggested_price"] or s.get("route_type") != "direct":
+                s["finance"] = finance
+                s["route_type"] = "direct"
+                modified_shipments.append(s)
+            
+    # Perform targeted updates for modified shipments
+    if modified_shipments:
+        print(f"[Migration] Writing {len(modified_shipments)} updated shipments...")
+        for ms in modified_shipments:
+            shipments_db.update(ms["id"], ms)
             
     print(f"[Migration] Successfully migrated {len(all_shipments)} shipments.")
