@@ -1102,6 +1102,18 @@ def link_driver_to_vehicle(
     
     return {"message": "Linked successfully"}
 
+import re
+
+def _normalize_type(t):
+    if not t:
+        return ""
+    # Lowercase, remove non-alphanumeric characters
+    norm = re.sub(r'[^a-z0-9]', '', str(t).lower())
+    # Fix common typos observed in user data
+    norm = norm.replace('derlivery', 'delivery')
+    norm = norm.replace('scooty', '')
+    return norm
+
 @router.post("/auto-assign-fleet")
 def auto_assign_fleet(company_id: str):
     # Fetch all data to perform in-memory bulk updates
@@ -1116,8 +1128,8 @@ def auto_assign_fleet(company_id: str):
     modified = False
     
     for d in drivers:
-        # Find matching vehicle: same hub AND same type
-        match = next((v for v in vehicles if v.get("base_warehouse_id") == d.get("base_warehouse_id") and v.get("type") == d.get("license_type")), None)
+        # Find matching vehicle: same hub AND robust type matching
+        match = next((v for v in vehicles if v.get("base_warehouse_id") == d.get("base_warehouse_id") and _normalize_type(v.get("type")) == _normalize_type(d.get("license_type"))), None)
         
         if match:
             # Update the dictionaries directly in memory
