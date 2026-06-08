@@ -1257,41 +1257,337 @@ def deassign_shipment(shipment_id: str):
 
 @router.post("/bulk-assign")
 def bulk_assign(company_id: str):
-    # Only consider shipments that aren't yet picked up or delivered
-    pending = [s for s in shipments_db.get_all() if s and s.get("status") == "pending" and s.get("company_id") == company_id]
-    assigned_count = 0
-    failed_count = 0
-    
+    """
+    Optimised bulk assignment engine.
+    Pre-loads ALL fleet and shipment data ONCE into memory, runs the full
+    matching logic in-memory (tracking assigned state via sets), then
+    flushes all changes to disk in a single batch at the end.
+    This eliminates the O(N²) disk I/O that caused runtime errors on large datasets.
+    """
     from backend.database import JSONDatabase
-    drivers_db = JSONDatabase("drivers")
-    vehicles_db = JSONDatabase("vehicles")
-    
-    from backend.services.assignment import auto_assign_shipment
-    
+    from backend.models import ShipmentEvent
+    from backend.services.route_engine import haversine, find_nearest_warehouse
+    from backend.services.driver_intel import calculate_driver_performance_score
+    from backend.services.finance_engine import estimate_delivery_cost
+    from backend.services.assignment import check_calamity_zone, is_weather_disrupted
+    from backend.services.route_engine import check_drone_viability
+
+    # ── 1. SINGLE BATCH READ ─────────────────────────────────────────────────
+    drivers_db    = JSONDatabase("drivers")
+    vehicles_db   = JSONDatabase("vehicles")
+    warehouses_db = JSONDatabase("warehouses")
+    drones_db     = JSONDatabase("drones")
+
+    all_drivers    = drivers_db.get_all()
+    all_vehicles   = vehicles_db.get_all()
+    all_warehouses = warehouses_db.get_all()
+    all_shipments  = shipments_db.get_all()
+    all_drones     = drones_db.get_all()
+
+    pending = [s for s in all_shipments if s and s.get("status") == "pending" and s.get("company_id") == company_id]
+
+    # ── 2. BUILD IN-MEMORY INDEXES ──────────────────────────────────────────
+    # Only consider drivers/vehicles for this company
+    company_drivers  = {d["id"]: d for d in all_drivers  if d and d.get("company_id") == company_id}
+    company_vehicles = {v["id"]: v for v in all_vehicles if v and v.get("company_id") == company_id}
+    wh_map           = {w["id"]: w for w in all_warehouses}
+
+    # Track which drivers/vehicles have been assigned IN THIS RUN (in-memory)
+    assigned_driver_ids  = set()
+    assigned_vehicle_ids = set()
+
+    # Track per-vehicle current load in-memory (from already-active shipments)
+    vehicle_active_load: dict = {}
+    for s in all_shipments:
+        if s and s.get("assigned_vehicle_id") and s.get("status") in ["assigned", "in_transit"]:
+            vid = s["assigned_vehicle_id"]
+            vehicle_active_load[vid] = vehicle_active_load.get(vid, 0.0) + s.get("weight", 0.0)
+
+    # ── 3. MUTATION BUFFERS ─────────────────────────────────────────────────
+    # Collect all mutations; write them ONCE at the end
+    shipment_mutations: dict = {}   # shipment_id -> dict of changes
+    driver_mutations:   dict = {}   # driver_id   -> dict of changes
+    vehicle_mutations:  dict = {}   # vehicle_id  -> dict of changes
+
+    assigned_count = 0
+    failed_count   = 0
+
+    # ── 4. INNER ASSIGNMENT LOGIC (pure in-memory) ──────────────────────────
+    def _get_v_cap(v, v_type):
+        cap = v.get("capacity")
+        try:
+            return float(cap) if cap else None
+        except (ValueError, TypeError):
+            pass
+        if   "heavy" in v_type or "large" in v_type: return 10000.0
+        elif "small" in v_type or "truck" in v_type:  return 3000.0
+        elif "van"   in v_type or "delivery" in v_type: return 1500.0
+        elif "ev"    in v_type:  return 800.0
+        elif "bike"  in v_type or "scooty" in v_type or "scooter" in v_type: return 80.0
+        elif "drone" in v_type:  return 15.0
+        return 1000.0
+
+    def _try_assign(shipment) -> dict | None:
+        s_weight  = shipment.get("weight", 0)
+        p_lat, p_lng = shipment["pickup"]["lat"], shipment["pickup"]["lng"]
+        d_lat, d_lng = shipment["drop"]["lat"],   shipment["drop"]["lng"]
+        leg_type    = shipment.get("leg_type")
+        is_leg      = shipment.get("is_leg", False)
+        distance    = haversine(p_lat, p_lng, d_lat, d_lng)
+        is_direct   = not is_leg and distance < 50
+        is_first_mile  = leg_type == "first_mile"
+        is_last_mile   = leg_type == "last_mile"
+        is_middle_mile = leg_type == "middle_mile"
+
+        # Calamity check (still uses DB, but cached via weather_cells; minor overhead)
+        if check_calamity_zone(p_lat, p_lng, company_id) or check_calamity_zone(d_lat, d_lng, company_id):
+            return None
+
+        # Drone fast-path for last-mile
+        if is_last_mile:
+            weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id) or is_weather_disrupted(d_lat, d_lng, company_id)
+            if not weather_disrupted:
+                pickup_wh_id = shipment.get("pickup_warehouse_id")
+                drone_vehicles = [
+                    v for vid, v in company_vehicles.items()
+                    if "drone" in v.get("type", "").lower()
+                    and v.get("base_warehouse_id") == pickup_wh_id
+                    and v.get("status") == "available"
+                    and vid not in assigned_vehicle_ids
+                ]
+                for dv in drone_vehicles:
+                    if s_weight <= dv.get("capacity", 20):
+                        drone_intel = check_drone_viability(p_lat, p_lng, d_lat, d_lng, s_weight)
+                        if drone_intel.get("viable"):
+                            return {
+                                "assigned_driver_id":  "DRONE-SYSTEM",
+                                "assigned_vehicle_id": dv["id"],
+                                "status":    "in_transit",
+                                "stage":     "Drone Air Delivery",
+                                "route_type": "drone-leg",
+                                "finance":   estimate_delivery_cost(shipment, "drone")
+                            }
+
+        best_score = None
+        best_pair  = None
+
+        for d_id, d in company_drivers.items():
+            # Skip drivers already assigned in this run or already busy in DB
+            if d_id in assigned_driver_ids:
+                continue
+            if d.get("status") not in ["available", "on_duty"]:
+                continue
+            if d.get("is_fit") == False:
+                continue
+
+            v_id = d.get("assigned_vehicle_id")
+            if not v_id or v_id in assigned_vehicle_ids:
+                continue
+
+            v = company_vehicles.get(v_id)
+            if not v:
+                continue
+            if v.get("is_operational") == False:
+                continue
+            if float(v.get("vehicle_health_score", 100.0)) <= 0.0:
+                continue
+            if v.get("status") == "assigned":
+                continue
+
+            v_type   = str(v.get("type", "")).lower()
+            v_base   = v.get("base_warehouse_id")
+            v_present = v.get("present_warehouse_id") or v.get("current_warehouse_id") or v_base
+
+            is_heavy_truck  = "heavy" in v_type or "large" in v_type
+            is_small_truck  = "small" in v_type or ("truck" in v_type and not is_heavy_truck)
+            is_van          = "van"   in v_type or "delivery" in v_type
+            is_bike_scooty  = "bike"  in v_type or "scooty" in v_type or "scooter" in v_type
+            is_ev           = "ev"    in v_type
+            is_drone        = "drone" in v_type
+
+            priority_score = 0
+            is_suitable    = False
+
+            if is_direct:
+                nearest_wh = find_nearest_warehouse(p_lat, p_lng, company_id)
+                if not nearest_wh:
+                    continue
+                if v_base != nearest_wh["id"] or v_present != nearest_wh["id"]:
+                    continue
+                if is_small_truck:
+                    priority_score = 100000; is_suitable = True
+                elif is_van:
+                    priority_score = 50000;  is_suitable = True
+                else:
+                    continue
+
+            elif is_first_mile:
+                if is_bike_scooty or is_ev:
+                    is_suitable = True
+                    weather_ok = is_weather_disrupted(p_lat, p_lng, company_id)
+                    priority_score = (100000 if is_ev else 50000) if weather_ok else (100000 if is_bike_scooty else 50000)
+                else:
+                    continue
+
+            elif is_last_mile:
+                weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id) or is_weather_disrupted(d_lat, d_lng, company_id)
+                if weather_disrupted:
+                    if is_van:
+                        priority_score = 100000; is_suitable = True
+                    else:
+                        continue
+                else:
+                    if is_van:
+                        priority_score = 100000; is_suitable = True
+                    elif is_bike_scooty:
+                        priority_score = 50000;  is_suitable = True
+                    else:
+                        continue
+
+            elif is_middle_mile:
+                if is_heavy_truck or is_small_truck:
+                    is_suitable    = True
+                    priority_score = 100000 if is_heavy_truck else 50000
+                    pickup_wh_id   = shipment.get("pickup_warehouse_id")
+                    drop_wh_id     = shipment.get("drop_warehouse_id")
+                    if v_base == drop_wh_id and v_present == pickup_wh_id:
+                        priority_score += 500000
+                else:
+                    continue
+
+            if not is_suitable:
+                continue
+
+            # Capacity check using in-memory load tracker
+            curr_load = vehicle_active_load.get(v_id, 0.0)
+            v_cap     = _get_v_cap(v, v_type)
+            if curr_load + s_weight > v_cap:
+                continue
+
+            # Score
+            score = priority_score + calculate_driver_performance_score(d) + (d.get("safety_rating", 5) * 10)
+            ref_wh = wh_map.get(v_present or v_base)
+            if ref_wh:
+                score -= haversine(ref_wh["lat"], ref_wh["lng"], p_lat, p_lng) * 100
+
+            if best_score is None or score > best_score:
+                best_score = score
+                best_pair  = (d_id, v_id, v)
+
+        if not best_pair:
+            return None
+
+        d_id, v_id, v = best_pair
+        return {
+            "assigned_driver_id":  d_id,
+            "assigned_vehicle_id": v_id,
+            "status":  "assigned",
+            "stage":   "Assigned to Driver",
+            "finance": estimate_delivery_cost(shipment, v.get("type", "").lower())
+        }
+
+    # ── 5. MAIN LOOP ─────────────────────────────────────────────────────────
+    today = __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
+
     for s in pending:
-        assigned_data = auto_assign_shipment(s)
-        if assigned_data:
-            from backend.models import ShipmentEvent
-            d = drivers_db.get_by_id(assigned_data["assigned_driver_id"])
-            v = vehicles_db.get_by_id(assigned_data["assigned_vehicle_id"])
-            driver_name = d["name"] if d else "Unknown"
-            plate = v["number_plate"] if v else "Unknown"
-            
-            log_event = ShipmentEvent(
-                status="assigned", 
-                message=f"🤖 AI successfully bulk-assigned driver {driver_name} and vehicle {plate}."
-            )
-            assigned_data["logs"] = s.get("logs", []) + [log_event.model_dump()]
-            shipments_db.update(s["id"], assigned_data)
-            try:
-                update_shipment_finance_post_assignment(s["id"])
-            except Exception as e:
-                print(f"Finance recalculation error in bulk_assign: {e}")
-            assigned_count += 1
-        else:
+        try:
+            result = _try_assign(s)
+            if result:
+                d_id = result.get("assigned_driver_id")
+                v_id = result.get("assigned_vehicle_id")
+
+                # Build log event
+                if d_id == "DRONE-SYSTEM":
+                    v_obj = company_vehicles.get(v_id, {})
+                    log_event = ShipmentEvent(
+                        status="in_transit",
+                        message=f"🛰️ AI deployed autonomous drone {v_id} for the last-mile segment."
+                    )
+                    result["stage"]  = "Drone Air Delivery"
+                    result["status"] = "in_transit"
+                else:
+                    d_obj = company_drivers.get(d_id, {})
+                    v_obj = company_vehicles.get(v_id, {})
+                    log_event = ShipmentEvent(
+                        status="assigned",
+                        message=f"🤖 AI bulk-assigned {d_obj.get('name','Driver')} / {v_obj.get('number_plate','Vehicle')}."
+                    )
+
+                result["logs"] = s.get("logs", []) + [log_event.model_dump()]
+                shipment_mutations[s["id"]] = result
+
+                # Mark in-memory so next iterations skip these
+                if d_id != "DRONE-SYSTEM":
+                    assigned_driver_ids.add(d_id)
+                    assigned_vehicle_ids.add(v_id)
+                    vehicle_active_load[v_id] = vehicle_active_load.get(v_id, 0.0) + s.get("weight", 0.0)
+
+                    # Update in-memory driver/vehicle state (so subsequent iterations see correct status)
+                    if d_id in company_drivers:
+                        company_drivers[d_id]["status"] = "assigned"
+                    if v_id in company_vehicles:
+                        company_vehicles[v_id]["status"] = "assigned"
+
+                    driver_mutations[d_id]  = {"status": "assigned", "assigned_vehicle_id": v_id}
+                    vehicle_mutations[v_id] = {"status": "assigned", "assigned_driver_id": d_id}
+
+                    # Operational days (in-memory; will be persisted in batch)
+                    d_pending = driver_mutations.get(d_id, {})
+                    drv = {**company_drivers.get(d_id, {}), **d_pending}
+                    dates = drv.get("operational_dates", [])
+                    if today not in dates:
+                        dates = list(dates) + [today]
+                    driver_mutations[d_id] = {**d_pending, "operational_dates": dates, "operational_days": len(dates)}
+
+                    v_pending = vehicle_mutations.get(v_id, {})
+                    veh = {**company_vehicles.get(v_id, {}), **v_pending}
+                    v_dates = veh.get("operational_dates", [])
+                    if today not in v_dates:
+                        v_dates = list(v_dates) + [today]
+                    vehicle_mutations[v_id] = {**v_pending, "operational_dates": v_dates, "operational_days": len(v_dates)}
+
+                assigned_count += 1
+            else:
+                failed_count += 1
+        except Exception as e:
+            print(f"[bulk_assign] Error assigning shipment {s.get('id')}: {e}")
             failed_count += 1
-            
-    return {"message": f"Bulk assignment complete. Assigned {assigned_count}, Failed {failed_count}"}
+
+    # ── 6. SINGLE BATCH WRITE ────────────────────────────────────────────────
+    # Flush shipment mutations
+    for sid, changes in shipment_mutations.items():
+        try:
+            shipments_db.update(sid, changes)
+        except Exception as e:
+            print(f"[bulk_assign] Shipment write error {sid}: {e}")
+
+    # Flush driver mutations
+    if driver_mutations:
+        try:
+            raw_drivers = drivers_db.get_all()
+            for drv in raw_drivers:
+                if drv and drv.get("id") in driver_mutations:
+                    drv.update(driver_mutations[drv["id"]])
+            drivers_db.write(raw_drivers)
+        except Exception as e:
+            print(f"[bulk_assign] Driver batch write error: {e}")
+
+    # Flush vehicle mutations
+    if vehicle_mutations:
+        try:
+            raw_vehicles = vehicles_db.get_all()
+            for veh in raw_vehicles:
+                if veh and veh.get("id") in vehicle_mutations:
+                    veh.update(vehicle_mutations[veh["id"]])
+            vehicles_db.write(raw_vehicles)
+        except Exception as e:
+            print(f"[bulk_assign] Vehicle batch write error: {e}")
+
+    return {
+        "message": f"Bulk assignment complete. Assigned: {assigned_count}, Skipped: {failed_count}",
+        "assigned": assigned_count,
+        "failed": failed_count
+    }
 
 @router.post("/consolidate")
 def consolidate_shipments(company_id: str):
