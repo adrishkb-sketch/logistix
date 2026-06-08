@@ -570,7 +570,7 @@ async function adoptStrategicLocation() {
         return alert("Error: Manager Name, Contact, Email and Password are required for AI-suggested hubs.");
     }
     const name = prompt("Enter Warehouse Name for Strategic Hub:");
-    const capacity = parseInt(document.getElementById('wh-capacity-input').value) || 5;
+    const capacity = parseInt(document.getElementById('sug-capacity').value) || 5;
     if (name) {
         const success = await createWarehouse(name, suggestedWhLoc.lat, suggestedWhLoc.lng, manager, contact, email, password, capacity);
         if (success) {
@@ -579,6 +579,7 @@ async function adoptStrategicLocation() {
             document.getElementById('sug-contact').value = '';
             document.getElementById('sug-email').value = '';
             document.getElementById('sug-password').value = '';
+            document.getElementById('sug-capacity').value = '5';
         }
     }
 }
@@ -594,7 +595,7 @@ async function stayWithManualLocation() {
     }
 
     const name = prompt("Enter Warehouse Name for Manual Hub:");
-    const capacity = parseInt(document.getElementById('wh-capacity-input').value) || 5;
+    const capacity = parseInt(document.getElementById('sug-capacity').value) || 5;
     if (name) {
         const success = await createWarehouse(name, pendingWhLoc.lat, pendingWhLoc.lng, manager, contact, email, password, capacity);
         if (success) {
@@ -603,6 +604,7 @@ async function stayWithManualLocation() {
             document.getElementById('sug-contact').value = '';
             document.getElementById('sug-email').value = '';
             document.getElementById('sug-password').value = '';
+            document.getElementById('sug-capacity').value = '5';
         }
     }
 }
