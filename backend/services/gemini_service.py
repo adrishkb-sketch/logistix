@@ -467,7 +467,7 @@ def call_gemini(prompt: str, system_instruction: Optional[str] = None, api_key: 
     
     # Try every key in the pool before giving up
     for key in shuffled_keys:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=30)
             
