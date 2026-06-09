@@ -149,6 +149,18 @@ class Vehicle(BaseModel):
 
     # CO2 Estimation
     vehicle_age: float = 0.0 # years
+    age_recorded_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+
+    @property
+    def current_age(self) -> float:
+        try:
+            from datetime import timezone
+            recorded = datetime.fromisoformat(self.age_recorded_at.replace("Z", "+00:00"))
+            now = datetime.utcnow().replace(tzinfo=timezone.utc)
+            days_passed = (now - recorded).days
+            return self.vehicle_age + (max(0, days_passed) / 365.25)
+        except Exception:
+            return self.vehicle_age
 
 class Warehouse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

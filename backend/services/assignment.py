@@ -308,7 +308,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         # CO2 Penalty Calculation
         co2_penalty = 0
         if not is_ev and not is_bike_scooty and not is_drone:
-            v_age = float(vehicle.get("vehicle_age", 0.0))
+            from backend.models import Vehicle
+            v_age = Vehicle(**vehicle).current_age
             # Base penalty for fossil fuel vehicles, increased by 5% for every year of vehicle age
             co2_penalty = 500 * (1.0 + (v_age * 0.05))
 
@@ -447,7 +448,8 @@ def get_assignment_recommendations_for_shipment(shipment: Dict[str, Any]) -> lis
 
         co2_penalty = 0
         if not is_ev and not is_bike_scooty and not is_drone:
-            v_age = float(vehicle.get("vehicle_age", 0.0))
+            from backend.models import Vehicle
+            v_age = Vehicle(**vehicle).current_age
             co2_penalty = 500 * (1.0 + (v_age * 0.05))
 
         score = priority_score + calculate_driver_performance_score(d) + (d.get("safety_rating", 5) * 10) - co2_penalty
