@@ -257,14 +257,13 @@ def run_tests():
 
     # ── Test 6: Calamity Detection and Safe Hub Rerouting ──
     print("\nRunning Test 6: Calamity Rerouting & Alerts...")
-    # Seed a disaster (cyclone) centered between Mumbai and Pune
     disaster = {
-        "id": "cyclone_disaster",
+        "id": "storm_disaster",
         "company_id": company_id,
-        "type": "cyclone",
+        "type": "storm",
         "lat": 18.8000,
         "lng": 73.3000,
-        "radius": 35, # 35km zone to cover Lonavala but leave wh_safe and Mumbai out
+        "radius": 55, # 55km zone to cover Mumbai Hub but leave wh_safe out
         "shapeType": "circle",
         "severity": "critical",
         "is_simulation": True
@@ -280,6 +279,7 @@ def run_tests():
         "drop": {"lat": 19.0760, "lng": 72.8777, "address": "Mumbai Hub"}, # Path is through Lonavala disaster zone
         "status": "in_transit",
         "stage": "Transit",
+        "expected_delivery": datetime.utcnow().isoformat() + "Z", # tight deadline triggers diversion
         "logs": []
     }
     shipments_db.insert(shipment_transit)
@@ -290,8 +290,9 @@ def run_tests():
     
     # Fetch updated shipment
     updated_shipment = shipments_db.get_by_id("ship_transit_divert")
+    print("DEBUG updated_shipment:", updated_shipment)
     # Destination must be updated to the nearest safe warehouse (wh_safe)
-    assert updated_shipment["drop_warehouse_id"] == "wh_Safe", f"Expected destination wh_Safe, got {updated_shipment['drop_warehouse_id']}"
+    assert updated_shipment["drop_warehouse_id"] == "wh_Safe", f"Expected destination wh_Safe, got {updated_shipment.get('drop_warehouse_id')}"
     assert "Diverted: Safe Hub" in updated_shipment["stage"]
     assert updated_shipment["status"] == "split"
     
