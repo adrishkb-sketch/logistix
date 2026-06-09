@@ -2661,13 +2661,24 @@ async function loadWallet() {
         const oracleBtn = document.getElementById('oracle-btn');
         const amtInput = document.getElementById('fund-req-amount');
         const typeSelect = document.getElementById('fund-req-type');
+        const emSection = document.getElementById('emergency-funds-section');
         
         if (!stats.is_active_route) {
+            if (emSection) {
+                emSection.style.filter = 'blur(4px)';
+                emSection.style.pointerEvents = 'none';
+                emSection.style.opacity = '0.5';
+            }
             if (reqBtn) { reqBtn.disabled = true; reqBtn.innerText = "Inactive Route"; }
             if (oracleBtn) oracleBtn.disabled = true;
             if (amtInput) amtInput.disabled = true;
             if (typeSelect) typeSelect.disabled = true;
         } else {
+            if (emSection) {
+                emSection.style.filter = 'none';
+                emSection.style.pointerEvents = 'auto';
+                emSection.style.opacity = '1';
+            }
             if (reqBtn) { reqBtn.disabled = false; reqBtn.innerText = "Request Funds Now"; }
             if (oracleBtn) oracleBtn.disabled = false;
             if (amtInput) amtInput.disabled = false;
@@ -2715,46 +2726,53 @@ async function withdrawMoney() {
     alert(getTranslation('withdrawal_initiated'));
 }
 
-window.onFundTypeChange = function() {
+window.onFundTypeChange = async function() {
     const type = document.getElementById('fund-req-type').value;
     const amtInput = document.getElementById('fund-req-amount');
     const oracleBtn = document.getElementById('oracle-btn');
-    if (type === 'FUEL') {
+    
+    let explanationDiv = document.getElementById('fund-explanation');
+    if (!explanationDiv) {
+        explanationDiv = document.createElement('div');
+        explanationDiv.id = 'fund-explanation';
+        explanationDiv.style.cssText = 'font-size:0.75rem; color:var(--text-muted); margin-top:8px; line-height:1.4;';
+        if (amtInput && amtInput.parentNode) {
+            amtInput.parentNode.parentNode.appendChild(explanationDiv);
+        }
+    }
+    
+    if (type === 'FUEL' || type === 'FOOD') {
         amtInput.readOnly = true;
         amtInput.value = '';
-        amtInput.placeholder = "Click Oracle ✨";
-        if(oracleBtn) oracleBtn.style.display = 'block';
+        amtInput.placeholder = "Calculating...";
+        explanationDiv.innerText = "Querying live Oracle calculations...";
+        if(oracleBtn) oracleBtn.style.display = 'none';
+        
+        try {
+            const lat = lastLat || 28.6139;
+            const lng = lastLng || 77.2090;
+            const remaining_km = window.currentRemainingKm || 300.0;
+            const driverId = localStorage.getItem('driver_id') || dId;
+            
+            const data = await apiCall(`/driver/${driverId}/calculate-fuel?lat=${lat}&lng=${lng}&remaining_km=${remaining_km}&type=${type}`, 'GET');
+            amtInput.value = Math.round(data.suggested_amount);
+            explanationDiv.innerText = data.explanation;
+        } catch (e) {
+            explanationDiv.innerText = "Failed to calculate emergency fund amount.";
+            amtInput.placeholder = "Error";
+        }
     } else {
         amtInput.readOnly = false;
         amtInput.placeholder = "Amount (₹)";
+        amtInput.value = '';
+        explanationDiv.innerText = "";
         if(oracleBtn) oracleBtn.style.display = 'none';
     }
 };
 
 window.calculateSuggestedFuel = async function(e) {
     if (e && e.preventDefault) e.preventDefault();
-    const btn = e ? (e.currentTarget || e.target || e) : null;
-    if (!btn || !btn.innerText) return;
-    
-    const originalText = btn.innerText;
-    btn.innerText = '⌛';
-    btn.disabled = true;
-
-    try {
-        const lat = lastLat || 28.6139;
-        const lng = lastLng || 77.2090;
-        const remaining_km = window.currentRemainingKm || 300.0;
-        
-        const data = await apiCall(`/driver/${dId}/calculate-fuel?lat=${lat}&lng=${lng}&remaining_km=${remaining_km}`, 'GET');
-        document.getElementById('fund-req-amount').value = Math.round(data.suggested_amount);
-        document.getElementById('fund-req-type').value = 'FUEL';
-        showNotification(`${getTranslation('fuel_oracle')}: ₹${data.price_per_liter}/L ${getTranslation('in_label')} ${data.state}. ${getTranslation('suggested_amount')}: ₹${Math.round(data.suggested_amount)} for ${remaining_km.toFixed(1)} km`, 'success');
-    } catch (e) {
-        showNotification(getTranslation('fuel_oracle_unavailable'), "error");
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
+    if (typeof window.onFundTypeChange === 'function') window.onFundTypeChange();
 }
 
 window.loadContracts = async function() {

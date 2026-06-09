@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Drone Hub Management | Logistix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+    <link crossorigin="" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Modern Glassmorphic Telemetry styles */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .drone-map-container {
+            height: 400px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            margin-top: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        #drone-tracking-map {
+            width: 100%;
+            height: 100%;
+            background: #0f172a;
+        }
+        .drone-battery-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .drone-battery-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.5s ease;
+        }
+        .drone-card-pulse {
+            position: relative;
+        }
+        .drone-card-pulse::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: pulse-dot 1.5s infinite;
+        }
+        @keyframes pulse-dot {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="dashboard-body">
+<div class="background-animation"></div>
+<div class="dashboard-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo" onclick="location.reload()" style="cursor:pointer;">Logistix</div>
+        <div class="nav-links-wrapper">
+            <nav class="nav-links">
+                <a class="nav-link-v3" href="warehouse_manager_dash.html" id="nav-dash"><span data-i18n="nav_dashboard" style="margin-left:12px;">Analytics</span></a>
+                <a class="nav-link-v3" href="warehouse_manager_verifications.html" id="nav-verifications">🛡️<span data-i18n="nav_verifications" style="margin-left:12px;">Verifications</span><span class="badge" id="verif-badge" style="background:var(--danger); display:none; margin-left: auto; width:8px; height:8px; border-radius:50%;"></span></a>
+                <a class="nav-link-v3" href="warehouse_manager_fleet.html" id="nav-fleet"><span data-i18n="nav_fleet" style="margin-left:12px;">Driver &amp; Fleet</span></a>
+                <a class="nav-link-v3" href="warehouse_manager_gate.html" id="nav-gate">⛩️<span data-i18n="nav_gate" style="margin-left:12px;">Gate Check-in</span></a>
+                <a class="nav-link-v3" href="warehouse_manager_audit.html" id="nav-audit"><span data-i18n="nav_daily_audit" style="margin-left:12px;">Daily Audit</span></a>
+                <a class="nav-link-v3" href="warehouse_manager_leaderboard.html" id="nav-leaderboard">🏆<span data-i18n="nav_leaderboard" style="margin-left:12px;">Leaderboard</span></a>
+                <a class="nav-link-v3" href="warehouse_manager_shipments.html" id="nav-shipments"><span style="margin-left:12px;">📦 Hub Shipments</span></a>
+                <a class="nav-link-v3" href="warehouse_manager_payments.html" id="nav-payments"><span style="margin-left:12px;">💰 Payments</span></a>
+                <a class="nav-link-v3 active" href="warehouse_manager_drones.html" id="nav-drones">🛸<span style="margin-left:12px;">Drone Hub</span></a>
+                <a class="nav-link-v3" href="warehouse_manager_settings.html" id="nav-settings"><span data-i18n="nav_settings" style="margin-left:12px;">Settings</span></a>
+            </nav>
+        </div>
+        <button class="btn-signout-v3" onclick="logout()">Sign Out</button>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <h1>🛸 Drone Hub &amp; Final-Leg Tracking - <span id="wh-location-label-short">---</span></h1>
+            <div class="top-actions">
+                <button class="btn-primary" onclick="triggerAIWarehouseReadiness()" style="background:linear-gradient(135deg, #a855f7 0%, #6366f1 100%); width:auto; padding:8px 16px; font-weight:bold; border-radius:10px; box-shadow:0 4px 15px rgba(168, 85, 247, 0.3); border:none;">
+                    🔮 AI Hub Readiness
+                </button>
+                <div class="lang-card-v3">
+                    <span>🌐</span>
+                    <select id="lang-select" onchange="changeLanguage(this.value)">
+                        <option value="en">English (EN)</option>
+                        <option value="bn">বাংলা (BN)</option>
+                        <option value="hi">हिंदी (HI)</option>
+                        <option value="te">తెలుగు (TE)</option>
+                        <option value="mr">मराठी (MR)</option>
+                        <option value="ta">தமிழ் (TA)</option>
+                        <option value="gu">ગુજરાતી (GU)</option>
+                        <option value="kn">ಕನ್ನಡ (KN)</option>
+                        <option value="or">ଓଡ଼ିଆ (OR)</option>
+                        <option value="ml">മലയാളം (ML)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                        <option value="as">অসমীয়া (AS)</option>
+                        <option value="mai">मैथिಲಿ (MAI)</option>
+                        <option value="sat">संताली (SAT)</option>
+                        <option value="ks">کٲشُر (KS)</option>
+                        <option value="ur">اردو (UR)</option>
+                        <option value="ne">नेपाली (NE)</option>
+                        <option value="sa">संस्कृतम् (SA)</option>
+                        <option value="sd">سنڌي (SD)</option>
+                        <option value="gom">कोंकणी (GOM)</option>
+                        <option value="doi">डोगरी (DOI)</option>
+                        <option value="mni">মৈতৈলোন (MNI)</option>
+                    </select>
+                </div>
+                <button class="theme-circle-btn notranslate" id="theme-toggle">
+                    <span id="theme-icon">🌙</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Drone Telemetry Cards -->
+        <div class="telemetry-grid">
+            <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--primary);">
+                <small style="color:var(--text-muted)">Total Hub Drones</small>
+                <h2 id="total-drones-count" style="margin: 5px 0 0 0;">0</h2>
+            </div>
+            <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--success);">
+                <small style="color:var(--text-muted)">Available Drones</small>
+                <h2 id="available-drones-count" style="margin: 5px 0 0 0;">0</h2>
+            </div>
+            <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--warning);">
+                <small style="color:var(--text-muted)">Active Deliveries</small>
+                <h2 id="active-flights-count" style="margin: 5px 0 0 0;">0</h2>
+            </div>
+            <div class="glass-card" style="padding: 16px; border-left: 4px solid var(--danger);">
+                <small style="color:var(--text-muted)">Average Battery State</small>
+                <h2 id="avg-battery-percent" style="margin: 5px 0 0 0;">-- %</h2>
+            </div>
+        </div>
+
+        <div class="responsive-grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:24px;">
+            <!-- Register Drone Form -->
+            <div class="glass-card section-card">
+                <h3 style="margin:0 0 15px 0;">🚁 Add Drone to Registry</h3>
+                <form id="add-drone-form">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                        <div class="input-group">
+                            <label>License Number</label>
+                            <input id="dr-license" placeholder="e.g. DRN-9852" required="" type="text"/>
+                        </div>
+                        <div class="input-group">
+                            <label>Payload Capacity (kg)</label>
+                            <input id="dr-capacity" min="0.5" step="0.1" placeholder="e.g. 5.0" required="" type="number"/>
+                        </div>
+                    </div>
+                    <div class="input-group" style="margin-bottom:15px;">
+                        <label>Operation Radius (km)</label>
+                        <input id="dr-radius" min="1" step="0.5" placeholder="e.g. 15.0" required="" type="number"/>
+                    </div>
+                    <button class="btn-primary" type="submit">Register Drone 🚀</button>
+                </form>
+            </div>
+
+            <!-- Dispatch/Final Leg Assignment Section -->
+            <div class="glass-card section-card">
+                <h3 style="margin:0 0 15px 0;">📦 Dispatch Drone Final Leg</h3>
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">Assign final-leg delivery shipments under 15km to an available hub drone.</p>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="input-group">
+                        <label>Select Pending Final-Leg Shipment</label>
+                        <select id="dispatch-shipment-select" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border);">
+                            <option value="">No pending final-leg shipments</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Select Available Drone</label>
+                        <select id="dispatch-drone-select" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--border);">
+                            <option value="">No available drones</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" onclick="dispatchDroneDelivery()" style="background:var(--success);">Launch Drone Delivery 🛸</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drone Tracking Map & Telemetry -->
+        <div class="glass-card section-card" style="margin-top:24px;">
+            <h3 style="margin:0;">🗺️ Active Final Leg Drone Tracking</h3>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">Real-time trajectory visualizer for active drone deliveries in this hub's airspace.</p>
+            <div class="drone-map-container">
+                <div id="drone-tracking-map"></div>
+            </div>
+        </div>
+
+        <!-- Drone Inventory -->
+        <div class="glass-card section-card" style="margin-top:24px;">
+            <h3 style="margin:0 0 15px 0;">📋 Registered Drone Fleet</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>System ID</th>
+                            <th>License</th>
+                            <th>Payload Cap</th>
+                            <th>Max Radius</th>
+                            <th>Status</th>
+                            <th>Telemetry</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drone-table-body">
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:var(--text-muted);">Fetching drones...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="../js/translator.js?v=2.2"></script>
+<script src="../js/logo.js"></script>
+<script src="../js/api.js?v=2.2"></script>
+<script src="../js/warehouse_manager_drones.js"></script>
+<script>
+    const themeBtn = document.getElementById('theme-toggle');
+    function setTheme(mode) {
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+            themeBtn.querySelector('#theme-icon').innerText = '☀️';
+        } else {
+            document.body.classList.remove('light-mode');
+            themeBtn.querySelector('#theme-icon').innerText = '🌙';
+        }
+        localStorage.setItem('theme', mode);
+    }
+    themeBtn.onclick = () => {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
+    setTheme(localStorage.getItem('theme') || 'dark');
+</script>
+</body>
+</html>

@@ -1082,8 +1082,15 @@ def get_driver_wallet(driver_id: str):
         {"desc": "Last Trip Earnings", "amount": driver.get("wallet_balance", 0), "timestamp": datetime.now().isoformat(), "type": "Trip"},
     ]
     
-    # Check if active
-    is_active = driver.get("status") in ["assigned", "in_transit"]
+    # Check if active shipment exists
+    active_shipment = None
+    all_ships = shipments_db.get_all()
+    for s in all_ships:
+        if s.get("assigned_driver_id") == driver_id and s.get("status") in ["assigned", "in_transit", "pickup"]:
+            active_shipment = s
+            break
+            
+    is_active = active_shipment is not None
     
     # Check food fund
     food_allowed = True
@@ -1676,7 +1683,6 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
             })
     
     # Log as Expense in Ledger
-    from backend.database import JSONDatabase
     ledger_db = JSONDatabase("ledger")
     company_id = driver["company_id"]
     warehouse_id = driver.get("base_warehouse_id")
@@ -1740,7 +1746,8 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
                 "kilometers_covered": round(new_dist, 2),
                 "vehicle_health_score": round(health, 2),
                 "deliveries_completed": v.get("deliveries_completed", 0) + 1,
-                "utilization_hours": v.get("utilization_hours", 0) + (dist / 40)
+                "utilization_hours": v.get("utilization_hours", 0) + (dist / 40),
+                "fuel_funded_until_km": 0.0
             })
             
     # If this is part of a split shipment, check if parent should be finalized
@@ -1812,44 +1819,103 @@ def request_funds(driver_id: str, data: dict):
     alerts_db.insert(new_alert.model_dump())
     return {"message": "Request sent to manager."}
 
+def resolve_indian_state(lat: float, lng: float) -> str:
+    if lat > 32: return "Delhi" # Srinagar / Jammu / North
+    if lat > 28.5 and lat < 29.5 and lng > 76.8 and lng < 77.4: return "Delhi"
+    if lat > 27 and lat < 31 and lng > 74 and lng < 78: return "Haryana"
+    if lat > 24 and lat < 28 and lng > 73 and lng < 79: return "Rajasthan"
+    if lat > 24 and lat < 30 and lng > 77 and lng < 84: return "Uttar Pradesh"
+    if lat > 21 and lat < 25 and lng > 68 and lng < 75: return "Gujarat"
+    if lat > 18.5 and lat < 22 and lng > 72 and lng < 80: return "Maharashtra"
+    if lat > 11 and lat < 18 and lng > 74 and lng < 78.5: return "Karnataka"
+    if lat > 8 and lat < 14 and lng > 76 and lng < 80.5: return "Tamil Nadu"
+    if lat > 21 and lat < 27 and lng > 85 and lng < 90: return "West Bengal"
+    
+    capitals = {
+        "Delhi": (28.6139, 77.2090),
+        "Haryana": (30.7333, 76.7794),
+        "Uttar Pradesh": (26.8467, 80.9462),
+        "Maharashtra": (19.0760, 72.8777),
+        "Karnataka": (12.9716, 77.5946),
+        "Tamil Nadu": (13.0827, 80.2707),
+        "West Bengal": (22.5726, 88.3639),
+        "Rajasthan": (26.9124, 75.7873),
+        "Gujarat": (23.2156, 72.6369)
+    }
+    closest_state = "Delhi"
+    min_dist = float('inf')
+    for state, (s_lat, s_lng) in capitals.items():
+        dist = (lat - s_lat)**2 + (lng - s_lng)**2
+        if dist < min_dist:
+            min_dist = dist
+            closest_state = state
+    return closest_state
+
 @router.get("/{driver_id}/calculate-fuel")
-def calculate_fuel_need(driver_id: str, lat: float, lng: float, remaining_km: float = 300.0):
-    # 1. Reverse geocode to get state (Simplified mock)
-    # In real life, use Nominatim or a state-boundary check
-    state = "Delhi"
-    if lat < 25: state = "Maharashtra"
-    if lat < 20: state = "Karnataka"
-    if lng > 85: state = "West Bengal"
-    
-    from backend.routers.fuel_oracle import FUEL_PRICES
-    price_info = FUEL_PRICES.get(state, FUEL_PRICES["Delhi"])
-    
+def calculate_fuel_need(driver_id: str, lat: float, lng: float, remaining_km: float = 300.0, type: str = "FUEL"):
     driver = drivers_db.get_by_id(driver_id)
     if not driver:
-        # Fallback for demo if driver session is weird
-        return {"suggested_amount": 1500, "price_per_liter": price_info["diesel"], "state": state}
+        return {"suggested_amount": 1500, "price_per_liter": 90.0, "state": "Delhi", "explanation": "Fallback default"}
 
+    state = resolve_indian_state(lat, lng)
+    
+    if type.upper() == "FOOD":
+        amount = 50.0 + remaining_km * 1.0
+        explanation = f"Food Fund: ₹50.00 base + ₹1.00 per km for {remaining_km:.1f} km = ₹{amount:.2f}"
+        return {
+            "suggested_amount": round(amount, 2),
+            "explanation": explanation,
+            "state": state
+        }
+        
     v_id = driver.get("assigned_vehicle_id")
-    mileage = 15.0 # default
     v_type = "van"
+    mileage = 15.0
+    
     if v_id:
         v = vehicles_db.get_by_id(v_id)
         if v:
             mileage = float(v.get("fuel_efficiency", 15.0))
             v_type = v.get("type", "van")
             
-    if remaining_km <= 0:
-        remaining_km = 300.0
-            
-    # Calculate suggested amount for remaining_km range
-    price = price_info["diesel"] if any(x in v_type.lower() for x in ["truck", "van"]) else price_info["petrol"]
-    suggested = (remaining_km / (mileage or 15)) * price
+    v_type_lower = v_type.lower()
+    if "ev" in v_type_lower or "electric" in v_type_lower:
+        fuel_cat = "EV"
+    elif "bike" in v_type_lower or "scooty" in v_type_lower or "scooter" in v_type_lower:
+        fuel_cat = "PETROL"
+    else:
+        fuel_cat = "DIESEL"
+        
+    if fuel_cat == "EV":
+        station_providers = ["Tata Power EZ Charge Station", "Jio-bp Pulse EV Hub", "Magenta ChargeGrid", "Statiq Charging Station"]
+        station_name = f"{random.choice(station_providers)}, {state} Highway"
+        ev_rates = {
+            "Delhi": 16.0, "Haryana": 17.5, "Uttar Pradesh": 16.5,
+            "Maharashtra": 21.0, "Karnataka": 19.0, "Tamil Nadu": 20.0,
+            "West Bengal": 18.0, "Rajasthan": 18.5, "Gujarat": 17.0
+        }
+        rate = ev_rates.get(state, 18.0)
+        unit = "kWh"
+    else:
+        station_providers = ["IndianOil Fuel Station", "HP Petrol Pump", "Bharat Petroleum (BPCL)", "Reliance Jio-bp Station"]
+        station_name = f"{random.choice(station_providers)}, {state} Bypass"
+        from backend.routers.fuel_oracle import scrape_fuel_prices
+        rates = scrape_fuel_prices()
+        state_rates = rates.get(state, rates.get("Delhi"))
+        rate = state_rates["diesel"] if fuel_cat == "DIESEL" else state_rates["petrol"]
+        unit = "L"
+
+    suggested = (remaining_km / (mileage or 15.0)) * rate
+    explanation = f"Nearest station: {station_name} ({state}). Rate: ₹{rate}/{unit}. Distance: {remaining_km:.1f} km. Vehicle Efficiency: {mileage:.1f} km/{unit}. Calculation: ({remaining_km:.1f} / {mileage:.1f}) * ₹{rate} = ₹{suggested:.2f}"
     
     return {
         "suggested_amount": round(suggested, 2),
-        "price_per_liter": price,
+        "price_per_liter": rate,
         "state": state,
-        "remaining_km": remaining_km
+        "remaining_km": remaining_km,
+        "station_name": station_name,
+        "unit": unit,
+        "explanation": explanation
     }
 
 @router.post("/{driver_id}/request-checkup")

@@ -1857,9 +1857,28 @@ const modelFooter = `
 `;
 
 async function triggerAIWarehouseReadiness() {
+    let modal = document.getElementById('wh-readiness-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'wh-readiness-modal';
+        modal.className = 'glass-card modal-glass';
+        modal.style.cssText = 'display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:650px; max-width:90vw; padding:30px; border:1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 40px 80px rgba(0,0,0,0.4); background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(25px); border-radius: 20px;';
+        modal.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+                <h3 style="margin:0; font-size:1.4rem; color:var(--primary); font-weight:800;">🏢 AI Hub Readiness Audit</h3>
+                <button onclick="document.getElementById('wh-readiness-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; opacity:0.6;">&times;</button>
+            </div>
+            <div id="wh-readiness-report" style="max-height:60vh; overflow-y:auto; font-size:0.95rem; line-height:1.6; color:var(--text); padding-right:8px;">
+                <!-- Injected via JS -->
+            </div>
+            <div style="margin-top:25px; text-align:right; border-top:1px solid rgba(255,255,255,0.08); padding-top:16px;">
+                <button class="btn-primary" onclick="document.getElementById('wh-readiness-modal').style.display='none'" style="width:auto; padding:10px 24px; border-radius:12px; font-weight:bold;">Close Audit</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
     const reportDiv = document.getElementById('wh-readiness-report');
-    const modal = document.getElementById('wh-readiness-modal');
-    if (!reportDiv || !modal) return;
+    if (!reportDiv) return;
     
     reportDiv.innerHTML = getShimmerHtml('Running AI hub readiness & resource check...');
     modal.style.display = 'block';

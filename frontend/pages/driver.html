@@ -201,22 +201,23 @@
                     </div>
                 </div>
 
-                <div class="glass-card" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);">
+                <div class="glass-card" id="emergency-funds-section" style="padding:20px; margin-bottom:24px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); transition: all 0.3s ease;">
                     <h4 style="margin:0 0 15px 0; color:var(--warning);" data-i18n="request_funds_title">Request Emergency Funds ⛽🍔</h4>
                     <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:15px;" data-i18n="incident_report_desc">Requests are sent to the manager for instant approval.</p>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <div style="display:flex; gap:10px;">
-                            <select id="fund-req-type" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; flex:1;">
+                            <select id="fund-req-type" onchange="onFundTypeChange()" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; flex:1;">
                                 <option value="FUEL" data-i18n="fund_type_fuel">Fuel / Gas ⛽</option>
                                 <option value="FOOD" data-i18n="fund_type_food">Food / Subsistence 🍔</option>
                                 <option value="MAINTENANCE" data-i18n="fund_type_maintenance">Emergency Repair 🛠️</option>
                                 <option value="OTHER" data-i18n="fund_type_other">Other / Misc 📦</option>
                             </select>
                             <div style="position:relative;">
-                                <input type="number" id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;">
-                                <button onclick="calculateSuggestedFuel(event)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:var(--primary); color:white; border:none; border-radius:4px; font-size:0.6rem; padding:4px 6px; cursor:pointer;" title="Auto-calculate fuel based on location">Oracle ✨</button>
+                                <input type="number" id="fund-req-amount" placeholder="Amount (₹)" style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:white; padding:12px; border-radius:8px; width:120px;" readonly>
+                                <button id="oracle-btn" onclick="calculateSuggestedFuel(event)" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:var(--primary); color:white; border:none; border-radius:4px; font-size:0.6rem; padding:4px 6px; cursor:pointer;" title="Auto-calculate fuel based on location">Oracle ✨</button>
                             </div>
                         </div>
+                        <div id="fund-explanation" style="font-size:0.75rem; color:var(--text-muted); margin-top:8px; line-height:1.4;"></div>
                         <button class="btn-primary" style="width:100%; padding:14px; font-weight:700;" onclick="handleFundRequest()">
                             <span data-i18n="withdraw_btn">Request Funds Now</span>
                         </button>

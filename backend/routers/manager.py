@@ -473,6 +473,35 @@ def delete_drone(drone_id: str):
         return {"message": "Deleted"}
     raise HTTPException(status_code=404, detail="Drone not found")
 
+@router.post("/shipments/{shipment_id}/complete-drone")
+def complete_drone_shipment(shipment_id: str, data: dict):
+    from backend.database import JSONDatabase
+    from datetime import datetime
+    drone_id = data.get("drone_id")
+    s_db = JSONDatabase("shipments")
+    shipment = s_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    s_db.update(shipment_id, {
+        "status": "delivered",
+        "stage": "Delivered",
+        "logs": shipment.get("logs", []) + [{
+            "status": "delivered",
+            "message": f"🏁 Drone arrived at destination. Final leg delivery complete.",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }]
+    })
+    
+    if drone_id:
+        JSONDatabase("drones").update(drone_id, {
+            "status": "available",
+            "battery": data.get("battery", 100)
+        })
+        
+    return {"message": "Drone delivery finalized successfully."}
+
+
 @router.post("/drones/bulk-parse")
 async def bulk_parse_drones(company_id: str, file: Optional[UploadFile] = File(None), url_req: Optional[str] = None):
     import pandas as pd
