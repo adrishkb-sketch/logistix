@@ -429,12 +429,24 @@ def create_shipment(shipment_data: ShipmentCreate):
         "vitality": 100.0,
         "qr_code_data": f"LX-{uuid.uuid4().hex[:8].upper()}",
         "finance": finance,
-        "payment_status": "unpaid"
+        "payment_status": "paid" if random.random() < 0.8 else "unpaid"
     })
 
     new_shipment = Shipment(**shipment_dict)
     
     shipments_db.insert(new_shipment.model_dump())
+    
+    # Auto-log revenue if prepaid
+    if shipment_dict["payment_status"] == "paid":
+        from backend.database import JSONDatabase
+        ledger_db = JSONDatabase("ledger")
+        ledger_db.insert({
+            "type": "REVENUE",
+            "desc": f"Digital Payment for Shipment #{shipment_dict['id'][:8]}",
+            "amount": finance.get("suggested_price", 0),
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "company_id": shipment_dict["company_id"]
+        })
     
     # Auto-Split and Auto-Assign
     try:

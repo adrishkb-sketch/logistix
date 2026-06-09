@@ -44,6 +44,9 @@ async function init() {
     renderCharts();
     setupFormListeners();
     setupSmartAssistantListeners();
+    if (document.getElementById('payments-tab')) {
+        loadHubFinance();
+    }
     if (typeof initAIGating === 'function') {
         await initAIGating();
     }
@@ -2180,3 +2183,42 @@ setTimeout(() => {
 
 
 
+
+// Hub Finance Logic
+async function loadHubFinance() {
+    try {
+        const data = await apiCall(/manager/warehouses/ + whId + /finance, 'GET');
+        
+        const elProfit = document.getElementById('stat-hub-profit');
+        const elDrone = document.getElementById('stat-drone-fund');
+        const tableBody = document.getElementById('hub-finance-table-body');
+        
+        if (elProfit) elProfit.innerText = '? ' + (data.hub_profit_share || 0);
+        if (elDrone) elDrone.innerText = '? ' + (data.drone_restoration_fund || 0);
+        
+        if (tableBody) {
+            tableBody.innerHTML = '';
+            if (!data.recent_transactions || data.recent_transactions.length === 0) {
+                tableBody.innerHTML = <tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">No transactions yet</td></tr>;
+                return;
+            }
+            
+            data.recent_transactions.forEach(tx => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+                tr.innerHTML = 
+                    <td style="padding:12px; font-weight:500;"> + (tx.desc || 'System Transaction') + </td>
+                    <td style="padding:12px; color:var(--success); font-weight:bold;">?  + tx.amount + </td>
+                    <td style="padding:12px; color:var(--text-muted); font-size:0.85rem;"> + new Date(tx.timestamp).toLocaleString() + </td>
+                ;
+                tableBody.appendChild(tr);
+            });
+        }
+    } catch(e) {
+        console.error("Failed to load hub finance:", e);
+        const tableBody = document.getElementById('hub-finance-table-body');
+        if (tableBody) {
+            tableBody.innerHTML = <tr><td colspan="3" style="text-align:center; padding:20px; color:var(--danger);">Error loading ledger</td></tr>;
+        }
+    }
+}

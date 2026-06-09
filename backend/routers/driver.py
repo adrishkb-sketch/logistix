@@ -1210,12 +1210,47 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
         # CREDIT DRIVER WALLET & POINTS
         driver = drivers_db.get_by_id(driver_id)
         if driver:
-            leg_cost = shipment.get("finance", {}).get("suggested_price", 0)
+            # Distance-ratio profit splitting
+            p_id = shipment.get("parent_id")
+            if p_id:
+                parent = shipments_db.get_by_id(p_id)
+                parent_charge = parent.get("finance", {}).get("suggested_price", 0)
+                parent_dist = parent.get("finance", {}).get("distance_km", 1) or 1
+                leg_dist = shipment.get("finance", {}).get("distance_km", 0)
+                ratio = leg_dist / parent_dist
+                leg_cost = parent_charge * ratio
+            else:
+                leg_cost = shipment.get("finance", {}).get("suggested_price", 0)
+                
             driver_share = round(leg_cost * 0.4, 2) # 40% share
+            hub_share = round(leg_cost * 0.1, 2)    # 10% share
+            drone_share = round(leg_cost * 0.05, 2) # 5% share
+            
             drivers_db.update(driver_id, {
                 "wallet_balance": driver.get("wallet_balance", 0) + driver_share,
                 "reward_points": driver.get("reward_points", 0) + 10,
                 "total_earnings": driver.get("total_earnings", 0) + driver_share
+            })
+            
+            from backend.database import JSONDatabase
+            ledger_db = JSONDatabase("ledger")
+            company_id = driver.get("company_id")
+            
+            ledger_db.insert({
+                "type": "EXPENSE",
+                "desc": f"Hub Profit Share (10%): Warehouse Manager for Leg {shipment_id[:8]}",
+                "amount": hub_share,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "company_id": company_id,
+                "warehouse_id": shipment.get("drop_warehouse_id") or driver.get("base_warehouse_id")
+            })
+            ledger_db.insert({
+                "type": "EXPENSE",
+                "desc": f"Drone Restoration Fund (5%): Leg {shipment_id[:8]}",
+                "amount": drone_share,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "company_id": company_id,
+                "warehouse_id": shipment.get("drop_warehouse_id") or driver.get("base_warehouse_id")
             })
         
         # Check if there are more legs or if parent should move to next stage
@@ -1309,10 +1344,24 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
                 "present_warehouse_id": base_wh
             })
     
-    # Update Driver Wallet & Log Expense
+    # Update Driver Wallet & Profit Splitting
     driver = drivers_db.get_by_id(driver_id)
-    finance = shipment.get("finance", {})
-    base_wage = finance.get("driver_wage", 0)
+    
+    # Distance-ratio profit splitting
+    p_id = shipment.get("parent_id")
+    if p_id:
+        parent = shipments_db.get_by_id(p_id)
+        parent_charge = parent.get("finance", {}).get("suggested_price", 0)
+        parent_dist = parent.get("finance", {}).get("distance_km", 1) or 1
+        leg_dist = shipment.get("finance", {}).get("distance_km", 0)
+        ratio = leg_dist / parent_dist
+        allocated_charge = parent_charge * ratio
+    else:
+        allocated_charge = shipment.get("finance", {}).get("suggested_price", 0)
+        
+    driver_share = allocated_charge * 0.4
+    hub_share = allocated_charge * 0.1
+    drone_share = allocated_charge * 0.05
     
     # Calculate Punctuality Bonus
     punctuality_bonus = 0
@@ -1323,10 +1372,12 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
             actual = datetime.utcnow()
             expected = datetime.fromisoformat(expected_str.replace('Z', ''))
             if actual <= expected:
-                punctuality_bonus = round(base_wage * 0.15, 2) # 15% bonus for on-time delivery
+                punctuality_bonus = driver_share * 0.15 # 15% bonus for on-time delivery
         except: pass
         
-    total_credit = base_wage + punctuality_bonus
+    total_credit = round(driver_share + punctuality_bonus, 2)
+    hub_share = round(hub_share, 2)
+    drone_share = round(drone_share, 2)
     
     new_balance = driver.get("wallet_balance", 0) + total_credit
     new_total = driver.get("total_earnings", 0) + total_credit
@@ -1335,12 +1386,31 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     # Log as Expense in Ledger
     from backend.database import JSONDatabase
     ledger_db = JSONDatabase("ledger")
+    company_id = driver["company_id"]
+    warehouse_id = driver.get("base_warehouse_id")
+    
     ledger_db.insert({
         "type": "EXPENSE",
-        "desc": f"Driver Payout: {driver.get('name')} for Shipment {shipment_id[:8]} (Incl. ₹{punctuality_bonus} bonus)",
+        "desc": f"Driver Payout: {driver.get('name')} for Shipment {shipment_id[:8]} (Incl. ₹{round(punctuality_bonus,2)} bonus)",
         "amount": total_credit,
-        "timestamp": datetime.utcnow().isoformat(),
-        "company_id": driver["company_id"]
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": company_id
+    })
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Hub Profit Share (10%): Warehouse Manager for {shipment_id[:8]}",
+        "amount": hub_share,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": company_id,
+        "warehouse_id": warehouse_id
+    })
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Drone Restoration Fund (5%): {shipment_id[:8]}",
+        "amount": drone_share,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": company_id,
+        "warehouse_id": warehouse_id
     })
     
     # Update Points (Smart Contract Reward)
@@ -1534,10 +1604,24 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
                 "present_warehouse_id": base_wh
             })
     
-    # Update Driver Wallet & Log Expense
+    # Update Driver Wallet & Profit Splitting
     driver = drivers_db.get_by_id(driver_id)
-    finance = shipment.get("finance", {})
-    base_wage = finance.get("driver_wage", 0)
+    
+    # Distance-ratio profit splitting
+    p_id = shipment.get("parent_id")
+    if p_id:
+        parent = shipments_db.get_by_id(p_id)
+        parent_charge = parent.get("finance", {}).get("suggested_price", 0)
+        parent_dist = parent.get("finance", {}).get("distance_km", 1) or 1
+        leg_dist = shipment.get("finance", {}).get("distance_km", 0)
+        ratio = leg_dist / parent_dist
+        allocated_charge = parent_charge * ratio
+    else:
+        allocated_charge = shipment.get("finance", {}).get("suggested_price", 0)
+        
+    driver_share = allocated_charge * 0.4
+    hub_share = allocated_charge * 0.1
+    drone_share = allocated_charge * 0.05
     
     # Calculate Punctuality Bonus
     punctuality_bonus = 0
@@ -1548,10 +1632,12 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
             actual = datetime.utcnow()
             expected = datetime.fromisoformat(expected_str.replace('Z', ''))
             if actual <= expected:
-                punctuality_bonus = round(base_wage * 0.15, 2)
+                punctuality_bonus = driver_share * 0.15
         except: pass
         
-    total_credit = base_wage + punctuality_bonus
+    total_credit = round(driver_share + punctuality_bonus, 2)
+    hub_share = round(hub_share, 2)
+    drone_share = round(drone_share, 2)
     
     new_balance = driver.get("wallet_balance", 0) + total_credit
     new_total = driver.get("total_earnings", 0) + total_credit
@@ -1560,12 +1646,31 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
     # Log as Expense in Ledger
     from backend.database import JSONDatabase
     ledger_db = JSONDatabase("ledger")
+    company_id = driver["company_id"]
+    warehouse_id = driver.get("base_warehouse_id")
+    
     ledger_db.insert({
         "type": "EXPENSE",
-        "desc": f"Driver Payout: {driver.get('name')} for Shipment {shipment_id[:8]} (Incl. ₹{punctuality_bonus} bonus)",
+        "desc": f"Driver Payout: {driver.get('name')} for Shipment {shipment_id[:8]} (Incl. ₹{round(punctuality_bonus,2)} bonus)",
         "amount": total_credit,
-        "timestamp": datetime.utcnow().isoformat(),
-        "company_id": driver["company_id"]
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": company_id
+    })
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Hub Profit Share (10%): Warehouse Manager for {shipment_id[:8]}",
+        "amount": hub_share,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": company_id,
+        "warehouse_id": warehouse_id
+    })
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Drone Restoration Fund (5%): {shipment_id[:8]}",
+        "amount": drone_share,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": company_id,
+        "warehouse_id": warehouse_id
     })
     
     # Update Points (Smart Contract Reward)

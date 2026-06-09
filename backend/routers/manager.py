@@ -1813,6 +1813,24 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         }
     }
 
+@router.get("/warehouses/{warehouse_id}/finance")
+def get_warehouse_finance(warehouse_id: str):
+    from datetime import datetime, timedelta
+    all_txs = ledger_db.get_all()
+    hub_txs = [t for t in all_txs if t and t.get("warehouse_id") == warehouse_id]
+    
+    # Calculate Hub Profit Share (10%) and Drone Restoration (5%) from the ledger
+    hub_profit = sum(t.get("amount", 0) for t in hub_txs if "Hub Profit Share" in t.get("desc", ""))
+    drone_fund = sum(t.get("amount", 0) for t in hub_txs if "Drone Restoration Fund" in t.get("desc", ""))
+    
+    recent = sorted(hub_txs, key=lambda x: x.get("timestamp", ""), reverse=True)[:10]
+    
+    return {
+        "hub_profit_share": round(hub_profit, 2),
+        "drone_restoration_fund": round(drone_fund, 2),
+        "recent_transactions": recent
+    }
+
 @router.post("/finance/fully-complete/{shipment_id}")
 def finalize_shipment_completion(shipment_id: str, x_logistix_context: Optional[str] = Header(None)):
     shipment = shipments_db.get_by_id(shipment_id)
