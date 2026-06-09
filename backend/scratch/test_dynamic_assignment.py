@@ -264,7 +264,7 @@ def run_tests():
         "type": "cyclone",
         "lat": 18.8000,
         "lng": 73.3000,
-        "radius": 55, # 55km zone to cover wh_A but leave wh_safe out
+        "radius": 35, # 35km zone to cover Lonavala but leave wh_safe and Mumbai out
         "shapeType": "circle",
         "severity": "critical",
         "is_simulation": True
@@ -277,7 +277,7 @@ def run_tests():
         "company_id": company_id,
         "current_location": {"lat": 18.7500, "lng": 73.2000, "address": "Moving near Lonavala"},
         "pickup": {"lat": 18.5204, "lng": 73.8567, "address": "Pune Hub"},
-        "drop": {"lat": 19.0760, "lng": 72.8777, "address": "Mumbai Hub"}, # Destination is inside disaster radius
+        "drop": {"lat": 19.0760, "lng": 72.8777, "address": "Mumbai Hub"}, # Path is through Lonavala disaster zone
         "status": "in_transit",
         "stage": "Transit",
         "logs": []
@@ -293,7 +293,7 @@ def run_tests():
     # Destination must be updated to the nearest safe warehouse (wh_safe)
     assert updated_shipment["drop_warehouse_id"] == "wh_Safe", f"Expected destination wh_Safe, got {updated_shipment['drop_warehouse_id']}"
     assert "Diverted: Safe Hub" in updated_shipment["stage"]
-    assert updated_shipment["status"] == "assigned"
+    assert updated_shipment["status"] == "split"
     
     # Verify alert generation in alerts_db
     alerts = alerts_db.get_filtered({"company_id": company_id, "type": "calamity_divert"})

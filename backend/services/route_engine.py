@@ -376,6 +376,7 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
         parent["route_type"] = "multi-leg"
         parent["status"] = "split"
         parent["stage"] = f"Diverted: Safe Hub ({safe_wh['name']})"
+        parent["drop_warehouse_id"] = safe_wh["id"]
         parent["assigned_driver_id"] = None
         parent["assigned_vehicle_id"] = None
         
