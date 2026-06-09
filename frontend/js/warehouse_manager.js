@@ -2184,17 +2184,22 @@ setTimeout(() => {
 
 
 
+let currentWalletBalance = 0;
+
 // Hub Finance Logic
 async function loadHubFinance() {
     try {
         const data = await apiCall(`/manager/warehouses/${whId}/finance`, 'GET');
         
+        const elWallet = document.getElementById('stat-hub-wallet');
         const elProfit = document.getElementById('stat-hub-profit');
         const elDrone = document.getElementById('stat-drone-fund');
         const tableBody = document.getElementById('hub-finance-table-body');
         
-        if (elProfit) elProfit.innerText = '₹ ' + (data.hub_profit_share || 0);
-        if (elDrone) elDrone.innerText = '₹ ' + (data.drone_restoration_fund || 0);
+        currentWalletBalance = data.wallet_balance || 0;
+        if (elWallet) elWallet.innerText = '₹ ' + currentWalletBalance.toFixed(2);
+        if (elProfit) elProfit.innerText = '₹ ' + (data.total_earnings || 0).toFixed(2);
+        if (elDrone) elDrone.innerText = '₹ ' + (data.drone_restoration_fund || 0).toFixed(2);
         
         if (tableBody) {
             tableBody.innerHTML = '';
@@ -2216,9 +2221,44 @@ async function loadHubFinance() {
         }
     } catch(e) {
         console.error("Failed to load hub finance:", e);
-        const tableBody = document.getElementById('hub-finance-table-body');
         if (tableBody) {
             tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--danger);">Error loading ledger</td></tr>';
         }
     }
 }
+
+window.openWithdrawModal = function() {
+    const elAvailable = document.getElementById('withdraw-available-txt');
+    if (elAvailable) elAvailable.innerText = '₹ ' + currentWalletBalance.toFixed(2);
+    const input = document.getElementById('withdraw-amount-input');
+    if (input) {
+        input.value = '';
+        input.max = currentWalletBalance;
+    }
+    document.getElementById('withdraw-modal').style.display = 'block';
+};
+
+window.submitWithdrawalRequest = async function() {
+    const input = document.getElementById('withdraw-amount-input');
+    const amount = parseFloat(input.value);
+    if (isNaN(amount) || amount <= 0) {
+        alert("Please enter a valid amount greater than zero.");
+        return;
+    }
+    if (amount > currentWalletBalance) {
+        alert("Insufficient balance for this withdrawal.");
+        return;
+    }
+    
+    try {
+        const res = await apiCall('/manager/withdraw', 'POST', {
+            warehouse_id: whId,
+            amount: amount
+        });
+        alert(res.message);
+        document.getElementById('withdraw-modal').style.display = 'none';
+        loadHubFinance();
+    } catch(e) {
+        alert(e.detail || "Failed to submit withdrawal request.");
+    }
+};

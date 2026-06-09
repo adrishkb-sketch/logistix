@@ -1232,6 +1232,17 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
                 "total_earnings": driver.get("total_earnings", 0) + driver_share
             })
             
+            # Credit Warehouse Manager (Hub) Wallet
+            wh_id = shipment.get("drop_warehouse_id") or driver.get("base_warehouse_id") or shipment.get("pickup_warehouse_id")
+            if wh_id:
+                warehouses_db = JSONDatabase("warehouses")
+                wh = warehouses_db.get_by_id(wh_id)
+                if wh:
+                    warehouses_db.update(wh_id, {
+                        "wallet_balance": round(wh.get("wallet_balance", 0.0) + hub_share, 2),
+                        "total_earnings": round(wh.get("total_earnings", 0.0) + hub_share, 2)
+                    })
+            
             ledger_db = JSONDatabase("ledger")
             company_id = driver.get("company_id")
             
@@ -1381,6 +1392,17 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     new_balance = driver.get("wallet_balance", 0) + total_credit
     new_total = driver.get("total_earnings", 0) + total_credit
     new_driving_hours = driver.get("driving_hours", 0.0) + trip_hours
+    
+    # Credit Warehouse Manager (Hub) Wallet
+    wh_id = shipment.get("drop_warehouse_id") or driver.get("base_warehouse_id") or shipment.get("pickup_warehouse_id")
+    if wh_id:
+        warehouses_db = JSONDatabase("warehouses")
+        wh = warehouses_db.get_by_id(wh_id)
+        if wh:
+            warehouses_db.update(wh_id, {
+                "wallet_balance": round(wh.get("wallet_balance", 0.0) + hub_share, 2),
+                "total_earnings": round(wh.get("total_earnings", 0.0) + hub_share, 2)
+            })
     
     # Log as Expense in Ledger
     from backend.database import JSONDatabase
@@ -1641,6 +1663,17 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
     new_balance = driver.get("wallet_balance", 0) + total_credit
     new_total = driver.get("total_earnings", 0) + total_credit
     new_driving_hours = driver.get("driving_hours", 0.0) + trip_hours
+    
+    # Credit Warehouse Manager (Hub) Wallet
+    wh_id = shipment.get("drop_warehouse_id") or driver.get("base_warehouse_id") or shipment.get("pickup_warehouse_id")
+    if wh_id:
+        warehouses_db = JSONDatabase("warehouses")
+        wh = warehouses_db.get_by_id(wh_id)
+        if wh:
+            warehouses_db.update(wh_id, {
+                "wallet_balance": round(wh.get("wallet_balance", 0.0) + hub_share, 2),
+                "total_earnings": round(wh.get("total_earnings", 0.0) + hub_share, 2)
+            })
     
     # Log as Expense in Ledger
     from backend.database import JSONDatabase

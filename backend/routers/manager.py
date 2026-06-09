@@ -3134,3 +3134,103 @@ def assign_shipment_dock(shipment_id: str, data: dict, x_logistix_context: Optio
 
     shipments_db.update(shipment_id, {"dock_assigned": dock_id})
     return {"message": f"Shipment assigned to {dock_id}"}
+
+from pydantic import BaseModel
+class ManagerWithdrawRequest(BaseModel):
+    warehouse_id: str
+    amount: float
+
+@router.post("/withdraw")
+def manager_withdraw(data: ManagerWithdrawRequest):
+    warehouse_id = data.warehouse_id
+    amount = data.amount
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+    
+    from backend.database import JSONDatabase
+    warehouses_db = JSONDatabase("warehouses")
+    wh = warehouses_db.get_by_id(warehouse_id)
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+        
+    wallet_balance = wh.get("wallet_balance", 0.0)
+    if wallet_balance < amount:
+        raise HTTPException(status_code=400, detail="Insufficient funds in hub manager wallet")
+        
+    # Deduct balance immediately
+    new_bal = round(wallet_balance - amount, 2)
+    warehouses_db.update(warehouse_id, {"wallet_balance": new_bal})
+    
+    # Create pending withdrawal request
+    import uuid
+    from datetime import datetime
+    withdrawals_db = JSONDatabase("withdrawals")
+    req_id = str(uuid.uuid4())
+    withdrawals_db.insert({
+        "id": req_id,
+        "warehouse_id": warehouse_id,
+        "warehouse_name": wh.get("name", "Unknown Hub"),
+        "manager_name": wh.get("manager_name", "Hub Manager"),
+        "amount": amount,
+        "status": "pending",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": wh.get("company_id")
+    })
+    
+    return {"message": "Withdrawal request submitted successfully", "withdrawal_id": req_id}
+
+@router.get("/withdrawals")
+def get_manager_withdrawals(company_id: str):
+    from backend.database import JSONDatabase
+    withdrawals_db = JSONDatabase("withdrawals")
+    all_reqs = withdrawals_db.get_filtered({"company_id": company_id})
+    return sorted(all_reqs, key=lambda x: x.get("timestamp", ""), reverse=True)
+
+@router.post("/withdrawals/{withdrawal_id}/approve")
+def approve_manager_withdrawal(withdrawal_id: str):
+    from backend.database import JSONDatabase
+    withdrawals_db = JSONDatabase("withdrawals")
+    req = withdrawals_db.get_by_id(withdrawal_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Withdrawal request not found")
+        
+    if req.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Request already processed")
+        
+    withdrawals_db.update(withdrawal_id, {"status": "approved"})
+    
+    # Log as Expense in Ledger
+    from datetime import datetime
+    ledger_db = JSONDatabase("ledger")
+    ledger_db.insert({
+        "type": "EXPENSE",
+        "desc": f"Hub Manager Withdrawal: {req.get('manager_name')} ({req.get('warehouse_name')})",
+        "amount": req.get("amount"),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "company_id": req.get("company_id"),
+        "warehouse_id": req.get("warehouse_id")
+    })
+    
+    return {"message": "Withdrawal approved successfully"}
+
+@router.post("/withdrawals/{withdrawal_id}/reject")
+def reject_manager_withdrawal(withdrawal_id: str):
+    from backend.database import JSONDatabase
+    withdrawals_db = JSONDatabase("withdrawals")
+    req = withdrawals_db.get_by_id(withdrawal_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Withdrawal request not found")
+        
+    if req.get("status") != "pending":
+        raise HTTPException(status_code=400, detail="Request already processed")
+        
+    withdrawals_db.update(withdrawal_id, {"status": "rejected"})
+    
+    # Refund back to warehouse balance
+    warehouses_db = JSONDatabase("warehouses")
+    wh = warehouses_db.get_by_id(req.get("warehouse_id"))
+    if wh:
+        new_bal = round(wh.get("wallet_balance", 0.0) + req.get("amount"), 2)
+        warehouses_db.update(req.get("warehouse_id"), {"wallet_balance": new_bal})
+        
+    return {"message": "Withdrawal rejected and funds refunded to hub wallet"}

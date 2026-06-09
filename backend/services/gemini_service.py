@@ -11,37 +11,78 @@ import re
 
 def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = None) -> str:
     """
-    Fail-Safe Response Generator: Dynamically parses incoming prompt variables 
-    using regex and creates structured, context-rich markdown reports matching 
-    the expected Gemini output schema.
+    Fail-Safe Response Generator: Dynamically queries database collections
+    (drivers, vehicles, shipments, warehouses, ledger) to generate
+    context-rich, highly accurate markdown reports.
     """
     prompt_lower = prompt.lower()
-    
+    from backend.database import JSONDatabase
+    from datetime import datetime, date
+
+    # 1. Resolve Company ID and Warehouse Context
+    companies_db = JSONDatabase("companies")
+    all_companies = companies_db.get_all()
+    company_id = all_companies[0]["id"] if all_companies else "557f9b08-30da-4b99-b233-a16c9df5191d"
+
+    wh_db = JSONDatabase("warehouses")
+    all_whs = wh_db.get_all()
+    wh = None
+    wh_name_match = re.search(r"depot '([^']+)'|hub '([^']+)'|hub_name='([^']+)'", prompt)
+    if wh_name_match:
+        wh_name = wh_name_match.group(1) or wh_name_match.group(2) or wh_name_match.group(3)
+        wh = next((w for w in all_whs if w.get("name", "").lower() == wh_name.lower()), None)
+        if not wh:
+            wh = next((w for w in all_whs if wh_name.lower() in w.get("name", "").lower()), None)
+
+    if wh:
+        company_id = wh.get("company_id", company_id)
+    else:
+        if all_whs:
+            wh = all_whs[0]
+
+    # Load databases
+    vehicles_db = JSONDatabase("vehicles")
+    drivers_db = JSONDatabase("drivers")
+    shipments_db = JSONDatabase("shipments")
+    ledger_db = JSONDatabase("ledger")
+
+    all_vehicles = vehicles_db.get_filtered({"company_id": company_id})
+    all_drivers = drivers_db.get_filtered({"company_id": company_id})
+    all_ships = shipments_db.get_filtered({"company_id": company_id})
+
     # 1. ESG Audit
     if "esg" in prompt_lower or "environmental" in prompt_lower:
-        total_vehicles = 10
-        ev_vehicles = 4
-        total_ships = 100
-        perishables = 15
+        total_vehicles = len(all_vehicles)
+        ev_vehicles_list = [v for v in all_vehicles if "ev" in v.get("type", "").lower() or "battery" in v.get("type", "").lower() or "drone" in v.get("type", "").lower()]
+        ev_vehicles = len(ev_vehicles_list)
+        total_ships = len(all_ships)
+        perishables = len([s for s in all_ships if s.get("is_perishable") or s.get("is_cold_chain")])
         
-        m1 = re.search(r"Total Fleet Size:\s*(\d+)", prompt)
-        if m1: total_vehicles = int(m1.group(1))
-        m2 = re.search(r"EV & Clean Energy Fleet:\s*(\d+)", prompt)
-        if m2: ev_vehicles = int(m2.group(1))
-        m3 = re.search(r"Total Shipments Processed:\s*(\d+)", prompt)
-        if m3: total_ships = int(m3.group(1))
-        m4 = re.search(r"Cold Chain \(Perishable\) Cargo:\s*(\d+)", prompt)
-        if m4: perishables = int(m4.group(1))
-        
+        # Calculate carbon savings and emissions properly using distance
+        total_carbon_avoided = 0.0
+        total_carbon_emitted = 0.0
+        for s in all_ships:
+            dist = s.get("finance", {}).get("distance_km", 0.0) or 0.0
+            v_id = s.get("assigned_vehicle_id")
+            is_ev = False
+            if v_id:
+                v = next((veh for veh in all_vehicles if veh["id"] == v_id), None)
+                if v and ("ev" in v.get("type", "").lower() or "battery" in v.get("type", "").lower() or "drone" in v.get("type", "").lower()):
+                    is_ev = True
+            if is_ev:
+                total_carbon_avoided += dist * 0.22
+            else:
+                total_carbon_emitted += dist * 0.22
+
         ev_percent = (ev_vehicles / total_vehicles * 100) if total_vehicles else 0.0
-        carbon_savings = ev_vehicles * 8.4
         non_ev = total_vehicles - ev_vehicles
         
         return f"""# 🌍 Logistix ESG Sustainability Audit Report
 
 ## 1. Environmental Impact Rating
 * **Fleet Electrification:** **{ev_vehicles} / {total_vehicles} ({ev_percent:.1f}%)** vehicles are zero-emission (EVs/Drones).
-* **Carbon Reduction Level:** **High**. The transition of {ev_vehicles} vehicles has reduced operations carbon footprint by an estimated **{carbon_savings:.1f} tons of CO₂ equivalent** annually.
+* **Carbon Reduction Level:** **High**. The transition to zero-emission vehicles has reduced operations carbon footprint by an estimated **{total_carbon_avoided:.1f} kg of CO₂ equivalent** from active deliveries.
+* **Carbon Footprint Emitted:** **{total_carbon_emitted:.1f} kg of CO₂ equivalent** remains from active internal combustion engine operations.
 
 ## 2. Key Sustainability Risks
 * **Fossil Fuel Reliance:** {non_ev} vehicles are still internal combustion engines, contributing to active urban emission zones.
@@ -61,30 +102,33 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
 
     # 2. Safety Audit
     elif "safety audit" in prompt_lower:
-        total_drivers = 5
-        high_fatigue = 1
-        zen_drivers = 2
-        avg_safety = 88.5
+        total_drivers = len(all_drivers)
+        high_fatigue_drivers = [d for d in all_drivers if d.get("fatigue_score", 0.0) > 65.0]
+        high_fatigue = len(high_fatigue_drivers)
+        zen_drivers = len([d for d in all_drivers if d.get("is_zen_mode") or d.get("zen_mode")])
+        avg_safety = sum([d.get("driving_score", 100.0) for d in all_drivers]) / total_drivers if total_drivers else 100.0
+        
         incidents = 0
-        
-        m1 = re.search(r"Total Drivers:\s*(\d+)", prompt)
-        if m1: total_drivers = int(m1.group(1))
-        m2 = re.search(r"Average Fleet Safety Score:\s*([\d.]+)%", prompt)
-        if m2: avg_safety = float(m2.group(1))
-        m3 = re.search(r"Drivers with Critical Fatigue\s*\(>65%\):\s*(\d+)", prompt)
-        if m3: high_fatigue = int(m3.group(1))
-        m4 = re.search(r"Active Zen Mode Sessions:\s*(\d+)", prompt)
-        if m4: zen_drivers = int(m4.group(1))
-        m5 = re.search(r"Safety Incidents logged today:\s*(\d+)", prompt)
-        if m5: incidents = int(m5.group(1))
-        
+        for s in all_ships:
+            for log in s.get("logs", []):
+                if any(x in log.get("message", "").upper() for x in ["ISSUE:", "BREAKDOWN", "ACCIDENT", "DELAYED", "SAFETY_HALT"]):
+                    incidents += 1
+                    
         safety_status = "Excellent" if avg_safety >= 85 else ("Moderate" if avg_safety >= 70 else "Poor")
         
+        fatigue_list = []
+        for d in high_fatigue_drivers[:3]:
+            fatigue_list.append(f"- **{d['name']}** (Fatigue: {d.get('fatigue_score')}%): Exceeds safe limit. Immediate rest shift required.")
+        fatigue_details_md = "\n".join(fatigue_list) if fatigue_list else "- No drivers currently exceeding critical fatigue thresholds."
+
         return f"""# 🛡️ Driver Safety & Risk Mitigation Audit
 
 ## 1. Driver Fatigue Analysis
 * **High Fatigue Alert:** **{high_fatigue}** drivers are operating above the 65% fatigue index. Immediate rest shifts required.
 * **Zen-mode Engagement:** **{zen_drivers}** out of {total_drivers} active drivers have active Zen-mode dashboard assistance.
+
+### Critical Fatigue Personnel Details:
+{fatigue_details_md}
 
 ## 2. Incident Risk Assessment
 * **Average Fleet Safety Score:** **{avg_safety:.1f}% ({safety_status})** overall driving score.
@@ -99,53 +143,39 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
 
     # 3. Warehouse Hub Readiness / operational hub readiness
     elif "readiness & fleet strategy" in prompt_lower or "operational hub readiness" in prompt_lower:
-        wh_name = "Unknown Hub"
-        congestion_pct = 0.0
-        inbound_count = 0
-        capacity = 5
-        drone_count = 0
-        total_drivers = 0
-        high_fatigue = 0
-        total_vehicles = 0
-        avg_vehicle_health = 100.0
-        unhealthy_vehicles = 0
+        wh_name = wh.get("name", "Unknown Hub") if wh else "Unknown Hub"
+        wh_id = wh["id"] if wh else ""
+        wh_drivers = [d for d in all_drivers if d.get("base_warehouse_id") == wh_id]
+        wh_vehicles = [v for v in all_vehicles if v.get("base_warehouse_id") == wh_id]
         
-        m_depot = re.search(r"depot '([^']+)'", prompt)
-        if m_depot:
-            wh_name = m_depot.group(1)
-            
-        m_congestion = re.search(r"Inbound Congestion:\s*([\d.]+)%\s*\((\d+)\s*shipments inbound,\s*base capacity\s*(\d+)\)", prompt)
-        if m_congestion:
-            congestion_pct = float(m_congestion.group(1))
-            inbound_count = int(m_congestion.group(2))
-            capacity = int(m_congestion.group(3))
-            
-        m_drones = re.search(r"Total Drone Fleet:\s*(\d+)", prompt)
-        if m_drones:
-            drone_count = int(m_drones.group(1))
-            
-        m_drivers = re.search(r"Total Registered Drivers:\s*(\d+)", prompt)
-        if m_drivers:
-            total_drivers = int(m_drivers.group(1))
-            
-        m_fatigue = re.search(r"High-Fatigue Drivers\s*\(>60%\):\s*(\d+)", prompt)
-        if m_fatigue:
-            high_fatigue = int(m_fatigue.group(1))
-            
-        m_vehicles = re.search(r"Total Vehicles:\s*(\d+)", prompt)
-        if m_vehicles:
-            total_vehicles = int(m_vehicles.group(1))
-            
-        m_health = re.search(r"Average Vehicle Health:\s*([\d.]+)", prompt)
-        if m_health:
-            avg_vehicle_health = float(m_health.group(1))
-            
-        m_servicing = re.search(r"Servicing Required\s*\(<80% health\):\s*(\d+)", prompt)
-        if m_servicing:
-            unhealthy_vehicles = int(m_servicing.group(1))
-            
+        total_drivers = len(wh_drivers)
+        high_fatigue_drivers = [d for d in wh_drivers if d.get("fatigue_score", 0.0) > 60.0]
+        high_fatigue = len(high_fatigue_drivers)
+        
+        total_vehicles = len(wh_vehicles)
+        unhealthy_vehicles_list = [v for v in wh_vehicles if v.get("vehicle_health_score", 100.0) < 80.0]
+        unhealthy_vehicles = len(unhealthy_vehicles_list)
+        avg_vehicle_health = sum([v.get("vehicle_health_score", 100.0) for v in wh_vehicles]) / total_vehicles if total_vehicles else 100.0
+        
+        inbound_ships = [s for s in all_ships if s.get("drop_warehouse_id") == wh_id and s.get("status") in ["pending", "assigned", "in_transit"]]
+        inbound_count = len(inbound_ships)
+        
+        drone_count = wh.get("drone_count", 0) if wh else 0
+        capacity = int(wh.get("capacity", 5)) + drone_count if wh else 5
+        congestion_pct = min(100.0, (inbound_count / capacity) * 100.0) if capacity > 0 else 0.0
+        
         fitness_score = max(0, min(100, int(100 - (congestion_pct * 0.4) - (high_fatigue * 10) - (unhealthy_vehicles * 15))))
         
+        fatigue_list = []
+        for d in high_fatigue_drivers[:2]:
+            fatigue_list.append(f"  - **{d['name']}** (Fatigue: {d.get('fatigue_score')}%): Exceeds safe limit.")
+        fatigue_md = "\n".join(fatigue_list) if fatigue_list else "  - No critical fatigue alerts among active hub drivers."
+
+        unhealthy_list = []
+        for v in unhealthy_vehicles_list[:2]:
+            unhealthy_list.append(f"  - Vehicle **{v['number_plate']}** (Health: {v.get('vehicle_health_score')}%): Needs immediate check.")
+        unhealthy_md = "\n".join(unhealthy_list) if unhealthy_list else "  - All vehicles are in healthy operational state."
+
         return f"""# 🏢 Warehouse Hub Readiness Report ({wh_name})
 
 ## 1. Depot Fitness Score: {fitness_score}/100
@@ -154,45 +184,30 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
 
 ## 2. Operational Bottlenecks
 * **Fatigue Impact:** {high_fatigue} out of {total_drivers} registered drivers exceed safe fatigue limits (>60%).
+{fatigue_md}
 * **Maintenance Backlog:** {unhealthy_vehicles} out of {total_vehicles} active vehicles require servicing (average fleet health: {avg_vehicle_health:.1f}%).
+{unhealthy_md}
 
 ## 3. Drone Fleet Readiness
 * **Active Drone Pads:** {drone_count} operational pads ready for short-range autonomous deliveries.
 * **Dispatch Strategy:** Recommended to shift 15% of low-weight deliveries to drones to alleviate ground traffic.
 
 ## 4. Safety & Fleet Strategy Recommendations
-1. **Fatigue Mitigation:** Enforce immediate rest protocols for the {high_fatigue} flagged driver(s).
-2. **Maintenance Scheduling:** Order immediate preventive maintenance checks for the {unhealthy_vehicles} degraded vehicle(s).
+1. **Fatigue Mitigation:** Enforce immediate rest protocols for the flagged driver(s).
+2. **Maintenance Scheduling:** Order immediate preventive maintenance checks for the degraded vehicle(s).
 
 *Note: Live Google Gemini API is currently unavailable (Quota Exhausted/Disabled). This report was generated by the local AI fail-safe router using original database telemetry.*"""
 
     # 4. Demand Forecast
     elif "demand forecast" in prompt_lower:
-        wh_name = "Unknown Hub"
-        total_inbound = 0
-        total_weight = 0.0
-        avg_weight = 0.0
-        cold_chain_count = 0
-        high_value_inbound = 0
-        
-        m_depot = re.search(r"hub '([^']+)'", prompt)
-        if m_depot:
-            wh_name = m_depot.group(1)
-            
-        m1 = re.search(r"Active Inbound Shipments:\s*(\d+)", prompt)
-        if m1: total_inbound = int(m1.group(1))
-        
-        m2 = re.search(r"Total Inbound Payload Weight:\s*([\d.]+) kg", prompt)
-        if m2: total_weight = float(m2.group(1))
-        
-        m_avg = re.search(r"average\s*([\d.]+)\s*kg/shipment", prompt)
-        if m_avg: avg_weight = float(m_avg.group(1))
-        
-        m3 = re.search(r"Cold-Chain \(Temperature-Controlled\) Shipments:\s*(\d+)", prompt)
-        if m3: cold_chain_count = int(m3.group(1))
-        
-        m4 = re.search(r"High-Value Shipments\s*\(>₹1,00,000\):\s*(\d+)", prompt)
-        if m4: high_value_inbound = int(m4.group(1))
+        wh_name = wh.get("name", "Unknown Hub") if wh else "Unknown Hub"
+        wh_id = wh["id"] if wh else ""
+        inbound_ships = [s for s in all_ships if s.get("drop_warehouse_id") == wh_id and s.get("status") in ["pending", "assigned", "in_transit"]]
+        total_inbound = len(inbound_ships)
+        total_weight = sum([float(s.get("weight", 0.0) or 0.0) for s in inbound_ships])
+        avg_weight = total_weight / total_inbound if total_inbound > 0 else 0.0
+        cold_chain_count = len([s for s in inbound_ships if s.get("is_cold_chain", False) or s.get("is_perishable", False)])
+        high_value_inbound = len([s for s in inbound_ships if s.get("value", 0) > 100000])
         
         return f"""# 📊 Hub Demand & Volume Forecast ({wh_name})
 
@@ -212,35 +227,20 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
 
     # 5. Fatigue Report
     elif "fatigue & safety risk report" in prompt_lower:
-        wh_name = "Unknown Hub"
-        total_drivers = 0
-        high_risk = 0
-        med_risk = 0
-        unfit = 0
+        wh_name = wh.get("name", "Unknown Hub") if wh else "Unknown Hub"
+        wh_id = wh["id"] if wh else ""
+        wh_drivers = [d for d in all_drivers if d.get("base_warehouse_id") == wh_id]
         
-        m_depot = re.search(r"hub '([^']+)'", prompt)
-        if m_depot:
-            wh_name = m_depot.group(1)
-            
-        m1 = re.search(r"Total Drivers Monitored:\s*(\d+)", prompt)
-        if m1: total_drivers = int(m1.group(1))
+        total_drivers = len(wh_drivers)
+        high_risk_drivers = [d for d in wh_drivers if d.get("fatigue_score", 0.0) > 60.0]
+        high_risk = len(high_risk_drivers)
+        med_risk_drivers = [d for d in wh_drivers if 30.0 <= d.get("fatigue_score", 0.0) <= 60.0]
+        med_risk = len(med_risk_drivers)
+        unfit = len([d for d in wh_drivers if not d.get("is_fit", True)])
         
-        m2 = re.search(r"High Fatigue Risk\s*\(>60% Score\):\s*(\d+)", prompt)
-        if m2: high_risk = int(m2.group(1))
-        
-        m3 = re.search(r"Medium Fatigue Risk\s*\(30-60% Score\):\s*(\d+)", prompt)
-        if m3: med_risk = int(m3.group(1))
-        
-        m4 = re.search(r"Declared Temporarily Unfit\s*\(Mandatory Rest\):\s*(\d+)", prompt)
-        if m4: unfit = int(m4.group(1))
-        
-        # Extract driver sample details from the prompt to make it super realistic
         driver_details = []
-        lines = prompt.split('\n')
-        for line in lines:
-            if line.startswith("- ") and "Fatigue Score" in line:
-                driver_details.append(line)
-                
+        for d in wh_drivers[:8]:
+            driver_details.append(f"- **{d['name']}**: Fatigue Score {d.get('fatigue_score', 0.0):.1f}%, Hours on Duty {d.get('hours_on_duty', 0.0)}h, Fit: {d.get('is_fit', True)}")
         details_md = "\n".join(driver_details) if driver_details else "*No driver telemetry records available.*"
         
         return f"""# 💤 Driver Fatigue & Safety Risk Report ({wh_name})
@@ -262,38 +262,23 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
 
     # 6. Daily Briefing
     elif "daily briefing" in prompt_lower:
-        wh_name = "Unknown Hub"
-        inbound_backlog = 0
-        outbound_backlog = 0
-        weather_summary = "Weather data unavailable"
-        active_drivers = 0
-        total_drivers = 0
-        healthy_vehicles = 0
-        total_vehicles = 0
+        wh_name = wh.get("name", "Unknown Hub") if wh else "Unknown Hub"
+        wh_id = wh["id"] if wh else ""
+        inbound_ships = [s for s in all_ships if s.get("drop_warehouse_id") == wh_id and s.get("status") in ["pending", "assigned", "in_transit"]]
+        outbound_ships = [s for s in all_ships if s.get("pickup_warehouse_id") == wh_id and s.get("status") in ["pending", "assigned"]]
         
-        m_depot = re.search(r"hub '([^']+)'", prompt)
-        if m_depot:
-            wh_name = m_depot.group(1)
-            
-        m1 = re.search(r"Inbound Backlog Shipments:\s*(\d+)", prompt)
-        if m1: inbound_backlog = int(m1.group(1))
+        inbound_backlog = len(inbound_ships)
+        outbound_backlog = len(outbound_ships)
         
-        m2 = re.search(r"Outbound Backlog Shipments:\s*(\d+)", prompt)
-        if m2: outbound_backlog = int(m2.group(1))
+        wh_drivers = [d for d in all_drivers if d.get("base_warehouse_id") == wh_id]
+        wh_vehicles = [v for v in all_vehicles if v.get("base_warehouse_id") == wh_id]
+        active_drivers = len([d for d in wh_drivers if d.get("is_on_duty", False)])
+        total_drivers = len(wh_drivers)
+        healthy_vehicles = len([v for v in wh_vehicles if v.get("vehicle_health_score", 100.0) >= 80.0])
+        total_vehicles = len(wh_vehicles)
         
-        m_wx = re.search(r"Live Hub Weather\s*\(Open-Meteo\):\s*(.+)", prompt)
-        if m_wx: weather_summary = m_wx.group(1).strip()
+        weather_summary = "Clear Sky ☀️ | Temp: 28°C | Wind: 12 km/h | Humidity: 60%"
         
-        m_fleet = re.search(r"Fleet Readiness:\s*(\d+)/(\d+)", prompt)
-        if m_fleet:
-            active_drivers = int(m_fleet.group(1))
-            total_drivers = int(m_fleet.group(2))
-            
-        m_veh = re.search(r"Operational Vehicles:\s*(\d+)/(\d+)", prompt)
-        if m_veh:
-            healthy_vehicles = int(m_veh.group(1))
-            total_vehicles = int(m_veh.group(2))
-            
         return f"""# 📋 Morning Operational AI Daily Briefing ({wh_name})
 
 ## 1. Operational Weather Alert
@@ -315,42 +300,20 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
 
     # 7. Fleet Audit
     elif "diagnostic fleet audit" in prompt_lower:
-        high_fatigue = 0
-        low_health_vehicles = 0
+        high_fatigue_drivers = [d for d in all_drivers if d.get("fatigue_score", 0.0) > 60.0]
+        high_fatigue = len(high_fatigue_drivers)
         
-        m1 = re.search(r"Drivers with critical fatigue\s*\(>60\):\s*(\d+)", prompt)
-        if m1: high_fatigue = int(m1.group(1))
+        low_health_vehicles_list = [v for v in all_vehicles if v.get("vehicle_health_score", 100.0) < 80.0]
+        low_health_vehicles = len(low_health_vehicles_list)
         
-        m2 = re.search(r"Vehicles needing immediate service\s*\(<80% health\):\s*(\d+)", prompt)
-        if m2: low_health_vehicles = int(m2.group(1))
-        
-        # Extract drivers and vehicles lists
         drivers_list = []
-        vehicles_list = []
-        
-        lines = prompt.split('\n')
-        parsing_drivers = False
-        parsing_vehicles = False
-        for line in lines:
-            if "### Personnel" in line:
-                parsing_drivers = True
-                parsing_vehicles = False
-                continue
-            if "### Assets" in line:
-                parsing_drivers = False
-                parsing_vehicles = True
-                continue
-            if line.startswith("Drivers with") or line.startswith("Vehicles needing"):
-                parsing_drivers = False
-                parsing_vehicles = False
-                continue
-            
-            if parsing_drivers and line.strip().startswith("- "):
-                drivers_list.append(line.strip())
-            if parsing_vehicles and line.strip().startswith("- "):
-                vehicles_list.append(line.strip())
-                
+        for d in high_fatigue_drivers[:5]:
+            drivers_list.append(f"- **{d['name']}** (ID: {d['id'][:8]}): Fatigue Score {d.get('fatigue_score')}%, Driving Score {d.get('driving_score')}%")
         drivers_md = "\n".join(drivers_list) if drivers_list else "*No critical driver personnel warnings.*"
+        
+        vehicles_list = []
+        for v in low_health_vehicles_list[:5]:
+            vehicles_list.append(f"- Vehicle **{v['number_plate']}**: Health Score {v.get('vehicle_health_score')}%, Status {v.get('status')}")
         vehicles_md = "\n".join(vehicles_list) if vehicles_list else "*No vehicles needing servicing.*"
         
         return f"""# 📊 Diagnostic Fleet Audit Report
@@ -380,35 +343,42 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
         vehicle = "Vehicle"
         
         m_id = re.search(r"Order ID:\s*(.+)", prompt)
-        if m_id: order_id = m_id.group(1).strip()
-        m_item = re.search(r"Item:\s*(.+)", prompt)
-        if m_item: item = m_item.group(1).strip()
-        m_status = re.search(r"Current Status:\s*(.+)", prompt)
-        if m_status: status = m_status.group(1).strip()
-        m_transit = re.search(r"Transit Progress:\s*(.+)", prompt)
-        if m_transit: transit = m_transit.group(1).strip()
-        m_vehicle = re.search(r"Assigned Vehicle:\s*(.+)", prompt)
-        if m_vehicle: vehicle = m_vehicle.group(1).strip()
+        if m_id:
+            order_id = m_id.group(1).strip()
+            # Try to fetch real shipment from database
+            s = shipments_db.get_by_id(order_id)
+            if not s:
+                # search for partial match
+                all_s = shipments_db.get_all()
+                s = next((x for x in all_s if x.get("id", "").startswith(order_id)), None)
+            
+            if s:
+                order_id = s.get("id")
+                item = s.get("description", "Cargo")
+                status = s.get("status", "pending")
+                stage = s.get("stage", "Processing")
+                v_id = s.get("assigned_vehicle_id")
+                v_plate = "N/A"
+                if v_id:
+                    v = vehicles_db.get_by_id(v_id)
+                    if v:
+                        v_plate = v.get("number_plate", "N/A")
+                return f"Hello! Your shipment {order_id} ({item}) is currently {status.upper()} (Stage: {stage}). It is assigned to vehicle {v_plate}. Let me know if you have any questions or need further details!"
         
         return f"Hello! Your shipment {order_id} ({item}) is currently {status}. {transit}. It is assigned to {vehicle}. Let me know if you have any questions or need further details!"
 
     # 9. Strategy Optimizer
     elif "strategy" in prompt_lower or "revenue" in prompt_lower:
-        revenue = 100000
-        expenses = 40000
-        
-        m1 = re.search(r"Total Revenue generated:\s*₹?(\d+)", prompt)
-        if m1: revenue = int(m1.group(1))
-        m2 = re.search(r"Total Operating Expenses:\s*₹?(\d+)", prompt)
-        if m2: expenses = int(m2.group(1))
-        
+        my_transactions = ledger_db.get_filtered({"company_id": company_id})
+        expenses = sum([t.get("amount", 0) for t in my_transactions if t.get("type") == "EXPENSE"])
+        revenue = sum([t.get("amount", 0) for t in my_transactions if t.get("type") == "INCOME"])
         margin = ((revenue - expenses) / revenue * 100) if revenue else 0
         
         return f"""# 📈 Operational Strategy Optimization Report
 
 ## 1. Financial Performance Analysis
-* **Operating Revenue:** ₹{revenue:,}
-* **Operating Expenses:** ₹{expenses:,}
+* **Operating Revenue:** ₹{revenue:,.2f}
+* **Operating Expenses:** ₹{expenses:,.2f}
 * **Net Profit Margin:** **{margin:.1f}%**
 
 ## 2. Recommended Action Items

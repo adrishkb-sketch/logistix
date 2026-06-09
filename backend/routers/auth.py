@@ -452,6 +452,40 @@ def customer_verify_delivery(data: CustomerVerifyDeliveryRequest):
                 "timestamp": datetime.utcnow().isoformat(),
                 "company_id": driver["company_id"]
             })
+
+            # Calculate and log Hub Profit Share & Drone Restoration Fund
+            finance = shipment.get("finance", {})
+            suggested_price = finance.get("suggested_price", 0.0) or (base_wage * 2.5)
+            hub_share = round(suggested_price * 0.1, 2)
+            drone_share = round(suggested_price * 0.05, 2)
+            
+            wh_id = shipment.get("drop_warehouse_id") or driver.get("base_warehouse_id") or shipment.get("pickup_warehouse_id")
+            ledger_db.insert({
+                "type": "EXPENSE",
+                "desc": f"Hub Profit Share (10%): Warehouse Manager for {shipment['id'][:8]} (Receiver Verified)",
+                "amount": hub_share,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "company_id": driver["company_id"],
+                "warehouse_id": wh_id
+            })
+            ledger_db.insert({
+                "type": "EXPENSE",
+                "desc": f"Drone Restoration Fund (5%): {shipment['id'][:8]} (Receiver Verified)",
+                "amount": drone_share,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "company_id": driver["company_id"],
+                "warehouse_id": wh_id
+            })
+            
+            # Credit Warehouse Manager (Hub) Wallet
+            if wh_id:
+                warehouses_db = JSONDatabase("warehouses")
+                wh = warehouses_db.get_by_id(wh_id)
+                if wh:
+                    warehouses_db.update(wh_id, {
+                        "wallet_balance": round(wh.get("wallet_balance", 0.0) + hub_share, 2),
+                        "total_earnings": round(wh.get("total_earnings", 0.0) + hub_share, 2)
+                    })
             
             v_id = driver.get("assigned_vehicle_id")
             if v_id:

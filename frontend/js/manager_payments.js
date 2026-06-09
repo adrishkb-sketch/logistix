@@ -108,8 +108,84 @@ async function settlePayout(driverId) {
     } catch (e) { alert("Failed to settle payout."); }
 }
 
+async function loadManagerWithdrawals() {
+    const cid = localStorage.getItem('manager_id');
+    try {
+        const reqs = await apiCall(`/manager/withdrawals?company_id=${cid}`);
+        const tbody = document.getElementById('manager-withdrawals-table');
+        if (!tbody) return;
+        
+        const pending = reqs.filter(r => r.status === 'pending');
+        if (pending.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No pending manager withdrawal requests.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = pending.map(r => {
+            return `
+                <tr>
+                    <td>
+                        <b>${r.warehouse_name}</b><br>
+                        <small style="color:var(--text-muted);">Manager: ${r.manager_name}</small>
+                    </td>
+                    <td><b style="color:var(--success);">₹ ${r.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}</b></td>
+                    <td><span class="badge" style="background:var(--warning); color:black; font-weight:bold;">${r.status.toUpperCase()}</span></td>
+                    <td style="text-align:center;">
+                        <div style="display:flex; gap:10px; justify-content:center;">
+                            <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:var(--success); border-radius:8px;" onclick="approveWithdrawal('${r.id}')">Approve</button>
+                            <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:rgba(239, 68, 68, 0.1); color:var(--danger); border:1px solid rgba(239, 68, 68, 0.2); border-radius:8px;" onclick="rejectWithdrawal('${r.id}')">Reject</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch(e) {
+        console.error("Manager withdrawals load failed:", e);
+    }
+}
+
+async function approveWithdrawal(id) {
+    if (!confirm('Approve and release profit share to this Hub Manager?')) return;
+    try {
+        await apiCall(`/manager/withdrawals/${id}/approve`, 'POST');
+        if (typeof showNotification === 'function') {
+            showNotification('Withdrawal approved successfully.', 'success');
+        } else {
+            alert('Withdrawal approved successfully.');
+        }
+        loadManagerWithdrawals();
+        if (typeof initFintechOracle === 'function') initFintechOracle();
+    } catch (e) {
+        if (typeof showNotification === 'function') {
+            showNotification(e.detail || 'Failed to approve withdrawal.', 'error');
+        } else {
+            alert(e.detail || 'Failed to approve withdrawal.');
+        }
+    }
+}
+
+async function rejectWithdrawal(id) {
+    if (!confirm('Are you sure you want to reject this withdrawal? The funds will be refunded back to their hub wallet.')) return;
+    try {
+        await apiCall(`/manager/withdrawals/${id}/reject`, 'POST');
+        if (typeof showNotification === 'function') {
+            showNotification('Withdrawal rejected and refunded.', 'success');
+        } else {
+            alert('Withdrawal rejected and refunded.');
+        }
+        loadManagerWithdrawals();
+    } catch (e) {
+        if (typeof showNotification === 'function') {
+            showNotification(e.detail || 'Failed to reject withdrawal.', 'error');
+        } else {
+            alert(e.detail || 'Failed to reject withdrawal.');
+        }
+    }
+}
+
 async function initPage() {
     loadFundRequests();
+    loadManagerWithdrawals();
 }
 
 document.addEventListener('DOMContentLoaded', initPage);
