@@ -410,8 +410,6 @@
 <div class="shipments-board-actions">
 <input class="polished-glass-input" data-i18n-placeholder="search_shipment_placeholder" id="shipment-search" oninput="applyShipmentFilters()" placeholder="Search ID or Desc..." type="text"/>
 <div class="shipments-board-buttons">
-<button class="btn-primary" onclick="bulkRouteSplitter()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem;">⚡ Auto Bulk Route Splitter</button>
-<button class="btn-primary" onclick="bulkAssign()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem; background:var(--success);">🤖 Auto Bulk Fleet Assign</button>
 <button class="btn-primary" data-i18n="btn_merge_suggestions" onclick="showMergeSuggestions()" style="width:auto; padding:8px 14px; white-space: nowrap; font-size:0.85rem; background:var(--warning);">🔗 Merge Suggestions</button>
 
 <div class="glass-card" id="sim-mode-toggle-container" style="padding:6px 12px; background:rgba(0,0,0,0.4); border:1px solid var(--border); display:flex; align-items:center; gap:10px; border-radius:12px; transition: all 0.3s ease;">
@@ -1152,6 +1150,14 @@ setTheme(localStorage.getItem('theme') || 'dark');
 <button class="btn-primary" onclick="document.getElementById('driver-profile-modal').style.display='none'" style="width:100%;">Close Profile</button>
 </div>
 </div>
+</div>
+<div class="modal-glass" id="edit-leg-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:600px; max-width:95%; max-height:90vh; overflow-y:auto; padding:32px; box-shadow: 0 40px 100px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border-radius:16px;">
+    <h2 style="margin:0; font-size:1.8rem; color:var(--accent);">✏️ Edit Leg Assignments</h2>
+    <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom: 20px;">Manage assignments for pending/assigned legs. Cannot edit legs already in transit.</div>
+    <div id="edit-leg-content">Loading...</div>
+    <div style="margin-top:20px; text-align:right;">
+        <button class="btn-primary" onclick="document.getElementById('edit-leg-modal').style.display='none'" style="background:var(--card); color:var(--text); border:1px solid var(--border);">Close</button>
+    </div>
 </div>
 </body>
 </html>

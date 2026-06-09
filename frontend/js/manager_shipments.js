@@ -2552,11 +2552,8 @@ window.openShipmentDetailModal = function(id) {
         <div id="manual-override-controls" style="display:none; margin-top:20px; padding:15px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px;">
             <h4 style="margin:0 0 12px 0; font-size:0.85rem; color:var(--warning); font-weight:bold;">⚙️ Edit / Manual Override Controls</h4>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="btn-primary" style="background:#3182ce; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="openManualSplit('${s.id}')">
-                    🔀 Manual Split Route
-                </button>
-                <button class="btn-primary" style="background:#3182ce; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="openManualAssignModal('${s.id}')">
-                    👤 Manual Assign Driver
+                <button class="btn-primary" style="background:#3182ce; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="openEditLegModal('${s.id}')">
+                    ✏️ Edit Leg Assignments
                 </button>
                 ${(s.status !== 'delivered' && s.status !== 'finalized') ? `
                     <button class="btn-primary" style="background:var(--warning); color:#000; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="managerManualVerify('${s.id}')">
@@ -2712,46 +2709,6 @@ window.openShipmentDetailModal = function(id) {
         `;
     }
 
-    if (!s.is_leg) {
-        const isRoutePlanned = s.status === 'split' || s.route_type === 'multi-leg' || s.stage === 'Route Optimized';
-        const isAssigned = s.assigned_driver_id || s.status === 'assigned' || s.status === 'in_transit';
-
-        // 1. SPLIT CONTROLS
-        if (s.status === 'pending' && !isRoutePlanned) {
-            actionsHtml += `
-                <button class="btn-action-details" style="background:var(--accent);" onclick="autoSplit('${s.id}')">
-                    <span class="icon">🤖</span> <span>Route Splitter</span>
-                </button>
-            `;
-        } else {
-            actionsHtml += `
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
-                    <span class="icon">🤖</span> <span>Route Finalized</span>
-                </button>
-            `;
-        }
-
-        // 2. ASSIGN CONTROLS (Only visible after split)
-        if (isRoutePlanned && !isAssigned) {
-            actionsHtml += `
-                <button class="btn-action-details" style="background:var(--success);" onclick="autoAssignShipment('${s.id}')">
-                    <span class="icon">🤖</span> <span>Auto Assign (AI)</span>
-                </button>
-            `;
-        } else if (isAssigned) {
-            actionsHtml += `
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled>
-                    <span class="icon">🤖</span> <span>Already Assigned</span>
-                </button>
-            `;
-        } else {
-            // Not yet planned
-            actionsHtml += `
-                <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Split route first">
-                    <span class="icon">🤖</span> <span>Assign (Locked)</span>
-                </button>
-            `;
-        }
     } else {
         // For Legs: Assignment is managed strictly through the parent shipment
         actionsHtml += `
@@ -3741,4 +3698,87 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPage);
 } else {
     initPage();
+}
+
+window.openEditLegModal = async function(id) {
+    document.getElementById('edit-leg-modal').style.display = 'block';
+    const content = document.getElementById('edit-leg-content');
+    content.innerHTML = 'Loading...';
+    try {
+        const shipments = globalShipments;
+        let parent = shipments.find(s => s.id === id);
+        if (!parent) {
+            content.innerHTML = 'Shipment not found';
+            return;
+        }
+        let legs = [];
+        if (parent.route_type === 'multi-leg' || parent.status === 'split') {
+            legs = shipments.filter(s => s.parent_id === id).sort((a,b) => a.leg_order - b.leg_order);
+        } else {
+            legs = [parent];
+        }
+
+        let html = '';
+        for (const leg of legs) {
+            const canEdit = ['pending', 'assigned'].includes(leg.status);
+            html += `<div style="background:rgba(255,255,255,0.05); padding:15px; margin-bottom:10px; border-radius:8px;">
+                <div style="font-weight:bold; margin-bottom:10px;">${leg.leg_type ? 'Leg ' + leg.leg_order + ': ' + leg.leg_type : 'Direct Shipment'} (${leg.id.substring(0,8)})</div>
+                <div>Status: ${leg.status}</div>
+                <div>Current Driver: ${leg.assigned_driver_id ? (globalDrivers.find(d=>d.id===leg.assigned_driver_id)?.name || leg.assigned_driver_id) : 'Unassigned'}</div>
+                <div>Current Vehicle: ${leg.assigned_vehicle_id ? (globalVehicles.find(v=>v.id===leg.assigned_vehicle_id)?.number_plate || leg.assigned_vehicle_id) : 'Unassigned'}</div>
+                ${canEdit ? `<div style="margin-top:10px;"><button class="btn-action-pill" onclick="loadRecommendationsForLeg('${leg.id}', this)">Load Options</button></div>` : '<div style="margin-top:10px; color:var(--warning);">Cannot edit (already in transit/delivered).</div>'}
+                <div id="leg-opts-${leg.id}" style="margin-top:10px;"></div>
+            </div>`;
+        }
+        content.innerHTML = html;
+    } catch(e) {
+        console.error(e);
+        content.innerHTML = 'Error loading legs.';
+    }
+}
+
+window.loadRecommendationsForLeg = async function(legId, btn) {
+    const container = document.getElementById(`leg-opts-${legId}`);
+    btn.disabled = true;
+    btn.innerText = 'Loading...';
+    try {
+        const res = await apiCall(`/shipments/${legId}/assignment-recommendations`);
+        if (!res.recommendations || res.recommendations.length === 0) {
+            container.innerHTML = '<div style="color:var(--danger)">No available vehicles found.</div>';
+            return;
+        }
+        let selectHtml = `<select id="sel-${legId}" class="polished-glass-input" style="margin-bottom:10px; width:100%; background:var(--bg);">`;
+        res.recommendations.forEach(r => {
+            selectHtml += `<option value="${r.driver_id}|${r.vehicle_id}">${r.driver_name} | ${r.vehicle_type} (${r.number_plate}) | Score: ${Math.round(r.score)} | CO2 Penalty: ${Math.round(r.co2_penalty)}</option>`;
+        });
+        selectHtml += `</select>`;
+        selectHtml += `<button class="btn-primary" onclick="submitLegEdit('${legId}')">Save Assignment</button>`;
+        container.innerHTML = selectHtml;
+    } catch(e) {
+        console.error(e);
+        container.innerHTML = '<div style="color:var(--danger)">Failed to load recommendations.</div>';
+    } finally {
+        btn.style.display = 'none';
+    }
+}
+
+window.submitLegEdit = async function(legId) {
+    const sel = document.getElementById(`sel-${legId}`);
+    if (!sel || !sel.value) return;
+    const [driver_id, vehicle_id] = sel.value.split('|');
+    try {
+        await apiCall(`/shipments/${legId}`, 'PUT', {
+            assigned_driver_id: driver_id,
+            assigned_vehicle_id: vehicle_id,
+            status: 'assigned',
+            stage: 'Assigned to Driver'
+        });
+        showNotification('Assignment updated!', 'success');
+        document.getElementById('edit-leg-modal').style.display = 'none';
+        if(window.closeShipmentDetailModal) window.closeShipmentDetailModal();
+        loadShipments();
+    } catch(e) {
+        console.error(e);
+        showNotification('Failed to update assignment', 'danger');
+    }
 }

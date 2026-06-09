@@ -147,6 +147,9 @@ class Vehicle(BaseModel):
     operational_days: int = 0
     operational_dates: List[str] = Field(default_factory=list)
 
+    # CO2 Estimation
+    vehicle_age: float = 0.0 # years
+
 class Warehouse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     company_id: str

@@ -305,8 +305,15 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             rejection_reasons.append(f"{d_name}: Overloaded ({curr_load + ship_weight}kg > {v_cap}kg)")
             continue
 
+        # CO2 Penalty Calculation
+        co2_penalty = 0
+        if not is_ev and not is_bike_scooty and not is_drone:
+            v_age = float(vehicle.get("vehicle_age", 0.0))
+            # Base penalty for fossil fuel vehicles, increased by 5% for every year of vehicle age
+            co2_penalty = 500 * (1.0 + (v_age * 0.05))
+
         # Score Calculation
-        score = priority_score + calculate_driver_performance_score(d) + (d.get("safety_rating", 5) * 10)
+        score = priority_score + calculate_driver_performance_score(d) + (d.get("safety_rating", 5) * 10) - co2_penalty
         
         # Distance penalty
         wh_to_query = v_present or v_base
@@ -339,6 +346,132 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "finance": estimate_delivery_cost(shipment, best["vehicle"]["type"].lower()),
         "pickup_deadline": None
     }
+
+def get_assignment_recommendations_for_shipment(shipment: Dict[str, Any]) -> list:
+    from backend.services.route_engine import haversine, find_nearest_warehouse
+    from backend.services.driver_intel import calculate_driver_performance_score
+    from backend.services.finance_engine import estimate_delivery_cost
+    from backend.database import JSONDatabase
+    
+    company_id = shipment.get("company_id")
+    if not company_id:
+        p_id = shipment.get("parent_id")
+        if p_id:
+            parent = JSONDatabase("shipments").get_by_id(p_id)
+            if parent:
+                company_id = parent.get("company_id")
+    
+    if not company_id: return []
+    
+    p_lat, p_lng = shipment["pickup"]["lat"], shipment["pickup"]["lng"]
+    d_lat, d_lng = shipment["drop"]["lat"], shipment["drop"]["lng"]
+
+    leg_type = shipment.get("leg_type")
+    is_leg = shipment.get("is_leg", False)
+    distance = haversine(p_lat, p_lng, d_lat, d_lng)
+    is_direct = not is_leg and distance < 50
+    
+    is_first_mile = leg_type == "first_mile"
+    is_last_mile = leg_type == "last_mile"
+    is_middle_mile = leg_type == "middle_mile"
+
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    all_shipments = JSONDatabase("shipments").get_all()
+    
+    drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
+    vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id]
+    
+    available_pairs = []
+
+    for d in drivers:
+        if d.get("status") not in ["available", "on_duty"] or d.get("is_fit") == False:
+            continue
+        v_id = d.get("assigned_vehicle_id")
+        if not v_id: continue
+        vehicle = next((v for v in vehicles if v.get("id") == v_id), None)
+        if not vehicle or vehicle.get("is_operational") == False or float(vehicle.get("vehicle_health_score", 100.0)) <= 0.0:
+            continue
+        
+        v_type = str(vehicle.get("type", "")).lower()
+        v_base = vehicle.get("base_warehouse_id")
+        v_present = vehicle.get("present_warehouse_id") or vehicle.get("current_warehouse_id") or v_base
+        
+        is_heavy_truck = "heavy" in v_type or "large" in v_type
+        is_small_truck = "small" in v_type or ("truck" in v_type and not is_heavy_truck)
+        is_van = "van" in v_type or "delivery" in v_type
+        is_bike_scooty = "bike" in v_type or "scooty" in v_type or "scooter" in v_type
+        is_ev = "ev" in v_type
+        is_drone = "drone" in v_type
+        
+        priority_score = 0
+        is_suitable = False
+
+        if is_direct:
+            nearest_wh = find_nearest_warehouse(p_lat, p_lng, company_id)
+            if not nearest_wh or (v_base != nearest_wh["id"] or v_present != nearest_wh["id"]): continue
+            if is_small_truck:
+                priority_score = 100000; is_suitable = True
+            elif is_van:
+                priority_score = 50000; is_suitable = True
+        elif is_first_mile:
+            if is_bike_scooty or is_ev:
+                is_suitable = True
+                priority_score = 100000 if is_bike_scooty else 50000
+        elif is_last_mile:
+            if is_van:
+                priority_score = 100000; is_suitable = True
+            elif is_bike_scooty:
+                priority_score = 50000; is_suitable = True
+        elif is_middle_mile:
+            if is_heavy_truck or is_small_truck:
+                is_suitable = True
+                priority_score = 100000 if is_heavy_truck else 50000
+                pickup_wh_id = shipment.get("pickup_warehouse_id")
+                drop_wh_id = shipment.get("drop_warehouse_id")
+                if v_base == drop_wh_id and v_present == pickup_wh_id:
+                    priority_score += 500000
+
+        if not is_suitable: continue
+
+        active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == vehicle["id"] and s.get("status") in ["assigned", "in_transit"]]
+        curr_load = sum(s.get("weight", 0) for s in active_for_v)
+        ship_weight = shipment.get("weight", 0)
+        v_cap = vehicle.get("capacity")
+        if not v_cap: v_cap = 1000.0
+        else:
+            try: v_cap = float(v_cap)
+            except: v_cap = 1000.0
+                
+        if curr_load + ship_weight > v_cap: continue
+
+        co2_penalty = 0
+        if not is_ev and not is_bike_scooty and not is_drone:
+            v_age = float(vehicle.get("vehicle_age", 0.0))
+            co2_penalty = 500 * (1.0 + (v_age * 0.05))
+
+        score = priority_score + calculate_driver_performance_score(d) + (d.get("safety_rating", 5) * 10) - co2_penalty
+        
+        wh_to_query = v_present or v_base
+        if wh_to_query:
+            warehouses_db = JSONDatabase("warehouses")
+            base_wh = warehouses_db.get_by_id(wh_to_query)
+            if base_wh:
+                dist_to_pickup = haversine(base_wh["lat"], base_wh["lng"], p_lat, p_lng)
+                score -= (dist_to_pickup * 100)
+
+        available_pairs.append({
+            "driver_id": d["id"],
+            "driver_name": d.get("name"),
+            "vehicle_id": vehicle["id"],
+            "vehicle_type": vehicle.get("type"),
+            "number_plate": vehicle.get("number_plate"),
+            "score": score,
+            "co2_penalty": co2_penalty
+        })
+
+    available_pairs.sort(key=lambda x: x["score"], reverse=True)
+    return available_pairs
 
 def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, Any]):
     from backend.database import JSONDatabase

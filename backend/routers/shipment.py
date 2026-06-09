@@ -435,6 +435,44 @@ def create_shipment(shipment_data: ShipmentCreate):
     new_shipment = Shipment(**shipment_dict)
     
     shipments_db.insert(new_shipment.model_dump())
+    
+    # Auto-Split and Auto-Assign
+    try:
+        from backend.services.route_engine import decompose_shipment
+        from backend.routers.shipment import _generate_legs # it's in the same file
+        
+        legs_data = decompose_shipment(shipment_dict)
+        if legs_data:
+            leg_ids = _generate_legs(shipment_dict, legs_data)
+            # Refresh parent shipment state
+            updated_parent = shipments_db.get_by_id(shipment_dict["id"])
+            if updated_parent:
+                shipment_dict.update(updated_parent)
+                new_shipment = Shipment(**shipment_dict)
+            
+            # Auto assign each leg
+            for lid in leg_ids:
+                leg_s = shipments_db.get_by_id(lid)
+                if leg_s:
+                    assigned = auto_assign_shipment(leg_s)
+                    if assigned and "error" not in assigned:
+                        leg_s["assigned_driver_id"] = assigned["assigned_driver_id"]
+                        leg_s["assigned_vehicle_id"] = assigned["assigned_vehicle_id"]
+                        leg_s["status"] = "assigned"
+                        shipments_db.update(lid, leg_s)
+        else:
+            # Direct Route Assignment
+            assigned = auto_assign_shipment(shipment_dict)
+            if assigned and "error" not in assigned:
+                shipment_dict["assigned_driver_id"] = assigned["assigned_driver_id"]
+                shipment_dict["assigned_vehicle_id"] = assigned["assigned_vehicle_id"]
+                shipment_dict["status"] = "assigned"
+                shipments_db.update(shipment_dict["id"], shipment_dict)
+                new_shipment = Shipment(**shipment_dict)
+    except Exception as e:
+        import traceback
+        print(f"Auto-split/assign failed during creation: {e}")
+        traceback.print_exc()
             
     return new_shipment
 
@@ -502,6 +540,25 @@ def get_shipments(company_id: str):
         shipments_db.write(all_ships)
         
     return company_ships
+
+@router.get("/{shipment_id}/assignment-recommendations")
+def get_assignment_recommendations(shipment_id: str):
+    all_ships = shipments_db.get_all()
+    shipment = next((s for s in all_ships if s and s.get("id") == shipment_id), None)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    if shipment.get("status") not in ["pending", "assigned"]:
+        raise HTTPException(status_code=400, detail="Shipment has already started or been delivered, cannot change assignment.")
+        
+    from backend.services.assignment import get_assignment_recommendations_for_shipment
+    try:
+        recommendations = get_assignment_recommendations_for_shipment(shipment)
+        return {"recommendations": recommendations}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{shipment_id}")
 def get_shipment(shipment_id: str):

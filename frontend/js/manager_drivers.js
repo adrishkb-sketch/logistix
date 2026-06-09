@@ -552,6 +552,7 @@ function setupFormListeners() {
                 capacity: parseFloat(document.getElementById('v-cap').value),
                 base_warehouse_id: document.getElementById('v-hub').value,
                 fuel_efficiency: parseFloat(document.getElementById('v-eff').value || 15),
+                vehicle_age: parseFloat(document.getElementById('v-age')?.value || 0),
                 status: 'available',
                 vehicle_health_score: 100.0
             };
