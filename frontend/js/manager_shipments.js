@@ -2821,7 +2821,7 @@ window.openShipmentDetailModal = function(id) {
         `;
     }
 
-    } else {
+    if (s.is_leg) {
         // For Legs: Assignment is managed strictly through the parent shipment
         actionsHtml += `
             <button class="btn-action-details" style="opacity:0.6; cursor:not-allowed; background:var(--muted);" disabled title="Manage assignments from the Parent Shipment">
