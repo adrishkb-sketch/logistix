@@ -28,8 +28,22 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 const CO2_FACTORS_KG_KM_TON = { truck: 0.27, van: 0.18, bike: 0.06, motorcycle: 0.06, drone: 0.02 };
 const VEHICLE_SPEED_KMH = { truck: 58, van: 68, bike: 48, motorcycle: 50, drone: 100 };
-function getVehicleCO2Factor(vehicleType) {
-    return CO2_FACTORS_KG_KM_TON[(vehicleType||'').toLowerCase()] || 0.20;
+function getVehicleCO2Factor(v) {
+    if (!v) return 0.20;
+    const vType = (typeof v === 'string') ? v : (v.type || v.vehicle_type || 'van');
+    let factor = CO2_FACTORS_KG_KM_TON[(vType).toLowerCase()] || 0.20;
+    
+    if (typeof v === 'object' && v.vehicle_age !== undefined && !['drone', 'bike', 'motorcycle', 'ev'].includes(vType.toLowerCase())) {
+        let age = parseFloat(v.vehicle_age) || 0;
+        if (v.age_recorded_at) {
+            const recordedDate = new Date(v.age_recorded_at);
+            const now = new Date();
+            const daysPassed = (now - recordedDate) / (1000 * 60 * 60 * 24);
+            if (daysPassed > 0) age += (daysPassed / 365.25);
+        }
+        factor = factor * (1.0 + (age * 0.05));
+    }
+    return factor;
 }
 function computeDriverAiScore(asset, group) {
     const rating = asset.driver_rating || 3.0;
@@ -204,6 +218,24 @@ async function loadShipments() {
     }
 }
 
+window.currentShipmentCategory = 'all';
+
+window.setShipmentCategory = function(cat) {
+    window.currentShipmentCategory = cat;
+    document.querySelectorAll('.shipment-tabs button').forEach(b => {
+        b.classList.remove('active-tab');
+        b.style.background = 'transparent';
+        b.style.color = 'var(--text)';
+    });
+    const active = document.getElementById('tab-' + cat);
+    if (active) {
+        active.classList.add('active-tab');
+        active.style.background = 'rgba(79,140,255,0.1)';
+        active.style.color = 'var(--primary)';
+    }
+    applyShipmentFilters();
+};
+
 function applyShipmentFilters() {
     const searchTerm = (document.getElementById('shipment-search')?.value || '').toLowerCase();
     const sortMode = document.getElementById('shipment-sort')?.value || 'newest';
@@ -217,6 +249,19 @@ function applyShipmentFilters() {
             s.id.toLowerCase().includes(searchTerm) || 
             s.description.toLowerCase().includes(searchTerm)
         );
+    }
+    
+    // Apply category filter
+    if (window.currentShipmentCategory === 'returns') {
+        parents = parents.filter(s => s.route_type === 'return' || (s.stage && s.stage.toLowerCase().includes('return')));
+    } else if (window.currentShipmentCategory === 'renewals') {
+        const now = Date.now();
+        parents = parents.filter(s => {
+            if (!s.eway_bill_expiry) return false;
+            const expiryMs = new Date(s.eway_bill_expiry).getTime();
+            const hoursLeft = (expiryMs - now) / 3600000;
+            return hoursLeft <= 48;
+        });
     }
     
     // Apply sorting
@@ -686,13 +731,79 @@ function renderDeadlineBanner(urgentList) {
                 <div style="display:flex;gap:6px;">
                     <button onclick="openShipmentDetailModal('${s.id}')" 
                         style="flex:1;padding:6px;border-radius:8px;border:none;background:rgba(255,255,255,0.08);color:var(--text);font-size:0.7rem;font-weight:700;cursor:pointer;">View</button>
-                    <button onclick="openEmergencyReassign('${s.id}')" 
-                        style="flex:2;padding:6px;border-radius:8px;border:none;background:${urgency};color:${expired || hoursLeft < 2 ? 'white' : '#000'};font-size:0.7rem;font-weight:900;cursor:pointer;letter-spacing:0.5px;">⚡ Emergency Reassign</button>
+                    <button onclick="openEwayExpiryHandler('${s.id}')" 
+                        style="flex:2;padding:6px;border-radius:8px;border:none;background:${urgency};color:${expired || hoursLeft < 2 ? 'white' : '#000'};font-size:0.7rem;font-weight:900;cursor:pointer;letter-spacing:0.5px;">📋 E-Way Compliance</button>
                 </div>
             </div>
         `;
     }).join('');
 }
+
+window.openEwayExpiryHandler = async function(shipmentId) {
+    const s = globalShipments.find(sh => sh.id === shipmentId);
+    if (!s) return;
+
+    const hoursLeft = s.eway_bill_expiry ?
+        ((new Date(s.eway_bill_expiry).getTime() - Date.now()) / 3600000).toFixed(1) : 'N/A';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'eway-compliance-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(14px);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML = `
+        <div style="background:var(--bg);border:1px solid rgba(249,115,22,0.4);border-radius:20px;padding:28px;max-width:500px;width:94%;box-shadow:0 40px 80px rgba(0,0,0,0.6);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+                <div>
+                    <h3 style="margin:0;font-size:1.1rem;color:var(--warning);">📋 E-Way Compliance Required</h3>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin:4px 0 0;">E-Way Bill deadline: <span style="color:#f97316;font-weight:700;">${hoursLeft}h remaining</span></p>
+                </div>
+                <button onclick="this.closest('.eway-compliance-overlay').remove()" style="background:none;border:none;color:var(--text);font-size:1.4rem;cursor:pointer;opacity:0.5;">✕</button>
+            </div>
+            <div style="background:rgba(249,115,22,0.06);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:0.82rem;">
+                <div style="font-weight:700;color:var(--text);">📦 ${s.description || 'Shipment'}</div>
+                <div style="color:var(--text-muted);margin-top:3px;">E-Way: ${s.eway_bill_no || 'N/A'}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <button id="eway-extend-btn" onclick="confirmEwayExtend('${shipmentId}')" 
+                    style="padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--primary);color:white;font-weight:700;cursor:pointer;font-size:0.9rem;transition:all 0.2s;">
+                    ⏳ Extend E-Way Bill (24 Hours)
+                </button>
+                <button id="eway-return-btn" onclick="confirmEwayReturnHub('${shipmentId}')" 
+                    style="padding:14px;border-radius:10px;border:1px solid var(--danger);background:rgba(239,68,68,0.1);color:var(--danger);font-weight:700;cursor:pointer;font-size:0.9rem;transition:all 0.2s;">
+                    ↩️ Return to Sender via Nearest Hub
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+};
+
+window.confirmEwayExtend = async function(shipmentId) {
+    const btn = document.getElementById('eway-extend-btn');
+    if(btn) btn.innerHTML = '<div class="spinner"></div> Processing...';
+    try {
+        await apiCall(`/shipments/${shipmentId}/extend-eway`, 'POST');
+        showNotification('E-Way Bill successfully extended for 24 hours.', 'success');
+        document.querySelector('.eway-compliance-overlay')?.remove();
+        loadShipments();
+    } catch (e) {
+        showNotification('Failed to extend E-Way Bill', 'error');
+        if(btn) btn.innerHTML = '⏳ Extend E-Way Bill (24 Hours)';
+    }
+};
+
+window.confirmEwayReturnHub = async function(shipmentId) {
+    const btn = document.getElementById('eway-return-btn');
+    if(btn) btn.innerHTML = '<div class="spinner"></div> Routing...';
+    try {
+        await apiCall(`/shipments/${shipmentId}/eway-return-hub`, 'POST');
+        showNotification('Shipment successfully routed back to sender via nearest hub.', 'success');
+        document.querySelector('.eway-compliance-overlay')?.remove();
+        loadShipments();
+    } catch (e) {
+        showNotification('Failed to route return.', 'error');
+        if(btn) btn.innerHTML = '↩️ Return to Sender via Nearest Hub';
+    }
+};
 
 window.openEmergencyReassign = async function(shipmentId) {
     const s = globalShipments.find(sh => sh.id === shipmentId);
@@ -752,7 +863,7 @@ window.openEmergencyReassign = async function(shipmentId) {
                     let distKm = 999;
                     if (loc && dLoc) distKm = haversineDistance(loc.lat, loc.lng, dLoc.lat || 0, dLoc.lng || 0);
                     
-                    const co2 = distKm * (s.weight / 1000) * getVehicleCO2Factor(v.type);
+                    const co2 = distKm * (s.weight / 1000) * getVehicleCO2Factor(v);
                     const etaH = distKm / (VEHICLE_SPEED_KMH[v.type?.toLowerCase()] || 60);
                     const score = computeDriverAiScore({ driver_rating: d.driver_rating || d.driving_score || 3.0 }, 'others');
                     
@@ -943,7 +1054,8 @@ async function openManualAssignModal(id) {
                 const scored = [];
                 const addGroup = (assets, group) => (assets || []).forEach(a => {
                     const vType = (a.vehicle_type || '').toLowerCase();
-                    const co2 = legDist * (weightKg / 1000) * getVehicleCO2Factor(vType);
+                    const realVehicle = globalVehicles.find(vh => vh.id === a.vehicle_id) || vType;
+                    const co2 = legDist * (weightKg / 1000) * getVehicleCO2Factor(realVehicle);
                     const speed = VEHICLE_SPEED_KMH[vType] || 65;
                     const etaH = legDist > 0 ? legDist / speed : 0;
                     const score = computeDriverAiScore(a, group);
@@ -1112,7 +1224,7 @@ window.generateShipmentReport = function(shipmentId) {
     }
 
     const vType = (v?.type || '').toLowerCase();
-    const co2Factor = getVehicleCO2Factor(vType || 'van');
+    const co2Factor = getVehicleCO2Factor(v || vType || 'van');
     const weightTons = (s.weight || 10) / 1000;
     const co2Kg = distKm * weightTons * co2Factor;
     const standardCO2 = distKm * weightTons * 0.20;
@@ -3306,7 +3418,7 @@ window.downloadShipmentEsgCertificate = function(shipmentId) {
         dist = haversineDistance(s.pickup.lat, s.pickup.lng, s.drop.lat, s.drop.lng);
     }
     const vType = (v?.type || '').toLowerCase();
-    const actualFactor = getVehicleCO2Factor(vType || 'van');
+    const actualFactor = getVehicleCO2Factor(v || vType || 'van');
     const standardFactor = 0.20; // kg CO₂/km/ton
     const tons = w / 1000;
     const e_co2 = dist * tons * actualFactor;   // Logistix optimized

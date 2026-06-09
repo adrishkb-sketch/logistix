@@ -406,7 +406,14 @@
 </div>
 <div class="glass-card section-card" data-layout-id="shipments-board">
 <div class="shipments-board-header">
+<div style="display:flex; flex-direction:column; gap:12px; flex:1;">
 <h3 data-i18n="shipments_board_title" style="margin:0;">Shipments Board</h3>
+<div class="shipment-tabs" style="display:flex; gap:10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
+    <button class="btn-primary btn-outline active-tab" id="tab-all" onclick="setShipmentCategory('all')" style="padding:6px 12px; font-size:0.8rem; border:none; background:rgba(79,140,255,0.1); color:var(--primary);">All Shipments</button>
+    <button class="btn-primary btn-outline" id="tab-renewals" onclick="setShipmentCategory('renewals')" style="padding:6px 12px; font-size:0.8rem; border:none; background:transparent;">E-Way Renewals</button>
+    <button class="btn-primary btn-outline" id="tab-returns" onclick="setShipmentCategory('returns')" style="padding:6px 12px; font-size:0.8rem; border:none; background:transparent;">Returns</button>
+</div>
+</div>
 <div class="shipments-board-actions">
 <input class="polished-glass-input" data-i18n-placeholder="search_shipment_placeholder" id="shipment-search" oninput="applyShipmentFilters()" placeholder="Search ID or Desc..." type="text"/>
 <div class="shipments-board-buttons">

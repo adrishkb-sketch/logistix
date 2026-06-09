@@ -2076,6 +2076,135 @@ def extend_eway_bill(shipment_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/{shipment_id}/eway-return-hub")
+def eway_return_hub(shipment_id: str):
+    """
+    Manual trigger for returning a shipment to sender via the nearest safe hub
+    due to E-Way bill expiry.
+    """
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    parent_id = shipment.get("parent_id") or shipment["id"]
+    parent = shipments_db.get_by_id(parent_id)
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent shipment not found")
+
+    company_id = parent.get("company_id")
+    from backend.routers.tracking import get_all_active_weather_cells
+    from backend.services.route_engine import find_nearest_safe_warehouse, haversine, decompose_shipment
+    from backend.models import ShipmentEvent
+
+    disaster_cells = get_all_active_weather_cells(company_id)
+    curr_loc = shipment.get("current_location") or shipment.get("pickup")
+    if not curr_loc or not curr_loc.get("lat"):
+        curr_loc = parent.get("pickup")
+
+    safe_wh = find_nearest_safe_warehouse(curr_loc["lat"], curr_loc["lng"], company_id, disaster_cells)
+    if not safe_wh:
+        warehouses_db = JSONDatabase("warehouses")
+        company_whs = [w for w in warehouses_db.get_all() if w and w.get("company_id") == company_id]
+        if company_whs:
+            safe_wh = min(company_whs, key=lambda w: haversine(curr_loc["lat"], curr_loc["lng"], w["lat"], w["lng"]))
+            
+    if not safe_wh:
+        raise HTTPException(status_code=400, detail="No suitable warehouse found for return.")
+
+    # 1. Clean up existing child legs
+    old_child_ids = parent.get("child_leg_ids", [])
+    for cid in old_child_ids:
+        cleg = shipments_db.get_by_id(cid)
+        if cleg and cleg.get("status") in ["pending", "assigned", "in_transit"]:
+            shipments_db.delete(cid)
+
+    # 2. De-assign current driver if any
+    orig_driver_id = shipment.get("assigned_driver_id")
+    drivers_db = JSONDatabase("drivers")
+    if orig_driver_id:
+        orig_driver = drivers_db.get_by_id(orig_driver_id)
+        if orig_driver:
+            import uuid as _uuid
+            from datetime import datetime
+            notifs = orig_driver.get("notifications", [])
+            notifs.append({
+                "id": str(_uuid.uuid4()),
+                "shipment_id": shipment["id"],
+                "title": "📋 Delivery Cancelled — E-Way Bill Expired",
+                "message": (
+                    f"Order '{parent.get('description', parent['id'][:8])}' cannot be delivered. "
+                    f"E-Way Bill expired. "
+                    f"The shipment is being returned to the sender via nearest hub."
+                ),
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "read": False
+            })
+            orig_driver["notifications"] = notifs
+            drivers_db.update(orig_driver_id, orig_driver)
+
+    # 3. Create the multi-leg return journey
+    leg1 = {
+        "pickup": curr_loc,
+        "drop": {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]},
+        "drop_warehouse_id": safe_wh["id"],
+        "leg_type": "first_mile",
+        "company_id": company_id
+    }
+
+    remaining_shipment = {
+        "pickup": {"lat": safe_wh["lat"], "lng": safe_wh["lng"], "address": safe_wh["name"]},
+        "drop": parent.get("pickup"),
+        "company_id": company_id
+    }
+
+    remaining_legs = decompose_shipment(remaining_shipment)
+    if not remaining_legs:
+        remaining_legs = [{
+            "pickup": remaining_shipment["pickup"],
+            "drop": remaining_shipment["drop"],
+            "pickup_warehouse_id": safe_wh["id"],
+            "leg_type": "last_mile"
+        }]
+
+    all_return_legs_data = [leg1] + remaining_legs
+
+    # Swap parent drop to original pickup
+    parent["drop"] = parent.get("pickup")
+    parent["pickup"] = curr_loc
+    parent["route_type"] = "return"
+    parent["status"] = "split"
+    parent["stage"] = f"Returned via Hub ({safe_wh['name']})"
+    parent["assigned_driver_id"] = None
+    parent["assigned_vehicle_id"] = None
+
+    log_msg = (
+        f"📋 COMPLIANCE RETURN (MANUAL): E-Way Bill expired. "
+        f"Delivery aborted and shipment routed back to sender via '{safe_wh['name']}'."
+    )
+    log = ShipmentEvent(status="split", message=log_msg, reason="E-Way Bill Expiry")
+    parent["logs"] = parent.get("logs", []) + [log.model_dump()]
+
+    shipments_db.update(parent_id, parent)
+
+    new_leg_ids = _generate_legs(parent, all_return_legs_data)
+
+    parent_after_legs = shipments_db.get_by_id(parent_id)
+    parent_after_legs["child_leg_ids"] = new_leg_ids
+    parent_after_legs["route_type"] = "return"
+    shipments_db.update(parent_id, parent_after_legs)
+    
+    from backend.services.assignment import auto_assign_shipment
+    first_leg = shipments_db.get_by_id(new_leg_ids[0])
+    if first_leg:
+        assign = auto_assign_shipment(first_leg)
+        if assign and "error" not in assign:
+            first_leg["assigned_driver_id"] = assign.get("assigned_driver_id")
+            first_leg["assigned_vehicle_id"] = assign.get("assigned_vehicle_id")
+            first_leg["status"] = "assigned"
+            shipments_db.update(new_leg_ids[0], first_leg)
+
+    return {"message": f"Successfully initiated return via {safe_wh['name']}. Split into {len(new_leg_ids)} return legs."}
+
 @router.post("/{shipment_id}/pay")
 def pay_shipment(shipment_id: str):
     shipment = shipments_db.get_by_id(shipment_id)
