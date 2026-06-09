@@ -562,10 +562,21 @@
 <div class="input-group" style="margin-bottom:15px;">
 <input id="split-wh-search" onkeyup="filterSplitWarehouses()" placeholder="🔍 Search warehouses..." style="width:100%; padding:10px 15px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text);" type="text"/>
 </div>
-<div id="split-wh-container" style="margin-bottom:20px; max-height:250px; overflow-y:auto; padding-right:5px;">
+<div id="split-wh-container" style="margin-bottom:20px; max-height:250px; overflow-y:auto; padding-right:5px;" onchange="updateManualSplitTimePenalty()">
 <!-- Checkboxes injected via JS -->
 </div>
-<button class="btn-primary" onclick="submitManualSplit()" style="width:100%;">CONFIRM &amp; SPLIT JOURNEY</button>
+<p id="split-time-penalty" style="font-size:0.85rem; color:var(--warning); display:none; margin-bottom:15px;"></p>
+<button class="btn-primary" onclick="proceedToSplitStep2()" style="width:100%;">NEXT: ASSIGN DRIVERS</button>
+</div>
+<div id="split-step-2" style="display:none;">
+<p style="font-size:0.85rem; margin-bottom:15px; color:var(--text-muted);">Assign drivers for the new route legs:</p>
+<div id="split-drivers-container" style="margin-bottom:20px; max-height:300px; overflow-y:auto; padding-right:5px;">
+<!-- Driver dropdowns injected via JS -->
+</div>
+<div style="display:flex; gap:10px;">
+<button class="btn-primary" onclick="backToSplitStep1()" style="flex:1; background:var(--surface-light); color:var(--text);">BACK</button>
+<button class="btn-primary" onclick="submitManualSplit()" style="flex:2;">CONFIRM &amp; SPLIT JOURNEY</button>
+</div>
 </div>
 </div>
 <!-- Assign Modal -->

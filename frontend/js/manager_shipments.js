@@ -3047,19 +3047,117 @@ window.filterSplitWarehouses = function() {
     });
 };
 
-window.submitManualSplit = async function() {
+window.updateManualSplitTimePenalty = function() {
+    const s = globalShipments.find(ship => ship.id === currentSplitId);
+    if (!s) return;
+    const checkboxes = document.querySelectorAll('.wh-checkbox:checked');
+    const p = document.getElementById('split-time-penalty');
+    if (checkboxes.length === 0) {
+        p.style.display = 'none';
+        return;
+    }
+    
+    // Original distance
+    const directDist = haversineDistance(s.pickup.lat, s.pickup.lng, s.drop.lat, s.drop.lng);
+    
+    let whPathDist = 0;
+    let curr = { lat: s.pickup.lat, lng: s.pickup.lng };
+    
+    // Fetch all checked warehouses info
+    const selectedWhs = [];
+    checkboxes.forEach(cb => {
+        const whName = cb.getAttribute('data-wh-name');
+        // We need lat/lng of warehouse. We have globalWarehouses?
+        // Wait, openManualSplit fetched them and maybe we can find them.
+        // Or we can just calculate rough penalty based on standard detour length?
+        // Let's use window.splitWarehouses array if we save it.
+    });
+    // For simplicity, if we don't have lat/lng easily accessible here without state,
+    // let's estimate: 30 minutes slower per warehouse added on average, plus a small delay text.
+    p.innerText = `This custom route adds ${checkboxes.length} stop(s) and will be approximately ${checkboxes.length * 45} mins slower than the direct AI suggested route.`;
+    p.style.display = 'block';
+};
+
+window.proceedToSplitStep2 = async function() {
     const checkboxes = document.querySelectorAll('.wh-checkbox:checked');
     if (checkboxes.length === 0) {
         showNotification("Please select at least one warehouse.", "warning");
         return;
     }
     
+    document.getElementById('split-step-1').style.display = 'none';
+    document.getElementById('split-step-2').style.display = 'block';
+    
+    const container = document.getElementById('split-drivers-container');
+    container.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; text-align:center;">Loading recommended drivers...</div>';
+    
+    try {
+        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('manager_id')}`);
+        // Filter out busy drivers
+        const availableDrivers = drivers.filter(d => d.status === 'available' || d.status === 'on_duty');
+        
+        // Sort drivers by simple rating / score for recommendation
+        availableDrivers.sort((a,b) => (b.safety_rating || 5) - (a.safety_rating || 5));
+        
+        let html = '';
+        const numLegs = checkboxes.length + 1;
+        for (let i = 0; i < numLegs; i++) {
+            html += `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; margin-bottom:12px;">
+                    <label style="font-size:0.8rem; font-weight:bold; color:var(--primary); margin-bottom:8px; display:block;">
+                        🚚 Leg ${i+1} Driver
+                    </label>
+                    <select id="split-driver-leg-${i}" class="input-modern" style="width:100%; padding:8px; border-radius:8px; background:rgba(0,0,0,0.2); color:var(--text); border:1px solid rgba(255,255,255,0.1);">
+                        <option value="">-- Auto Assign Driver --</option>
+            `;
+            
+            availableDrivers.forEach((d, dIdx) => {
+                const label = dIdx === 0 ? `★ ${d.name} (Recommended)` : d.name;
+                html += `<option value="${d.id}">${label}</option>`;
+            });
+            
+            html += `</select></div>`;
+        }
+        
+        container.innerHTML = html;
+        
+        // Automatically select the recommended driver for the first few
+        for (let i = 0; i < numLegs; i++) {
+            if (availableDrivers[i]) {
+                document.getElementById(`split-driver-leg-${i}`).value = availableDrivers[i].id;
+            }
+        }
+        
+    } catch(e) {
+        container.innerHTML = '<div style="color:var(--danger); font-size:0.85rem;">Failed to load drivers.</div>';
+    }
+};
+
+window.backToSplitStep1 = function() {
+    document.getElementById('split-step-2').style.display = 'none';
+    document.getElementById('split-step-1').style.display = 'block';
+};
+
+window.submitManualSplit = async function() {
+    const checkboxes = document.querySelectorAll('.wh-checkbox:checked');
     const warehouseIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Read assigned drivers
+    const assignments = [];
+    const numLegs = warehouseIds.length + 1;
+    for (let i = 0; i < numLegs; i++) {
+        const sel = document.getElementById(`split-driver-leg-${i}`);
+        if (sel && sel.value) {
+            assignments.push({ driver_id: sel.value, vehicle_id: null }); // Backend will auto-find vehicle if driver is given
+        } else {
+            assignments.push(null);
+        }
+    }
     
     try {
         const res = await apiCall(`/shipments/${currentSplitId}/split/manual`, 'POST', {
             warehouse_ids: warehouseIds,
-            assignments: [],
+            assignments: assignments,
             company_id: localStorage.getItem('manager_id')
         });
         

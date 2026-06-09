@@ -1895,29 +1895,27 @@ def manual_split(shipment_id: str, req: ManualSplitRequest):
     
     new_leg_ids = _generate_legs(shipment, legs)
     
-    # Apply Assignments if provided
-    if req.assignments and len(req.assignments) == len(new_leg_ids):
-        for i, leg_id in enumerate(new_leg_ids):
-            assign_data = req.assignments[i]
-            if assign_data:
-                # Robust access for both model objects and dictionaries
-                if isinstance(assign_data, dict):
-                    d_id = assign_data.get('driver_id')
-                    v_id = assign_data.get('vehicle_id')
-                else:
-                    d_id = getattr(assign_data, 'driver_id', None)
-                    v_id = getattr(assign_data, 'vehicle_id', None)
-                
-                _perform_assignment(leg_id, d_id, v_id)
+    from backend.services.assignment import auto_assign_shipment
+    for i, leg_id in enumerate(new_leg_ids):
+        assign_data = req.assignments[i] if req.assignments and i < len(req.assignments) else None
+        if assign_data:
+            # Robust access for both model objects and dictionaries
+            if isinstance(assign_data, dict):
+                d_id = assign_data.get('driver_id')
+                v_id = assign_data.get('vehicle_id')
             else:
-                # Fallback to auto-assign for this leg
-                try:
-                    from backend.services.assignment import auto_assign_shipment
-                    leg = shipments_db.get_by_id(leg_id)
-                    assigned_data = auto_assign_shipment(leg)
-                    if assigned_data:
-                        shipments_db.update(leg_id, assigned_data)
-                except: pass
+                d_id = getattr(assign_data, 'driver_id', None)
+                v_id = getattr(assign_data, 'vehicle_id', None)
+            
+            _perform_assignment(leg_id, d_id, v_id)
+        else:
+            # Fallback to auto-assign for this leg
+            try:
+                leg = shipments_db.get_by_id(leg_id)
+                assigned_data = auto_assign_shipment(leg)
+                if assigned_data:
+                    shipments_db.update(leg_id, assigned_data)
+            except: pass
     
     return {"message": f"Manually split into {len(legs)} legs with planned assignments."}
 
@@ -1937,7 +1935,15 @@ async def bulk_auto_split(company_id: str):
         try:
             legs_data = decompose_shipment(s)
             if legs_data:
-                _generate_legs(s, legs_data)
+                new_leg_ids = _generate_legs(s, legs_data)
+                from backend.services.assignment import auto_assign_shipment
+                for leg_id in new_leg_ids:
+                    try:
+                        leg = shipments_db.get_by_id(leg_id)
+                        assigned_data = auto_assign_shipment(leg)
+                        if assigned_data:
+                            shipments_db.update(leg_id, assigned_data)
+                    except: pass
                 success_count += 1
             else:
                 error_count += 1
@@ -1974,8 +1980,14 @@ def auto_split(shipment_id: str):
     
     new_leg_ids = _generate_legs(shipment, legs_data)
     
-    # Optional: Auto-assign is usually a separate step, but we'll keep it if needed.
-    # For now, following "Route Splitter" focus.
+    from backend.services.assignment import auto_assign_shipment
+    for leg_id in new_leg_ids:
+        try:
+            leg = shipments_db.get_by_id(leg_id)
+            assigned_data = auto_assign_shipment(leg)
+            if assigned_data:
+                shipments_db.update(leg_id, assigned_data)
+        except: pass
         
     return {"message": f"Successfully planned multi-leg route with {len(new_leg_ids)} legs."}
 
