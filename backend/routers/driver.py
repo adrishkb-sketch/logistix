@@ -1232,7 +1232,6 @@ def verify_qr(driver_id: str, shipment_id: str, data: dict, x_logistix_context: 
                 "total_earnings": driver.get("total_earnings", 0) + driver_share
             })
             
-            from backend.database import JSONDatabase
             ledger_db = JSONDatabase("ledger")
             company_id = driver.get("company_id")
             

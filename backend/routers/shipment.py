@@ -1279,6 +1279,13 @@ def emergency_reassign(shipment_id: str, data: EmergencyReassignRequest):
         "stage": "Assigned to Driver (Emergency Reassign)"
     })
     
+    if target_id != shipment_id:
+        shipments_db.update(shipment_id, {
+            "assigned_driver_id": data.driver_id,
+            "assigned_vehicle_id": data.vehicle_id,
+            "stage": "Assigned to Driver (Emergency Reassign)"
+        })
+    
     return {"message": "Emergency reassignment complete", "target_shipment_id": target_id}
 
 @router.post("/{shipment_id}/assign")
