@@ -97,6 +97,19 @@ function showPanel(panelId) {
     document.getElementById('auth-panel').style.display = panelId === 'auth' ? 'block' : 'none';
     document.getElementById('list-panel').style.display = panelId === 'list' ? 'block' : 'none';
     document.getElementById('detail-panel').style.display = panelId === 'detail' ? 'block' : 'none';
+    
+    const chatToggle = document.getElementById('ai-chat-toggle');
+    const chatWindow = document.getElementById('ai-chat-window');
+    if (panelId === 'detail') {
+        if (window.shipmentAiConfigured) {
+            if (chatToggle) chatToggle.style.display = 'flex';
+        } else {
+            if (chatToggle) chatToggle.style.display = 'none';
+        }
+    } else {
+        if (chatToggle) chatToggle.style.display = 'none';
+        if (chatWindow) chatWindow.style.display = 'none';
+    }
 }
 
 function renderEmptyOrdersState() {
@@ -182,6 +195,8 @@ async function viewOrder(id) {
         const activeAlerts = trackingData.alerts;
         
         currentShipmentId = s.id;
+        window.shipmentAiConfigured = trackingData.ai_configured;
+        window.chatHistory = [];
         
         document.getElementById('det-id').innerText = `${getTranslation('order_hash')} #${s.id.substring(0,8)}`;
         document.getElementById('det-desc').innerText = s.description;
@@ -665,3 +680,92 @@ window.addEventListener('themeChanged', (e) => {
     });
     L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(trackMap);
 });
+
+
+/* ── CUSTOMER AI CHATBOT FUNCTIONALITY ───────────────────────── */
+window.chatHistory = [];
+
+window.toggleAIChat = function() {
+    const win = document.getElementById('ai-chat-window');
+    if (!win) return;
+    
+    const isHidden = win.style.display === 'none' || win.style.display === '';
+    win.style.display = isHidden ? 'flex' : 'none';
+    
+    if (isHidden) {
+        const msgContainer = document.getElementById('ai-chat-messages');
+        if (msgContainer && msgContainer.children.length === 0) {
+            msgContainer.innerHTML = `
+                <div style="align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 12px 16px; border-radius: 16px 16px 16px 4px; max-width: 85%; line-height: 1.5; color: var(--text);">
+                    Hi! I am your <b>Logistix AI Assistant</b>. I have live access to your shipment details. Ask me anything about its status, ETA, route, weather, or billing! 📦
+                </div>
+            `;
+            window.chatHistory = [];
+        }
+        document.getElementById('ai-chat-input').focus();
+    }
+};
+
+window.sendAIChatMessage = async function() {
+    const input = document.getElementById('ai-chat-input');
+    const msgContainer = document.getElementById('ai-chat-messages');
+    if (!input || !msgContainer || !currentShipmentId) return;
+    
+    const text = input.value.trim();
+    if (!text) return;
+    
+    input.value = '';
+    
+    // Add user message to UI
+    msgContainer.innerHTML += `
+        <div style="align-self: flex-end; background: var(--primary); padding: 12px 16px; border-radius: 16px 16px 4px 16px; max-width: 85%; line-height: 1.5; color: white; font-weight: 600;">
+            ${text}
+        </div>
+    `;
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+    
+    // Display typing bubble
+    const typingId = 'ai-typing-' + Date.now();
+    msgContainer.innerHTML += `
+        <div id="${typingId}" style="align-self: flex-start; background: rgba(255,255,255,0.02); border: 1px solid var(--border); padding: 12px 16px; border-radius: 16px 16px 16px 4px; max-width: 80%; display: flex; align-items: center; gap: 4px; padding-top: 16px; padding-bottom: 16px;">
+            <span style="width: 6px; height: 6px; background: var(--muted); border-radius: 50%; display: inline-block; animation: typingPulse 0.6s infinite alternate;"></span>
+            <span style="width: 6px; height: 6px; background: var(--muted); border-radius: 50%; display: inline-block; animation: typingPulse 0.6s infinite alternate 0.2s;"></span>
+            <span style="width: 6px; height: 6px; background: var(--muted); border-radius: 50%; display: inline-block; animation: typingPulse 0.6s infinite alternate 0.4s;"></span>
+        </div>
+    `;
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+    
+    try {
+        const res = await apiCall(`/tracking/${currentShipmentId}/chat`, 'POST', {
+            message: text,
+            history: window.chatHistory
+        });
+        
+        // Remove typing
+        const bubble = document.getElementById(typingId);
+        if (bubble) bubble.remove();
+        
+        // Render formatted response
+        const formatted = parseMarkdownToHtml(res.response);
+        msgContainer.innerHTML += `
+            <div style="align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 12px 16px; border-radius: 16px 16px 16px 4px; max-width: 85%; line-height: 1.5; color: var(--text);">
+                ${formatted}
+            </div>
+        `;
+        
+        window.chatHistory.push({ role: 'user', text: text });
+        window.chatHistory.push({ role: 'model', text: res.response });
+        
+    } catch(err) {
+        const bubble = document.getElementById(typingId);
+        if (bubble) bubble.remove();
+        
+        msgContainer.innerHTML += `
+            <div style="align-self: flex-start; background: rgba(229, 62, 62, 0.1); border: 1px solid var(--danger); padding: 12px 16px; border-radius: 16px; max-width: 85%; line-height: 1.5; color: var(--danger);">
+                ⚠️ Sorry, I had trouble reaching the neural cloud. Please try again.
+            </div>
+        `;
+    }
+    
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+};

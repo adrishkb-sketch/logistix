@@ -1,0 +1,22 @@
+{
+  "name": "Logistix AI Supply Chain Engine",
+  "short_name": "Logistix AI",
+  "description": "Premium AI-Driven Logistics & Supply Chain Orchestration Platform.",
+  "start_url": "../index.html",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#4f8cff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "../favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "../apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

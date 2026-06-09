@@ -5,6 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <link rel="icon" type="image/png" href="../favicon.png">
     <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Track My Orders | Logistix</title>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -219,5 +220,43 @@
         };
         setTheme(localStorage.getItem('theme') || 'dark');
     </script>
+
+    <!-- AI Chat Assistant Floating Button -->
+    <button id="ai-chat-toggle" onclick="toggleAIChat()" class="glass-card" style="display:none; position:fixed; bottom:30px; right:30px; width:60px; height:60px; border-radius:50%; border:1px solid var(--primary); background:rgba(79, 140, 255, 0.15); box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:10005; cursor:pointer; align-items:center; justify-content:center; font-size:1.8rem; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';">
+        ✨
+    </button>
+
+    <!-- AI Chat Window -->
+    <div id="ai-chat-window" class="glass-card" style="display:none; position:fixed; bottom:100px; right:30px; width:360px; height:480px; flex-direction:column; border:1px solid var(--border); box-shadow:0 20px 50px rgba(0,0,0,0.4); z-index:10004; overflow:hidden; border-radius:24px; background:rgba(20, 24, 35, 0.85); backdrop-filter:blur(20px);">
+        <!-- Chat Header -->
+        <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(79, 140, 255, 0.1); display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.4rem;">✨</span>
+                <div>
+                    <h4 style="margin:0; font-weight:800; font-size:0.95rem; color:var(--text);">AI Delivery Assistant</h4>
+                    <small style="color:var(--success); font-weight:700; font-size:0.75rem; display:flex; align-items:center; gap:4px;">
+                        <span style="width:6px; height:6px; background:var(--success); border-radius:50%; display:inline-block; box-shadow:0 0 6px var(--success);"></span>
+                        Powered by Gemini 2.0
+                    </small>
+                </div>
+            </div>
+            <button onclick="toggleAIChat()" style="background:none; border:none; color:var(--muted); font-size:1.2rem; cursor:pointer; padding:4px;">✕</button>
+        </div>
+        <!-- Chat Body (Messages) -->
+        <div id="ai-chat-messages" style="flex:1; padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; font-size:0.9rem;">
+            <!-- Injected by JS -->
+        </div>
+        <!-- Chat Input -->
+        <div style="padding:15px; border-top:1px solid rgba(255,255,255,0.08); display:flex; gap:8px;">
+            <input type="text" id="ai-chat-input" placeholder="Ask about your shipment..." style="flex:1; margin-bottom:0; background:rgba(255,255,255,0.05); border:1px solid var(--border); padding:10px 14px; border-radius:12px; color:white; font-size:0.85rem;" onkeydown="if(event.key==='Enter') sendAIChatMessage()">
+            <button onclick="sendAIChatMessage()" class="btn-primary" style="width:auto; padding:10px 16px; border-radius:12px; font-weight:800; font-size:0.85rem;">Send</button>
+        </div>
+    </div>
+    <style>
+        @keyframes typingPulse {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+    </style>
 </body>
 </html>

@@ -7,6 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="../favicon.svg">
     <link rel="icon" type="image/png" href="../favicon.png">
     <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.json">
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
 <title>Driver App | Logistix</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
@@ -226,9 +227,10 @@
 
 <!-- AI & Real-time Routing Controls -->
 <div id="ai-routing-controls" style="display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px;">
-    <button id="toggle-heatmap-btn" class="poi-toggle-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="toggleTrafficHeatmap()">🚦 Traffic Heatmap: Off</button>
-    <button id="toggle-voice-btn" class="poi-toggle-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="toggleVoiceNav()">🔊 Voice Nav: On</button>
-    <button id="ai-reroute-btn-new" class="poi-toggle-btn ai-gated-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="triggerSmartReroute()">🧠 Smart AI Reroute</button>
+    <button id="toggle-heatmap-btn" class="poi-toggle-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="toggleTrafficHeatmap()">🚦 Heatmap</button>
+    <button id="toggle-voice-btn" class="poi-toggle-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="toggleVoiceNav()">🔊 Voice Nav</button>
+    <button id="ai-briefing-btn" class="poi-toggle-btn ai-gated-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="triggerAIDriverBriefing()">🔮 AI Briefing</button>
+    <button id="ai-reroute-btn-new" class="poi-toggle-btn ai-gated-btn" style="flex: 1; padding: 10px 14px; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.05); color: var(--text); font-size: 0.8rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="triggerSmartReroute()">🧠 Smart Reroute</button>
 </div>
 
 <!-- AI Rerouting Modal -->
@@ -243,6 +245,20 @@
     <div style="margin-top:25px; text-align:right; display:flex; gap:12px; justify-content:flex-end;">
         <button class="btn-primary" onclick="acceptReroute()" style="width:auto; padding:10px 24px; border-radius:12px; font-weight:bold;">Apply Alternate Route</button>
         <button class="btn-primary" onclick="document.getElementById('ai-reroute-modal').style.display='none'" style="width:auto; padding:10px 24px; border-radius:12px; font-weight:bold; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:white;">Dismiss</button>
+    </div>
+</div>
+
+<!-- AI Route Briefing Modal -->
+<div class="glass-card modal-glass" id="driver-briefing-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:90%; max-width:500px; padding:28px; border:1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 40px 80px rgba(0,0,0,0.5); background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(25px); border-radius: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="margin:0; font-size:1.3rem; color:var(--primary); display:flex; align-items:center; gap:8px;">🔮 Smart AI Route Briefing</h2>
+        <button onclick="document.getElementById('driver-briefing-modal').style.display='none'" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; opacity:0.6;">&times;</button>
+    </div>
+    <div id="driver-briefing-report" style="max-height:50vh; overflow-y:auto; font-size:0.9rem; line-height:1.6; padding-right:10px; color:#e2e8f0;">
+        <!-- Injected via JS -->
+    </div>
+    <div style="margin-top:25px; text-align:right; display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn-primary" onclick="document.getElementById('driver-briefing-modal').style.display='none'" style="width:auto; padding:10px 24px; border-radius:12px; font-weight:bold;">Acknowledge Briefing</button>
     </div>
 </div>
 

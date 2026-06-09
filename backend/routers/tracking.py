@@ -1033,10 +1033,156 @@ def track_shipment(shipment_id: str):
         legs = [s for s in all_ships if s and s.get("parent_id") == shipment_id]
         legs.sort(key=lambda x: x.get("leg_order", 0))
     
+    # Check if AI keys are configured for this company or fallback
+    company_id = shipment.get("company_id")
+    ai_configured = False
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+    if not api_keys or not any(k.strip() and not k.strip().startswith("YOUR_") and len(k.strip()) > 10 for k in api_keys.split(",")):
+        cfg = JSONDatabase("config").get_by_id("test_company") or JSONDatabase("config").get_by_id("default")
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+    valid_keys = [k.strip() for k in api_keys.split(",") if k.strip() and not k.strip().startswith("YOUR_") and len(k.strip()) > 10] if api_keys else []
+    if valid_keys:
+        ai_configured = True
+
     return {
         "shipment": shipment,
         "alerts": active_alerts,
         "dynamic_eta": dynamic_eta,
         "legs": legs,
-        "vehicle_type": v_type.lower()
+        "vehicle_type": v_type.lower(),
+        "ai_configured": ai_configured
     }
+
+
+@router.post("/{shipment_id}/chat")
+def track_shipment_chat(shipment_id: str, payload: dict):
+    shipment = shipments_db.get_by_id(shipment_id)
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+        
+    company_id = shipment.get("company_id")
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    # Fallback to test_company or default if not configured at company level
+    if not api_keys or not any(k.strip() and not k.strip().startswith("YOUR_") and len(k.strip()) > 10 for k in api_keys.split(",")):
+        cfg = JSONDatabase("config").get_by_id("test_company") or JSONDatabase("config").get_by_id("default")
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+            
+    # Check if we have any valid keys
+    valid_keys = [k.strip() for k in api_keys.split(",") if k.strip() and not k.strip().startswith("YOUR_") and len(k.strip()) > 10] if api_keys else []
+    if not valid_keys:
+        raise HTTPException(status_code=400, detail="Google Gemini API Key is not configured in System Settings.")
+
+    from backend.services.route_engine import predict_weather_impact, calculate_dynamic_eta, haversine
+    from backend.database import JSONDatabase
+    
+    drivers_db = JSONDatabase("drivers")
+    vehicles_db = JSONDatabase("vehicles")
+    
+    weather = predict_weather_impact(shipment["pickup"]["lat"], shipment["pickup"]["lng"])
+    fatigue = 0
+    health = 100
+    v_type = "van"
+    driver_name = "N/A"
+    
+    if shipment.get("assigned_driver_id"):
+        driver = drivers_db.get_by_id(shipment["assigned_driver_id"])
+        if driver:
+            driver_name = driver.get("name", "N/A")
+            fatigue = driver.get("fatigue_score", 0)
+            if driver.get("assigned_vehicle_id"):
+                vehicle = vehicles_db.get_by_id(driver["assigned_vehicle_id"])
+                if vehicle:
+                    health = vehicle.get("vehicle_health_score", 100)
+                    v_type = vehicle["type"]
+    
+    dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
+    dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
+    
+    from datetime import datetime, timedelta
+    from backend.services.time_utils import snap_eta_to_business_hours
+    
+    arrival_time_str = shipment.get("expected_delivery")
+    if shipment.get("expected_delivery"):
+        try:
+            eta_str = shipment["expected_delivery"].replace('Z', '+00:00')
+            original_eta = datetime.fromisoformat(eta_str)
+            adjusted_eta = original_eta + timedelta(minutes=dynamic_eta["delay_mins"])
+            snapped_eta = snap_eta_to_business_hours(adjusted_eta)
+            arrival_time_str = snapped_eta.strftime('%Y-%m-%d %I:%M %p')
+        except Exception:
+            pass
+
+    # Format readable expected delivery or status
+    if shipment.get("status") == "delivered":
+        arrival_status = "Delivered successfully"
+    else:
+        arrival_status = f"Estimated arrival date & time: {arrival_time_str}"
+        if dynamic_eta.get("delay_mins", 0) > 0:
+            arrival_status += f" (delayed by {dynamic_eta['delay_mins']} mins due to weather: {dynamic_eta.get('weather', 'N/A')})"
+        elif dynamic_eta.get("delay_mins", 0) < 0:
+            arrival_status += f" (running early by {abs(dynamic_eta['delay_mins'])} mins)"
+        else:
+            arrival_status += " (on time)"
+
+    all_alerts = alerts_db.get_all()
+    active_alerts = [a for a in all_alerts if a and a.get("shipment_id") == shipment_id and a.get("status") == "active"]
+    
+    legs = []
+    if shipment.get("status") == "split" or shipment.get("route_type") == "multi-leg":
+        all_ships = shipments_db.get_all()
+        legs = [s for s in all_ships if s and s.get("parent_id") == shipment_id]
+        legs.sort(key=lambda x: x.get("leg_order", 0))
+
+    system_instruction = (
+        "You are Logistix Customer Support AI, a polite, professional, and reassuring assistant. "
+        "Your task is to answer customer questions about their shipment using ONLY the live details provided below. "
+        "Do not make up or hallucinate details. Keep your answers friendly, clear, and very concise (maximum 3 sentences or bullet points).\n"
+        "CRITICAL: If the customer asks when their package will arrive, always quote the exact date and estimated time of arrival (ETA) provided in the LIVE DETAILS.\n\n"
+        "LIVE DETAILS:\n"
+        f"- Order ID: {shipment_id}\n"
+        f"- Item: {shipment.get('description')}\n"
+        f"- Current Status: {shipment.get('status').upper()}\n"
+        f"- Pickup Location: {shipment.get('pickup', {}).get('address', 'N/A')}\n"
+        f"- Drop Location: {shipment.get('drop', {}).get('address', 'N/A')}\n"
+        f"- Transit Progress: {arrival_status}\n"
+        f"- Assigned Vehicle: {v_type} (Fleet Health: {health}%)\n"
+        f"- Driver Name: {driver_name} (details are confidential but driver is fully certified)\n"
+        f"- Payment Status: {shipment.get('payment_status').upper()} (Amount Due: ₹ {shipment.get('finance', {}).get('suggested_price', 0)})\n"
+        f"- Active Alerts: {[a.get('description') for a in active_alerts]}\n"
+        f"- Journey Legs: {[f'Leg {l.get(\"leg_order\")}: {l.get(\"status\")}' for l in legs]}\n"
+    )
+    
+    user_msg = payload.get("message", "")
+    history = payload.get("history", [])
+    
+    prompt_parts = []
+    for turn in history:
+        role = turn.get("role", "user")
+        text = turn.get("text", "")
+        if role == "user":
+            prompt_parts.append(f"Customer: {text}")
+        else:
+            prompt_parts.append(f"AI: {text}")
+    prompt_parts.append(f"Customer: {user_msg}\nAI:")
+    
+    prompt = "\n".join(prompt_parts)
+    
+    from backend.services.gemini_service import call_gemini
+    try:
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    return {"response": response_text}
+
