@@ -3393,8 +3393,47 @@ function checkGeofenceArrival(driverLat, driverLng, stops) {
     }
 }
 
-// Weather Strip Update Helper
-function updateWeatherStrip(stops) {
+// Weather Strip Update Helper — powered by Open-Meteo (free, no key)
+const _WMO_ICONS = {
+    0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+    45: '🌫️', 48: '🌫️',
+    51: '🌦️', 53: '🌦️', 55: '🌧️',
+    61: '🌧️', 63: '🌧️', 65: '🌧️',
+    71: '🌨️', 73: '🌨️', 75: '❄️',
+    80: '🌦️', 81: '🌧️', 82: '⛈️',
+    95: '⛈️', 96: '⛈️', 99: '⛈️',
+};
+const _WMO_TEXT = {
+    0: 'Clear sky — ideal driving conditions.',
+    1: 'Mainly clear — good visibility.',
+    2: 'Partly cloudy along the route.',
+    3: 'Overcast — keep lights on.',
+    45: 'Fog alert: Reduced visibility. Use low beams.',
+    48: 'Dense fog: Drive slowly, hazards on.',
+    51: 'Light drizzle — roads may be slippery.',
+    53: 'Drizzle — reduce speed, increase following distance.',
+    55: 'Heavy drizzle — exercise caution.',
+    61: 'Rain alert: Wet roads, slow down.',
+    63: 'Moderate rain — drive carefully.',
+    65: 'Heavy rain alert: Reduce speed significantly.',
+    71: 'Light snow — watch for slippery patches.',
+    80: 'Rain showers along route — intermittent.',
+    81: 'Moderate rain showers — stay alert.',
+    82: 'Violent showers ⚠️ — consider halting.',
+    95: 'Thunderstorm ⚠️ — avoid open roads.',
+    96: 'Thunderstorm with hail — seek shelter.',
+    99: 'Severe storm ⚠️ — ground vehicle if unsafe.',
+};
+const _WMO_BG = {
+    0: 'rgba(15,23,42,0.85)', 1: 'rgba(15,23,42,0.85)', 2: 'rgba(30,30,60,0.85)', 3: 'rgba(30,30,60,0.85)',
+    45: 'rgba(245,158,11,0.18)', 48: 'rgba(245,158,11,0.25)',
+    51: 'rgba(49,130,206,0.18)', 53: 'rgba(49,130,206,0.22)', 55: 'rgba(49,130,206,0.28)',
+    61: 'rgba(49,130,206,0.20)', 63: 'rgba(49,130,206,0.25)', 65: 'rgba(49,130,206,0.30)',
+    80: 'rgba(49,130,206,0.18)', 81: 'rgba(49,130,206,0.25)', 82: 'rgba(229,62,62,0.22)',
+    95: 'rgba(229,62,62,0.22)', 96: 'rgba(229,62,62,0.28)', 99: 'rgba(229,62,62,0.35)',
+};
+
+async function updateWeatherStrip(stops) {
     const strip = document.getElementById('route-weather-strip');
     const iconEl = document.getElementById('weather-icon');
     const textEl = document.getElementById('weather-text');
@@ -3405,30 +3444,62 @@ function updateWeatherStrip(stops) {
         return;
     }
     
-    const s = stops[0].shipment;
-    const weather = (s.performance_stats && s.performance_stats.weather) || 'Clear';
-    
     strip.style.display = 'flex';
     
-    const weatherInfo = {
-        'Clear': { icon: '☀️', text: 'Clear weather along the route.', bg: 'rgba(15, 23, 42, 0.85)', border: 'rgba(255,255,255,0.08)' },
-        'Rain': { icon: '🌧️', text: 'Rain alert: Drive carefully, roads may be wet.', bg: 'rgba(49, 130, 206, 0.2)', border: 'rgba(49, 130, 206, 0.4)' },
-        'Storm': { icon: '⛈️', text: 'Severe storm alert: Heavy rain and wind. Ground vehicles if unsafe.', bg: 'rgba(229, 62, 62, 0.2)', border: 'rgba(229, 62, 62, 0.4)' },
-        'Fog': { icon: '🌫️', text: 'Fog alert: Reduced visibility. Keep hazard lights active.', bg: 'rgba(245, 158, 11, 0.2)', border: 'rgba(245, 158, 11, 0.4)' }
-    };
+    // Use driver's current GPS if available, else use shipment pickup location
+    let lat = window.lastLat;
+    let lng = window.lastLng;
+    if (!lat && marker) { lat = marker.getLatLng().lat; lng = marker.getLatLng().lng; }
+    if (!lat) { lat = 19.0760; lng = 72.8777; } // Mumbai default
     
-    const info = weatherInfo[weather] || weatherInfo['Clear'];
-    iconEl.innerText = info.icon;
-    textEl.innerText = info.text;
-    strip.style.background = info.bg;
-    strip.style.borderColor = info.border;
+    // Optimistic UI — show loading state immediately
+    if (iconEl) iconEl.innerText = '🌐';
+    if (textEl) textEl.innerText = 'Fetching live weather...';
+    if (tempEl) tempEl.innerText = '...';
     
-    if (weather === 'Clear') tempEl.innerText = '28°C';
-    else if (weather === 'Rain') tempEl.innerText = '22°C';
-    else if (weather === 'Storm') tempEl.innerText = '19°C';
-    else if (weather === 'Fog') tempEl.innerText = '15°C';
-    else tempEl.innerText = '25°C';
+    try {
+        const resp = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+            `&current=temperature_2m,weather_code,wind_speed_10m,apparent_temperature` +
+            `&timezone=auto`
+        );
+        if (resp.ok) {
+            const data = await resp.json();
+            const curr = data.current || {};
+            const code = curr.weather_code ?? 0;
+            const temp = curr.temperature_2m ?? '—';
+            const feels = curr.apparent_temperature ?? temp;
+            const wind = curr.wind_speed_10m ?? 0;
+            
+            if (iconEl) iconEl.innerText = _WMO_ICONS[code] || '🌡️';
+            if (textEl) textEl.innerText = `${_WMO_TEXT[code] || 'Current conditions.'} Wind: ${wind} km/h`;
+            if (tempEl) tempEl.innerText = `${temp}°C`;
+            strip.style.background = _WMO_BG[code] || 'rgba(15,23,42,0.85)';
+            
+            // Colour-code border for severity
+            if (code >= 95) strip.style.borderColor = 'rgba(229,62,62,0.6)';
+            else if (code >= 61 || code === 45 || code === 48) strip.style.borderColor = 'rgba(245,158,11,0.5)';
+            else strip.style.borderColor = 'rgba(255,255,255,0.08)';
+        } else {
+            throw new Error('Open-Meteo unavailable');
+        }
+    } catch(e) {
+        // Fallback to shipment field if API fails
+        const s = stops[0]?.shipment;
+        const weather = (s?.performance_stats && s.performance_stats.weather) || 'Clear';
+        const fallback = {
+            'Clear': { icon: '☀️', text: 'Clear weather along the route.' },
+            'Rain':  { icon: '🌧️', text: 'Rain alert: Drive carefully.' },
+            'Storm': { icon: '⛈️', text: 'Storm alert: Exercise caution.' },
+            'Fog':   { icon: '🌫️', text: 'Fog: Reduced visibility.' },
+        };
+        const info = fallback[weather] || fallback['Clear'];
+        if (iconEl) iconEl.innerText = info.icon;
+        if (textEl) textEl.innerText = info.text;
+        if (tempEl) tempEl.innerText = '—°C';
+    }
 }
+
 
 window.toggleHUDMirror = function() {
     const activeTab = document.getElementById('active-tab');

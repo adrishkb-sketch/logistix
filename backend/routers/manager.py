@@ -2588,6 +2588,30 @@ def manager_demand_forecast(data: dict, x_logistix_context: Optional[str] = Head
     total_weight = sum([float(s.get("weight", 0.0) or 0.0) for s in inbound_ships])
     avg_weight = total_weight / total_inbound if total_inbound > 0 else 0.0
     
+    # ── Upcoming Indian public holidays (Nager.Date, free, no key) ────────────
+    from datetime import date
+    holiday_context = ""
+    try:
+        import requests as http_req
+        year = date.today().year
+        hol_resp = http_req.get(
+            f"https://date.nager.at/api/v3/PublicHolidays/{year}/IN",
+            timeout=5
+        )
+        if hol_resp.status_code == 200:
+            holidays = hol_resp.json()
+            today = date.today()
+            upcoming = []
+            for h in holidays:
+                hdate = date.fromisoformat(h["date"])
+                delta = (hdate - today).days
+                if 0 <= delta <= 14:
+                    upcoming.append(f"{h['localName'] or h['name']} ({hdate.strftime('%d %b')}, {delta} days away)")
+            if upcoming:
+                holiday_context = f"\n- Upcoming Indian Public Holidays (next 14 days): {'; '.join(upcoming)}"
+    except Exception:
+        pass
+    
     prompt = (
         f"Perform an AI Shipment Demand Forecast for hub '{wh.get('name', 'Unknown Hub')}' with the following parameters:\n"
         f"- Active Inbound Shipments: {total_inbound}\n"
@@ -2595,19 +2619,22 @@ def manager_demand_forecast(data: dict, x_logistix_context: Optional[str] = Head
         f"- Cold-Chain (Temperature-Controlled) Shipments: {cold_chain_count}\n"
         f"- High-Value Shipments (>₹1,00,000): {high_value_inbound}\n"
         f"- Available Hub Drivers: {len(local_drivers)}\n"
-        f"- Available Hub Vehicles: {len(local_vehicles)}\n\n"
+        f"- Available Hub Vehicles: {len(local_vehicles)}"
+        f"{holiday_context}\n\n"
         f"Based on this, generate a predictive demand forecast. Provide sections: 'Predictive Volume Forecast', "
         f"'Predicted Peak Hours & Bottlenecks', 'Driver Resource Needs', and 'Actionable Operational Recommendations'. "
+        f"If any public holidays are approaching, factor in expected demand surges (e.g., festive season shipments, pre-holiday surges). "
         f"Output in clean, structured Markdown, formatted beautifully for a manager."
     )
     
-    system_instruction = "You are a senior logistics resource planner and demand forecasting expert. Output a clean markdown forecast report. Keep it concise, professional, and under 250 words."
+    system_instruction = "You are a senior logistics resource planner and demand forecasting expert for India. Output a clean markdown forecast report. Keep it concise, professional, and under 280 words."
     from backend.services.gemini_service import call_gemini
     try:
         response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"report": response_text}
+
 
 @router.post("/ai/fatigue-report")
 def manager_fatigue_report(data: dict, x_logistix_context: Optional[str] = Header(None)):
@@ -2706,33 +2733,97 @@ def manager_daily_briefing(data: dict, x_logistix_context: Optional[str] = Heade
     local_drivers = drivers_db.get_filtered({"base_warehouse_id": warehouse_id})
     local_vehicles = vehicles_db.get_filtered({"base_warehouse_id": warehouse_id})
     
-    weather_cells = weather_db.get_all()
-    active_weather_conditions = [w.get("condition") or w.get("type") or "Storm" for w in weather_cells if w]
-    weather_summary = ", ".join(list(set(active_weather_conditions))) if active_weather_conditions else "No major active weather disturbances"
-    
     total_drivers = len(local_drivers)
     active_drivers = len([d for d in local_drivers if d.get("is_on_duty", False)])
     healthy_vehicles = len([v for v in local_vehicles if v.get("vehicle_health_score", 100.0) >= 80.0])
     
+    # ── Real weather via Open-Meteo (free, no key) ────────────────────────────
+    wh_lat = wh.get("lat", 20.5937)
+    wh_lng = wh.get("lng", 78.9629)
+    weather_summary = "Weather data unavailable"
+    try:
+        import requests as http_req
+        wmo_labels = {
+            0: "Clear sky ☀️", 1: "Mainly clear 🌤️", 2: "Partly cloudy ⛅", 3: "Overcast ☁️",
+            45: "Foggy 🌫️", 48: "Dense fog 🌫️",
+            51: "Light drizzle 🌦️", 53: "Drizzle 🌦️", 55: "Heavy drizzle 🌧️",
+            61: "Light rain 🌧️", 63: "Moderate rain 🌧️", 65: "Heavy rain 🌧️",
+            71: "Light snow 🌨️", 73: "Moderate snow 🌨️", 75: "Heavy snow ❄️",
+            80: "Rain showers 🌦️", 81: "Moderate showers 🌧️", 82: "Violent showers ⛈️",
+            95: "Thunderstorm ⛈️", 96: "Thunderstorm with hail ⛈️", 99: "Severe thunderstorm ⛈️",
+        }
+        wx_resp = http_req.get(
+            f"https://api.open-meteo.com/v1/forecast?latitude={wh_lat}&longitude={wh_lng}"
+            f"&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,precipitation"
+            f"&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code"
+            f"&timezone=auto&forecast_days=2",
+            timeout=6
+        )
+        if wx_resp.status_code == 200:
+            wx = wx_resp.json()
+            curr = wx.get("current", {})
+            daily = wx.get("daily", {})
+            code = curr.get("weather_code", 0)
+            temp = curr.get("temperature_2m", "N/A")
+            wind = curr.get("wind_speed_10m", 0)
+            humidity = curr.get("relative_humidity_2m", 0)
+            rain = curr.get("precipitation", 0)
+            tomorrow_code = daily.get("weather_code", [0, 0])[1] if daily.get("weather_code") else 0
+            tomorrow_max = daily.get("temperature_2m_max", [0, 0])[1] if daily.get("temperature_2m_max") else "N/A"
+            tomorrow_rain = daily.get("precipitation_sum", [0, 0])[1] if daily.get("precipitation_sum") else 0
+            weather_summary = (
+                f"Current: {wmo_labels.get(code, 'Clear')} | Temp: {temp}°C | Wind: {wind} km/h | Humidity: {humidity}% | Precipitation: {rain}mm. "
+                f"Tomorrow forecast: {wmo_labels.get(tomorrow_code, 'Clear')} | Max Temp: {tomorrow_max}°C | Expected Rainfall: {tomorrow_rain}mm"
+            )
+    except Exception:
+        weather_summary = "Live weather unavailable — check local forecast"
+    
+    # ── Upcoming Indian public holidays via Nager.Date (free, no key) ─────────
+    from datetime import date, timedelta
+    holiday_alert = ""
+    try:
+        import requests as http_req
+        year = date.today().year
+        hol_resp = http_req.get(
+            f"https://date.nager.at/api/v3/PublicHolidays/{year}/IN",
+            timeout=5
+        )
+        if hol_resp.status_code == 200:
+            holidays = hol_resp.json()
+            today = date.today()
+            upcoming = []
+            for h in holidays:
+                hdate = date.fromisoformat(h["date"])
+                delta = (hdate - today).days
+                if 0 <= delta <= 7:
+                    upcoming.append(f"{h['localName'] or h['name']} on {hdate.strftime('%d %b')} ({delta} day{'s' if delta != 1 else ''} away)")
+            if upcoming:
+                holiday_alert = f"\n- Upcoming Indian Public Holidays (next 7 days): {'; '.join(upcoming)}"
+    except Exception:
+        pass
+    
     prompt = (
-        f"Perform a Morning Operational AI Daily Briefing for hub '{wh.get('name', 'Unknown Hub')}' with the following parameters:\n"
+        f"Perform a Morning Operational AI Daily Briefing for hub '{wh.get('name', 'Unknown Hub')}' with the following live data:\n"
         f"- Inbound Backlog Shipments: {len(inbound_ships)}\n"
         f"- Outbound Backlog Shipments: {len(outbound_ships)}\n"
-        f"- Regional Weather Summary: {weather_summary}\n"
+        f"- Live Hub Weather (Open-Meteo): {weather_summary}\n"
         f"- Fleet Readiness: {active_drivers}/{total_drivers} drivers on-duty\n"
-        f"- Operational Vehicles: {healthy_vehicles}/{len(local_vehicles)} (>=80% health score)\n\n"
+        f"- Operational Vehicles: {healthy_vehicles}/{len(local_vehicles)} (>=80% health score)"
+        f"{holiday_alert}\n\n"
         f"Generate a daily morning briefing report for the depot manager. Include sections: 'Operational Weather Alert', "
         f"'Backlog & Congestion Status', 'Fleet Readiness Indicator', and 'Top Priority Action Items for Today'. "
+        f"If a public holiday is approaching, flag it as a demand surge alert in the action items. "
         f"Output in clean, structured Markdown, formatted beautifully for a manager."
     )
     
-    system_instruction = "You are a senior logistics operations director. Output a professional operational morning briefing in clean markdown. Keep it under 250 words."
+    system_instruction = "You are a senior logistics operations director. Output a professional operational morning briefing in clean markdown. Keep it under 300 words."
     from backend.services.gemini_service import call_gemini
     try:
         response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"report": response_text}
+
 
 
 @router.post("/ai/fleet-audit")

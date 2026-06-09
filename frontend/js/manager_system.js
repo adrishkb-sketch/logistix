@@ -58,8 +58,8 @@ async function addGeminiKey() {
     const btn = document.getElementById('add-key-btn');
     const newKey = (input?.value || '').trim();
 
-    if (!newKey || !newKey.startsWith('AIza')) {
-        showToast('Please enter a valid Gemini API key (starts with AIzaSy...)', 'error');
+    if (!newKey || newKey.length < 10 || newKey.startsWith('YOUR_')) {
+        showToast('Please enter a valid Gemini API key.', 'error');
         return;
     }
 

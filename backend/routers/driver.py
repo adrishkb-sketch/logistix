@@ -93,47 +93,94 @@ def get_rest_stops(lat: float, lng: float):
 
 @router.get("/nearby-pois")
 def get_nearby_pois(lat: float, lng: float, types: str):
+    import requests as http_req
     # types is comma-separated e.g. "fuel,food,mechanic,rest"
     type_list = [t.strip().lower() for t in types.split(",")]
-    pois = []
     
-    # Seeds for realistic offsets and names
-    poi_data = {
-        "fuel": [
-            {"name": "Highway Fuel Station", "offset_lat": 0.008, "offset_lng": -0.012, "desc": "⛽ 24/7 CNG/Diesel, Air pump"},
-            {"name": "IndianOil Plaza", "offset_lat": -0.015, "offset_lng": 0.007, "desc": "⛽ Refueling, Clean restrooms"},
-            {"name": "HP Petrol Pump", "offset_lat": 0.022, "offset_lng": 0.018, "desc": "⛽ Card payments accepted"}
-        ],
-        "food": [
-            {"name": "Sher-e-Punjab Dhaba", "offset_lat": -0.009, "offset_lng": 0.015, "desc": "🍔 Hot meals, Tea & Coffee"},
-            {"name": "Highway Express Food Court", "offset_lat": 0.014, "offset_lng": -0.022, "desc": "🍔 Multi-cuisine dining"},
-            {"name": "Chai & Snacks Corner", "offset_lat": -0.021, "offset_lng": -0.011, "desc": "☕ Quick bites, Snacks"}
-        ],
-        "mechanic": [
-            {"name": "National Truck Repair & Spares", "offset_lat": 0.019, "offset_lng": -0.005, "desc": "🔧 Engine & tire repair"},
-            {"name": "QuickFix Auto Clinic", "offset_lat": -0.011, "offset_lng": -0.019, "desc": "🔧 Hydraulic system specialists"},
-            {"name": "24/7 Breakdown Assistance", "offset_lat": 0.028, "offset_lng": 0.009, "desc": "🔧 Towing, puncture repairs"}
-        ],
-        "rest": [
-            {"name": "Highway Comfort Inn", "offset_lat": 0.012, "offset_lng": 0.012, "desc": "🛏️ Rooms, Showers, Parking"},
-            {"name": "Sovereign Rest House", "offset_lat": -0.018, "offset_lng": 0.024, "desc": "🛏️ Quiet rooms, AC lounge"},
-            {"name": "Zen Haven Rest Stop", "offset_lat": 0.015, "offset_lng": 0.01, "desc": "🛏️ Sleep pods, cafe, showers"}
-        ]
+    # Map our types to Overpass OSM amenity tags
+    osm_tag_queries = {
+        "fuel":     '["amenity"="fuel"]',
+        "food":     '["amenity"~"^(restaurant|fast_food|cafe)$"]',
+        "mechanic": '["shop"="car_repair"]',
+        "rest":     '["tourism"~"^(hotel|motel|guest_house)$"]',
+    }
+    type_icon_map = {
+        "fuel": "⛽", "food": "🍔", "mechanic": "🔧", "rest": "🛏️",
+    }
+    type_desc_default = {
+        "fuel": "Diesel & CNG available",
+        "food": "Hot meals & snacks",
+        "mechanic": "Engine & tyre repair",
+        "rest": "Rooms & parking available",
     }
     
-    for t in type_list:
-        if t in poi_data:
-            for item in poi_data[t]:
-                pois.append({
-                    "name": item["name"],
-                    "lat": lat + item["offset_lat"],
-                    "lng": lng + item["offset_lng"],
-                    "type": t,
-                    "desc": item["desc"],
-                    "is_open": True
-                })
+    pois = []
+    radius = 5000  # 5 km
+    
+    for poi_type in type_list:
+        if poi_type not in osm_tag_queries:
+            continue
+        tag = osm_tag_queries[poi_type]
+        query = f"[out:json][timeout:8];node{tag}(around:{radius},{lat},{lng});out body 4;"
+        try:
+            resp = http_req.post(
+                "https://overpass-api.de/api/interpreter",
+                data={"data": query},
+                timeout=8
+            )
+            elements = []
+            if resp.status_code == 200:
+                elements = resp.json().get("elements", [])
+            
+            for el in elements[:3]:
+                tags = el.get("tags", {})
+                name = (
+                    tags.get("name:en") or tags.get("name") or
+                    tags.get("brand") or
+                    f"{type_icon_map.get(poi_type, '📍')} Nearby {poi_type.capitalize()}"
+                )
+                opening_hours = tags.get("opening_hours", "")
+                cuisine = tags.get("cuisine", "")
+                desc_parts = []
+                if opening_hours:
+                    desc_parts.append(f"Open: {opening_hours[:25]}")
+                if cuisine and poi_type == "food":
+                    desc_parts.append(cuisine.replace(";", ", ").title())
+                if not desc_parts:
+                    desc_parts.append(type_desc_default.get(poi_type, "Verified on OpenStreetMap"))
                 
+                pois.append({
+                    "name": name,
+                    "lat": el.get("lat", lat),
+                    "lng": el.get("lon", lng),
+                    "type": poi_type,
+                    "desc": f"{type_icon_map.get(poi_type, '📍')} {' · '.join(desc_parts)}",
+                    "is_open": True,
+                    "source": "openstreetmap"
+                })
+        except Exception:
+            pass  # Silently skip if Overpass unreachable
+        
+        # Always guarantee at least one result per type
+        if not any(p["type"] == poi_type for p in pois):
+            fallback_names = {
+                "fuel": "Fuel Station (Near Route)",
+                "food": "Dhaba / Restaurant (Near Route)",
+                "mechanic": "Auto Repair Shop (Near Route)",
+                "rest": "Rest Stop / Hotel (Near Route)",
+            }
+            pois.append({
+                "name": fallback_names.get(poi_type, "Nearby Service"),
+                "lat": lat + (0.01 * (len(pois) + 1)),
+                "lng": lng + (0.008 * (len(pois) + 1)),
+                "type": poi_type,
+                "desc": f"{type_icon_map.get(poi_type, '📍')} Approximate — verify before visiting",
+                "is_open": True,
+                "source": "fallback"
+            })
+    
     return pois
+
 
 @router.post("/{driver_id}/zen")
 def toggle_zen(driver_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
@@ -1990,16 +2037,44 @@ def driver_ai_smart_reroute(driver_id: str, data: dict, x_logistix_context: Opti
     dest_lng = data.get("dest_lng")
     
     weather_cond = "Clear"
-    traffic_level = "Heavy Congestion"
+    traffic_level = "Moderate Traffic"
     if lat and lng:
         try:
-            from backend.services.route_engine import predict_weather_impact, simulate_traffic
-            weather = predict_weather_impact(lat, lng)
-            traffic = simulate_traffic(lat, lng)
-            weather_cond = weather.get("condition", "Clear")
-            traffic_level = traffic.get("level", "Heavy")
+            import requests as http_req
+            wmo_code_map = {
+                0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+                45: "Fog", 48: "Freezing fog",
+                51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+                61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
+                71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
+                80: "Rain showers", 81: "Moderate showers", 82: "Violent showers",
+                95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Severe thunderstorm",
+            }
+            wx_resp = http_req.get(
+                f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}"
+                f"&current=temperature_2m,weather_code,wind_speed_10m,precipitation"
+                f"&timezone=auto",
+                timeout=5
+            )
+            if wx_resp.status_code == 200:
+                current = wx_resp.json().get("current", {})
+                code = current.get("weather_code", 0)
+                temp = current.get("temperature_2m", 28)
+                wind = current.get("wind_speed_10m", 0)
+                rain = current.get("precipitation", 0)
+                weather_cond = wmo_code_map.get(code, "Clear sky")
+                if rain > 5 or code >= 80:
+                    traffic_level = "Heavy congestion due to rain"
+                elif wind > 40:
+                    traffic_level = "Difficult conditions — high wind"
+                elif code >= 45:
+                    traffic_level = "Reduced visibility — foggy roads"
+                else:
+                    traffic_level = "Normal traffic conditions"
+                weather_cond = f"{weather_cond} ({temp}°C, wind {wind} km/h)"
         except Exception:
             pass
+
             
     prompt = (
         f"Generate a Smart AI Rerouting recommendation for Driver '{driver.get('name')}' who is currently stuck in traffic/weather:\n"
