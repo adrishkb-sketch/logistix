@@ -1136,6 +1136,20 @@ def _perform_assignment(shipment_id: str, driver_id: Optional[str], vehicle_id: 
     old_vehicle_id = shipment.get("assigned_vehicle_id")
     if old_driver_id and old_driver_id != driver_id:
         JSONDatabase("drivers").update(old_driver_id, {"status": "available", "current_shipment_id": None})
+        # Send system notification message to the unassigned driver
+        try:
+            from datetime import datetime
+            msg_content = f"🚨 Shipment #{shipment_id[:8]} has been reassigned to an autonomous drone for priority delivery. You are now free for new tasks."
+            JSONDatabase("messages").insert({
+                "sender_id": "SYSTEM",
+                "receiver_id": old_driver_id,
+                "content": msg_content,
+                "company_id": shipment.get("company_id"),
+                "created_at": datetime.utcnow().isoformat() + "Z"
+            })
+        except Exception as e:
+            print(f"[Driver Notification Alert] Failed to send chat notification: {e}")
+            
     if old_vehicle_id and old_vehicle_id != vehicle_id:
         JSONDatabase("vehicles").update(old_vehicle_id, {"status": "available"})
 

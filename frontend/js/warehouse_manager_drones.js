@@ -141,13 +141,36 @@ async function loadPendingShipments() {
             return s.pickup_warehouse_id === whId && (s.status === 'pending' || s.status === 'assigned');
         });
         
+        // Sort shipments: urgent/overdue first
+        globalShipments.sort((a, b) => {
+            const timeA = a.expected_delivery ? Date.parse(a.expected_delivery) : Infinity;
+            const timeB = b.expected_delivery ? Date.parse(b.expected_delivery) : Infinity;
+            return timeA - timeB;
+        });
+        
         const shipSelect = document.getElementById('dispatch-shipment-select');
         shipSelect.innerHTML = '<option value="">Select final-leg shipment</option>';
         
         globalShipments.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.id;
-            opt.innerText = `📦 #${s.id.substring(0,8)} - ${s.description} (${s.weight}kg) -> ${s.drop?.name || 'Local Destination'}`;
+            
+            let deadlineStr = "";
+            let prefix = "📦";
+            if (s.expected_delivery) {
+                const msDiff = Date.parse(s.expected_delivery) - Date.now();
+                const hoursLeft = msDiff / (1000 * 60 * 60);
+                if (hoursLeft < 0) {
+                    deadlineStr = ` [🚨 OVERDUE by ${Math.abs(hoursLeft).toFixed(1)}h]`;
+                    prefix = "🚨 [URGENT]";
+                } else if (hoursLeft <= 12) {
+                    deadlineStr = ` [⚠️ Due in ${hoursLeft.toFixed(1)}h]`;
+                    prefix = "⚠️ [PRIORITY]";
+                } else {
+                    deadlineStr = ` [Due in ${hoursLeft.toFixed(1)}h]`;
+                }
+            }
+            opt.innerText = `${prefix} #${s.id.substring(0,8)} - ${s.description} (${s.weight}kg)${deadlineStr} -> ${s.drop?.name || 'Local Destination'}`;
             shipSelect.appendChild(opt);
         });
     } catch(e) {
@@ -208,9 +231,9 @@ async function dispatchDroneDelivery() {
     try {
         // Mark shipment as in_transit and drone as in_flight
         await apiCall(`/manager/drones/${droneId}`, 'PUT', { status: "in_flight", battery: 95 });
-        await apiCall(`/manager/shipments/${shipmentId}/assign-manual`, 'POST', {
-            assigned_driver_id: null,
-            assigned_vehicle_id: drone.id
+        await apiCall(`/shipments/${shipmentId}/assign`, 'POST', {
+            driver_id: null,
+            vehicle_id: drone.id
         });
         
         // Trigger flight animation on Leaflet map
