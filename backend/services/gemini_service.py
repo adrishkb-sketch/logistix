@@ -467,43 +467,52 @@ def call_gemini(prompt: str, system_instruction: Optional[str] = None, api_key: 
     
     # Try every key in the pool before giving up
     for key in shuffled_keys:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                res_data = response.json()
-                candidates = res_data.get("candidates", [])
-                if candidates:
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if parts:
-                        return parts[0].get("text", "")
-                raise ValueError(f"Failed to parse Gemini API response candidates: {response.text}")
-            
-            # Extract detailed error message from response JSON if possible
+        # Try candidate models to bypass key-specific deprecations (like 1.5 404s) and rate limits (like 2.0 429s)
+        models_to_try = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"]
+        
+        for model in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
             try:
-                err_json = response.json()
-                err_msg = err_json.get("error", {}).get("message", response.text)
-            except:
-                err_msg = response.text
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
                 
-            if response.status_code == 429:
-                # Rate limited — try next key
-                last_error = f"Key ending ...{key[-6:]} hit rate limit (429): {err_msg}"
-                continue
-            
-            elif response.status_code in (401, 403):
-                # Invalid key — try next key
-                last_error = f"Key ending ...{key[-6:]} is invalid or unauthorized ({response.status_code}): {err_msg}"
-                continue
-            
-            else:
-                last_error = f"Gemini API returned error {response.status_code}: {err_msg}"
-                continue
+                if response.status_code == 200:
+                    res_data = response.json()
+                    candidates = res_data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts:
+                            return parts[0].get("text", "")
+                    raise ValueError(f"Failed to parse Gemini API response candidates: {response.text}")
                 
-        except Exception as e:
-            last_error = f"Connection error with key ...{key[-6:]}: {str(e)}"
-            continue
+                # Extract detailed error message from response JSON if possible
+                try:
+                    err_json = response.json()
+                    err_msg = err_json.get("error", {}).get("message", response.text)
+                except:
+                    err_msg = response.text
+                    
+                if response.status_code == 404:
+                    # Model not found or deprecated for this key - try next model candidate
+                    last_error = f"Model {model} on key ...{key[-6:]} not found/supported (404): {err_msg}"
+                    continue
+                    
+                elif response.status_code == 429:
+                    # Quota/rate limits exceeded for this model - try next model candidate on same key
+                    last_error = f"Model {model} on key ...{key[-6:]} hit rate limit (429): {err_msg}"
+                    continue
+                
+                elif response.status_code in (401, 403):
+                    # Key is completely invalid or unauthorized - try next key
+                    last_error = f"Key ending ...{key[-6:]} is invalid or unauthorized ({response.status_code}): {err_msg}"
+                    break
+                
+                else:
+                    last_error = f"Gemini API returned error {response.status_code} for {model}: {err_msg}"
+                    continue
+                    
+            except Exception as e:
+                last_error = f"Connection error with model {model} on key ...{key[-6:]}: {str(e)}"
+                continue
     
     # All keys exhausted
     print(f"[Gemini Fail-Safe Warning] All keys failed. Last error: {last_error or 'Unknown error'}. Activating Fail-Safe Auto-Fallback.")
