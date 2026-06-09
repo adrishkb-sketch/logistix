@@ -71,17 +71,14 @@ def generate_random_shipment():
     return shipment_obj.dict()
 
 def main():
-    new_shipments = []
-    for _ in range(1000):
-        new_shipments.append(generate_random_shipment())
-    
-    # Load existing shipments
-    existing = shipments_db.get_all()
-    existing.extend(new_shipments)
-    
-    # Write back
-    shipments_db.write(existing)
-    print(f"Successfully generated and inserted 1000 random shipments. Total shipments in db: {len(existing)}")
+    print("Generating and inserting 1000 random shipments...")
+    for i in range(1000):
+        shipment = generate_random_shipment()
+        shipments_db.insert(shipment)
+        if (i+1) % 100 == 0:
+            print(f"Inserted {i+1} shipments...")
+            
+    print("Done inserting 1000 shipments.")
 
 if __name__ == "__main__":
     main()
