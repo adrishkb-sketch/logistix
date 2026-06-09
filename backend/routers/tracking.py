@@ -976,10 +976,8 @@ def get_weather_at(lat: float, lng: float, company_id: str):
 def track_shipment(shipment_id: str):
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
-        # Avoid full scan if possible, but keep the prefix search if needed.
-        # However, for a single shipment, we should really just use get_by_id.
-        # If we MUST do a prefix search, let's at least not do it on every track call.
-        return shipment
+        all_ships = shipments_db.get_all()
+        shipment = next((s for s in all_ships if s and s.get("id", "").startswith(shipment_id)), None)
         
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")

@@ -349,6 +349,10 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     <div style="font-weight:bold;">${s.description}</div>
                     <div style="font-size:0.7rem; color:var(--text-muted); font-family:monospace;">${getTranslation('id_label')}: ${s.id.substring(0,8)}</div>
                     ${s.route_type === 'multi-leg' ? '<span style="font-size:0.65rem; color:var(--accent); font-weight:bold;">[HUB ROUTE]</span>' : ''}
+                    <div style="font-size:0.75rem; margin-top:5px; line-height:1.4;">
+                        <span style="color:var(--warning);">📅 Est. Pickup: ${s.pickup_deadline ? formatDate(s.pickup_deadline) : 'N/A'}</span><br>
+                        <span style="color:var(--success);">🏁 Est. Delivery: ${s.expected_delivery ? formatDate(s.expected_delivery) : 'N/A'}</span>
+                    </div>
                 </td>
                 <td>
                     <div style="width:80px; height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; margin-bottom:4px;">
@@ -425,7 +429,13 @@ function renderShipmentsTable(parents, legs, drivers, vehicles) {
                     }
 
                     lTr.innerHTML = `
-                        <td style="padding-left:30px; font-size:0.8rem; color:var(--text-muted);">↳ Leg ${leg.leg_order}: ${leg.description}</td>
+                        <td style="padding-left:30px; font-size:0.8rem; color:var(--text-muted);">
+                            <div>↳ Leg ${leg.leg_order}: ${leg.description}</div>
+                            <div style="font-size:0.7rem; margin-left:15px; margin-top:2px;">
+                                <span style="color:var(--warning);">📅 Est. Pickup: ${leg.pickup_deadline ? formatDate(leg.pickup_deadline) : 'N/A'}</span> | 
+                                <span style="color:var(--success);">🏁 Est. Delivery: ${leg.expected_delivery ? formatDate(leg.expected_delivery) : 'N/A'}</span>
+                            </div>
+                        </td>
                         <td>---</td>
                         <td>
                             <span class="status-pill status-${leg.status}" style="font-size:0.6rem;">${leg.status.toUpperCase()}</span>

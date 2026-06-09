@@ -3,7 +3,7 @@ from backend.models import ShipmentCreate, Shipment, Location, ShipmentEvent, Ma
 from backend.database import JSONDatabase
 from backend.services.assignment import auto_assign_shipment
 from backend.services.route_engine import calculate_route_type, haversine
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from pydantic import BaseModel
 import uuid
@@ -2089,7 +2089,16 @@ def _generate_legs(parent_shipment, leg_data):
     p_dict["delivery_code"] = d_code
     
     # Sequential Protocol Hardening: Next Pickup = Previous Drop + 5 Minutes Buffer
-    next_pivot_time = snap_eta_to_business_hours(datetime.utcnow())
+    created_at_str = parent_shipment.get("created_at")
+    if created_at_str:
+        try:
+            created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+        except Exception:
+            created_at = datetime.utcnow().replace(tzinfo=timezone.utc)
+    else:
+        created_at = datetime.utcnow().replace(tzinfo=timezone.utc)
+        
+    next_pivot_time = snap_eta_to_business_hours(created_at + timedelta(hours=1))
     new_ids = []
     
     suggested_price_sum = 0.0
@@ -2202,6 +2211,10 @@ def _generate_legs(parent_shipment, leg_data):
         "distance_km": round(distance_km_sum, 2)
     }
     
+    if legs_to_insert:
+        p_dict["pickup_deadline"] = legs_to_insert[0]["pickup_deadline"]
+        p_dict["expected_delivery"] = legs_to_insert[-1]["expected_delivery"]
+        
     # Save parent and insert all legs
     shipments_db.update(p_dict["id"], p_dict)
     for leg_data_dict in legs_to_insert:

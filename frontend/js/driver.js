@@ -1316,8 +1316,6 @@ async function loadMissions(autoStartNext = false) {
                             <h4 style="margin-bottom:5px; color:${dotColor}; opacity:${isLocked ? 0.5 : 1}">${actionText} ${isLocked ? `(${getTranslation('queued')})` : ''}</h4>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('shipment_label')}:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
                             
-                            ${actionBtn}
-                            
                             ${s.is_perishable ? `
                                 <div style="background:rgba(0,242,254,0.1); padding:10px; border-radius:8px; border:1px solid var(--primary); margin:10px 0;">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
@@ -1717,6 +1715,11 @@ async function drawMultiStopRoute(stops) {
         marker.addTo(map);
     }
     
+    // Fit bounds to stops and marker initially
+    const bounds = L.latLngBounds(stops.map(s => [s.lat, s.lng]));
+    if (marker) bounds.extend(marker.getLatLng());
+    map.fitBounds(bounds, { padding: [50, 50] });
+    
     stops.forEach((stop, idx) => {
         const isCurrent = idx === 0;
         const icon = stop.type === 'pickup' ? ICON_PICKUP : ICON_DROP;
@@ -1738,12 +1741,14 @@ async function drawMultiStopRoute(stops) {
     if (marker) {
         coordsString = `${marker.getLatLng().lng},${marker.getLatLng().lat};` + coordsString;
     }
-    
     try {
         const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson&steps=true`);
         const data = await res.json();
-        if(data.routes && data.routes[0]) {
+        if (data.routes && data.routes[0]) {
             routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            if (routeCoords.length > 0) {
+                map.fitBounds(L.polyline(routeCoords).getBounds(), { padding: [50, 50] });
+            }
             
             activeRoutePolylines.forEach(p => map.removeLayer(p));
             activeRoutePolylines = [];
@@ -1892,7 +1897,18 @@ function toggleFullscreen() {
             document.msExitFullscreen();
         }
     }
+    if (map) {
+        setTimeout(() => { if (map) map.invalidateSize(true); }, 150);
+        setTimeout(() => { if (map) map.invalidateSize(true); }, 500);
+    }
 }
+
+document.addEventListener('fullscreenchange', () => {
+    if (map) {
+        setTimeout(() => { if (map) map.invalidateSize(true); }, 150);
+        setTimeout(() => { if (map) map.invalidateSize(true); }, 500);
+    }
+});
 
 async function loadAlertsAndMessages() {
     try {

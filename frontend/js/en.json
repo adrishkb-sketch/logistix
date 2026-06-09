@@ -102,6 +102,7 @@
     "eta_success": "ETA Success Rate",
     "execute_actions": "Execute All Actions",
     "expected_delivery": "Expected Delivery",
+    "expected_pickup": "Expected Pickup",
     "fatigue_meter": "Fatigue Meter",
     "feature_cold_desc": "Predict spoilage using real-time environmental data.",
     "feature_cold_title": "Cold Chain Intelligence",

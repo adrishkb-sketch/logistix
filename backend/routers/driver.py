@@ -1771,7 +1771,8 @@ def request_funds(driver_id: str, data: dict):
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
         
-    if driver.get("status") not in ["assigned", "in_transit"]:
+    active_shipments = [s for s in shipments_db.get_filtered({"assigned_driver_id": driver_id}) if s and s.get("status") in ["in_transit", "assigned"]]
+    if not active_shipments:
         raise HTTPException(status_code=400, detail="You must be active on a route to request emergency funds.")
 
     amount = data.get("amount", 0)
