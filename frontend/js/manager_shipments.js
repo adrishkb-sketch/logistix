@@ -2393,12 +2393,7 @@ window.toggleVerificationCodesDisplay = function(btn) {
     }
 };
 
-window.toggleManualOverride = function() {
-    const el = document.getElementById('manual-override-controls');
-    if (el) {
-        el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    }
-};
+
 
 window.renderEslLedger = async function(s) {
     const lockAnim = document.getElementById('escrow-lock-anim');
@@ -2663,22 +2658,7 @@ window.openShipmentDetailModal = function(id) {
         </div>
     `;
 
-    // Collapsable manual override controls
-    contentHtml += `
-        <div id="manual-override-controls" style="display:none; margin-top:20px; padding:15px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px;">
-            <h4 style="margin:0 0 12px 0; font-size:0.85rem; color:var(--warning); font-weight:bold;">⚙️ Edit / Manual Override Controls</h4>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="btn-primary" style="background:#3182ce; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="openEditLegModal('${s.id}')">
-                    ✏️ Edit Leg Assignments
-                </button>
-                ${(s.status !== 'delivered' && s.status !== 'finalized') ? `
-                    <button class="btn-primary" style="background:var(--warning); color:#000; font-size:0.8rem; width:auto; padding:8px 16px;" onclick="managerManualVerify('${s.id}')">
-                        🔐 Manager OTP Override
-                    </button>
-                ` : ''}
-            </div>
-        </div>
-    `;
+
 
     if (s.route_type === 'multi-leg' || s.status === 'split') {
         const sLegs = globalShipments.filter(l => l.parent_id === s.id).sort((a,b) => a.leg_order - b.leg_order);
@@ -2802,9 +2782,6 @@ window.openShipmentDetailModal = function(id) {
         </button>
         <button class="btn-action-details" style="background:rgba(99,102,241,0.7);" onclick="generateShipmentReport('${s.id}')">
             <span class="icon">📊</span> <span>Full Report</span>
-        </button>
-        <button class="btn-action-details" style="background:rgba(255,255,255,0.05);" onclick="toggleManualOverride()">
-            <span class="icon">⚙️</span> <span>Edit / Manual Override</span>
         </button>
     `;
 

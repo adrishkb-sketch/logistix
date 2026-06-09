@@ -5,6 +5,29 @@ import uuid
 drivers_db = JSONDatabase("drivers")
 vehicles_db = JSONDatabase("vehicles")
 
+def normalize_vehicle_type(vtype: str) -> str:
+    if not vtype:
+        return ""
+    s = str(vtype).strip().lower().replace("-", " ").replace("_", " ")
+    # Fix common typos
+    s = s.replace("derlivery", "delivery")
+    # Normalize synonyms
+    if "heavy" in s or "large" in s:
+        return "heavy_truck"
+    if "small" in s or "light" in s:
+        return "small_truck"
+    if "van" in s:
+        return "delivery_van"
+    if "bike" in s or "scooty" in s or "scooter" in s or "bicycle" in s:
+        return "bike_scooty"
+    if "ev" in s:
+        return "ev_cargo"
+    if "drone" in s:
+        return "drone"
+    if "truck" in s:
+        return "small_truck"
+    return s
+
 def check_calamity_zone(lat: float, lng: float, company_id: str) -> Optional[Dict[str, Any]]:
     from backend.services.route_engine import haversine
     from backend.routers.tracking import get_all_active_weather_cells
@@ -142,194 +165,238 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     vehicles_db = JSONDatabase("vehicles")
     all_shipments = JSONDatabase("shipments").get_all()
     
+    # Auto-pair any unlinked drivers and vehicles for this company first
+    try:
+        all_drivers = drivers_db.get_all()
+        all_vehicles = vehicles_db.get_all()
+        unlinked_drivers = [d for d in all_drivers if d and d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
+        unlinked_vehicles = [v for v in all_vehicles if v and v.get("company_id") == company_id and not v.get("assigned_driver_id")]
+        
+        if unlinked_drivers and unlinked_vehicles:
+            driver_updates = []
+            vehicle_updates = []
+            vehicle_pool = unlinked_vehicles[:]
+            for d in unlinked_drivers:
+                dtype = str(d.get("license_type") or "").strip().lower()
+                dhub = str(d.get("base_warehouse_id") or "").strip()
+                if not dtype or not dhub:
+                    continue
+                # Find a matching vehicle
+                match_idx = -1
+                for idx, v in enumerate(vehicle_pool):
+                    vtype = str(v.get("type") or "").strip().lower()
+                    vhub = str(v.get("base_warehouse_id") or "").strip()
+                    if vhub == dhub and normalize_vehicle_type(vtype) == normalize_vehicle_type(dtype):
+                        match_idx = idx
+                        break
+                if match_idx != -1:
+                    match = vehicle_pool.pop(match_idx)
+                    driver_updates.append((d["id"], {"assigned_vehicle_id": match["id"], "verification_status": "unverified"}))
+                    vehicle_updates.append((match["id"], {"assigned_driver_id": d["id"]}))
+            
+            if driver_updates:
+                drivers_db.update_many(driver_updates)
+            if vehicle_updates:
+                vehicles_db.update_many(vehicle_updates)
+    except Exception as ep:
+        print(f"Auto-pairing fleet failed during assignment: {ep}")
+
     drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id]
     vehicles = [v for v in vehicles_db.get_all() if v and v.get("company_id") == company_id]
     
     if not drivers:
         return {"error": "Hub Empty: No drivers registered."}
 
+    # Two-pass assignment check: first strict hub, then relaxed
     available_pairs = []
     rejection_reasons = []
-
-    for d in drivers:
-        d_name = d.get("name", "Unknown Driver")
+    
+    for strict_hub in [True, False]:
+        available_pairs = []
+        rejection_reasons = []
         
-        # Status & Fitness Checks
-        if d.get("status") not in ["available", "on_duty"]:
-            rejection_reasons.append(f"{d_name}: Driver status is {d.get('status')}")
-            continue
-        if d.get("is_fit") == False:
-            rejection_reasons.append(f"{d_name}: Driver marked UNFIT")
-            continue
-        
-        v_id = d.get("assigned_vehicle_id")
-        if not v_id: 
-            rejection_reasons.append(f"{d_name}: No vehicle linked")
-            continue
-        
-        vehicle = next((v for v in vehicles if v.get("id") == v_id), None)
-        if not vehicle:
-            rejection_reasons.append(f"{d_name}: Linked vehicle {v_id} not found")
-            continue
+        for d in drivers:
+            d_name = d.get("name", "Unknown Driver")
             
-        if vehicle.get("is_operational") == False:
-            rejection_reasons.append(f"{d_name}: Vehicle {vehicle.get('number_plate')} is in maintenance")
-            continue
-
-        if float(vehicle.get("vehicle_health_score", 100.0)) <= 0.0:
-            rejection_reasons.append(f"{d_name}: Vehicle {vehicle.get('number_plate')} health is 0%")
-            continue
-        
-        v_type = str(vehicle.get("type", "")).lower()
-        v_base = vehicle.get("base_warehouse_id")
-        # Check present_warehouse_id (fallback to current_warehouse_id or base_warehouse_id)
-        v_present = vehicle.get("present_warehouse_id") or vehicle.get("current_warehouse_id") or v_base
-        v_plate = vehicle.get("number_plate", "Unknown")
-
-        # Normalize Vehicle Types
-        is_heavy_truck = "heavy" in v_type or "large" in v_type
-        is_small_truck = "small" in v_type or ("truck" in v_type and not is_heavy_truck)
-        is_van = "van" in v_type or "delivery" in v_type
-        is_bike_scooty = "bike" in v_type or "scooty" in v_type or "scooter" in v_type
-        is_ev = "ev" in v_type
-        is_drone = "drone" in v_type
-
-        # 4. Apply Dynamic Priority Matrices
-        priority_score = 0
-        is_suitable = False
-
-        if is_direct:
-            # DIRECT DELIVERIES: Truck (Small) or Delivery Van only.
-            # Base and present warehouse must match nearest warehouse from pickup.
-            nearest_wh = find_nearest_warehouse(p_lat, p_lng, company_id)
-            if not nearest_wh:
-                rejection_reasons.append(f"{d_name}: No nearest warehouse found for direct pickup.")
+            # Status & Fitness Checks
+            if d.get("status") not in ["available", "on_duty"]:
+                rejection_reasons.append(f"{d_name}: Driver status is {d.get('status')}")
                 continue
+            if d.get("is_fit") == False:
+                rejection_reasons.append(f"{d_name}: Driver marked UNFIT")
+                continue
+            
+            v_id = d.get("assigned_vehicle_id")
+            if not v_id: 
+                rejection_reasons.append(f"{d_name}: No vehicle linked")
+                continue
+            
+            vehicle = next((v for v in vehicles if v.get("id") == v_id), None)
+            if not vehicle:
+                # Direct lookup fallback in case of company_id mismatch
+                vehicle = vehicles_db.get_by_id(v_id)
+                if not vehicle:
+                    rejection_reasons.append(f"{d_name}: Linked vehicle {v_id} not found")
+                    continue
                 
-            if v_base != nearest_wh["id"] or v_present != nearest_wh["id"]:
-                rejection_reasons.append(f"{d_name}: Vehicle not present at pickup's nearest hub {nearest_wh['name']}.")
+            if vehicle.get("is_operational") == False:
+                rejection_reasons.append(f"{d_name}: Vehicle {vehicle.get('number_plate')} is in maintenance")
                 continue
 
-            if is_small_truck:
-                priority_score = 100000  # Truck (Small) priority
-                is_suitable = True
-            elif is_van:
-                priority_score = 50000   # Delivery Van priority
-                is_suitable = True
-            else:
-                rejection_reasons.append(f"{d_name}: Only Truck (Small) or Delivery Van allowed for direct deliveries.")
+            if float(vehicle.get("vehicle_health_score", 100.0)) <= 0.0:
+                rejection_reasons.append(f"{d_name}: Vehicle {vehicle.get('number_plate')} health is 0%")
                 continue
+            
+            v_type = str(vehicle.get("type", "")).lower()
+            v_base = vehicle.get("base_warehouse_id")
+            # Check present_warehouse_id (fallback to current_warehouse_id or base_warehouse_id)
+            v_present = vehicle.get("present_warehouse_id") or vehicle.get("current_warehouse_id") or v_base
+            v_plate = vehicle.get("number_plate", "Unknown")
 
-        elif is_first_mile:
-            # VIA 1 WAREHOUSE: LEG 1 (Pickup to Warehouse)
-            # Allowed: Bike/scooty or EV-Cargo.
-            if is_bike_scooty or is_ev:
-                is_suitable = True
-                weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id)
+            # Normalize Vehicle Types
+            is_heavy_truck = "heavy" in v_type or "large" in v_type
+            is_small_truck = "small" in v_type or ("truck" in v_type and not is_heavy_truck)
+            is_van = "van" in v_type or "delivery" in v_type
+            is_bike_scooty = "bike" in v_type or "scooty" in v_type or "scooter" in v_type
+            is_ev = "ev" in v_type
+            is_drone = "drone" in v_type
+
+            # 4. Apply Dynamic Priority Matrices
+            priority_score = 0
+            is_suitable = False
+
+            if is_direct:
+                # DIRECT DELIVERIES: Truck (Small) or Delivery Van only.
+                # Base and present warehouse must match nearest warehouse from pickup.
+                nearest_wh = find_nearest_warehouse(p_lat, p_lng, company_id)
+                if strict_hub and nearest_wh:
+                    if v_base != nearest_wh["id"] or v_present != nearest_wh["id"]:
+                        rejection_reasons.append(f"{d_name}: Vehicle not present at pickup's nearest hub {nearest_wh['name']}.")
+                        continue
+
+                if is_small_truck:
+                    priority_score = 100000  # Truck (Small) priority
+                    is_suitable = True
+                elif is_van:
+                    priority_score = 50000   # Delivery Van priority
+                    is_suitable = True
+                else:
+                    rejection_reasons.append(f"{d_name}: Only Truck (Small) or Delivery Van allowed for direct deliveries.")
+                    continue
+
+            elif is_first_mile:
+                # VIA 1 WAREHOUSE: LEG 1 (Pickup to Warehouse)
+                # Allowed: Bike/scooty or EV-Cargo.
+                if is_bike_scooty or is_ev:
+                    is_suitable = True
+                    weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id)
+                    if weather_disrupted:
+                        # Reverse priority order: EV-Cargo > Bike/scooty
+                        priority_score = 100000 if is_ev else 50000
+                    else:
+                        # Standard priority order: Bike/scooty > EV-Cargo
+                        priority_score = 100000 if is_bike_scooty else 50000
+                else:
+                    rejection_reasons.append(f"{d_name}: Only Bike/scooty or EV-Cargo allowed for first mile.")
+                    continue
+
+            elif is_last_mile:
+                # VIA 1 WAREHOUSE: LEG 2 (Warehouse to Destination)
+                # Allowed: Drone (already handled above), Delivery Van, Bike/scooty.
+                weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id) or is_weather_disrupted(d_lat, d_lng, company_id)
                 if weather_disrupted:
-                    # Reverse priority order: EV-Cargo > Bike/scooty
-                    priority_score = 100000 if is_ev else 50000
+                    # Drones and Bikes are grounded
+                    if is_van:
+                        priority_score = 100000
+                        is_suitable = True
+                    else:
+                        rejection_reasons.append(f"{d_name}: Bicycles/Bikes/Drones grounded due to storm/rain.")
+                        continue
                 else:
-                    # Standard priority order: Bike/scooty > EV-Cargo
-                    priority_score = 100000 if is_bike_scooty else 50000
-            else:
-                rejection_reasons.append(f"{d_name}: Only Bike/scooty or EV-Cargo allowed for first mile.")
+                    if is_van:
+                        priority_score = 100000
+                        is_suitable = True
+                    elif is_bike_scooty:
+                        priority_score = 50000
+                        is_suitable = True
+                    else:
+                        rejection_reasons.append(f"{d_name}: Invalid vehicle type for last mile.")
+                        continue
+
+            elif is_middle_mile:
+                # MIDDLE MILE: Trucks (Heavy) and Trucks (Small) only
+                if is_heavy_truck or is_small_truck:
+                    is_suitable = True
+                    # Priority: Truck (Heavy) > Truck (Small)
+                    priority_score = 100000 if is_heavy_truck else 50000
+                    
+                    # Back-haul Return Preference:
+                    # If vehicle is based on drop warehouse but present at pickup warehouse
+                    pickup_wh_id = shipment.get("pickup_warehouse_id")
+                    drop_wh_id = shipment.get("drop_warehouse_id")
+                    if v_base == drop_wh_id and v_present == pickup_wh_id:
+                        # Give massive boost so it overrides other trucks based at pickup warehouse
+                        priority_score += 500000
+                else:
+                    rejection_reasons.append(f"{d_name}: Only Heavy or Small Trucks allowed for middle-mile movements.")
+                    continue
+
+            if not is_suitable:
                 continue
 
-        elif is_last_mile:
-            # VIA 1 WAREHOUSE: LEG 2 (Warehouse to Destination)
-            # Allowed: Drone (already handled above), Delivery Van, Bike/scooty.
-            weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id) or is_weather_disrupted(d_lat, d_lng, company_id)
-            if weather_disrupted:
-                # Drones and Bikes are grounded
-                if is_van:
-                    priority_score = 100000
-                    is_suitable = True
-                else:
-                    rejection_reasons.append(f"{d_name}: Bicycles/Bikes/Drones grounded due to storm/rain.")
-                    continue
+            # Capacity Check
+            active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == vehicle["id"] and s.get("status") in ["assigned", "in_transit"]]
+            curr_load = sum(s.get("weight", 0) for s in active_for_v)
+            ship_weight = shipment.get("weight", 0)
+            
+            # Robust capacity check with fallback defaults
+            v_cap = vehicle.get("capacity")
+            if not v_cap:
+                if is_heavy_truck: v_cap = 10000.0
+                elif is_small_truck: v_cap = 3000.0
+                elif is_van: v_cap = 1500.0
+                elif is_ev: v_cap = 800.0
+                elif is_bike_scooty: v_cap = 80.0
+                elif is_drone: v_cap = 15.0
+                else: v_cap = 1000.0
             else:
-                if is_van:
-                    priority_score = 100000
-                    is_suitable = True
-                elif is_bike_scooty:
-                    priority_score = 50000
-                    is_suitable = True
-                else:
-                    rejection_reasons.append(f"{d_name}: Invalid vehicle type for last mile.")
-                    continue
-
-        elif is_middle_mile:
-            # MIDDLE MILE: Trucks (Heavy) and Trucks (Small) only
-            if is_heavy_truck or is_small_truck:
-                is_suitable = True
-                # Priority: Truck (Heavy) > Truck (Small)
-                priority_score = 100000 if is_heavy_truck else 50000
-                
-                # Back-haul Return Preference:
-                # If vehicle is based on drop warehouse but present at pickup warehouse
-                pickup_wh_id = shipment.get("pickup_warehouse_id")
-                drop_wh_id = shipment.get("drop_warehouse_id")
-                if v_base == drop_wh_id and v_present == pickup_wh_id:
-                    # Give massive boost so it overrides other trucks based at pickup warehouse
-                    priority_score += 500000
-            else:
-                rejection_reasons.append(f"{d_name}: Only Heavy or Small Trucks allowed for middle-mile movements.")
+                try:
+                    v_cap = float(v_cap)
+                except (ValueError, TypeError):
+                    v_cap = 1000.0
+                    
+            if curr_load + ship_weight > v_cap:
+                rejection_reasons.append(f"{d_name}: Overloaded ({curr_load + ship_weight}kg > {v_cap}kg)")
                 continue
 
-        if not is_suitable:
-            continue
+            # CO2 Penalty Calculation
+            co2_penalty = 0
+            if not is_ev and not is_bike_scooty and not is_drone:
+                from backend.models import Vehicle
+                v_age = Vehicle(**vehicle).current_age
+                # Base penalty for fossil fuel vehicles, increased by 5% for every year of vehicle age
+                co2_penalty = 500 * (1.0 + (v_age * 0.05))
 
-        # Capacity Check
-        active_for_v = [s for s in all_shipments if s and s.get("assigned_vehicle_id") == vehicle["id"] and s.get("status") in ["assigned", "in_transit"]]
-        curr_load = sum(s.get("weight", 0) for s in active_for_v)
-        ship_weight = shipment.get("weight", 0)
-        
-        # Robust capacity check with fallback defaults
-        v_cap = vehicle.get("capacity")
-        if not v_cap:
-            if is_heavy_truck: v_cap = 10000.0
-            elif is_small_truck: v_cap = 3000.0
-            elif is_van: v_cap = 1500.0
-            elif is_ev: v_cap = 800.0
-            elif is_bike_scooty: v_cap = 80.0
-            elif is_drone: v_cap = 15.0
-            else: v_cap = 1000.0
-        else:
-            try:
-                v_cap = float(v_cap)
-            except (ValueError, TypeError):
-                v_cap = 1000.0
-                
-        if curr_load + ship_weight > v_cap:
-            rejection_reasons.append(f"{d_name}: Overloaded ({curr_load + ship_weight}kg > {v_cap}kg)")
-            continue
+            # Score Calculation
+            score = priority_score + calculate_driver_performance_score(d) + (float(d.get("safety_rating", 5.0) or 5.0) * 10) - co2_penalty
+            
+            # Distance penalty
+            wh_to_query = v_present or v_base
+            if wh_to_query:
+                warehouses_db = JSONDatabase("warehouses")
+                base_wh = warehouses_db.get_by_id(wh_to_query)
+                if base_wh:
+                    dist_to_pickup = haversine(base_wh["lat"], base_wh["lng"], p_lat, p_lng)
+                    score -= (dist_to_pickup * 100)
 
-        # CO2 Penalty Calculation
-        co2_penalty = 0
-        if not is_ev and not is_bike_scooty and not is_drone:
-            from backend.models import Vehicle
-            v_age = Vehicle(**vehicle).current_age
-            # Base penalty for fossil fuel vehicles, increased by 5% for every year of vehicle age
-            co2_penalty = 500 * (1.0 + (v_age * 0.05))
-
-        # Score Calculation
-        score = priority_score + calculate_driver_performance_score(d) + (d.get("safety_rating", 5) * 10) - co2_penalty
-        
-        # Distance penalty
-        wh_to_query = v_present or v_base
-        if wh_to_query:
-            warehouses_db = JSONDatabase("warehouses")
-            base_wh = warehouses_db.get_by_id(wh_to_query)
-            if base_wh:
-                dist_to_pickup = haversine(base_wh["lat"], base_wh["lng"], p_lat, p_lng)
-                score -= (dist_to_pickup * 100)
-
-        available_pairs.append({
-            "driver": d,
-            "vehicle": vehicle,
-            "score": score
-        })
+            available_pairs.append({
+                "driver": d,
+                "vehicle": vehicle,
+                "score": score
+            })
+            
+        if available_pairs:
+            break
 
     if not available_pairs:
         unique_reasons = list(set(rejection_reasons))[:3]

@@ -1190,7 +1190,7 @@ def link_driver_to_vehicle(
         raise HTTPException(status_code=404, detail="Driver or Vehicle not found")
         
     # Validation
-    if driver["license_type"] != vehicle["type"]:
+    if normalize_vehicle_type(driver.get("license_type")) != normalize_vehicle_type(vehicle.get("type")):
         raise HTTPException(status_code=400, detail=f"License mismatch: {driver['name']} has {driver['license_type']} license, cannot drive {vehicle['type']}.")
     
     if driver.get("base_warehouse_id") != vehicle.get("base_warehouse_id"):
@@ -1208,6 +1208,29 @@ def link_driver_to_vehicle(
     
     return {"message": "Linked successfully"}
 
+def normalize_vehicle_type(vtype: str) -> str:
+    if not vtype:
+        return ""
+    s = str(vtype).strip().lower().replace("-", " ").replace("_", " ")
+    # Fix common typos
+    s = s.replace("derlivery", "delivery")
+    # Normalize synonyms
+    if "heavy" in s or "large" in s:
+        return "heavy_truck"
+    if "small" in s or "light" in s:
+        return "small_truck"
+    if "van" in s:
+        return "delivery_van"
+    if "bike" in s or "scooty" in s or "scooter" in s or "bicycle" in s:
+        return "bike_scooty"
+    if "ev" in s:
+        return "ev_cargo"
+    if "drone" in s:
+        return "drone"
+    if "truck" in s:
+        return "small_truck"
+    return s
+
 def is_valid_matching_value(val) -> bool:
     if not val:
         return False
@@ -1220,8 +1243,8 @@ def auto_assign_fleet(company_id: str):
     Auto-pair unlinked drivers and vehicles.
     Matching rules (both must be true):
       1. Same base_warehouse_id
-      2. Vehicle type == Driver license_type  (strict exact string match)
-    If no vehicle matches a driver exactly, the driver is left unlinked.
+      2. Vehicle type == Driver license_type  (normalized)
+    If no vehicle matches a driver, the driver is left unlinked.
     """
     all_drivers  = drivers_db.get_all()
     all_vehicles = vehicles_db.get_all()
@@ -1230,14 +1253,14 @@ def auto_assign_fleet(company_id: str):
     unlinked_drivers  = [d for d in all_drivers  if d and d.get("company_id") == company_id and not d.get("assigned_vehicle_id")]
     unlinked_vehicles = [v for v in all_vehicles if v and v.get("company_id") == company_id and not v.get("assigned_driver_id")]
 
-    # Build a pool index: (hub_id, type) -> list of vehicles  for O(1) lookup
+    # Build a pool index: (hub_id, type_normalized) -> list of vehicles  for O(1) lookup
     pool: dict = {}
     for v in unlinked_vehicles:
         hub = v.get("base_warehouse_id")
         vtype = v.get("type")
         if not is_valid_matching_value(hub) or not is_valid_matching_value(vtype):
             continue
-        key = (str(hub).strip(), str(vtype).strip())
+        key = (str(hub).strip(), normalize_vehicle_type(vtype))
         pool.setdefault(key, []).append(v)
 
     # Track which records were mutated so we can do targeted DB writes
@@ -1250,11 +1273,11 @@ def auto_assign_fleet(company_id: str):
         dtype = d.get("license_type")
         if not is_valid_matching_value(hub) or not is_valid_matching_value(dtype):
             continue
-        key = (str(hub).strip(), str(dtype).strip())
+        key = (str(hub).strip(), normalize_vehicle_type(dtype))
 
         candidates = pool.get(key, [])
         if not candidates:
-            continue  # No exact match — leave driver unlinked
+            continue  # No match — leave driver unlinked
 
         match = candidates.pop(0)   # Take first available vehicle
         if not candidates:
@@ -1358,7 +1381,7 @@ def manual_verify_driver(driver_id: str, status: str, vehicle_id: Optional[str] 
             raise HTTPException(status_code=404, detail="Vehicle not found")
             
         # Compatibility Validation
-        if driver.get("license_type") != vehicle.get("type"):
+        if normalize_vehicle_type(driver.get("license_type")) != normalize_vehicle_type(vehicle.get("type")):
             raise HTTPException(status_code=400, detail=f"License mismatch: {driver['name']} has {driver['license_type']} license, cannot drive {vehicle['type']}.")
         
         if driver.get("base_warehouse_id") != vehicle.get("base_warehouse_id"):
