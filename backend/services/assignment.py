@@ -136,9 +136,13 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     is_last_mile = leg_type == "last_mile"
     is_middle_mile = leg_type == "middle_mile"
 
+    # Precompute weather disruptions once to avoid thousands of database queries and network calls
+    p_weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id)
+    d_weather_disrupted = is_weather_disrupted(d_lat, d_lng, company_id)
+
     # 3. Last Leg Drone Check (Only for Last Mile under normal weather conditions)
     if is_last_mile:
-        weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id) or is_weather_disrupted(d_lat, d_lng, company_id)
+        weather_disrupted = p_weather_disrupted or d_weather_disrupted
         if not weather_disrupted:
             from backend.services.route_engine import check_drone_viability
             drone_vehicles = [
@@ -289,7 +293,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 # Allowed: Bike/scooty or EV-Cargo.
                 if is_bike_scooty or is_ev:
                     is_suitable = True
-                    weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id)
+                    weather_disrupted = p_weather_disrupted
                     if weather_disrupted:
                         # Reverse priority order: EV-Cargo > Bike/scooty
                         priority_score = 100000 if is_ev else 50000
@@ -303,7 +307,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             elif is_last_mile:
                 # VIA 1 WAREHOUSE: LEG 2 (Warehouse to Destination)
                 # Allowed: Drone (already handled above), Delivery Van, Bike/scooty.
-                weather_disrupted = is_weather_disrupted(p_lat, p_lng, company_id) or is_weather_disrupted(d_lat, d_lng, company_id)
+                weather_disrupted = p_weather_disrupted or d_weather_disrupted
                 if weather_disrupted:
                     # Drones and Bikes are grounded
                     if is_van:
