@@ -11,587 +11,895 @@
 <link rel="manifest" href="manifest.json">
 
 <!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
 <style>
+/* ── ULTRA-PREMIUM THEME VARIABLES ──────────────────────── */
 :root {
-    --bg: #0b1220;
-    --text: #ffffff;
-    --muted: #9aa4b2;
-    --primary: #4f8cff;
-    --card: rgba(255,255,255,0.05);
-    --border: rgba(255,255,255,0.08);
+    /* Dark Mode (Deep Obsidian & Vivid Neon) */
+    --bg-base: #010308;
+    --text-main: #ffffff;
+    --text-muted: #8b9bb4;
+
+    /* Striking Accents */
+    --accent-1: #00f0ff; /* Pure Neon Cyan */
+    --accent-2: #8a2be2; /* Electric Purple */
+    --accent-3: #ff007f; /* Hot Magenta */
+
+    /* Surfaces & Glassmorphism */
+    --surface: rgba(15, 20, 35, 0.4);
+    --surface-hover: rgba(25, 33, 55, 0.7);
+    --border: rgba(255, 255, 255, 0.06);
+    --border-highlight: rgba(255, 255, 255, 0.15);
+    --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.8);
+    --neon-glow: rgba(0, 240, 255, 0.25);
+    --grid-color: rgba(255, 255, 255, 0.02);
 }
+
 body.light-mode {
-    --bg: #f6f8fc;
-    --text: #0f172a;
-    --muted: #475569;
-    --primary: #2563eb;
-    --card: #ffffff;
-    --border: rgba(0,0,0,0.08);
+    /* Light Mode (Premium Pearl & Iridescent) */
+    --bg-base: #f0f4f8;
+    --text-main: #0a0f1c;
+    --text-muted: #5a6b85;
+
+    /* Vibrant Accents */
+    --accent-1: #0055ff; /* Deep Ultramarine */
+    --accent-2: #b400ff; /* Electric Magenta */
+    --accent-3: #00b3ff; /* Vivid Sky */
+
+    /* Surfaces & Glassmorphism */
+    --surface: rgba(255, 255, 255, 0.7);
+    --surface-hover: rgba(255, 255, 255, 1);
+    --border: rgba(0, 0, 0, 0.05);
+    --border-highlight: rgba(0, 0, 0, 0.12);
+    --glow-shadow: 0 15px 40px -5px rgba(0, 85, 255, 0.12);
+    --neon-glow: rgba(0, 85, 255, 0.2);
+    --grid-color: rgba(0, 0, 0, 0.03);
 }
+
+/* ── RESET & BASE ────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body, input, select, button, textarea {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-}
+html { scroll-behavior: smooth; }
 body {
     font-family: 'Plus Jakarta Sans', sans-serif;
-    color: var(--text);
-    transition: background 0.4s ease, color 0.3s ease;
-    background: linear-gradient(110deg, #080d1a 0%, #0f172a 45%, #1e1b4b 100%);
-    background-attachment: fixed;
+    color: var(--text-main);
+    background-color: var(--bg-base);
+    transition: background-color 0.4s ease, color 0.4s ease;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
 }
-body.light-mode {
-    background: linear-gradient(110deg, #f8fafc 0%, #f1f5ff 45%, #e0e7ff 100%);
-    background-attachment: fixed;
-}
-body::before {
-    content: "";
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+::selection { background: var(--accent-1); color: #fff; }
+
+/* ── ANIMATED BACKGROUND MAGIC & GRID ────────────────── */
+.bg-blobs {
     position: fixed;
     inset: 0;
-    background:
-        radial-gradient(circle at 20% 20%, rgba(79,140,255,0.12), transparent),
-        radial-gradient(circle at 80% 60%, rgba(99,102,241,0.08), transparent);
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--bg-base);
+    transition: background 0.6s ease;
+}
+.blob {
+    position: absolute;
+    filter: blur(120px);
+    border-radius: 50%;
+    opacity: 0.35;
+    animation: floatBlob 25s infinite alternate ease-in-out;
+    mix-blend-mode: screen;
+    transform: translate3d(0, 0, 0); /* Hardware acceleration */
+}
+body.light-mode .blob { mix-blend-mode: multiply; opacity: 0.25; filter: blur(90px); }
+
+.blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: var(--accent-1); animation-delay: 0s; }
+.blob-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: var(--accent-2); animation-delay: -5s; }
+.blob-3 { top: 30%; left: 40%; width: 40vw; height: 40vw; background: var(--accent-3); animation-delay: -10s; }
+
+@keyframes floatBlob {
+    0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+    33% { transform: translate3d(5vw, 5vh, 0) scale(1.1) rotate(10deg); }
+    66% { transform: translate3d(-5vw, 10vh, 0) scale(0.9) rotate(-10deg); }
+    100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+}
+
+.bg-grid {
+    position: fixed;
+    inset: 0;
     z-index: -1;
     pointer-events: none;
+    background-size: 50px 50px;
+    background-image:
+        linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+    mask-image: radial-gradient(circle at center, black 20%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at 50% 30%, black 20%, transparent 80%);
 }
 
-/* ── FLOATING CONTROLS ──────────────────────────────── */
-#landing-brand-container {
+/* ── ADVANCED LETTER WAVE EFFECT (Optimized for H1/H2) ── */
+.split-text { display: inline-block; word-wrap: break-word; }
+.split-text .char {
+    display: inline-block;
+    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s ease, text-shadow 0.2s ease;
+    white-space: pre;
+}
+
+.split-text .char:hover {
+    transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg);
+    color: var(--accent-1);
+    text-shadow: 0 10px 20px var(--neon-glow);
+    transition: transform 0.05s ease-out, color 0.05s ease-out, text-shadow 0.05s ease-out;
+    z-index: 2;
+    position: relative;
+}
+.split-text .char:hover + .char {
+    transform: translate3d(0, -4px, 0) scale(1.05);
+    color: var(--accent-2);
+    transition: transform 0.1s ease-out, color 0.1s ease-out;
+}
+.split-text .char:has(+ .char:hover) {
+    transform: translate3d(0, -4px, 0) scale(1.05);
+    color: var(--accent-2);
+    transition: transform 0.1s ease-out, color 0.1s ease-out;
+}
+
+/* ── LIGHTWEIGHT TEXT SHINE (For Pills & Small Text) ── */
+.text-shine-hover {
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+.text-shine-hover:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: textShineSweep 2s linear infinite;
+}
+@keyframes textShineSweep { to { background-position: 300% 50%; } }
+
+/* ── FLOATING CONTROLS (HEADER) ──────────────────────── */
+.fixed-control-bar {
     position: fixed;
     top: 20px;
-    left: 20px;
+    left: 0;
+    width: 100%;
+    padding: 0 4%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     z-index: 10002;
+    pointer-events: none;
+}
+.fixed-control-bar > * { pointer-events: auto; }
+
+#landing-brand-container {
     display: flex;
     align-items: center;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    height: 38px;
-    width: 150px;
+    transition: transform 0.3s ease;
 }
 
-.lang-selector-wrap {
-    position: fixed;
-    top: 20px;
-    right: 120px;
-    z-index: 10002;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.3s ease;
 }
 
-#theme-toggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10002;
-    padding: 8px 14px;
-    border-radius: 10px;
+.glass-control {
+    padding: 10px 18px;
+    border-radius: 14px;
     border: 1px solid var(--border);
-    background: rgba(255,255,255,0.05);
-    color: var(--text);
-    cursor: pointer;
-    font-size: 0.8rem;
+    background: var(--surface);
+    color: var(--text-main);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    font-size: 0.85rem;
     font-weight: 700;
-    font-family: inherit;
-    white-space: nowrap;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    transition: all 0.2s ease; /* Snappy */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    outline: none;
 }
-body.light-mode #theme-toggle {
-    background: rgba(255,255,255,0.7);
+.glass-control:hover {
+    border-color: var(--border-highlight);
+    background: var(--surface-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px var(--neon-glow);
 }
-#theme-toggle:hover {
-    border-color: var(--primary);
-    background: rgba(79,140,255,0.1);
-}
+.glass-control:active { transform: scale(0.95); }
 
-/* Scroll effect - shrink and fade slightly when page is scrolled */
-body.scrolled #landing-brand-container {
-    top: 10px;
-    transform: scale(0.9);
-    opacity: 0.95;
+.glass-control select {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    padding-right: 15px;
 }
-body.scrolled .lang-selector-wrap {
-    top: 10px;
-    transform: scale(0.9);
-    opacity: 0.95;
-}
-body.scrolled #theme-toggle {
-    top: 10px;
-    transform: scale(0.9);
-    opacity: 0.95;
-}
+.glass-control select option { background: var(--bg-base); color: var(--text-main); }
 
-/* ── HERO ───────────────────────────────────────────── */
+body.scrolled .fixed-control-bar { top: 10px; }
+body.scrolled #landing-brand-container,
+body.scrolled .controls-right { transform: scale(0.92); opacity: 0.98; }
+
+/* ── HERO SECTION ───────────────────────────────────── */
 .hero {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: url('dark_mode_bg.png') no-repeat center/cover;
     position: relative;
-    padding-top: 80px;
-}
-body.light-mode .hero {
-    background: url('light_mode_bg.png') no-repeat center/cover;
-}
-.hero::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(8, 13, 26, 0.42);
-}
-body.light-mode .hero::after {
-    background: rgba(255,255,255,0.52);
-}
-.hero-content {
-    text-align: center;
-    max-width: 760px;
-    padding: 0 24px;
-    position: relative;
+    padding: 120px 6% 60px;
     z-index: 2;
 }
 
-/* Updates pill */
+.hero-content {
+    text-align: center;
+    max-width: 850px;
+    position: relative;
+    z-index: 2;
+    perspective: 1000px;
+}
+
+/* Updates Pill */
 .updates-pill {
     display: inline-flex;
     align-items: center;
-    background: rgba(79,140,255,0.1);
-    border: 1px solid rgba(79,140,255,0.2);
-    padding: 6px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 18px 6px 8px;
     border-radius: 30px;
-    margin-bottom: 28px;
+    margin-bottom: 32px;
     text-decoration: none;
-    transition: 0.3s;
-    animation: lx-fade-up 0.6s ease both;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(20px);
+    animation: lx-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .updates-pill:hover {
-    background: rgba(79,140,255,0.18);
-    border-color: rgba(79,140,255,0.4);
-    transform: translateY(-2px);
+    background: var(--surface-hover);
+    border-color: var(--accent-1);
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px var(--neon-glow);
+}
+.pill-badge {
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-right: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 10px var(--neon-glow);
+}
+.pill-text {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
-/* Hero headline */
+/* Hero Headline */
 .hero h1 {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(2.6rem, 7vw, 4.8rem);
-    font-weight: 700;
-    line-height: 1.1;
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.05;
     letter-spacing: -0.04em;
-    margin-bottom: 22px;
-    animation: lx-fade-up 0.7s ease 0.1s both;
-
-    background: linear-gradient(
-        135deg,
-        #ffffff 0%,
-        #c4d9ff 35%,
-        #818cf8 65%,
-        #c084fc 100%
-    );
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-body.light-mode .hero h1 {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 40%, #4f46e5 80%, #7c3aed 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    margin-bottom: 24px;
+    animation: lx-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
-/* Hero subtitle */
+/* Hero Subtitle */
 .hero-sub {
-    font-size: clamp(1rem, 2.5vw, 1.2rem);
-    color: rgba(255,255,255,0.65);
-    line-height: 1.7;
-    margin-bottom: 36px;
+    font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 40px;
     font-weight: 500;
-    letter-spacing: -0.01em;
-    animation: lx-fade-up 0.8s ease 0.2s both;
-}
-body.light-mode .hero-sub {
-    color: var(--muted);
+    max-width: 650px;
+    margin-inline: auto;
+    animation: lx-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
-/* Tagline row */
+/* Tagline Row */
 .hero-tagline {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 36px;
-    animation: lx-fade-up 0.8s ease 0.25s both;
+    margin-bottom: 44px;
+    animation: lx-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
 }
 .hero-tagline-pill {
-    padding: 5px 14px;
-    border-radius: 20px;
-    font-size: 0.8rem;
+    padding: 8px 18px;
+    border-radius: 12px;
+    font-size: 0.85rem;
     font-weight: 700;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    border: 1px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.7);
-    background: rgba(255,255,255,0.04);
+    letter-spacing: 0.02em;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    background: var(--surface);
+    backdrop-filter: blur(10px);
+    transition: all 0.2s ease; /* Snappy */
 }
-body.light-mode .hero-tagline-pill {
-    color: var(--muted);
-    border-color: rgba(0,0,0,0.1);
-    background: rgba(0,0,0,0.03);
+.hero-tagline-pill:hover {
+    border-color: var(--border-highlight);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+    background: var(--surface-hover);
+    color: var(--accent-1);
+}
+.pill-ai {
+    background: linear-gradient(135deg, rgba(176, 38, 255, 0.1), rgba(255, 0, 127, 0.1));
+    border-color: rgba(176, 38, 255, 0.4);
+    color: var(--accent-2);
+}
+.pill-ai:hover {
+    box-shadow: 0 0 20px rgba(176, 38, 255, 0.3);
+    color: var(--accent-3);
 }
 
-/* CTA buttons */
+/* ── BUTTER-SMOOTH BUTTONS ───────────────── */
 .hero-ctas {
     display: flex;
-    gap: 14px;
+    gap: 16px;
     justify-content: center;
     flex-wrap: wrap;
-    animation: lx-fade-up 0.9s ease 0.3s both;
+    animation: lx-fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 .btn {
-    padding: 14px 30px;
-    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    padding: 16px 36px;
+    border-radius: 16px;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-family: inherit;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    transition: all 0.25s ease;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease;
     cursor: pointer;
     border: none;
-    letter-spacing: -0.01em;
+    z-index: 1;
+    outline: none;
+    min-width: 180px;
 }
+.btn:active { transform: scale(0.96) !important; }
+
+/* Primary Button - Snappy & Responsive */
 .btn-primary {
-    background: linear-gradient(135deg, #4f8cff, #6366f1);
-    color: #fff;
-    box-shadow: 0 10px 30px rgba(79,140,255,0.35);
+    background: var(--text-main);
+    color: var(--bg-base);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
+body.light-mode .btn-primary { background: var(--text-main); color: var(--bg-base); }
 .btn-primary:hover {
     transform: translateY(-3px);
-    box-shadow: 0 18px 45px rgba(79,140,255,0.5);
+    box-shadow: 0 12px 25px var(--neon-glow);
+    background: var(--accent-1);
+    color: #000;
 }
+
+/* Outline Button */
 .btn-outline {
-    border: 1px solid rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.85);
-    background: rgba(255,255,255,0.04);
-}
-body.light-mode .btn-outline {
-    border-color: rgba(0,0,0,0.12);
-    color: var(--text);
-    background: rgba(0,0,0,0.02);
+    background: var(--surface);
+    color: var(--text-main);
+    border: 1px solid var(--border-highlight);
+    backdrop-filter: blur(20px);
 }
 .btn-outline:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(79,140,255,0.4);
-    transform: translateY(-2px);
+    background: var(--surface-hover);
+    border-color: var(--text-main);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px var(--glow-shadow);
 }
 
-/* Scroll fade-up animation */
+/* Processing State Animation */
+.btn.is-processing {
+    pointer-events: none;
+    color: transparent !important;
+}
+.btn.is-processing::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spinner 0.6s linear infinite;
+}
+.btn-primary.is-processing::after { border-top-color: var(--bg-base); }
+.btn-outline.is-processing::after { border-top-color: var(--text-main); }
+@keyframes spinner { to { transform: rotate(360deg); } }
+
 @keyframes lx-fade-up {
-    from { opacity: 0; transform: translateY(24px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translate3d(0, 30px, 0); filter: blur(5px); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0); }
 }
 
-/* ── SECTIONS ────────────────────────────────────────── */
+/* ── SECTIONS & LAYOUT ───────────────────────────────── */
 section {
-    padding: 100px 6%;
+    padding: 120px 6%;
+    position: relative;
+    z-index: 2;
 }
 .reveal {
     opacity: 0;
-    transform: translateY(30px);
-    transition: 0.6s ease;
+    transform: translate3d(0, 30px, 0);
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .reveal.active {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
 }
 
-/* ── STATS ────────────────────────────────────────────── */
-.stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+/* Section Headings */
+section h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin-bottom: 60px;
     text-align: center;
-    gap: 20px;
+}
+
+/* ── STATS SECTION (Fixed Layout) ────────────────────── */
+.stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px;
+}
+.stat {
+    flex: 1;
+    min-width: 200px;
+    /* Forces items onto separate lines perfectly */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 20px;
+    backdrop-filter: blur(20px);
+    transition: all 0.25s ease;
+}
+.stat:hover {
+    transform: translateY(-6px);
+    border-color: var(--accent-1);
+    box-shadow: var(--glow-shadow);
 }
 .stat h2 {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 2.8rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--primary), #818cf8);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: -0.04em;
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+.stat:hover h2 {
+    transform: scale(1.05);
+    color: var(--accent-1);
 }
 .stat p {
-    color: var(--muted);
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-top: 4px;
-}
-
-/* ── SECTION HEADINGS ─────────────────────────────────── */
-section h2 {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    color: var(--text-muted);
+    font-size: 1.1rem;
     font-weight: 700;
-    letter-spacing: -0.04em;
-    margin-bottom: 48px;
-    background: linear-gradient(135deg, var(--text), var(--primary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
 }
 
-/* ── FEATURE CARDS ───────────────────────────────────── */
-.features-grid {
+/* ── PREMIUM CARDS (FEATURES & PLATFORM) ─────────────── */
+.features-grid, .platform-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    max-width: 1300px;
+    margin: 0 auto;
 }
+
 .card {
-    background: var(--card);
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 28px;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    font-size: 1.4rem;
+    border-radius: 28px;
+    padding: 40px 32px;
+    /* CSS transitions disabled for transform here because we drive it purely via JS for instant 1:1 mouse tracking */
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    transform-style: preserve-3d;
+    will-change: transform;
 }
+/* Glowing Inner Edge Spotlight */
+.card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.06), transparent 40%);
+    z-index: -1;
+    transition: opacity 0.2s ease;
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+}
+.card:hover::before { opacity: 1; }
 .card:hover {
-    transform: translateY(-8px);
-    border-color: rgba(79,140,255,0.3);
-    box-shadow: 0 24px 50px rgba(79,140,255,0.12);
+    border-color: var(--border-highlight);
+    box-shadow: 0 20px 50px -10px var(--glow-shadow);
 }
+.card:active { transform: scale3d(0.98, 0.98, 0.98) !important; transition: transform 0.05s; }
+
+/* Premium SVG Icons inside Cards */
+.icon-box {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--surface-hover), var(--bg-base));
+    border: 1px solid var(--border-highlight);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 28px;
+    transition: all 0.25s ease;
+    box-shadow: inset 0 2px 10px rgba(255,255,255,0.05), 0 8px 20px rgba(0,0,0,0.2);
+    color: var(--text-main);
+}
+.card:hover .icon-box {
+    transform: translate3d(0, -6px, 20px) scale(1.05);
+    border-color: var(--accent-1);
+    color: var(--accent-1);
+    box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px var(--neon-glow);
+}
+.icon-box svg {
+    width: 32px;
+    height: 32px;
+    stroke-width: 1.5;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .card h3 {
     font-family: 'Space Grotesk', sans-serif;
-    margin: 10px 0 8px;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-main);
     letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    transition: color 0.2s ease, transform 0.2s ease;
+    transform: translateZ(10px);
 }
+.card:hover h3 { color: var(--accent-1); }
 .card p {
-    color: var(--muted);
-    line-height: 1.65;
-    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+    font-size: 1rem;
+    font-weight: 500;
+    transform: translateZ(5px);
+    margin: 0;
 }
 
-/* ── PLATFORM GRID ───────────────────────────────────── */
-.platform-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
+/* ── AI FEATURES SPECIAL SECTION ─────────────────────── */
+.ai-section {
+    background: linear-gradient(180deg, transparent, rgba(176, 38, 255, 0.03) 50%, transparent);
+    border-top: 1px solid rgba(176, 38, 255, 0.1);
+    border-bottom: 1px solid rgba(176, 38, 255, 0.1);
 }
+.ai-section-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 60px;
+    gap: 16px;
+}
+.ai-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(176, 38, 255, 0.15));
+    border: 1px solid rgba(176, 38, 255, 0.3);
+    padding: 10px 24px;
+    border-radius: 40px;
+    box-shadow: 0 0 20px rgba(176, 38, 255, 0.15);
+}
+.ai-header-badge svg {
+    width: 20px; height: 20px;
+    color: var(--accent-1);
+}
+.ai-header-badge span:last-child {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--accent-2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.ai-section .card:hover .icon-box {
+    border-color: var(--accent-2);
+    color: var(--accent-2);
+    box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px rgba(176, 38, 255, 0.3);
+}
+.ai-section .card:hover h3 { color: var(--accent-2); }
+
+/* ── PLATFORM CARDS ──────────────────────────────────── */
 .platform-grid .card {
-    cursor: pointer;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
-.platform-grid .card:hover h3 {
-    color: var(--primary);
+.platform-grid .icon-box {
+    width: 80px; height: 80px; border-radius: 22px; margin-bottom: 30px;
 }
+.platform-grid .icon-box svg { width: 40px; height: 40px; }
+a { text-decoration: none; color: inherit; }
 
-/* ── MODAL ───────────────────────────────────────────── */
+/* ── MODAL (INCH-PERFECT FINISHING) ──────────────────── */
 .modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(8px);
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     justify-content: center;
     align-items: center;
     z-index: 10000;
-    animation: lx-fade-up 0.2s ease;
+    animation: fadeInModal 0.2s ease forwards;
 }
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 .modal-box {
     position: relative;
-    background: rgba(15, 23, 42, 0.95);
+    background: rgba(8, 12, 20, 0.95);
     border: 1px solid rgba(255,255,255,0.1);
-    backdrop-filter: blur(24px);
-    padding: 36px;
-    border-radius: 22px;
-    width: 92%;
-    max-width: 420px;
-    box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+    padding: 48px;
+    border-radius: 32px;
+    width: 90%;
+    max-width: 440px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8), inset 0 0 40px rgba(255,255,255,0.02);
+    animation: popModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 body.light-mode .modal-box {
-    background: rgba(255,255,255,0.96);
-    border-color: rgba(0,0,0,0.08);
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.15), inset 0 0 40px rgba(0,0,0,0.02);
 }
+
+@keyframes popModal {
+    from { transform: scale3d(0.9, 0.9, 1) translateY(20px); opacity: 0; }
+    to { transform: scale3d(1, 1, 1) translateY(0); opacity: 1; }
+}
+
 .modal-box h2 {
     font-family: 'Space Grotesk', sans-serif;
-    margin-bottom: 20px;
-    font-size: 1.4rem;
-    font-weight: 700;
+    margin-bottom: 28px;
+    font-size: 1.8rem;
+    font-weight: 800;
     letter-spacing: -0.03em;
-    background: none;
-    -webkit-text-fill-color: var(--text);
+    color: var(--text-main);
+    text-align: center;
 }
+
 .modal-box input {
     width: 100%;
-    padding: 12px 14px;
-    margin: 8px 0;
-    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 10px 0;
+    border-radius: 16px;
     border: 1px solid var(--border);
-    background: rgba(255,255,255,0.05);
-    color: var(--text);
-    font-size: 0.95rem;
+    background: rgba(255,255,255,0.03);
+    color: var(--text-main);
+    font-size: 1rem;
+    font-weight: 500;
     font-family: inherit;
-    transition: 0.2s;
+    transition: all 0.2s ease;
     outline: none;
 }
+body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
+
 .modal-box input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79,140,255,0.12);
+    border-color: var(--accent-1);
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 4px var(--neon-glow);
+    transform: translateY(-2px);
 }
-body.light-mode .modal-box input {
-    background: rgba(0,0,0,0.03);
-    color: #0f172a;
-}
+
 .modal-box .btn {
     width: 100%;
-    margin-top: 12px;
+    margin-top: 20px;
     justify-content: center;
+    padding: 18px;
+    font-size: 1.15rem;
 }
+
 .modal-close {
     position: absolute;
-    top: 14px;
-    right: 16px;
-    font-size: 1.2rem;
+    top: 24px;
+    right: 24px;
+    font-size: 1.4rem;
     cursor: pointer;
-    opacity: 0.5;
-    transition: 0.2s;
-    color: var(--text);
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
 }
-.modal-close:hover { opacity: 1; transform: scale(1.1); }
+.modal-close:hover {
+    color: var(--accent-3);
+    background: var(--surface-hover);
+    transform: rotate(90deg);
+    border-color: var(--accent-3);
+    box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
+}
 
-/* PIN row */
+/* PIN Row */
 .pin-row {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     justify-content: center;
-    margin: 20px 0;
+    margin: 30px 0;
 }
 .pin-box {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    border: 2px solid var(--border);
-    background: rgba(255,255,255,0.05);
-    color: var(--text);
-    font-size: 1.4rem;
-    font-weight: 800;
+    width: 54px !important;
+    height: 60px;
+    border-radius: 16px !important;
+    border: 2px solid var(--border) !important;
+    background: rgba(255,255,255,0.02) !important;
+    color: var(--text-main) !important;
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
     text-align: center;
     outline: none;
-    transition: all 0.2s ease;
-    padding: 0;
-    font-family: inherit;
+    transition: all 0.2s ease !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 .pin-box:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 12px rgba(79,140,255,0.25);
-}
-body.light-mode .pin-box { color: #0f172a; }
-
-select option {
-    background-color: #0b1220;
-    color: #ffffff;
-}
-body.light-mode select option {
-    background-color: #ffffff;
-    color: #0f172a;
+    border-color: var(--accent-1) !important;
+    background: rgba(255,255,255,0.08) !important;
+    box-shadow: 0 10px 25px var(--neon-glow) !important;
+    transform: translateY(-4px) !important;
 }
 
-/* Mobile responsive */
-@media (max-width: 600px) {
-    section { padding: 70px 5%; }
-    .hero-ctas { flex-direction: column; align-items: center; }
-    .btn { width: 100%; max-width: 320px; justify-content: center; }
+/* ── MOBILE RESPONSIVENESS ───────────────────────────── */
+@media (max-width: 768px) {
+    section { padding: 80px 5%; }
+    .hero { padding-top: 140px; }
+    .stats { flex-direction: column; }
+    .hero-ctas { flex-direction: column; width: 100%; align-items: center; }
+    .hero-ctas .btn { width: 100%; max-width: 350px; justify-content: center; }
 }
+
 @media (max-width: 480px) {
-    #landing-brand-container {
-        top: 10px !important;
-        left: 10px !important;
-    }
-    #landing-brand-container .brand-logo {
-        width: 110px !important;
-        height: 28px !important;
-    }
-    .lang-selector-wrap {
-        top: 10px !important;
-        right: 85px !important;
-    }
-    #theme-toggle {
-        top: 10px !important;
-        right: 10px !important;
-        padding: 6px 10px !important;
-        font-size: 0.75rem !important;
-    }
-    
-    body.scrolled #landing-brand-container,
-    body.scrolled .lang-selector-wrap,
-    body.scrolled #theme-toggle {
-        transform: scale(0.85);
-    }
+    .fixed-control-bar { padding: 0 10px; top: 15px; }
+    #landing-brand-container .brand-logo { width: 110px !important; height: 28px !important; }
+    .glass-control { padding: 8px 12px; font-size: 0.75rem; border-radius: 12px; }
+    .modal-box { padding: 32px 20px; }
+    .pin-box { width: 44px !important; height: 50px; font-size: 1.3rem !important; }
+    .pin-row { gap: 6px; }
+    .hero h1 { font-size: 2.5rem; }
 }
 </style>
 </head>
 
 <body>
 
-<!-- Fixed Controls -->
-<button id="theme-toggle" style="position:fixed; top:20px; right:20px; z-index:9999; padding:8px 16px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text); cursor:pointer; backdrop-filter:blur(10px);">🌙 Dark</button>
+<!-- ── ANIMATED BACKGROUND MAGIC ── -->
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+<div class="bg-grid"></div>
 
-<div class="glass-card lang-selector-wrap" id="lang-selector" style="position:fixed; top:20px; right:120px; padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px; z-index:9999; backdrop-filter:blur(10px);">
-    <span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
-    <select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;" aria-label="Language">
-        <option value="en">English (EN)</option>
-        <option value="bn">বাংলা (BN)</option>
-        <option value="hi">हिंदी (HI)</option>
-        <option value="te">తెలుగు (TE)</option>
-        <option value="mr">मराठी (MR)</option>
-        <option value="ta">தமிழ் (TA)</option>
-        <option value="gu">ગુજરાતી (GU)</option>
-        <option value="kn">ಕನ್ನಡ (KN)</option>
-        <option value="or">ଓଡ଼ିଆ (OR)</option>
-        <option value="ml">മലയാളം (ML)</option>
-        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
-        <option value="as">অসমীয়া (AS)</option>
-        <option value="mai">मैथिली (MAI)</option>
-        <option value="sat">संताली (SAT)</option>
-        <option value="ks">کٲشُر (KS)</option>
-        <option value="ur">اردو (UR)</option>
-        <option value="ne">नेपाली (NE)</option>
-        <option value="sa">संस्कृतम् (SA)</option>
-        <option value="sd">سنڌي (SD)</option>
-        <option value="gom">कोंकणी (GOM)</option>
-        <option value="doi">डोगरी (DOI)</option>
-        <option value="mni">মৈতৈলোন (MNI)</option>
-    </select>
+<!-- ── FIXED CONTROLS ── -->
+<div class="fixed-control-bar">
+    <div id="landing-brand-container">
+        <!-- Logo injected by logo.js usually, placeholder styling kept if missing -->
+        <span style="font-size: 1.5rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.05em; background: linear-gradient(135deg, var(--text-main), var(--accent-1)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Logistix.</span>
+    </div>
+
+    <div class="controls-right">
+        <div class="glass-control" id="lang-selector">
+            <svg style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <select onchange="setLanguage(this.value)" aria-label="Language">
+                <option value="en">English (EN)</option>
+                <option value="bn">বাংলা (BN)</option>
+                <option value="hi">हिंदी (HI)</option>
+                <option value="te">తెలుగు (TE)</option>
+                <option value="mr">मराठी (MR)</option>
+                <option value="ta">தமிழ் (TA)</option>
+                <option value="gu">ગુજરાતી (GU)</option>
+                <option value="kn">ಕನ್ನಡ (KN)</option>
+                <option value="or">ଓଡ଼ିଆ (OR)</option>
+                <option value="ml">മലയാളം (ML)</option>
+                <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                <option value="as">অসমীয়া (AS)</option>
+                <option value="mai">मैथिली (MAI)</option>
+                <option value="sat">संताली (SAT)</option>
+                <option value="ks">کٲشُر (KS)</option>
+                <option value="ur">اردو (UR)</option>
+                <option value="ne">नेपाली (NE)</option>
+                <option value="sa">संस्कृतम् (SA)</option>
+                <option value="sd">سنڌي (SD)</option>
+                <option value="gom">कोंकणी (GOM)</option>
+                <option value="doi">डोगरी (DOI)</option>
+                <option value="mni">মৈতৈলোন (MNI)</option>
+            </select>
+        </div>
+
+        <button id="theme-toggle" class="glass-control">
+            <svg class="theme-icon" style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            Dark
+        </button>
+    </div>
 </div>
 
 <script src="js/translator.js"></script>
 <script src="js/logo.js"></script>
 
-
 <!-- ── HERO ───────────────────────────────────────────── -->
 <div class="hero">
-    <div class="hero-content reveal">
+    <div class="hero-content">
 
-        <a href="pages/updates.html" class="updates-pill">
-            <span style="background:var(--primary); color:#fff; font-size:0.6rem; font-weight:800; padding:3px 9px; border-radius:10px; margin-right:10px; text-transform:uppercase; letter-spacing:0.05em;">New</span>
-            <span style="color:var(--primary); font-size:0.82rem; font-weight:700;" data-i18n="nav_updates">Update History 📜</span>
+        <a href="pages/updates.html" class="updates-pill" onclick="handleActionClick(event, this)">
+            <span class="pill-badge">New</span>
+            <span class="pill-text text-shine-hover" data-i18n="nav_updates">Update History 📜</span>
         </a>
 
-        <h1 data-i18n="hero_title">Logistics with<br>Automated Precision</h1>
+        <!-- High Performance Split Text applied ONLY to main headers -->
+        <h1 class="split-text" data-i18n="hero_title" style="margin-bottom: 24px; display:block;">Ship with<br> Automated      Precision</h1>
 
         <div class="hero-tagline">
             <span class="hero-tagline-pill">Predict Delays</span>
-            <span style="color:rgba(255,255,255,0.25); font-size:0.75rem;">•</span>
+            <span style="color:var(--text-muted); font-size:1.2rem; font-weight:300;">+</span>
             <span class="hero-tagline-pill">Optimize Routes</span>
-            <span style="color:rgba(255,255,255,0.25); font-size:0.75rem;">•</span>
+            <span style="color:var(--text-muted); font-size:1.2rem; font-weight:300;">+</span>
             <span class="hero-tagline-pill">Prevent Chaos</span>
-            <span style="color:rgba(255,255,255,0.25); font-size:0.75rem;">•</span>
-            <span class="hero-tagline-pill" style="background:linear-gradient(135deg,rgba(79,140,255,0.2),rgba(168,85,247,0.2)); border-color:rgba(168,85,247,0.4); color:#c084fc;">✨ Built with Gemini AI</span>
+            <span style="color:var(--text-muted); font-size:1.2rem; margin: 0 10px;">|</span>
+            <span class="hero-tagline-pill pill-ai">
+                Built with Gemini AI
+            </span>
         </div>
 
         <p class="hero-sub" data-i18n="hero_subtitle">
@@ -599,86 +907,168 @@ body.light-mode select option {
         </p>
 
         <div class="hero-ctas">
-            <a href="#platform" class="btn btn-primary" data-i18n="btn_get_started">Get Started →</a>
-            <a href="#features" class="btn btn-outline" data-i18n="btn_explore">Explore Features</a>
+            <button class="btn btn-primary" onclick="handleActionClick(event, this, () => document.getElementById('platform').scrollIntoView({behavior: 'smooth'}))" data-i18n="btn_get_started">Get Started →</button>
+            <button class="btn btn-outline" onclick="handleActionClick(event, this, () => document.getElementById('features').scrollIntoView({behavior: 'smooth'}))" data-i18n="btn_explore">Explore Features</button>
         </div>
     </div>
 </div>
 
 <!-- ── STATS ───────────────────────────────────────────── -->
-<section class="stats reveal">
-    <div class="stat"><h2>1500+</h2><p data-i18n="stat_companies">Companies</p></div>
-    <div class="stat"><h2>12400+</h2><p data-i18n="stat_drivers">Drivers</p></div>
-    <div class="stat"><h2>98%</h2><p data-i18n="stat_ontime">On-Time</p></div>
-    <div class="stat"><h2>50K+</h2><p data-i18n="stat_trips">Trips</p></div>
+<section class="reveal">
+    <div class="stats">
+        <div class="stat"><h2>1500+</h2><p data-i18n="stat_companies">Companies</p></div>
+        <div class="stat"><h2>12.4K</h2><p data-i18n="stat_drivers">Drivers</p></div>
+        <div class="stat"><h2>98%</h2><p data-i18n="stat_ontime">On-Time</p></div>
+        <div class="stat"><h2>50K+</h2><p data-i18n="stat_trips">Trips</p></div>
+    </div>
 </section>
 
 <!-- ── FEATURES ─────────────────────────────────────────── -->
 <section id="features" class="reveal">
-    <h2 style="text-align:center;" data-i18n="why_logistix">Why Logistix?</h2>
+    <h2 class="split-text" data-i18n="why_logistix" style="display:block;">Why Logistix?</h2>
     <div class="features-grid">
-        <div class="card">❄️<h3 data-i18n="feature_cold_title">Cold Chain Intelligence</h3><p data-i18n="feature_cold_desc">Prevent spoilage with automated systems predicting decay using real-time environmental data.</p></div>
-        <div class="card">🤖<h3 data-i18n="feature_dispatch_title">Smart Dispatch</h3><p data-i18n="feature_dispatch_desc">Auto-assign drivers using fatigue, performance, and proximity intelligence.</p></div>
-        <div class="card">📦<h3 data-i18n="feature_load_title">Load Optimization</h3><p data-i18n="feature_load_desc">Reduce trips and maximize space with intelligent cargo planning.</p></div>
-        <div class="card">🔐<h3 data-i18n="feature_secure_title">Secure Delivery</h3><p data-i18n="feature_secure_desc">OTP-based verification ensures safe, fraud-proof deliveries.</p></div>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Snowflake / Cold Chain -->
+                <svg viewBox="0 0 24 24"><path d="M2 12h20M12 2v20M20 16l-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="feature_cold_title">Cold Chain Intelligence</h3>
+            <p data-i18n="feature_cold_desc">Prevent spoilage with automated systems predicting decay using real-time environmental data.</p>
+        </div>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Smart Dispatch / AI Circuit -->
+                <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="feature_dispatch_title">Smart Dispatch</h3>
+            <p data-i18n="feature_dispatch_desc">Auto-assign drivers using fatigue, performance, and proximity intelligence.</p>
+        </div>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Load Optimization / Cube -->
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="feature_load_title">Load Optimization</h3>
+            <p data-i18n="feature_load_desc">Reduce trips and maximize space with intelligent cargo planning.</p>
+        </div>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Secure Delivery / Shield Check -->
+                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="feature_secure_title">Secure Delivery</h3>
+            <p data-i18n="feature_secure_desc">OTP-based verification ensures safe, fraud-proof deliveries.</p>
+        </div>
     </div>
 </section>
 
 <!-- ── GEMINI AI FEATURES ──────────────────────────────────────────── -->
-<section id="ai-features" class="reveal" style="background: linear-gradient(135deg, rgba(79,140,255,0.04) 0%, rgba(168,85,247,0.06) 100%); border-top: 1px solid rgba(168,85,247,0.1); border-bottom: 1px solid rgba(168,85,247,0.1);">
-    <div style="text-align:center; margin-bottom:48px;">
-        <div style="display:inline-flex; align-items:center; gap:10px; background:linear-gradient(135deg,rgba(79,140,255,0.1),rgba(168,85,247,0.15)); border:1px solid rgba(168,85,247,0.3); padding:8px 20px; border-radius:30px; margin-bottom:20px;">
-            <span style="font-size:1rem;">✨</span>
-            <span style="font-size:0.85rem; font-weight:800; color:#c084fc; letter-spacing:0.05em; text-transform:uppercase;">Powered by Google Gemini 1.5</span>
+<section id="ai-features" class="reveal ai-section">
+    <!-- Fixed Flex Column Header for Desktop & Mobile -->
+    <div class="ai-section-header">
+        <div class="ai-header-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>
+            <span>Powered by Google Gemini 1.5</span>
         </div>
-        <h2 style="text-align:center;">AI at Every Step</h2>
-        <p style="color:var(--muted); max-width:600px; margin:0 auto; font-size:1rem; line-height:1.7;">Logistix integrates Gemini 1.5 Flash across the entire logistics chain — from manager briefings to real-time driver routing.</p>
+        <h2 class="split-text" style="margin-bottom:0;">AI at Every Step</h2>
+        <p style="color:var(--text-muted); max-width:650px; font-size:1.1rem; line-height:1.7; margin-top:8px;">Logistix integrates Gemini 1.5 Flash across the entire logistics chain — from manager briefings to real-time driver routing.</p>
     </div>
     <div class="features-grid">
-        <div class="card" style="border-color:rgba(168,85,247,0.2); background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.04));">
-            <span style="font-size:2rem;">🔮</span>
-            <h3 style="margin-top:10px;">AI Daily Briefing</h3>
-            <p>Generates a morning operational summary combining weather alerts, backlog shipments, and fleet readiness for warehouse managers.</p>
+        <div class="card">
+            <div class="icon-box">
+                <!-- AI Briefing / Sparkles -->
+                <svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/><path d="M5 3v4M3 5h4"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="ai_briefing_title">AI Daily Briefing</h3>
+            <p data-i18n="ai_briefing_desc">Generates a morning operational summary combining weather alerts, backlog shipments, and fleet readiness for warehouse managers.</p>
         </div>
-        <div class="card" style="border-color:rgba(168,85,247,0.2); background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.04));">
-            <span style="font-size:2rem;">📦</span>
-            <h3 style="margin-top:10px;">Demand Forecast</h3>
-            <p>Predicts inbound shipment volume, peak operational hours, and driver resource needs using real-time hub data.</p>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Demand Forecast / Trend Up -->
+                <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="ai_forecast_title">Demand Forecast</h3>
+            <p data-i18n="ai_forecast_desc">Predicts inbound shipment volume, peak operational hours, and driver resource needs using real-time hub data.</p>
         </div>
-        <div class="card" style="border-color:rgba(168,85,247,0.2); background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.04));">
-            <span style="font-size:2rem;">🧑‍🔧</span>
-            <h3 style="margin-top:10px;">Driver Fatigue Risk</h3>
-            <p>Analyzes fatigue scores, hours on duty, and telemetry warnings to generate safety risk reports and scheduling shifts.</p>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Fatigue Risk / Pulse -->
+                <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="ai_fatigue_title">Driver Fatigue Risk</h3>
+            <p data-i18n="ai_fatigue_desc">Analyzes fatigue scores, hours on duty, and telemetry warnings to generate safety risk reports and scheduling shifts.</p>
         </div>
-        <div class="card" style="border-color:rgba(168,85,247,0.2); background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.04));">
-            <span style="font-size:2rem;">🔄</span>
-            <h3 style="margin-top:10px;">Smart AI Rerouting</h3>
-            <p>Gemini analyzes live weather cells and traffic conditions and suggests alternate routing for drivers in real time.</p>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Rerouting / Map Nodes -->
+                <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="ai_routing_title">Smart AI Rerouting</h3>
+            <p data-i18n="ai_routing_desc">Gemini analyzes live weather cells and traffic conditions and suggests alternate routing for drivers in real time.</p>
         </div>
-        <div class="card" style="border-color:rgba(168,85,247,0.2); background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.04));">
-            <span style="font-size:2rem;">🏢</span>
-            <h3 style="margin-top:10px;">Hub Readiness Audit</h3>
-            <p>AI evaluates depot infrastructure, capacity, staffing, and bottlenecks to produce an actionable hub fitness report.</p>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Hub Readiness / Building Grid -->
+                <svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="9" y1="22" x2="9" y2="2"/><line x1="15" y1="22" x2="15" y2="2"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="ai_hub_title">Hub Readiness Audit</h3>
+            <p data-i18n="ai_hub_desc">AI evaluates depot infrastructure, capacity, staffing, and bottlenecks to produce an actionable hub fitness report.</p>
         </div>
-        <div class="card" style="border-color:rgba(168,85,247,0.2); background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.04));">
-            <span style="font-size:2rem;">🧠</span>
-            <h3 style="margin-top:10px;">Strategy Oracle</h3>
-            <p>Provides network expansion, hub placement, and operational efficiency strategies powered by Gemini analysis.</p>
+        <div class="card">
+            <div class="icon-box">
+                <!-- Strategy Oracle / Network Brain -->
+                <svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="ai_oracle_title">Strategy Oracle</h3>
+            <p data-i18n="ai_oracle_desc">Provides network expansion, hub placement, and operational efficiency strategies powered by Gemini analysis.</p>
         </div>
     </div>
 </section>
 
 <!-- ── PLATFORM ──────────────────────────────────────────── -->
 <section id="platform" class="reveal">
-    <h2 style="text-align:center;" data-i18n="enter_platform">Enter Platform</h2>
+    <h2 class="split-text" data-i18n="enter_platform" style="display:block;">Enter Platform</h2>
     <div class="platform-grid">
-        <div class="card" onclick="openModal('manager')">🏢<h3 data-i18n="platform_manager">Manager</h3><p data-i18n="platform_manager_desc">Control operations and fleet in real time.</p></div>
-        <div class="card" onclick="openModal('wh-manager')">🏗️<h3 data-i18n="platform_wh_manager">Warehouse Manager</h3><p data-i18n="platform_wh_manager_desc">Manage inventory and operations for a specific hub.</p></div>
-        <div class="card" onclick="openModal('driver')">🚛<h3 data-i18n="platform_driver">Driver</h3><p data-i18n="platform_driver_desc">Access tasks and track deliveries.</p></div>
-        <a href="pages/track.html" style="text-decoration:none;color:inherit;">
-            <div class="card">📦<h3 data-i18n="platform_track">Track Order</h3><p data-i18n="platform_track_desc">Track shipments securely using OTP login.</p></div>
-        </a>
-        <div class="card" onclick="openModal('signup')">🚀<h3 data-i18n="platform_join">Join</h3><p data-i18n="platform_join_desc">Register your logistics company.</p></div>
+        <div class="card" onclick="handleActionClick(event, this, () => openModal('manager'))">
+            <div class="icon-box">
+                <!-- Manager / User Tie -->
+                <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="platform_manager">Manager</h3>
+            <p data-i18n="platform_manager_desc">Control operations and fleet in real time.</p>
+        </div>
+        <div class="card" onclick="handleActionClick(event, this, () => openModal('wh-manager'))">
+            <div class="icon-box">
+                <!-- Warehouse / Layout -->
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="platform_wh_manager">Warehouse Manager</h3>
+            <p data-i18n="platform_wh_manager_desc">Manage inventory and operations for a specific hub.</p>
+        </div>
+        <div class="card" onclick="handleActionClick(event, this, () => openModal('driver'))">
+            <div class="icon-box">
+                <!-- Driver / Truck -->
+                <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="platform_driver">Driver</h3>
+            <p data-i18n="platform_driver_desc">Access tasks and track deliveries.</p>
+        </div>
+        <div class="card" onclick="handleActionClick(event, this, () => { window.location.href = 'pages/track.html'; })">
+            <div class="icon-box">
+                <!-- Track Order / Box Target -->
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="platform_track">Track Order</h3>
+            <p data-i18n="platform_track_desc">Track shipments securely using OTP login.</p>
+        </div>
+        <div class="card" onclick="handleActionClick(event, this, () => openModal('signup'))">
+            <div class="icon-box">
+                <!-- Join / Rocket -->
+                <svg viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+            </div>
+            <h3 class="text-shine-hover" data-i18n="platform_join">Join</h3>
+            <p data-i18n="platform_join_desc">Register your logistics company.</p>
+        </div>
     </div>
 </section>
 
@@ -694,52 +1084,173 @@ body.light-mode select option {
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
+    // ── ADVANCED LETTER WAVE LOGIC (High Performance version) ──
+    function splitTextNodes(element) {
+        if (element.classList.contains('is-split')) return;
+
+        const processNode = (node) => {
+            if (node.nodeType === 3) {
+                const text = node.nodeValue;
+                if (!text.trim() && !text.includes(' ')) return;
+
+                const fragment = document.createDocumentFragment();
+                // Split by spaces to safely isolate words
+                const words = text.split(/(\s+)/);
+
+                words.forEach(word => {
+                    if (/^\s+$/.test(word)) {
+                        // Normalize any amount of whitespace into exactly 1 space gap
+                        const spaceSpan = document.createElement('span');
+                        spaceSpan.className = 'char space';
+                        spaceSpan.innerHTML = '&nbsp;';
+                        fragment.appendChild(spaceSpan);
+                        return;
+                    }
+                    if (word === '') return;
+
+                    // Wrap the entire word to prevent mid-word line breaks
+                    const wordSpan = document.createElement('span');
+                    wordSpan.style.display = 'inline-block';
+                    wordSpan.style.whiteSpace = 'nowrap';
+
+                    Array.from(word).forEach(char => {
+                        const charSpan = document.createElement('span');
+                        charSpan.className = 'char';
+                        charSpan.textContent = char;
+                        wordSpan.appendChild(charSpan);
+                    });
+
+                    fragment.appendChild(wordSpan);
+                });
+
+                node.parentNode.replaceChild(fragment, node);
+            } else if (node.nodeType === 1) {
+                // Preserve <br> tags and do not re-process already processed spans
+                if (node.classList.contains('char') || node.tagName === 'BR') return;
+                Array.from(node.childNodes).forEach(processNode);
+            }
+        };
+
+        // Clone childNodes to array first so iteration is stable during replacement
+        Array.from(element.childNodes).forEach(processNode);
+        element.classList.add('is-split');
+    }
+
+    function initSplitText() {
+        document.querySelectorAll('.split-text').forEach(splitTextNodes);
+    }
+
+    initSplitText();
+
+    // Safely re-apply split if translator.js overwrites the content
+    const observerSplit = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                let target = mutation.target;
+                if (target.nodeType === 3) target = target.parentNode;
+
+                if (target && target.classList && target.classList.contains('split-text') && !target.querySelector('.char')) {
+                    target.classList.remove('is-split');
+                    splitTextNodes(target);
+                }
+            }
+        });
+    });
+
+    observerSplit.observe(document.body, { childList: true, characterData: true, subtree: true });
+
+
     // Navbar scroll effect
     window.addEventListener('scroll', () => {
         document.body.classList.toggle('scrolled', window.scrollY > 40);
     }, { passive: true });
 
-    // Modal
+    // Premium Processing Click Handler - ultra fast visual response
+    window.handleActionClick = function(event, element, callback) {
+        event.preventDefault();
+
+        if(element.classList.contains('is-processing')) return;
+        element.classList.add('is-processing');
+
+        setTimeout(() => {
+            element.classList.remove('is-processing');
+            if (callback) callback();
+        }, 300); // Super fast 300ms transition
+    };
+
+    // 3D Tilt Effect on Cards - Optimised with RequestAnimationFrame
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        let rafId;
+
+        card.addEventListener('mousemove', e => {
+            cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const xPct = (x / rect.width) - 0.5;
+                const yPct = (y / rect.height) - 0.5;
+                const rotateX = yPct * -8;
+                const rotateY = xPct * 8;
+
+                // Pure JS transform, removing CSS transition conflict
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+
+        card.addEventListener('mouseleave', () => {
+            cancelAnimationFrame(rafId);
+            card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            card.style.setProperty('--mouse-x', `50%`);
+            card.style.setProperty('--mouse-y', `50%`);
+        });
+    });
+
+    // Modal Builder
     function openModal(type) {
         const modal = document.getElementById('modal');
         const content = document.getElementById('modal-content');
-        let html = `<span class="modal-close" id="modal-close-btn">✖</span>`;
+        let html = `<span class="modal-close" id="modal-close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span>`;
 
         if (type === 'manager') {
-            html += `<form id="manager-login-form">
-                <h2 data-i18n="modal_manager_title">🏢 Manager Login</h2>
-                <input id="manager-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required>
+            html += `<form id="manager-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
+                <h2 data-i18n="modal_manager_title">Manager Portal</h2>
+                <input id="manager-email" type="email" placeholder="Email Address" data-i18n-placeholder="placeholder_email" required>
                 <input id="manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
+                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login Securely</button>
             </form>`;
         } else if (type === 'wh-manager') {
-            html += `<form id="wh-manager-login-form">
-                <h2 data-i18n="modal_wh_manager_title">🏗️ Warehouse Manager Login</h2>
+            html += `<form id="wh-manager-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
+                <h2 data-i18n="modal_wh_manager_title">Warehouse Manager</h2>
                 <input id="wh-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
                 <input id="wh-manager-email" type="email" placeholder="Manager Email" data-i18n-placeholder="placeholder_email" required>
                 <input id="wh-manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
+                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login Securely</button>
             </form>`;
         } else if (type === 'driver') {
-            html += `<form id="driver-login-form">
-                <h2 data-i18n="modal_driver_title">🚛 Driver Login</h2>
+            html += `<form id="driver-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
+                <h2 data-i18n="modal_driver_title">Driver Login</h2>
                 <input id="driver-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
                 <input id="driver-id" type="text" placeholder="Driver ID" data-i18n-placeholder="placeholder_driver_id" required>
                 <input id="driver-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login</button>
+                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Access Portal</button>
             </form>`;
         } else {
             html += `<form id="signup-form">
-                <h2 data-i18n="modal_register_title">🚀 Register Company</h2>
+                <h2 data-i18n="modal_register_title">Register Company</h2>
                 <div id="step-1">
                     <input id="signup-name" type="text" placeholder="Company Name" data-i18n-placeholder="placeholder_company_name" required>
-                    <input id="signup-email" type="email" placeholder="Email" data-i18n-placeholder="placeholder_email" required oninput="validateSignupEmail(this.value)">
-                    <small id="email-warning" style="color:#ff4f4f;display:none;font-size:0.75rem;" data-i18n="error_email_registered">🚨 Email already registered!</small>
+                    <input id="signup-email" type="email" placeholder="Email Address" data-i18n-placeholder="placeholder_email" required oninput="if(typeof validateSignupEmail === 'function') validateSignupEmail(this.value)">
+                    <small id="email-warning" style="color:var(--accent-3);display:none;font-size:0.8rem;font-weight:600;margin-left:5px;" data-i18n="error_email_registered">🚨 Email already registered!</small>
                     <input id="signup-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                    <button id="signup-otp-btn" type="button" class="btn btn-primary" onclick="requestOTP()" data-i18n="btn_request_otp">Request OTP</button>
+                    <button id="signup-otp-btn" type="button" class="btn btn-primary" onclick="handleActionClick(event, this, () => { if(typeof requestOTP === 'function') requestOTP() })" data-i18n="btn_request_otp">Request Access OTP</button>
                 </div>
                 <div id="step-2" style="display:none;">
-                    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
+                    <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:10px;text-align:center;font-weight:600;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
                     <div class="pin-row" id="signup-pin-row">
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
@@ -748,10 +1259,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                     </div>
-                    <button type="submit" class="btn btn-primary" data-i18n="btn_verify_register">Verify & Register</button>
-                    <p id="resend-timer-container" style="text-align:center;margin-top:15px;font-size:0.85rem;color:var(--muted);">
+                    <button type="button" class="btn btn-primary" onclick="handleActionClick(event, this)" data-i18n="btn_verify_register">Verify & Launch Platform</button>
+                    <p id="resend-timer-container" style="text-align:center;margin-top:20px;font-size:0.9rem;color:var(--text-muted);">
                         <span data-i18n="didnt_receive_code">Didn't receive code?</span>
-                        <span id="resend-link" style="color:var(--primary);cursor:pointer;font-weight:bold;opacity:0.5;pointer-events:none;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
+                        <span id="resend-link" style="color:var(--accent-1);cursor:pointer;font-weight:800;opacity:0.5;pointer-events:none;transition:0.2s;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
                     </p>
                 </div>
             </form>`;
@@ -759,12 +1270,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
         content.innerHTML = html;
         modal.style.display = 'flex';
+
+        setTimeout(() => {
+            const firstInput = content.querySelector('input');
+            if(firstInput) firstInput.focus();
+        }, 50); // Faster focus
+
         if (typeof updatePageTranslations === 'function') updatePageTranslations();
         document.getElementById('modal-close-btn')?.addEventListener('click', e => { e.stopPropagation(); closeModal(); });
     }
 
     function closeModal() {
-        document.getElementById('modal').style.display = 'none';
+        const modalBox = document.getElementById('modal-content');
+        modalBox.style.animation = 'popModal 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) reverse forwards';
+        document.getElementById('modal').style.animation = 'fadeInModal 0.2s ease reverse forwards';
+        setTimeout(() => {
+            document.getElementById('modal').style.display = 'none';
+            modalBox.style.animation = '';
+            document.getElementById('modal').style.animation = '';
+        }, 200);
     }
 
     window.openModal = openModal;
@@ -773,29 +1297,36 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === document.getElementById('modal')) closeModal();
     });
 
-    // Scroll reveal
-    const reveals = document.querySelectorAll('.reveal');
-    function revealOnScroll() {
-        reveals.forEach(el => {
-            if (el.getBoundingClientRect().top < window.innerHeight - 80) el.classList.add('active');
+    // Scroll reveal with Intersection Observer
+    const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
+    const observerReveal = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                observer.unobserve(entry.target);
+            }
         });
-    }
-    window.addEventListener('scroll', revealOnScroll, { passive: true });
-    revealOnScroll();
+    }, observerOptions);
 
-    // Theme
+    document.querySelectorAll('.reveal').forEach(el => observerReveal.observe(el));
+
+    // Theme logic
     const btn = document.getElementById('theme-toggle');
+    const lightIcon = '<svg class="theme-icon" style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+    const darkIcon = '<svg class="theme-icon" style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
     if (localStorage.getItem('theme') === 'light') {
         document.body.classList.add('light-mode');
-        btn.innerText = '☀️ Light';
+        btn.innerHTML = lightIcon + ' Light';
     } else {
-        btn.innerText = '🌙 Dark';
+        btn.innerHTML = darkIcon + ' Dark';
     }
+
     btn.addEventListener('click', () => {
         document.body.classList.toggle('light-mode');
         const isLight = document.body.classList.contains('light-mode');
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
-        btn.innerText = isLight ? '☀️ Light' : '🌙 Dark';
+        btn.innerHTML = isLight ? lightIcon + ' Light' : darkIcon + ' Dark';
     });
 });
 </script>
