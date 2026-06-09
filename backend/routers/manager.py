@@ -2413,7 +2413,6 @@ def manager_esg_audit(data: dict, x_logistix_context: Optional[str] = Header(Non
 
     from backend.services.gemini_service import call_gemini
     # Fetch current carbon stats, EV fleets, etc.
-    from backend.database import JSONDatabase
     vehicles_db = JSONDatabase("vehicles")
     shipments_db = JSONDatabase("shipments")
     
@@ -2453,7 +2452,6 @@ def manager_safety_audit(data: dict, x_logistix_context: Optional[str] = Header(
         if cfg:
             api_keys = cfg.get("gemini_keys")
 
-    from backend.database import JSONDatabase
     drivers_db = JSONDatabase("drivers")
     shipments_db = JSONDatabase("shipments")
     
@@ -2502,7 +2500,6 @@ def manager_wh_readiness(data: dict, x_logistix_context: Optional[str] = Header(
 
     warehouse_id = data.get("warehouse_id")
     
-    from backend.database import JSONDatabase
     warehouses_db = JSONDatabase("warehouses")
     drivers_db = JSONDatabase("drivers")
     vehicles_db = JSONDatabase("vehicles")
@@ -2558,14 +2555,12 @@ def manager_demand_forecast(data: dict, x_logistix_context: Optional[str] = Head
     
     api_keys = None
     if company_id:
-        from backend.database import JSONDatabase
         cfg = JSONDatabase("config").get_by_id(company_id)
         if cfg:
             api_keys = cfg.get("gemini_keys")
             
     warehouse_id = data.get("warehouse_id")
     
-    from backend.database import JSONDatabase
     warehouses_db = JSONDatabase("warehouses")
     shipments_db = JSONDatabase("shipments")
     drivers_db = JSONDatabase("drivers")
@@ -2643,14 +2638,12 @@ def manager_fatigue_report(data: dict, x_logistix_context: Optional[str] = Heade
     
     api_keys = None
     if company_id:
-        from backend.database import JSONDatabase
         cfg = JSONDatabase("config").get_by_id(company_id)
         if cfg:
             api_keys = cfg.get("gemini_keys")
             
     warehouse_id = data.get("warehouse_id")
     
-    from backend.database import JSONDatabase
     warehouses_db = JSONDatabase("warehouses")
     drivers_db = JSONDatabase("drivers")
     
@@ -2708,14 +2701,12 @@ def manager_daily_briefing(data: dict, x_logistix_context: Optional[str] = Heade
     
     api_keys = None
     if company_id:
-        from backend.database import JSONDatabase
         cfg = JSONDatabase("config").get_by_id(company_id)
         if cfg:
             api_keys = cfg.get("gemini_keys")
             
     warehouse_id = data.get("warehouse_id")
     
-    from backend.database import JSONDatabase
     warehouses_db = JSONDatabase("warehouses")
     shipments_db = JSONDatabase("shipments")
     drivers_db = JSONDatabase("drivers")
@@ -2880,7 +2871,6 @@ def manager_strategy_optimizer(data: dict, x_logistix_context: Optional[str] = H
     if not company_id:
         raise HTTPException(status_code=400, detail="Missing company_id context")
         
-    from backend.database import JSONDatabase
     plans_db = JSONDatabase("strategy_plans")
     ledger_db = JSONDatabase("ledger")
     

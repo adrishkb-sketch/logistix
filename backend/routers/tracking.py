@@ -1144,6 +1144,9 @@ def track_shipment_chat(shipment_id: str, payload: dict):
         legs = [s for s in all_ships if s and s.get("parent_id") == shipment_id]
         legs.sort(key=lambda x: x.get("leg_order", 0))
 
+    active_alerts_list = [a.get('description') for a in active_alerts]
+    legs_list = [f"Leg {l.get('leg_order')}: {l.get('status')}" for l in legs]
+
     system_instruction = (
         "You are Logistix Customer Support AI, a polite, professional, and reassuring assistant. "
         "Your task is to answer customer questions about their shipment using ONLY the live details provided below. "
@@ -1159,8 +1162,8 @@ def track_shipment_chat(shipment_id: str, payload: dict):
         f"- Assigned Vehicle: {v_type} (Fleet Health: {health}%)\n"
         f"- Driver Name: {driver_name} (details are confidential but driver is fully certified)\n"
         f"- Payment Status: {shipment.get('payment_status').upper()} (Amount Due: ₹ {shipment.get('finance', {}).get('suggested_price', 0)})\n"
-        f"- Active Alerts: {[a.get('description') for a in active_alerts]}\n"
-        f"- Journey Legs: {[f'Leg {l.get(\"leg_order\")}: {l.get(\"status\")}' for l in legs]}\n"
+        f"- Active Alerts: {active_alerts_list}\n"
+        f"- Journey Legs: {legs_list}\n"
     )
     
     user_msg = payload.get("message", "")
