@@ -286,6 +286,9 @@
                     <a href="#" class="nav-link-v3" onclick="switchTab('leaderboard')" id="nav-leaderboard">
                         🏆 <span data-i18n="nav_leaderboard" style="margin-left:12px;">Leaderboard</span>
                     </a>
+                    <a href="#" class="nav-link-v3" onclick="switchTab('shipments')" id="nav-shipments">
+                        📦 <span style="margin-left:12px;">Hub Shipments</span>
+                    </a>
                     <a href="#" class="nav-link-v3" onclick="switchTab('settings')" id="nav-settings">
                         ⚙️ <span data-i18n="nav_settings" style="margin-left:12px;">Settings</span>
                     </a>
@@ -385,6 +388,19 @@
                         <canvas id="hubPerformanceChart"></canvas>
                     </div>
                 </div>
+
+                <div class="glass-card section-card" style="margin-top:24px; border:1px solid var(--warning);">
+                    <h3 style="margin:0 0 10px 0; color:var(--warning);">🤖 Predictive Bottleneck Alerts</h3>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">AI-driven analysis of incoming and outgoing flow.</p>
+                    <div id="bottleneck-alert-content" style="padding:15px; background:rgba(255,255,255,0.05); border-radius:10px; margin-bottom:15px; font-weight:bold;">Loading AI analysis...</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <button class="btn-primary" onclick="fetchBottleneckAlerts()" style="width:auto; padding:8px 16px; font-size:0.8rem;">Refresh Analysis</button>
+                        <div>
+                            <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:5px;">If the hub is overloaded, you can block inbound scheduling.</p>
+                            <button id="btn-toggle-scheduling" class="btn-primary" style="background:var(--danger); width:auto; padding:8px 16px; font-size:0.8rem;" onclick="toggleScheduling()">Block Scheduling</button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Gate Check-in Tab -->
@@ -396,6 +412,14 @@
                             <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;">Mark inbound shipments and vehicles as arrived at this hub.</p>
                         </div>
                         <button class="btn-primary" onclick="loadGateQueue()" style="width:auto; padding:8px 16px;">🔄 Refresh Queue</button>
+                    </div>
+                    
+                    <div class="glass-card" style="margin-bottom:24px; border:1px solid var(--primary); background:rgba(79, 140, 255, 0.03); padding:16px; border-radius:12px;">
+                        <h3 style="margin:0 0 10px 0; color:var(--primary);">🏭 Dock Scheduling</h3>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:15px;">Assign arrived trucks to specific loading docks.</p>
+                        <div style="display:flex; gap:15px; flex-wrap:wrap;" id="dock-status-container">
+                            <!-- Docks rendered here -->
+                        </div>
                     </div>
                     
                     <div class="table-container">
@@ -465,6 +489,27 @@
                                         </tr>
                                     </thead>
                                     <tbody id="returning-assets-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Maintenance & Fitness Recovery Section -->
+                        <div class="glass-card" style="margin-top:32px; border:1px solid var(--danger); background:rgba(239, 68, 68, 0.03);">
+                            <h3 style="margin:0 0 10px 0; color:var(--danger);">🔧 Maintenance & Fitness Recovery</h3>
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Drivers marked UNFIT or Vehicles that BROKE DOWN. Mark them as Fixed/Fit to allow new assignments.</p>
+                            <div class="table-container">
+                                <table style="width:100%;">
+                                    <thead>
+                                        <tr style="text-align:left; border-bottom:1px solid var(--border);">
+                                            <th style="padding:12px;">Asset / Personnel</th>
+                                            <th style="padding:12px;">Type</th>
+                                            <th style="padding:12px;">Status</th>
+                                            <th style="padding:12px; text-align:right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="maintenance-recovery-body">
+                                        <tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No broken vehicles or unfit drivers found.</td></tr>
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
@@ -739,6 +784,43 @@
                                 </tr>
                             </thead>
                             <tbody id="leaderboard-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hub Shipments Tab -->
+            <section id="shipments-tab" class="tab-content" style="display:none;">
+                <div class="glass-card section-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                        <div>
+                            <h2 style="margin:0; font-size:1.6rem; color:var(--primary);">📦 Hub Shipments</h2>
+                            <p style="color:var(--text-muted); font-size:0.85rem; margin-top:4px;">Manage all shipments associated with this hub.</p>
+                        </div>
+                        <button class="btn-primary" onclick="renderHubShipments()" style="width:auto; padding:8px 16px;">🔄 Refresh</button>
+                    </div>
+
+                    <div class="category-tabs" style="display:flex; gap:10px; margin-bottom:20px;">
+                        <button class="btn-outline-v3 active" id="tab-btn-hub-all" onclick="setHubShipmentsTab('all')">All Shipments</button>
+                        <button class="btn-outline-v3" id="tab-btn-hub-eway" onclick="setHubShipmentsTab('eway')">E-Way Renewals <span id="badge-hub-eway" style="background:var(--danger); color:white; padding:2px 6px; border-radius:10px; font-size:0.7rem; margin-left:5px; display:none;">0</span></button>
+                        <button class="btn-outline-v3" id="tab-btn-hub-returns" onclick="setHubShipmentsTab('returns')">Returns <span id="badge-hub-returns" style="background:var(--warning); color:black; padding:2px 6px; border-radius:10px; font-size:0.7rem; margin-left:5px; display:none;">0</span></button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="data-table wide-table">
+                            <thead>
+                                <tr>
+                                    <th>Shipment ID</th>
+                                    <th>Status</th>
+                                    <th>Dock</th>
+                                    <th>Pickup</th>
+                                    <th>Drop</th>
+                                    <th>Weight (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hub-shipments-table-body">
+                                <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Loading shipments...</td></tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>

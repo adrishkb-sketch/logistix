@@ -1953,6 +1953,230 @@ function collapseAIReport() {
 }
 window.collapseAIReport = collapseAIReport;
 
+// --- New Features Added ---
+
+// 1. Predictive Bottlenecks
+window.fetchBottleneckAlerts = async function() {
+    const el = document.getElementById('bottleneck-alert-content');
+    if (!el) return;
+    el.innerHTML = "Analyzing...";
+    try {
+        const res = await apiCall(`/manager/warehouses/${currentWarehouseId}/bottleneck-alerts`, 'GET');
+        el.innerHTML = `<div>${res.alert}</div><div style="margin-top:10px; font-size:0.8rem; font-weight:normal;">Inbound: ${res.stats.inbound} | Outbound: ${res.stats.outbound} | At Hub: ${res.stats.at_hub}</div>`;
+        const btn = document.getElementById('btn-toggle-scheduling');
+        if (btn) {
+            if (res.is_accepting_shipments) {
+                btn.innerText = "Block Scheduling";
+                btn.style.background = "var(--danger)";
+            } else {
+                btn.innerText = "Unblock Scheduling";
+                btn.style.background = "var(--success)";
+            }
+        }
+    } catch(e) {
+        el.innerHTML = "<span style='color:red;'>Failed to load alerts.</span>";
+    }
+};
+
+window.toggleScheduling = async function() {
+    try {
+        // Toggle based on current text
+        const btn = document.getElementById('btn-toggle-scheduling');
+        const isAccepting = btn.innerText.includes("Unblock"); // If it says Unblock, we are changing it to true
+        await apiCall(`/manager/warehouses/${currentWarehouseId}/toggle-scheduling`, 'POST', {
+            is_accepting_shipments: isAccepting
+        });
+        fetchBottleneckAlerts();
+    } catch(e) {
+        alert("Failed to toggle scheduling.");
+    }
+};
+
+// 2. Dock Scheduling
+window.renderDockScheduling = async function() {
+    const container = document.getElementById('dock-status-container');
+    if (!container) return;
+    
+    // Create 5 docks
+    let html = '';
+    for (let i = 1; i <= 5; i++) {
+        const dockId = `Dock ${i}`;
+        // Find if any shipment arriving/here is assigned to this dock
+        const assignedShipment = globalShipments.find(s => 
+            s.dock_assigned === dockId && 
+            (s.current_warehouse_id === currentWarehouseId || s.drop_warehouse_id === currentWarehouseId) &&
+            ["assigned", "in_transit", "at_warehouse"].includes(s.status)
+        );
+        
+        let dockContent = `<div style="font-weight:bold; margin-bottom:5px;">${dockId}</div>`;
+        if (assignedShipment) {
+            dockContent += `<div style="font-size:0.8rem; color:var(--warning);">Occupied by: ${assignedShipment.id.split('-')[0]}</div>`;
+        } else {
+            dockContent += `<div style="font-size:0.8rem; color:var(--success);">Available</div>`;
+        }
+
+        // Add a dropdown to assign a shipment
+        // Only shipments inbound or at warehouse that don't have a dock
+        const pendingShipments = globalShipments.filter(s => 
+            (s.current_warehouse_id === currentWarehouseId || s.drop_warehouse_id === currentWarehouseId) &&
+            ["assigned", "in_transit", "at_warehouse"].includes(s.status)
+        );
+
+        let selectOptions = `<option value="">Select Shipment...</option>`;
+        pendingShipments.forEach(s => {
+            const selected = s.dock_assigned === dockId ? "selected" : "";
+            selectOptions += `<option value="${s.id}" ${selected}>${s.id.split('-')[0]} (${s.status})</option>`;
+        });
+
+        html += `
+            <div style="flex:1; min-width:150px; background:rgba(255,255,255,0.05); padding:15px; border-radius:10px; border:1px solid var(--border);">
+                ${dockContent}
+                <select class="polished-glass-input" style="width:100%; margin-top:10px; font-size:0.75rem; padding:5px;" onchange="assignDock(this.value, '${dockId}')">
+                    ${selectOptions}
+                </select>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+};
+
+window.assignDock = async function(shipmentId, dockId) {
+    if (!shipmentId) return; // Unassigning is handled backend side generally, but we can allow it
+    try {
+        await apiCall(`/manager/shipments/${shipmentId}/assign-dock`, 'PUT', { dock_id: dockId });
+        await loadGlobalData(); // reload shipments
+        if (typeof loadGateQueue === 'function') loadGateQueue(); // reload gate tab if defined
+        renderDockScheduling();
+    } catch(e) {
+        alert("Failed to assign dock.");
+    }
+};
+
+// 3. Maintenance Recovery
+window.renderMaintenanceRecovery = function() {
+    const tbody = document.getElementById('maintenance-recovery-body');
+    if (!tbody) return;
+
+    let html = '';
+    
+    // Unfit Drivers
+    globalDrivers.forEach(d => {
+        if (d.is_fit === false) {
+            html += `<tr>
+                <td>${d.name} (${d.system_id || d.id.split('-')[0]})</td>
+                <td>Driver</td>
+                <td><span class="badge" style="background:var(--danger);">UNFIT</span></td>
+                <td style="text-align:right;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="recoverDriver('${d.id}')">Mark Fit</button></td>
+            </tr>`;
+        }
+    });
+
+    // Broken Vehicles
+    globalVehicles.forEach(v => {
+        if (v.is_operational === false) {
+            html += `<tr>
+                <td>${v.plate_number || v.id.split('-')[0]}</td>
+                <td>Vehicle</td>
+                <td><span class="badge" style="background:var(--danger);">BREAKDOWN</span></td>
+                <td style="text-align:right;"><button class="btn-primary" style="padding:4px 10px; font-size:0.7rem;" onclick="recoverVehicle('${v.id}')">Mark Fixed</button></td>
+            </tr>`;
+        }
+    });
+
+    if (html === '') {
+        html = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No broken vehicles or unfit drivers found.</td></tr>`;
+    }
+    tbody.innerHTML = html;
+};
+
+window.recoverDriver = async function(id) {
+    if(confirm("Mark this driver as Fit for duty?")) {
+        await apiCall(`/manager/drivers/${id}`, 'PUT', { is_fit: true });
+        await loadGlobalData();
+        renderMaintenanceRecovery();
+    }
+};
+
+window.recoverVehicle = async function(id) {
+    if(confirm("Mark this vehicle as Fixed and operational?")) {
+        await apiCall(`/manager/vehicles/${id}`, 'PUT', { is_operational: true });
+        await loadGlobalData();
+        renderMaintenanceRecovery();
+    }
+};
+
+// 4. Hub Shipments
+let currentHubShipmentsTab = 'all';
+
+window.setHubShipmentsTab = function(tab) {
+    currentHubShipmentsTab = tab;
+    document.querySelectorAll('#shipments-tab .category-tabs button').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-btn-hub-${tab}`).classList.add('active');
+    renderHubShipments();
+};
+
+window.renderHubShipments = function() {
+    const tbody = document.getElementById('hub-shipments-table-body');
+    if (!tbody) return;
+
+    // Filter shipments related to this hub
+    let hubShips = globalShipments.filter(s => 
+        s.pickup_warehouse_id === currentWarehouseId || 
+        s.drop_warehouse_id === currentWarehouseId || 
+        s.current_warehouse_id === currentWarehouseId
+    );
+
+    // Filter by tab
+    if (currentHubShipmentsTab === 'eway') {
+        hubShips = hubShips.filter(s => {
+            if (!s.eway_bill_expiry) return false;
+            const exp = new Date(s.eway_bill_expiry).getTime();
+            const now = Date.now();
+            return (exp < now + 86400000) && s.status !== 'completed'; // Expires within 24h or already expired
+        });
+    } else if (currentHubShipmentsTab === 'returns') {
+        hubShips = hubShips.filter(s => s.status === 'return_to_origin' || s.is_return);
+    }
+
+    // Update badges
+    const ewayCount = globalShipments.filter(s => {
+        if (!s.eway_bill_expiry || s.status === 'completed') return false;
+        return new Date(s.eway_bill_expiry).getTime() < Date.now() + 86400000;
+    }).length;
+    
+    const returnsCount = globalShipments.filter(s => s.status === 'return_to_origin' || s.is_return).length;
+
+    const bEway = document.getElementById('badge-hub-eway');
+    const bRet = document.getElementById('badge-hub-returns');
+    if(bEway) { bEway.innerText = ewayCount; bEway.style.display = ewayCount > 0 ? 'inline-block' : 'none'; }
+    if(bRet) { bRet.innerText = returnsCount; bRet.style.display = returnsCount > 0 ? 'inline-block' : 'none'; }
+
+    let html = '';
+    hubShips.forEach(s => {
+        html += `<tr>
+            <td>${s.id.split('-')[0]}</td>
+            <td><span class="badge" style="background:var(--primary);">${s.status}</span></td>
+            <td>${s.dock_assigned || '-'}</td>
+            <td>${s.pickup_warehouse_id === currentWarehouseId ? 'This Hub' : 'Other'}</td>
+            <td>${s.drop_warehouse_id === currentWarehouseId ? 'This Hub' : 'Other'}</td>
+            <td>${s.weight || 0}</td>
+        </tr>`;
+    });
+
+    if (html === '') {
+        html = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No shipments found.</td></tr>`;
+    }
+    tbody.innerHTML = html;
+};
+
+// Hook into initial load to render these if they exist
+setTimeout(() => {
+    fetchBottleneckAlerts();
+    renderMaintenanceRecovery();
+    renderDockScheduling();
+    renderHubShipments();
+}, 2000);
+
 
 
 

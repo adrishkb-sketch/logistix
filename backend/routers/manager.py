@@ -2941,3 +2941,99 @@ def get_driver_audit_log(company_id: str, x_logistix_context: Optional[str] = He
             
     return sorted(filtered_logs, key=lambda x: x.get("timestamp", ""), reverse=True)
 
+
+@router.get("/warehouses/{warehouse_id}/bottleneck-alerts")
+def get_warehouse_bottleneck_alerts(warehouse_id: str, company_id: str, x_logistix_context: Optional[str] = Header(None)):
+    verify_context(company_id, x_logistix_context)
+    
+    # Check if AI keys are configured
+    api_keys = None
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg:
+            api_keys = cfg.get("gemini_keys")
+
+    # Gather data for this warehouse
+    wh = warehouses_db.get_by_id(warehouse_id)
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+
+    is_accepting = wh.get("is_accepting_shipments", True)
+
+    all_ships = shipments_db.get_filtered({"company_id": company_id})
+    inbound = [s for s in all_ships if s.get("drop_warehouse_id") == warehouse_id and s.get("status") in ["assigned", "in_transit"]]
+    outbound = [s for s in all_ships if s.get("pickup_warehouse_id") == warehouse_id and s.get("status") == "pending"]
+    at_hub = [s for s in all_ships if s.get("current_warehouse_id") == warehouse_id and s.get("status") == "at_warehouse"]
+
+    prompt = (
+        f"Perform a bottleneck analysis for warehouse '{wh.get('name')}'. "
+        f"Incoming Shipments: {len(inbound)}, Outbound Queue: {len(outbound)}, Currently at Hub: {len(at_hub)}. "
+        f"Provide a short 2-3 sentence assessment. Mention if they need extra loaders or if scheduling should be temporarily blocked. "
+        f"Be very concise."
+    )
+    system_instruction = "You are an AI logistics bot. Provide concise, professional warehouse bottleneck analysis."
+
+    try:
+        from backend.services.gemini_service import call_gemini
+        response_text = call_gemini(prompt, system_instruction, api_key=api_keys)
+    except ValueError as e:
+        # Fallback if no AI key
+        total = len(inbound) + len(outbound) + len(at_hub)
+        if total > 50:
+            response_text = "⚠️ HIGH VOLUME: Suggest adding 2 extra loaders immediately. Consider blocking inbound routing."
+        elif total > 20:
+            response_text = "🟡 MODERATE VOLUME: Manageable, but keep docks clear."
+        else:
+            response_text = "🟢 NORMAL VOLUME: Operations running smoothly."
+
+    return {
+        "alert": response_text,
+        "is_accepting_shipments": is_accepting,
+        "stats": {
+            "inbound": len(inbound),
+            "outbound": len(outbound),
+            "at_hub": len(at_hub)
+        }
+    }
+
+@router.post("/warehouses/{warehouse_id}/toggle-scheduling")
+def toggle_warehouse_scheduling(warehouse_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
+    company_id = data.get("company_id")
+    verify_context(company_id, x_logistix_context)
+
+    wh = warehouses_db.get_by_id(warehouse_id)
+    if not wh:
+        raise HTTPException(status_code=404, detail="Warehouse not found")
+
+    new_state = data.get("is_accepting_shipments", True)
+    warehouses_db.update(warehouse_id, {"is_accepting_shipments": new_state})
+
+    return {"message": "Warehouse scheduling state updated.", "is_accepting_shipments": new_state}
+
+@router.put("/shipments/{shipment_id}/assign-dock")
+def assign_shipment_dock(shipment_id: str, data: dict, x_logistix_context: Optional[str] = Header(None)):
+    company_id = data.get("company_id")
+    verify_context(company_id, x_logistix_context)
+    
+    dock_id = data.get("dock_id")
+    if not dock_id:
+        raise HTTPException(status_code=400, detail="Dock ID required")
+
+    s = shipments_db.get_by_id(shipment_id)
+    if not s:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Clear this dock from any other shipments currently using it
+    # to enforce 1-to-1 dock usage loosely at this hub.
+    # We only care about shipments in "at_warehouse" or "in_transit" (arriving soon).
+    wh_id = s.get("current_warehouse_id") or s.get("drop_warehouse_id")
+    all_s = shipments_db.get_filtered({"company_id": company_id})
+    for other_s in all_s:
+        if other_s["id"] != shipment_id and other_s.get("dock_assigned") == dock_id:
+            # Check if it's at the same warehouse
+            other_wh_id = other_s.get("current_warehouse_id") or other_s.get("drop_warehouse_id")
+            if other_wh_id == wh_id:
+                shipments_db.update(other_s["id"], {"dock_assigned": None})
+
+    shipments_db.update(shipment_id, {"dock_assigned": dock_id})
+    return {"message": f"Shipment assigned to {dock_id}"}
