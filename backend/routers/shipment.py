@@ -433,8 +433,9 @@ def create_shipment(shipment_data: ShipmentCreate):
     })
 
     new_shipment = Shipment(**shipment_dict)
+    shipment_dict = new_shipment.model_dump()
     
-    shipments_db.insert(new_shipment.model_dump())
+    shipments_db.insert(shipment_dict)
     
     # Auto-log revenue if prepaid
     if shipment_dict["payment_status"] == "paid":

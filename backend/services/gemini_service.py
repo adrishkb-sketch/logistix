@@ -429,7 +429,7 @@ def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = N
 
 def call_gemini(prompt: str, system_instruction: Optional[str] = None, api_key: Optional[str] = None) -> str:
     """
-    Calls the Gemini 2.0 Flash API directly using the requests library.
+    Calls the Gemini 1.5 Flash API directly using the requests library.
     Automatically rotates through all keys in the pool on rate limit or error.
     If all keys fail (e.g., rate limits, invalid keys, or billing constraints), 
     transparently falls back to local high-fidelity simulated reports.

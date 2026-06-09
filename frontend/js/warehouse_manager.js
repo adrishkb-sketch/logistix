@@ -1851,7 +1851,7 @@ function getShimmerHtml(message) {
 
 const modelFooter = `
     <div style="margin-top: 24px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted);">
-        <span>Model: <b>Gemini 2.0 Flash</b></span>
+        <span>Model: <b>Gemini 1.5 Flash</b></span>
         <span>Confidence: <b>High (94%)</b></span>
     </div>
 `;
