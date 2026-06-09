@@ -3950,21 +3950,21 @@ window.resplitRemainingRoute = async function(shipmentId) {
         let directEta = directDist / 60.0;
         let diffDirect = directEta - origEtaHours;
         let diffDirectStr = diffDirect > 0 
-            ? \`<span style="color:var(--danger); font-size:0.75rem; font-weight:bold;">Slower by \${diffDirect.toFixed(1)} hrs</span>\`
-            : \`<span style="color:var(--success); font-size:0.75rem; font-weight:bold;">Faster by \${Math.abs(diffDirect).toFixed(1)} hrs</span>\`;
+            ? `<span style="color:var(--danger); font-size:0.75rem; font-weight:bold;">Slower by ${diffDirect.toFixed(1)} hrs</span>`
+            : `<span style="color:var(--success); font-size:0.75rem; font-weight:bold;">Faster by ${Math.abs(diffDirect).toFixed(1)} hrs</span>`;
             
-        html += \`
+        html += `
             <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <strong style="font-size:1rem;">🚀 Direct to Destination</strong>
-                    <div style="color:var(--text-muted); font-size:0.8rem; margin-top:4px;">No intermediate hubs. \${Math.round(directDist)} km</div>
+                    <div style="color:var(--text-muted); font-size:0.8rem; margin-top:4px;">No intermediate hubs. ${Math.round(directDist)} km</div>
                 </div>
                 <div style="text-align:right;">
-                    <div>\${diffDirectStr}</div>
-                    <button class="btn-primary" style="margin-top:8px; padding:6px 12px; font-size:0.8rem;" onclick="submitManualHub('\${shipmentId}', null)">Select Direct</button>
+                    <div>${diffDirectStr}</div>
+                    <button class="btn-primary" style="margin-top:8px; padding:6px 12px; font-size:0.8rem;" onclick="submitManualHub('${shipmentId}', null)">Select Direct</button>
                 </div>
             </div>
-        \`;
+        `;
         
         for (const wh of warehouses) {
             let distA = haversine(startLoc.lat, startLoc.lng, wh.lat, wh.lng);
@@ -3973,24 +3973,24 @@ window.resplitRemainingRoute = async function(shipmentId) {
             let diff = whEta - origEtaHours;
             
             let diffStr = diff > 0 
-                ? \`<span style="color:var(--danger); font-size:0.75rem; font-weight:bold;">Slower by \${diff.toFixed(1)} hrs</span>\`
-                : \`<span style="color:var(--success); font-size:0.75rem; font-weight:bold;">Faster by \${Math.abs(diff).toFixed(1)} hrs</span>\`;
+                ? `<span style="color:var(--danger); font-size:0.75rem; font-weight:bold;">Slower by ${diff.toFixed(1)} hrs</span>`
+                : `<span style="color:var(--success); font-size:0.75rem; font-weight:bold;">Faster by ${Math.abs(diff).toFixed(1)} hrs</span>`;
                 
-            html += \`
+            html += `
                 <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:12px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong style="font-size:1rem;">🏢 \${wh.name}</strong>
-                        <div style="color:var(--text-muted); font-size:0.8rem; margin-top:4px;">Via \${wh.location.city} · \${Math.round(distA + distB)} km total</div>
+                        <strong style="font-size:1rem;">🏢 ${wh.name}</strong>
+                        <div style="color:var(--text-muted); font-size:0.8rem; margin-top:4px;">Via ${wh.location.city} · ${Math.round(distA + distB)} km total</div>
                     </div>
                     <div style="text-align:right;">
-                        <div>\${diffStr}</div>
-                        <button class="btn-primary" style="margin-top:8px; padding:6px 12px; font-size:0.8rem;" onclick="submitManualHub('\${shipmentId}', '\${wh.id}')">Route Via Hub</button>
+                        <div>${diffStr}</div>
+                        <button class="btn-primary" style="margin-top:8px; padding:6px 12px; font-size:0.8rem;" onclick="submitManualHub('${shipmentId}', '${wh.id}')">Route Via Hub</button>
                     </div>
                 </div>
-            \`;
+            `;
         }
         
-        html += \`</div></div></div>\`;
+        html += `</div></div></div>`;
         document.body.insertAdjacentHTML('beforeend', html);
         
     } catch(e) {
@@ -4004,7 +4004,7 @@ window.submitManualHub = async function(shipmentId, warehouseId) {
         document.getElementById('manual-hub-modal').remove();
         showNotification('Configuring manual route...', 'success');
         
-        await apiCall(\`/shipments/\${shipmentId}/manual-resplit\`, 'POST', {
+        await apiCall(`/shipments/${shipmentId}/manual-resplit`, 'POST', {
             warehouse_id: warehouseId
         });
         
