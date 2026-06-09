@@ -653,3 +653,115 @@ function parseMarkdownToHtml(text) {
 window.ensureGeminiApiKey = ensureGeminiApiKey;
 window.parseMarkdownToHtml = parseMarkdownToHtml;
 
+// --- Universal Smart Table Search ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Exclude shipments page as requested
+    if (window.location.pathname.includes('shipment')) return;
+
+    function injectSearchBars() {
+        const tables = document.querySelectorAll('table');
+        tables.forEach(table => {
+            if (table.hasAttribute('data-smart-search-added')) return;
+            if (table.classList.contains('sim-table') || table.id === 'sims-table') return;
+            
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+
+            table.setAttribute('data-smart-search-added', 'true');
+
+            const searchContainer = document.createElement('div');
+            searchContainer.style.cssText = 'width: 100%; margin-bottom: 15px; position: relative;';
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = '🔍 Smart Search...';
+            searchInput.className = 'smart-table-search';
+            searchInput.style.cssText = `
+                width: 100%;
+                max-width: 100%;
+                padding: 12px 18px;
+                border-radius: 25px;
+                border: 1px solid rgba(255,255,255,0.1);
+                background: rgba(0, 0, 0, 0.2);
+                color: var(--text, white);
+                font-size: 0.95rem;
+                outline: none;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-sizing: border-box;
+                backdrop-filter: blur(10px);
+            `;
+
+            searchInput.addEventListener('focus', () => {
+                searchInput.style.border = '1px solid var(--primary, #3b82f6)';
+                searchInput.style.boxShadow = '0 4px 15px rgba(59, 130, 246, 0.2)';
+                searchInput.style.background = 'rgba(0, 0, 0, 0.4)';
+            });
+            searchInput.addEventListener('blur', () => {
+                searchInput.style.border = '1px solid rgba(255,255,255,0.1)';
+                searchInput.style.boxShadow = 'none';
+                searchInput.style.background = 'rgba(0, 0, 0, 0.2)';
+            });
+
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const currentTbody = table.querySelector('tbody');
+                if (!currentTbody) return;
+                const rows = Array.from(currentTbody.querySelectorAll('tr'));
+                
+                rows.forEach((row, idx) => {
+                    if (!row.hasAttribute('data-orig-idx')) {
+                        row.setAttribute('data-orig-idx', idx);
+                    }
+                });
+
+                if (!term) {
+                    rows.sort((a, b) => parseInt(a.getAttribute('data-orig-idx')) - parseInt(b.getAttribute('data-orig-idx')))
+                        .forEach(row => currentTbody.appendChild(row));
+                    rows.forEach(row => {
+                        row.style.opacity = '1';
+                        row.style.pointerEvents = 'auto';
+                    });
+                    return;
+                }
+
+                const matched = [];
+                const unmatched = [];
+
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(term)) {
+                        row.style.opacity = '1';
+                        row.style.pointerEvents = 'auto';
+                        matched.push(row);
+                    } else {
+                        row.style.opacity = '0.15';
+                        row.style.pointerEvents = 'none';
+                        unmatched.push(row);
+                    }
+                });
+
+                matched.forEach(row => currentTbody.appendChild(row));
+                unmatched.forEach(row => currentTbody.appendChild(row));
+            });
+
+            searchContainer.appendChild(searchInput);
+
+            const container = table.closest('.table-container') || table;
+            container.parentNode.insertBefore(searchContainer, container);
+        });
+    }
+
+    injectSearchBars();
+
+    const observer = new MutationObserver((mutations) => {
+        let shouldInject = false;
+        for (let m of mutations) {
+            if (m.addedNodes.length > 0) {
+                shouldInject = true;
+                break;
+            }
+        }
+        if (shouldInject) injectSearchBars();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+});
