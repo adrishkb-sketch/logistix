@@ -2608,6 +2608,9 @@ async function applyOfficialBorders(mapInstance) {
 }
 
 async function initDriverDashboard(isRetry = false) {
+    if (sessionStorage.getItem('location_granted') === 'true') {
+        isRetry = true;
+    }
     const overlay = document.getElementById('location-lock-overlay');
     const btn = overlay ? overlay.querySelector('button') : null;
     const originalText = btn ? btn.innerText : '';
@@ -2632,6 +2635,7 @@ async function initDriverDashboard(isRetry = false) {
                     maximumAge: 0
                 });
             });
+            sessionStorage.setItem('location_granted', 'true');
         } catch (err) {
             if (isRetry) {
                 console.warn("Geolocation API failed, falling back to IP location", err);
@@ -2714,6 +2718,7 @@ window.handleCustomLocation = async function(choice) {
     if (promptOverlay) promptOverlay.style.display = 'none';
     
     if (choice === 'allow' || choice === 'once') {
+        sessionStorage.setItem('location_granted', 'true');
         const overlay = document.getElementById('location-lock-overlay');
         const btn = overlay ? overlay.querySelector('button') : null;
         if (btn) {
