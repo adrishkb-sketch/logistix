@@ -2623,13 +2623,37 @@ async function initDriverDashboard() {
     }
 
     try {
-        const pos = await new Promise((res, rej) => {
-            navigator.geolocation.getCurrentPosition(res, rej, {
-                enableHighAccuracy: true, 
-                timeout: 8000,
-                maximumAge: 0
+        let pos;
+        try {
+            pos = await new Promise((res, rej) => {
+                navigator.geolocation.getCurrentPosition(res, rej, {
+                    enableHighAccuracy: true, 
+                    timeout: 8000,
+                    maximumAge: 0
+                });
             });
-        });
+        } catch (err) {
+            console.warn("Geolocation API failed, falling back to IP location", err);
+            try {
+                const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
+                const ipData = await ipRes.json();
+                if (ipData.latitude && ipData.longitude) {
+                    pos = {
+                        coords: {
+                            latitude: parseFloat(ipData.latitude),
+                            longitude: parseFloat(ipData.longitude)
+                        }
+                    };
+                    if (typeof updateLocation === 'function') {
+                        updateLocation(pos);
+                    }
+                } else {
+                    throw err;
+                }
+            } catch (fallbackErr) {
+                throw err;
+            }
+        }
         
         if (overlay) overlay.style.display = 'none';
         document.querySelector('.driver-layout').style.filter = 'none';
