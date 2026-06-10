@@ -1195,75 +1195,14 @@ async function loadMissions(autoStartNext = false) {
             return;
         }
 
-        // OTP First Logic: If assigned but not in transit, block map and force OTP
         const needsPickupOTP = activeShipments.some(s => s.status === 'assigned') && !activeShipments.some(s => s.status === 'in_transit');
-        if (needsPickupOTP) {
-            const assignedShipment = activeShipments.find(s => s.status === 'assigned');
-            const sId = assignedShipment.id;
-            
-            document.getElementById('route-map').style.display = 'none';
-            document.getElementById('fullscreen-btn').style.display = 'none';
-            document.getElementById('ai-routing-controls').style.display = 'none';
-            document.getElementById('nearby-pois-toggle').style.display = 'none';
-            
-            container.innerHTML = `
-                <div style="display:flex; justify-content:center; align-items:center; min-height:60vh; width:100%;">
-                    <div class="glass-card" style="border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:40px; max-width:450px; width:100%; box-shadow:0 30px 60px rgba(0,0,0,0.6); background:#0f172a; text-align:center;">
-                        <div style="font-size:3.5rem; margin-bottom:15px;">📦</div>
-                        <h3 style="margin:0; font-size:1.5rem; color:var(--primary); font-weight:800;">Verify Shipment Pickup</h3>
-                        <p style="font-size:0.95rem; color:var(--text-muted); margin:15px 0 30px 0; line-height:1.6;">Enter the 6-digit pickup OTP code provided by the warehouse or sender to unlock your route and map.</p>
-                        
-                        <div style="text-align:left; margin-bottom:25px;">
-                            <label style="font-size:0.8rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:1px;">Enter 6-Digit Code</label>
-                            <input id="dr-otp-input-inline" type="text" maxlength="6" pattern="[0-9]*" inputmode="numeric" placeholder="000000" style="width:100%; margin-top:10px; font-family:monospace; font-size:2rem; font-weight:800; letter-spacing:12px; text-align:center; padding:15px; border-radius:12px; background:rgba(255,255,255,0.03); border:2px solid var(--border); color:var(--text); outline:none; transition:border-color 0.3s;">
-                        </div>
-                        
-                        <button class="btn-primary" id="dr-verify-btn-inline" style="width:100%; padding:16px; font-size:1.1rem; font-weight:800; border-radius:12px; background:var(--primary); box-shadow:0 4px 15px rgba(59,130,246,0.4);">
-                            ✅ Verify Pickup
-                        </button>
-                        
-                        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:20px;">The interactive map, traffic heatmap, and AI features will be enabled once pickup is confirmed.</p>
-                    </div>
-                </div>
-            `;
-            
-            // Add inline event listeners
-            setTimeout(() => {
-                const inp = document.getElementById('dr-otp-input-inline');
-                const btn = document.getElementById('dr-verify-btn-inline');
-                
-                inp.addEventListener('focus', () => inp.style.borderColor = 'var(--primary)');
-                inp.addEventListener('blur', () => inp.style.borderColor = 'var(--border)');
-                
-                btn.onclick = async () => {
-                    const code = inp.value.trim();
-                    if (!code) return showToast("Please enter the code", "error");
-                    
-                    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-bottom-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></span> Verifying...';
-                    btn.disabled = true;
-                    
-                    try {
-                        const res = await apiCall(`/driver/${dId}/verify-pickup/${sId}?code=${code}`, 'POST');
-                        showNotification("Pickup verified successfully! 🚚", "success");
-                        loadMissions(); // Reloads the dashboard, breaking out of OTP lock
-                    } catch (err) {
-                        showToast(err.message || "Invalid Code", "error");
-                        inp.value = '';
-                        inp.focus();
-                        btn.innerHTML = '✅ Verify Pickup';
-                        btn.disabled = false;
-                    }
-                };
-            }, 100);
-            
-            return;
-        }
 
         // Decompose into stops
         let stops = [];
         activeShipments.forEach(s => {
             if (s.status === 'assigned' || s.status === 'pending') {
                 stops.push({ type: 'pickup', shipment: s, lat: s.pickup.lat, lng: s.pickup.lng, id: s.id + '_pickup' });
+                // We also push the drop so the map shows the whole leg route they have to cover!
                 stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' });
             } else if (s.status === 'in_transit') {
                 stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' });
@@ -1499,6 +1438,14 @@ async function loadMissions(autoStartNext = false) {
         
         // Fetch and show dynamic alerts/messages
         loadAlertsAndMessages();
+        
+        // If OTP is required, auto-trigger the modal over the map
+        if (needsPickupOTP) {
+            const assignedShipment = activeShipments.find(s => s.status === 'assigned');
+            setTimeout(() => {
+                window.openDriverOTPModal(assignedShipment.id, 'pickup');
+            }, 500);
+        }
         
     } catch(e) {
         console.error("[Bootstrap] loadMissions Failed:", e);
