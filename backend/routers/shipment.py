@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query
 from backend.models import ShipmentCreate, Shipment, Location, ShipmentEvent, ManualAssignRequest
 from backend.database import JSONDatabase
 from backend.services.assignment import auto_assign_shipment
