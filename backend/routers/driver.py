@@ -780,11 +780,6 @@ def get_driver_stats(driver_id: str, background_tasks: BackgroundTasks):
     driver = drivers_db.get_by_id(driver_id)
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
-        
-    if driver.get("company_id"):
-        background_tasks.add_task(check_and_run_dynamic_reassignment, driver["company_id"])
-        # Reload driver after potential notifications update
-        driver = drivers_db.get_by_id(driver_id)
 
     my_ships = shipments_db.get_filtered({"assigned_driver_id": driver_id})
     
