@@ -1908,26 +1908,6 @@ window.showNotification = showToast;
 
 // ── Boot ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject mobile header
-    const layout = document.querySelector('.dashboard-layout');
-    if (layout && !document.querySelector('.mobile-header')) {
-        const header = document.createElement('div');
-        header.className = 'mobile-header';
-        header.innerHTML = `<button class="menu-toggle" id="global-menu-toggle">☰</button><div style="font-weight:800;font-size:1rem;">Weather Fleet Map</div><div id="header-theme-placeholder"></div>`;
-        document.body.prepend(header);
-
-        const themeBtn = document.getElementById('theme-toggle');
-        const placeholder = document.getElementById('header-theme-placeholder');
-        const topBar = document.querySelector('.top-bar');
-
-        const syncPos = () => {
-            if (window.innerWidth <= 1024) {
-                if (themeBtn && placeholder && themeBtn.parentElement !== placeholder) placeholder.appendChild(themeBtn);
-            } else {
-                if (themeBtn && topBar && themeBtn.parentElement !== topBar) topBar.appendChild(themeBtn);
-            }
-        };
-        syncPos();
         window.addEventListener('resize', syncPos);
 
         const toggleBtn = document.getElementById('global-menu-toggle');
