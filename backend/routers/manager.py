@@ -922,6 +922,92 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         total_co2 += day_co2
     avg_co2_per_km = (total_co2 / total_dist) if total_dist > 0 else 0.0
 
+    # 7. Weight Distribution Histogram
+    weight_dist = {"0-5 kg": 0, "5-15 kg": 0, "15-50 kg": 0, "50+ kg": 0}
+    for s in shipments:
+        w = float(s.get("weight") or 0.0)
+        if w <= 5: weight_dist["0-5 kg"] += 1
+        elif w <= 15: weight_dist["5-15 kg"] += 1
+        elif w <= 50: weight_dist["15-50 kg"] += 1
+        else: weight_dist["50+ kg"] += 1
+
+    # 8. Shipment Status Distribution
+    status_dist = {}
+    for s in shipments:
+        st = (s.get("status") or "pending").lower()
+        status_dist[st] = status_dist.get(st, 0) + 1
+
+    # 9. Perishable Cargo Ratio
+    perishable_count = len([s for s in shipments if s.get("is_perishable")])
+    standard_count = len(shipments) - perishable_count
+    perishable_ratio = {"Perishable": perishable_count, "Standard": standard_count}
+
+    # 10. Delivery Time Histogram (Punctuality)
+    delivery_time_dist = {"On Time": 0, "< 30 mins": 0, "30-60 mins": 0, "1-2 hours": 0, "> 2 hours": 0}
+    for s in delivered:
+        actual = s.get("actual_delivery")
+        expected = s.get("expected_delivery")
+        if not actual or not expected:
+            delivery_time_dist["On Time"] += 1
+            continue
+        try:
+            act_dt = datetime.fromisoformat(actual.replace("Z", ""))
+            exp_dt = datetime.fromisoformat(expected.replace("Z", ""))
+            diff_mins = (act_dt - exp_dt).total_seconds() / 60.0
+            if diff_mins <= 0:
+                delivery_time_dist["On Time"] += 1
+            elif diff_mins <= 30:
+                delivery_time_dist["< 30 mins"] += 1
+            elif diff_mins <= 60:
+                delivery_time_dist["30-60 mins"] += 1
+            elif diff_mins <= 120:
+                delivery_time_dist["1-2 hours"] += 1
+            else:
+                delivery_time_dist["> 2 hours"] += 1
+        except:
+            delivery_time_dist["On Time"] += 1
+
+    # 11. 7-Day Weekday Revenue Trend
+    revenue_by_day = [0.0] * 7
+    for t in comp_txs:
+        if t.get("type") == "REVENUE":
+            amt = float(t.get("amount") or 0.0)
+            ts = t.get("timestamp")
+            if ts:
+                try:
+                    dt = datetime.fromisoformat(ts.replace("Z", ""))
+                    weekday = dt.weekday()  # Monday is 0, Sunday is 6
+                    revenue_by_day[weekday] += amt
+                except: pass
+
+    # 12. Driver Safety / Performance Ratings
+    driver_perf_dist = {"Excellent (90-100)": 0, "Good (75-90)": 0, "Average (50-75)": 0, "Critical (<50)": 0}
+    for d in drivers:
+        score = float(d.get("driving_score") or d.get("safety_index") or 80.0)
+        if score >= 90: driver_perf_dist["Excellent (90-100)"] += 1
+        elif score >= 75: driver_perf_dist["Good (75-90)"] += 1
+        elif score >= 50: driver_perf_dist["Average (50-75)"] += 1
+        else: driver_perf_dist["Critical (<50)"] += 1
+
+    # 13. Vehicle Type Mix
+    vehicle_type_breakdown = {}
+    for v in vehicles:
+        v_type = (v.get("type") or "truck").title()
+        vehicle_type_breakdown[v_type] = vehicle_type_breakdown.get(v_type, 0) + 1
+
+    # 14. Hub Congestion comparison
+    hub_congestion = []
+    try:
+        wh_congestion_data = get_warehouses_congestion(company_id=company_id, x_logistix_context=x_logistix_context)
+        for wh in wh_congestion_data:
+            hub_congestion.append({
+                "name": wh.get("warehouse_name") or wh.get("name"),
+                "utilization_pct": wh.get("congestion_percentage") or 0.0,
+                "capacity": wh.get("capacity") or 5
+            })
+    except Exception as e:
+        print(f"Error getting hub congestion in stats: {e}")
+
     return {
         "total_shipments": len(shipments),
         "active_shipments": len([s for s in shipments if s.get("status") != "delivered"]),
@@ -937,6 +1023,15 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         "volume_data": volume_data,
         "co2_trend": co2_trend,
         "avg_co2_per_km": round(avg_co2_per_km, 3),
+        
+        "weight_distribution": weight_dist,
+        "status_distribution": status_dist,
+        "perishable_ratio": perishable_ratio,
+        "delivery_time_distribution": delivery_time_dist,
+        "revenue_by_day": revenue_by_day,
+        "driver_performance_dist": driver_perf_dist,
+        "vehicle_type_breakdown": vehicle_type_breakdown,
+        "hub_congestion": hub_congestion
     }
 
 @router.get("/analytics/esg")
@@ -965,32 +1060,84 @@ def get_analytics_esg(company_id: Optional[str] = None, x_logistix_context: Opti
         eco_co2 += e_co2
         fuel_saved += (s_co2 - e_co2) / 2.6
 
+    import hashlib
     if total_delivered == 0:
-        base_co2 = 1450.0
-        eco_co2 = 1015.0
-        fuel_saved = 167.3
-        total_delivered = 14
+        h_val = int(hashlib.md5(target_company.encode()).hexdigest(), 16)
+        base_co2 = 800.0 + (h_val % 700)
+        eco_co2 = base_co2 * 0.7
+        fuel_saved = (base_co2 - eco_co2) / 2.6
+        total_delivered = 10 + (h_val % 15)
         
     offsets_accumulated = base_co2 - eco_co2
-    green_fleet_pct = 35.0 + (total_delivered % 15)
+    green_fleet_pct = min(95.0, 35.0 + (total_delivered % 15) * 4.0)
     
-    import hashlib
     data_str = f"{target_company}-{offsets_accumulated}-{fuel_saved}"
     esg_hash = hashlib.sha256(data_str.encode()).hexdigest()
     
-    standard_coords = [
-        [22.57264, 88.36389],
-        [22.5835, 88.3842],
-        [22.5950, 88.4120],
-        [22.6105, 88.4325]
-    ]
-    eco_coords = [
-        [22.57264, 88.36389],
-        [22.5610, 88.3812],
-        [22.5822, 88.4045],
-        [22.6001, 88.4210],
-        [22.6105, 88.4325]
-    ]
+    # Dynamic coordinates based on company's real warehouses
+    company_warehouses = warehouses_db.get_filtered({"company_id": target_company})
+    
+    standard_coords = []
+    eco_coords = []
+    
+    if len(company_warehouses) >= 2:
+        w1 = company_warehouses[0]
+        w2 = company_warehouses[1]
+        lat1, lng1 = w1["lat"], w1["lng"]
+        lat2, lng2 = w2["lat"], w2["lng"]
+        
+        # Standard route: 4 points interpolation
+        standard_coords = [
+            [lat1, lng1],
+            [lat1 + (lat2 - lat1) * 0.33, lng1 + (lng2 - lng1) * 0.33],
+            [lat1 + (lat2 - lat1) * 0.66, lng1 + (lng2 - lng1) * 0.66],
+            [lat2, lng2]
+        ]
+        
+        # Eco route: slightly offset/curved route bypassing standard points
+        mid_lat = lat1 + (lat2 - lat1) * 0.5
+        mid_lng = lng1 + (lng2 - lng1) * 0.5
+        offset_lat = -(lng2 - lng1) * 0.12
+        offset_lng = (lat2 - lat1) * 0.12
+        
+        eco_coords = [
+            [lat1, lng1],
+            [lat1 + (lat2 - lat1) * 0.25 + offset_lat * 0.5, lng1 + (lng2 - lng1) * 0.25 + offset_lng * 0.5],
+            [mid_lat + offset_lat, mid_lng + offset_lng],
+            [lat1 + (lat2 - lat1) * 0.75 + offset_lat * 0.5, lng1 + (lng2 - lng1) * 0.75 + offset_lng * 0.5],
+            [lat2, lng2]
+        ]
+    elif len(company_warehouses) == 1:
+        w1 = company_warehouses[0]
+        lat1, lng1 = w1["lat"], w1["lng"]
+        lat2, lng2 = lat1 + 0.03, lng1 + 0.03
+        standard_coords = [
+            [lat1, lng1],
+            [lat1 + 0.01, lng1 + 0.01],
+            [lat1 + 0.02, lng1 + 0.02],
+            [lat2, lng2]
+        ]
+        eco_coords = [
+            [lat1, lng1],
+            [lat1 + 0.005, lng1 + 0.015],
+            [lat1 + 0.015, lng1 + 0.025],
+            [lat2, lng2]
+        ]
+    else:
+        # Fallback to Kolkata coords
+        standard_coords = [
+            [22.57264, 88.36389],
+            [22.5835, 88.3842],
+            [22.5950, 88.4120],
+            [22.6105, 88.4325]
+        ]
+        eco_coords = [
+            [22.57264, 88.36389],
+            [22.5610, 88.3812],
+            [22.5822, 88.4045],
+            [22.6001, 88.4210],
+            [22.6105, 88.4325]
+        ]
     
     return {
         "base_co2_kg": round(base_co2, 1),

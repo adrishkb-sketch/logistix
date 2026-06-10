@@ -326,35 +326,37 @@ function renderCascadePredictor(data) {
     
     if (!container) return;
     
-    totalHoursEl.innerText = `${data.total_impact_hours} hrs`;
+    if (totalHoursEl) {
+        totalHoursEl.innerText = `${data.total_impact_hours || 0} hrs`;
+    }
     
-    if (data.risks.length === 0) {
+    if (!data.risks || data.risks.length === 0) {
         container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted);">
             <div style="font-size:2rem; margin-bottom:10px;">🛡️</div>
             Network Stable. No cascading risks detected.
         </div>`;
-        recDiv.style.display = 'none';
+        if (recDiv) recDiv.style.display = 'none';
         return;
     }
     
-    recDiv.style.display = 'block';
-    recText.innerText = data.recommendation;
+    if (recDiv) recDiv.style.display = 'block';
+    if (recText) recText.innerText = data.recommendation || '';
     
     container.innerHTML = data.risks.map(r => `
         <div class="glass-card" style="padding:24px; border-left: 4px solid ${r.severity==='high'?'var(--danger)':'var(--warning)'}; background:rgba(255,255,255,0.02); margin-bottom:16px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-                <span style="font-size:0.75rem; color:var(--muted); font-weight:bold; letter-spacing:0.05em;">SOURCE: ${r.source_shipment_id.slice(0,8)}</span>
-                <span class="status-pill" style="background:${r.severity==='high'?'var(--danger)':'var(--warning)'}22; color:${r.severity==='high'?'var(--danger)':'var(--warning)'}; font-size:0.7rem;">${r.severity.toUpperCase()} RISK</span>
+                <span style="font-size:0.75rem; color:var(--muted); font-weight:bold; letter-spacing:0.05em;">SOURCE: ${r.source_shipment_id ? r.source_shipment_id.slice(0,8) : 'UNKNOWN'}</span>
+                <span class="status-pill" style="background:${r.severity==='high'?'var(--danger)':'var(--warning)'}22; color:${r.severity==='high'?'var(--danger)':'var(--warning)'}; font-size:0.7rem;">${(r.severity || 'UNKNOWN').toUpperCase()} RISK</span>
             </div>
-            <h3 style="margin:8px 0; font-size:1.1rem;">${r.description}</h3>
-            <p style="font-size:0.9rem; color:var(--danger); font-weight:600; margin-bottom:16px;">Current Deviation: +${r.current_delay}</p>
+            <h3 style="margin:8px 0; font-size:1.1rem;">${r.description || ''}</h3>
+            <p style="font-size:0.9rem; color:var(--danger); font-weight:600; margin-bottom:16px;">Current Deviation: +${r.current_delay || 0}</p>
             
             <div style="border-top: 1px solid var(--border); padding-top:16px;">
                 <small style="color:var(--muted); display:block; margin-bottom:8px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">Predicted Hub Impacts:</small>
-                ${r.impact_hubs.map(h => `
+                ${(r.impact_hubs || []).map(h => `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:0.85rem;">
-                        <span style="font-weight:600;">📍 ${h.location}</span>
-                        <span style="color:${h.risk_level==='critical'?'var(--danger)':'var(--warning)'}">+${h.est_delay_mins}m</span>
+                        <span style="font-weight:600;">📍 ${h.location || ''}</span>
+                        <span style="color:${h.risk_level==='critical'?'var(--danger)':'var(--warning)'}">+${h.est_delay_mins || 0}m</span>
                     </div>
                 `).join('')}
             </div>

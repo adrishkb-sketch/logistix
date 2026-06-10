@@ -114,6 +114,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('manager_id', res.company_id);
             localStorage.setItem('company_id', res.company_id);
             localStorage.setItem('manager_name', res.name);
+            localStorage.setItem('company_name', res.name);
             
             window.location.href = 'pages/manager.html';
         }
@@ -179,6 +180,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('manager_id', res.company_id);
             localStorage.setItem('company_id', res.company_id);
             localStorage.setItem('manager_name', name);
+            localStorage.setItem('company_name', name);
 
             // Show Welcome Modal
             showWelcomeModal(name);
