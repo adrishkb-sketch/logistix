@@ -888,32 +888,69 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
     expenses = sum(float(t.get("amount") or 0) for t in comp_txs if t.get("type") == "EXPENSE")
     net_profit = revenue - expenses
 
-    # 6. 7-day volume_data (real shipment counts per day)
+    # 6. 7-day operational histories (real data from shipments & ledger)
     from datetime import datetime, timedelta, timezone
     today = datetime.now(timezone.utc).date()
     volume_data = []
     co2_trend = []
+    perf_history = []
+    delay_history = []
+    revenue_history = []
+
     for offset in range(6, -1, -1):
         day = today - timedelta(days=offset)
+        day_str = str(day)
+        
         day_ships = [
             s for s in shipments
-            if s.get("created_at") and s["created_at"][:10] == str(day)
+            if s.get("created_at") and s["created_at"][:10] == day_str
         ]
         volume_data.append(len(day_ships))
-        # CO2 estimate for that day's shipments
+        
+        # Day's CO2 estimate
         day_co2 = 0.0
         for ds in day_ships:
-            dist = 200.0  # default estimate km
+            dist = 200.0
             weight = float(ds.get("weight") or 10.0)
             vtype = (ds.get("vehicle_type") or "truck").lower()
             factor = {"truck": 0.27, "van": 0.18, "bike": 0.06, "drone": 0.02}.get(vtype, 0.20)
-            day_co2 += weight * dist * factor / 1000.0  # kg CO2
+            day_co2 += weight * dist * factor / 1000.0
         co2_trend.append(round(day_co2, 2))
+
+        # Day's punctuality (timely percent) and average delay (delivered shipments)
+        day_delivered = [s for s in day_ships if s.get("status") == "delivered"]
+        if not day_delivered:
+            perf_history.append(100.0)
+            delay_history.append(0.0)
+        else:
+            day_timely = [s for s in day_delivered if is_timely(s)]
+            day_timely_pct = (len(day_timely) / len(day_delivered)) * 100.0
+            perf_history.append(round(day_timely_pct, 1))
+
+            day_delays = []
+            for s in day_delivered:
+                if s.get("actual_delivery") and s.get("expected_delivery"):
+                    try:
+                        act = datetime.fromisoformat(s["actual_delivery"].replace("Z", ""))
+                        exp = datetime.fromisoformat(s["expected_delivery"].replace("Z", ""))
+                        diff = (act - exp).total_seconds() / 60.0
+                        if diff > 0: day_delays.append(diff)
+                    except: pass
+            day_avg_delay = sum(day_delays) / len(day_delays) if day_delays else 0.0
+            delay_history.append(round(day_avg_delay, 1))
+
+        # Day's revenue from ledger
+        day_rev = 0.0
+        for t in comp_txs:
+            if t.get("type") == "REVENUE" and t.get("timestamp"):
+                if t["timestamp"][:10] == day_str:
+                    day_rev += float(t.get("amount") or 0.0)
+        revenue_history.append(round(day_rev, 2))
 
     total_dist = 0.0
     total_co2 = 0.0
     for s in shipments:
-        dist = 200.0  # default estimate km
+        dist = 200.0
         weight = float(s.get("weight") or 10.0)
         vtype = (s.get("vehicle_type") or "truck").lower()
         factor = {"truck": 0.27, "van": 0.18, "bike": 0.06, "drone": 0.02}.get(vtype, 0.20)
@@ -1019,10 +1056,12 @@ def get_manager_stats(company_id: str, x_logistix_context: Optional[str] = Heade
         "fleet_dist": fleet_dist,
         "revenue": round(revenue, 2),
         "net_profit": round(net_profit, 2),
-        "perf_history": [random.randint(85, 100) for _ in range(7)],
+        "perf_history": perf_history,
         "volume_data": volume_data,
         "co2_trend": co2_trend,
         "avg_co2_per_km": round(avg_co2_per_km, 3),
+        "delay_history": delay_history,
+        "revenue_history": revenue_history,
         
         "weight_distribution": weight_dist,
         "status_distribution": status_dist,
@@ -1061,15 +1100,12 @@ def get_analytics_esg(company_id: Optional[str] = None, x_logistix_context: Opti
         fuel_saved += (s_co2 - e_co2) / 2.6
 
     import hashlib
-    if total_delivered == 0:
-        h_val = int(hashlib.md5(target_company.encode()).hexdigest(), 16)
-        base_co2 = 800.0 + (h_val % 700)
-        eco_co2 = base_co2 * 0.7
-        fuel_saved = (base_co2 - eco_co2) / 2.6
-        total_delivered = 10 + (h_val % 15)
-        
     offsets_accumulated = base_co2 - eco_co2
-    green_fleet_pct = min(95.0, 35.0 + (total_delivered % 15) * 4.0)
+    
+    # Calculate real green fleet percentage based on company vehicles
+    comp_vehicles = vehicles_db.get_filtered({"company_id": target_company})
+    green_vehicles = [v for v in comp_vehicles if v and (v.get("type") or "").lower() in ["bike", "scooty", "3 wheeled (battery)", "ev"]]
+    green_fleet_pct = (len(green_vehicles) / len(comp_vehicles) * 100.0) if comp_vehicles else 0.0
     
     data_str = f"{target_company}-{offsets_accumulated}-{fuel_saved}"
     esg_hash = hashlib.sha256(data_str.encode()).hexdigest()

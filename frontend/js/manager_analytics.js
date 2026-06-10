@@ -103,18 +103,18 @@ async function loadInsights() {
                 trendTimely.innerText = `${onTimeDiff >= 0 ? '↑' : '↓'} ${Math.abs(onTimeDiff).toFixed(1)}% vs baseline`;
             }
 
-            // Draw sparklines
-            drawSparkline('sparkline-timely', stats.perf_history || vol.map(() => stats.timely_percent || 90), '#4f8cff');
+            // Draw sparklines using real backend histories
+            drawSparkline('sparkline-timely', stats.perf_history || vol.map(() => stats.timely_percent || 0), '#4f8cff');
             drawSparkline('sparkline-volume', vol, '#10b981');
-            drawSparkline('sparkline-delay', vol.map(v => Math.max(0, 30 - v * 2)), '#f59e0b');
+            drawSparkline('sparkline-delay', stats.delay_history || vol.map(() => stats.avg_delay_mins || 0), '#f59e0b');
             drawSparkline('sparkline-drivers', vol.map(() => stats.total_drivers || 0), '#a855f7');
             drawSparkline('sparkline-wh', vol.map(() => stats.total_warehouses || 0), '#4f8cff');
             drawSparkline('sparkline-veh', vol.map(() => stats.total_vehicles || 0), '#6366f1');
-            drawSparkline('sparkline-revenue', vol.map((v, i) => netProfit * (0.8 + i * 0.04)), '#10b981');
-            drawSparkline('sparkline-co2-km', vol.map((v, i) => (stats.avg_co2_per_km || 0.18) * (1 - i * 0.02)), '#10b981');
+            drawSparkline('sparkline-revenue', stats.revenue_history || vol.map(() => netProfit), '#10b981');
+            drawSparkline('sparkline-co2-km', stats.co2_trend || vol.map(() => stats.avg_co2_per_km || 0), '#10b981');
 
             // CO₂ Trend Chart
-            const co2Data = stats.co2_trend || vol.map(v => v * 12.4);
+            const co2Data = stats.co2_trend || vol.map(() => 0);
             const totalCO2 = co2Data.reduce((a, b) => a + b, 0);
             const co2El = document.getElementById('stat-co2-total');
             if (co2El) animateCounter(co2El, totalCO2, 'number');
@@ -147,6 +147,18 @@ async function loadInsights() {
         // Render Charts & Cascade
         if (stats) renderManagerCharts(stats);
         renderCascadePredictor(cascade);
+
+        // Show/hide Cascade Predictor Section depending on active risks
+        const cascadeCard = document.querySelector('[data-layout-id="analytics-cascade"]');
+        if (cascadeCard) {
+            cascadeCard.style.display = (cascade && cascade.risks && cascade.risks.length > 0) ? 'block' : 'none';
+        }
+
+        // Show/hide Alerts Section depending on active alerts
+        const insightsCard = document.getElementById('insights-panel');
+        if (insightsCard) {
+            insightsCard.style.display = (alertsList.length > 0) ? 'block' : 'none';
+        }
 
         // Safety Badge Update
         const safetyAlerts = alertsList.filter(a => (a.type === 'fatigue' || a.type === 'breakdown'));
@@ -369,7 +381,6 @@ async function resolveAlert(id) {
     loadInsights();
 }
 
-let esgMapInstance = null;
 let esgDataGlobal = null;
 
 async function loadEsgData() {
@@ -379,71 +390,13 @@ async function loadEsgData() {
         esgDataGlobal = data;
 
         // Update elements
-        document.getElementById('esg-offset-weight').innerText = `${data.offsets_accumulated_kg.toLocaleString()} kg`;
-        document.getElementById('esg-fuel-saved').innerText = `${data.fuel_saved_liters.toLocaleString()} L`;
-        document.getElementById('esg-green-pct').innerText = `${data.green_fleet_pct}%`;
+        const offsetWeightEl = document.getElementById('esg-offset-weight');
+        const fuelSavedEl = document.getElementById('esg-fuel-saved');
+        const greenPctEl = document.getElementById('esg-green-pct');
 
-        // Render ESG Map
-        if (document.getElementById('esg-map')) {
-            if (!esgMapInstance) {
-                esgMapInstance = L.map('esg-map', { zoomControl: true }).setView([22.59, 88.40], 12);
-                updateMapTheme(esgMapInstance);
-            } else {
-                esgMapInstance.eachLayer(layer => {
-                    if (layer instanceof L.Polyline || layer instanceof L.Marker) {
-                        esgMapInstance.removeLayer(layer);
-                    }
-                });
-            }
-
-            // Draw standard route (solid orange)
-            const standardPoly = L.polyline(data.standard_route, {
-                color: '#ff9a00',
-                weight: 5,
-                opacity: 0.85
-            }).addTo(esgMapInstance);
-
-            // Draw eco-optimized route (glowing green line)
-            const ecoPoly = L.polyline(data.eco_route, {
-                color: '#10b981',
-                weight: 6,
-                opacity: 0.95,
-                dashArray: '10, 10'
-            }).addTo(esgMapInstance);
-
-            // Add starting (pickup) and ending (destination) markers
-            if (data.standard_route && data.standard_route.length > 0) {
-                const start = data.standard_route[0];
-                const end = data.standard_route[data.standard_route.length - 1];
-
-                L.marker(start, {
-                    icon: L.divIcon({
-                        html: '<div style="background:#ff9a00;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px #ff9a00"></div>',
-                        className: '',
-                        iconSize: [18, 18],
-                        iconAnchor: [9, 9]
-                    })
-                }).bindPopup('<b>Standard Pickup Point</b>').addTo(esgMapInstance);
-
-                L.marker(end, {
-                    icon: L.divIcon({
-                        html: '<div style="background:#10b981;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px #10b981"></div>',
-                        className: '',
-                        iconSize: [18, 18],
-                        iconAnchor: [9, 9]
-                    })
-                }).bindPopup('<b>Eco-Optimized Destination</b>').addTo(esgMapInstance);
-            }
-
-            // Fit map boundaries
-            const group = new L.featureGroup([standardPoly, ecoPoly]);
-            esgMapInstance.fitBounds(group.getBounds(), { padding: [25, 25] });
-            
-            // Invalidate size to ensure rendering is correct
-            setTimeout(() => {
-                esgMapInstance.invalidateSize();
-            }, 200);
-        }
+        if (offsetWeightEl) offsetWeightEl.innerText = `${(data.offsets_accumulated_kg || 0).toLocaleString()} kg`;
+        if (fuelSavedEl) fuelSavedEl.innerText = `${(data.fuel_saved_liters || 0).toLocaleString()} L`;
+        if (greenPctEl) greenPctEl.innerText = `${(data.green_fleet_pct || 0)}%`;
     } catch(err) {
         console.error("ESG Load failed:", err);
     }
