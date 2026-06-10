@@ -905,9 +905,9 @@ function loadRadarLayer() {
         .then(data => {
             const past = data.radar?.past;
             if (past && past.length > 0) {
-                const latest = past[past.length - 1].path;
+                const latest = past[past.length - 1].time;
                 radarLayer = L.tileLayer(
-                    `https://tilecache.rainviewer.com${latest}/256/{z}/{x}/{y}/4/1_1.png`,
+                    `https://tilecache.rainviewer.com/v2/radar/${latest}/256/{z}/{x}/{y}/4/1_1.png`,
                     { opacity: 0.65, zIndex: 10, isOverlay: true, attribution: 'RainViewer' }
                 );
                 if (document.getElementById('toggle-radar').classList.contains('active')) {

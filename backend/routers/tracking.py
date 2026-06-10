@@ -545,7 +545,7 @@ def get_all_active_weather_cells(company_id: str) -> list[dict]:
                         seen_coords.add(key)
                         points.append({"lat": lat, "lng": lng, "label": loc_key.title()})
 
-    points = points[:100]
+    points = points[:25]
 
     if company_id == "test_company_assignment":
         live_cells = []
@@ -663,7 +663,7 @@ def get_fleet_weather(company_id: str):
                         points.append({"lat": lat, "lng": lng, "label": loc_key.title()})
 
     # Cap at 100 points — Open-Meteo free tier handles this fine
-    points = points[:100]
+    points = points[:25]
 
     # ── 2. Fetch live weather from Open-Meteo ──────────────────────────────
     weather_data = fetch_real_weather(points)
