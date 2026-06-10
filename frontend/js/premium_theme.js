@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const char = textContent[i];
                 const span = document.createElement('span');
                 span.className = 'char';
-                span.innerText = char;
+                span.innerHTML = char === ' ' ? ' ' : char;
                 heading.appendChild(span);
             }
 
