@@ -1,0 +1,119 @@
+
+==================================================
+Page: manager_analytics.html
+JS Controller: manager_analytics.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_drivers.html
+JS Controller: manager_drivers.js
+Total Modals: 26
+Used (8): ['broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-vehicle-modal', 'edit-fields', 'edit-form', 'edit-modal', 'smart-assistant-modal']
+Unused (18): ['assign-modal', 'bulk-upload-modal', 'cargo-plan-modal', 'driver-profile-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_fuel_oracle.html
+JS Controller: manager_fuel_oracle.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_hub_leaves.html
+JS Controller: manager_hub_leaves.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_leaderboard.html
+JS Controller: manager_leaderboard.js
+Total Modals: 26
+Used (2): ['driver-profile-modal', 'profile-modal']
+Unused (24): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_messages.html
+JS Controller: manager_messages.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_oracle.html
+JS Controller: manager_oracle.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_payments.html
+JS Controller: manager_payments.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_receivers.html
+JS Controller: manager_receivers.js
+Total Modals: 27
+Used (4): ['edit-fields', 'edit-form', 'edit-modal', 'receiver-orders-modal']
+Unused (23): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_resilience.html
+JS Controller: manager_resilience.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_safety.html
+JS Controller: manager_safety.js
+Total Modals: 27
+Used (2): ['logs-modal', 'safety-audit-modal']
+Unused (25): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_shipments.html
+JS Controller: manager_shipments.js
+Total Modals: 27
+Used (15): ['assign-modal', 'bulk-upload-modal', 'cargo-plan-modal', 'edit-leg-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'track-modal']
+Unused (12): ['broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-vehicle-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'profile-modal', 'suggestion-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_strategy.html
+JS Controller: manager_strategy.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_system.html
+JS Controller: manager_system.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_verifications.html
+JS Controller: manager_verifications.js
+Total Modals: 26
+Used (0): []
+Unused (26): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'edit-modal', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'suggestion-modal', 'track-modal', 'wh-edit-modal', 'wh-modal']
+
+==================================================
+Page: manager_warehouses.html
+JS Controller: manager_warehouses.js
+Total Modals: 28
+Used (6): ['congestion-modal', 'edit-modal', 'suggestion-modal', 'wh-edit-modal', 'wh-modal', 'wh-readiness-modal']
+Unused (22): ['assign-modal', 'broadcast-modal', 'bulk-driver-modal', 'bulk-drone-modal', 'bulk-upload-modal', 'bulk-vehicle-modal', 'cargo-plan-modal', 'driver-profile-modal', 'edit-fields', 'edit-form', 'logs-modal', 'manual-assign-modal', 'map-picker-modal', 'merge-modal', 'message-modal', 'profile-modal', 'qr-modal', 'shipment-detail-modal', 'smart-assistant-modal', 'split-modal', 'split-modal-title', 'track-modal']
+
+==================================================
+Page: manager_weather.html
+JS Controller: None
+Total Modals: 0
+Used (0): []
+Unused (0): []
