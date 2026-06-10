@@ -16,15 +16,15 @@
 <style>
 /* ── ULTRA-PREMIUM THEME VARIABLES ──────────────────────── */
 :root {
-    /* Dark Mode (Deep Obsidian & Vivid Neon) */
-    --bg-base: #010308;
+    /* Dark Mode (Ultra-Deep Navy & Bioluminescent Palette) */
+    --bg-base: #010208; /* Extremely Dark Navy Blue */
     --text-main: #ffffff;
     --text-muted: rgba(255, 255, 255, 0.7);
 
-    /* Striking Accents */
-    --accent-1: #00f0ff; /* Pure Neon Cyan */
-    --accent-2: #8a2be2; /* Electric Purple */
-    --accent-3: #ff007f; /* Hot Magenta */
+    /* 3 Distinct Striking Accents (Aquatic/Tech) */
+    --accent-1: #00e5ff; /* Vivid Neon Cyan */
+    --accent-2: #ff9900; /* Rich Gold/Amber */
+    --accent-3: #00ff73; /* Intense Spring Green */
 
     /* Surfaces & Glassmorphism */
     --surface: rgba(15, 20, 35, 0.4);
@@ -36,14 +36,14 @@
 }
 
 body.light-mode {
-    /* Enhanced Light Mode (Premium Slate & Vibrant Pastels) */
-    --bg-base: #f8fafc;
+    /* Enhanced Light Mode (Premium Slate & Crisp Tech Accents) */
+    --bg-base: #f1f5f9; /* Slightly deeper slate-white */
     --text-main: #0f172a;
     --text-muted: rgba(15, 23, 42, 0.65);
 
-    /* Much more vibrant light mode accents */
+    /* 3 Distinct Light Mode Accents */
     --accent-1: #0ea5e9; /* Sky Blue */
-    --accent-2: #8b5cf6; /* Violet */
+    --accent-2: #f59e0b; /* Amber/Orange */
     --accent-3: #10b981; /* Emerald */
 
     /* Surfaces & Glassmorphism */
@@ -145,35 +145,41 @@ body.light-mode .blob {
     height: 100%;
 }
 
-/* ── ADVANCED LETTER WAVE EFFECT ──────────────────────── */
-.split-text { display: inline-block; word-wrap: break-word; }
+/* ── ADVANCED LETTER WAVE EFFECT (Ultra-Optimized) ── */
+.split-text {
+    display: inline-block;
+    word-wrap: break-word;
+    pointer-events: auto;
+    touch-action: pan-y; /* Allows smooth vertical scrolling on mobile */
+}
 .split-text .char {
     display: inline-block;
-    transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s ease, text-shadow 0.2s ease;
+    /* Much faster, snappier return transition */
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.15s ease, text-shadow 0.15s ease;
     white-space: pre;
+    will-change: transform, color;
+    pointer-events: none; /* Passes events to parent container for unified math tracking */
 }
-.text-shine-hover { display: inline-block; transition: transform 0.2s ease; }
+.text-shine-hover { display: inline-block; transition: transform 0.15s ease; }
+
+/* Memory-Mapped JS Classes (Zero Layout Thrashing) */
+.split-text .char.hovered {
+    transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg);
+    color: var(--accent-1);
+    text-shadow: 0 10px 20px var(--neon-glow);
+    /* Ultra-fast instantaneous pop */
+    transition: transform 0.03s ease-out, color 0.03s ease-out, text-shadow 0.03s ease-out;
+    z-index: 2;
+    position: relative;
+}
+.split-text .char.neighbor {
+    transform: translate3d(0, -4px, 0) scale(1.05);
+    color: var(--accent-2);
+    /* Ultra-fast instantaneous neighbor reaction */
+    transition: transform 0.04s ease-out, color 0.04s ease-out;
+}
 
 @media (hover: hover) and (pointer: fine) {
-    .split-text .char:hover {
-        transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg);
-        color: var(--accent-1);
-        text-shadow: 0 10px 20px var(--neon-glow);
-        transition: transform 0.05s ease-out, color 0.05s ease-out, text-shadow 0.05s ease-out;
-        z-index: 2;
-        position: relative;
-    }
-    .split-text .char:hover + .char {
-        transform: translate3d(0, -4px, 0) scale(1.05);
-        color: var(--accent-2);
-        transition: transform 0.1s ease-out, color 0.1s ease-out;
-    }
-    .split-text .char:has(+ .char:hover) {
-        transform: translate3d(0, -4px, 0) scale(1.05);
-        color: var(--accent-2);
-        transition: transform 0.1s ease-out, color 0.1s ease-out;
-    }
-
     .text-shine-hover:hover {
         transform: translateY(-2px);
         background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
@@ -205,6 +211,7 @@ body.light-mode .blob {
     display: flex;
     align-items: center;
     transition: transform 0.3s ease;
+    cursor: pointer;
 }
 
 .controls-right {
@@ -367,12 +374,12 @@ body.scrolled .controls-right { transform: scale(0.92); opacity: 0.98; }
     color: var(--accent-1);
 }
 .pill-ai {
-    background: linear-gradient(135deg, rgba(176, 38, 255, 0.1), rgba(255, 0, 127, 0.1));
-    border-color: rgba(176, 38, 255, 0.4);
+    background: linear-gradient(135deg, rgba(41, 98, 255, 0.1), rgba(0, 230, 118, 0.1));
+    border-color: rgba(41, 98, 255, 0.4);
     color: var(--text-main);
 }
 .pill-ai:hover {
-    box-shadow: 0 0 20px rgba(176, 38, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 230, 118, 0.3);
     color: var(--accent-3);
 }
 
@@ -417,7 +424,7 @@ body.light-mode .btn-primary { background: var(--text-main); color: var(--bg-bas
     transform: translateY(-3px);
     box-shadow: 0 12px 25px var(--neon-glow);
     background: var(--accent-1);
-    color: #fff;
+    color: #000;
 }
 
 /* Outline Button */
@@ -641,9 +648,9 @@ section h2 {
 
 /* ── AI FEATURES SPECIAL SECTION ─────────────────────── */
 .ai-section {
-    background: linear-gradient(180deg, transparent, rgba(176, 38, 255, 0.03) 50%, transparent);
-    border-top: 1px solid rgba(176, 38, 255, 0.1);
-    border-bottom: 1px solid rgba(176, 38, 255, 0.1);
+    background: linear-gradient(180deg, transparent, rgba(41, 98, 255, 0.03) 50%, transparent);
+    border-top: 1px solid rgba(41, 98, 255, 0.1);
+    border-bottom: 1px solid rgba(41, 98, 255, 0.1);
 }
 .ai-section-header {
     display: flex;
@@ -657,11 +664,11 @@ section h2 {
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(176, 38, 255, 0.15));
-    border: 1px solid rgba(176, 38, 255, 0.3);
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(41, 98, 255, 0.15));
+    border: 1px solid rgba(41, 98, 255, 0.3);
     padding: 10px 24px;
     border-radius: 40px;
-    box-shadow: 0 0 20px rgba(176, 38, 255, 0.15);
+    box-shadow: 0 0 20px rgba(41, 98, 255, 0.15);
 }
 .ai-header-badge svg {
     width: 20px; height: 20px;
@@ -679,7 +686,7 @@ section h2 {
     .ai-section .card:hover .icon-box {
         border-color: var(--accent-2);
         color: var(--accent-2);
-        box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px rgba(176, 38, 255, 0.3);
+        box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px rgba(41, 98, 255, 0.3);
     }
     .ai-section .card:hover h3 { color: var(--accent-2); }
 }
@@ -696,6 +703,36 @@ section h2 {
 }
 .platform-grid .icon-box svg { width: 40px; height: 40px; }
 a { text-decoration: none; color: inherit; }
+
+/* ── FOOTER PHYSICS GRID (TRANSPARENT FOR GLOBAL BACKGROUND) ── */
+#custom-footer {
+    position: relative;
+    width: 100%;
+    height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: transparent; /* Lets global blobs show through smoothly */
+    z-index: 2;
+    border-top: 1px solid var(--border);
+}
+#custom-footer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, var(--bg-base) 10%, transparent 70%);
+    opacity: 0.85;
+    z-index: 0;
+    pointer-events: none;
+}
+#footer-grid {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
 
 /* ── MODAL ──────────────────── */
 .modal {
@@ -802,7 +839,7 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
     background: var(--surface-hover);
     transform: rotate(90deg);
     border-color: var(--accent-3);
-    box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
+    box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
 }
 
 /* PIN Row */
@@ -864,14 +901,46 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
     <div class="blob blob-3"></div>
 </div>
 
-<!-- ── PHYSICS DOT GRID (NEW) ── -->
+<!-- ── MAIN BACKGROUND PHYSICS DOT GRID ── -->
 <canvas id="interactive-grid"></canvas>
 
 <!-- ── FIXED CONTROLS ── -->
 <div class="fixed-control-bar">
-    <div id="landing-brand-container">
-        <!-- Logo injected by logo.js usually, placeholder styling kept if missing -->
-        <span style="font-size: 1.5rem; font-weight: 800; font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.05em; background: linear-gradient(135deg, var(--text-main), var(--accent-1)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Logistix.</span>
+    <div id="landing-brand-container" onclick="window.scrollTo(0,0)">
+        <!-- Custom SVG Logo Matching Apple Touch Icon -->
+        <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
+            <defs>
+                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#7B9EFE" />
+                    <stop offset="100%" stop-color="#5575F4" />
+                </linearGradient>
+            </defs>
+            <!-- Blue rounded square base -->
+            <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/>
+
+            <!-- Truck Box -->
+            <rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/>
+
+            <!-- Truck Cab -->
+            <path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/>
+
+            <!-- Window -->
+            <rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/>
+
+            <!-- Yellow Headlight -->
+            <polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/>
+
+            <!-- Blue Cross -->
+            <rect x="37" y="38" width="8" height="24" fill="#678BFF"/>
+            <rect x="29" y="46" width="24" height="8" fill="#678BFF"/>
+
+            <!-- Wheels -->
+            <circle cx="34" cy="72" r="11" fill="#FFFFFF"/>
+            <circle cx="34" cy="72" r="7" fill="#1C2438"/>
+
+            <circle cx="68" cy="72" r="11" fill="#FFFFFF"/>
+            <circle cx="68" cy="72" r="7" fill="#1C2438"/>
+        </svg>
     </div>
 
     <div class="controls-right">
@@ -911,7 +980,6 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
 </div>
 
 <script src="js/translator.js"></script>
-<script src="js/logo.js"></script>
 
 <!-- ── HERO ───────────────────────────────────────────── -->
 <div class="hero">
@@ -922,7 +990,7 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
             <span class="pill-text text-shine-hover" data-i18n="nav_updates">Update History 📜</span>
         </a>
 
-        <!-- High Performance Split Text applied ONLY to main headers -->
+        <!-- High Performance Split Text -->
         <h1 class="split-text" data-i18n="hero_title" style="margin-bottom: 24px; display:block;">Ship with<br> Automated   Precision</h1>
 
         <div class="hero-tagline">
@@ -1107,6 +1175,11 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
     </div>
 </section>
 
+<!-- ── CUSTOM FOOTER WITH DIAMOND PHYSICS TEXT GRID ── -->
+<footer id="custom-footer">
+    <canvas id="footer-grid"></canvas>
+</footer>
+
 <!-- ── MODAL ─────────────────────────────────────────────── -->
 <div id="modal" class="modal">
     <div class="modal-box" id="modal-content"></div>
@@ -1119,105 +1192,198 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-    /* ── HIGH-PERFORMANCE PHYSICS DOT GRID ── */
-    const canvas = document.getElementById('interactive-grid');
-    const ctx = canvas.getContext('2d', { alpha: true });
-    let width, height;
-    let dots = [];
+    // Global Pointer Coordinates
     const pointer = { x: -1000, y: -1000 };
-
-    // Physics constants (Amped up for a prominent, "buttery" feel)
-    const pushRadius = 220; // Much larger room for the cursor
-    const pushForce = 30; // Stronger snap away
-    const spring = 0.05; // Softer, more organic return
-    const friction = 0.8; // Longer glide
-
-    function initGrid() {
-        const dpr = window.devicePixelRatio || 1;
-        width = window.innerWidth;
-        height = window.innerHeight;
-
-        // Scale canvas for crisp rendering on high-DPI (Retina) screens
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-        ctx.scale(dpr, dpr);
-
-        // Denser, cleaner grid spacing
-        const spacing = window.innerWidth < 768 ? 35 : 30;
-        dots = [];
-
-        for (let x = 0; x < width; x += spacing) {
-            for (let y = 0; y < height; y += spacing) {
-                dots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
-            }
-        }
-    }
-
-    // Interaction Listeners
     window.addEventListener('mousemove', (e) => {
         pointer.x = e.clientX;
         pointer.y = e.clientY;
     });
-
     window.addEventListener('touchmove', (e) => {
         pointer.x = e.touches[0].clientX;
         pointer.y = e.touches[0].clientY;
     }, { passive: true });
-
     window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
     window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
 
-    // Debounced Resize
+
+    /* ── HIGH-PERFORMANCE PHYSICS DOT GRID (MAIN & FOOTER) ── */
+    const mCanvas = document.getElementById('interactive-grid');
+    const mCtx = mCanvas.getContext('2d', { alpha: true });
+
+    const fCanvas = document.getElementById('footer-grid');
+    const fCtx = fCanvas.getContext('2d', { alpha: true });
+
+    let mWidth, mHeight, mDots = [];
+    let fWidth, fHeight, fDots = [];
+
+    // Main Physics Config
+    const mPushRadius = 220;
+    const mPushForce = 30;
+    const spring = 0.05;
+    const friction = 0.8;
+
+    // Footer Text Physics Config
+    const fPushRadius = 90; // Smooth circular radius
+    const fPushForce = 20; // Good outward force
+    const fSpring = 0.06; // Smooth return
+    const fFriction = 0.88; // More fluid glide
+
+    function initGrids() {
+        const dpr = window.devicePixelRatio || 1;
+
+        // Main Grid Sizing
+        mWidth = window.innerWidth;
+        mHeight = window.innerHeight;
+        mCanvas.width = mWidth * dpr;
+        mCanvas.height = mHeight * dpr;
+        mCtx.scale(dpr, dpr);
+
+        // Footer Grid Sizing
+        const footerRect = document.getElementById('custom-footer').getBoundingClientRect();
+        fWidth = footerRect.width;
+        fHeight = footerRect.height;
+        fCanvas.width = fWidth * dpr;
+        fCanvas.height = fHeight * dpr;
+        fCtx.scale(dpr, dpr);
+
+        const spacing = window.innerWidth < 768 ? 35 : 30;
+
+        mDots = [];
+        for (let x = 0; x < mWidth; x += spacing) {
+            for (let y = 0; y < mHeight; y += spacing) {
+                mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+            }
+        }
+
+        /* ── RENDER TEXT TO OFF-SCREEN CANVAS FOR PARTICLE EXTRACTION ── */
+        const offCanvas = document.createElement('canvas');
+        const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+        offCanvas.width = fWidth;
+        offCanvas.height = fHeight;
+        offCtx.textAlign = 'center';
+        offCtx.textBaseline = 'middle';
+
+        let fontSize = Math.min(fWidth * 0.18, 200);
+        if(fontSize < 60) fontSize = 60;
+
+        offCtx.font = `800 ${fontSize}px 'Space Grotesk', sans-serif`;
+        offCtx.fillStyle = 'white';
+        offCtx.fillText('Logistix', fWidth / 2, fHeight / 2);
+
+        const imgData = offCtx.getImageData(0, 0, fWidth, fHeight).data;
+        const step = window.innerWidth < 768 ? 4 : 5; // Denser dots for much better readability
+
+        fDots = [];
+        for (let y = 0; y < fHeight; y += step) {
+            for (let x = 0; x < fWidth; x += step) {
+                // Check alpha channel of off-screen render
+                if (imgData[(y * fWidth + x) * 4 + 3] > 128) {
+                    let colorIdx = Math.floor(Math.random() * 3);
+                    fDots.push({
+                        x: x + (Math.random() * 60 - 30), // Initial explosion effect
+                        y: y + (Math.random() * 60 - 30),
+                        bx: x,
+                        by: y,
+                        vx: 0,
+                        vy: 0,
+                        colorIdx
+                    });
+                }
+            }
+        }
+    }
+
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(initGrid, 200);
+        resizeTimeout = setTimeout(initGrids, 200);
     });
 
-    function animateGrid() {
-        ctx.clearRect(0, 0, width, height);
-
-        // Dynamic color based on current theme, heavily bumped opacity
+    function animateGrids() {
+        // --- 1. Main Grid Animation (Circular Push) ---
+        mCtx.clearRect(0, 0, mWidth, mHeight);
         const isLight = document.body.classList.contains('light-mode');
-        ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.35)';
+        mCtx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.35)';
+        const mPushRadiusSq = mPushRadius * mPushRadius;
 
-        const pushRadiusSq = pushRadius * pushRadius;
-
-        for (let i = 0; i < dots.length; i++) {
-            let p = dots[i];
-
+        for (let i = 0; i < mDots.length; i++) {
+            let p = mDots[i];
             let dx = pointer.x - p.x;
             let dy = pointer.y - p.y;
             let distSq = dx * dx + dy * dy;
 
-            // Repulsion logic
-            if (distSq < pushRadiusSq) {
+            if (distSq < mPushRadiusSq) {
                 let dist = Math.sqrt(distSq);
-                let force = (pushRadius - dist) / pushRadius;
-                p.vx -= (dx / dist) * force * pushForce;
-                p.vy -= (dy / dist) * force * pushForce;
+                let force = (mPushRadius - dist) / mPushRadius;
+                p.vx -= (dx / dist) * force * mPushForce;
+                p.vy -= (dy / dist) * force * mPushForce;
             }
 
-            // Spring back to base position
             p.vx += (p.bx - p.x) * spring;
             p.vy += (p.by - p.y) * spring;
-
-            // Apply friction and move
             p.vx *= friction;
             p.vy *= friction;
             p.x += p.vx;
             p.y += p.vy;
-
-            // Slightly thicker dots for visibility
-            ctx.fillRect(p.x, p.y, 2.5, 2.5);
+            mCtx.fillRect(p.x, p.y, 2.5, 2.5);
         }
-        requestAnimationFrame(animateGrid);
+
+        // --- 2. Footer Text Grid Animation (Tight Hollow Push + Colors) ---
+        const footerRect = document.getElementById('custom-footer').getBoundingClientRect();
+
+        // Only compute footer physics if it's currently on screen
+        if (footerRect.top < window.innerHeight && footerRect.bottom > 0) {
+            fCtx.clearRect(0, 0, fWidth, fHeight);
+
+            const fColors = isLight
+                ? ['#0f172a', '#f59e0b', '#0ea5e9'] // Deep Slate, Amber, Sky Blue
+                : ['#ffffff', '#ff9900', '#00e5ff']; // Pure White, Gold, Cyan
+
+            // Adjust pointer local to footer canvas
+            let localPtrX = pointer.x;
+            let localPtrY = pointer.y - footerRect.top;
+
+            for (let i = 0; i < fDots.length; i++) {
+                let p = fDots[i];
+                let dx = localPtrX - p.x;
+                let dy = localPtrY - p.y;
+
+                // Smooth Euclidean distance instead of rigid Manhattan distance
+                let dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < fPushRadius) {
+                    // Quadratic easing for buttery smooth falloff
+                    let force = Math.pow((fPushRadius - dist) / fPushRadius, 2);
+
+                    // Push outward
+                    p.vx -= (dx / dist) * force * fPushForce;
+                    p.vy -= (dy / dist) * force * fPushForce;
+
+                    // Add a beautiful fluid swirl/vortex effect
+                    p.vx += (dy / dist) * force * (fPushForce * 0.6);
+                    p.vy -= (dx / dist) * force * (fPushForce * 0.6);
+                }
+
+                p.vx += (p.bx - p.x) * fSpring;
+                p.vy += (p.by - p.y) * fSpring;
+                p.vx *= fFriction;
+                p.vy *= fFriction;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                fCtx.fillStyle = fColors[p.colorIdx];
+                // Using fillRect instead of arc for vastly superior text rendering performance
+                fCtx.fillRect(p.x, p.y, 4, 4);
+            }
+        }
+
+        requestAnimationFrame(animateGrids);
     }
 
-    initGrid();
-    animateGrid();
+    initGrids();
+    animateGrids();
 
-    // ── ADVANCED LETTER WAVE LOGIC ──
+    // ── ADVANCED LETTER WAVE LOGIC (Responsive & Touch optimized) ──
     function splitTextNodes(element) {
         if (element.classList.contains('is-split')) return;
 
@@ -1264,11 +1430,79 @@ document.addEventListener("DOMContentLoaded", () => {
         element.classList.add('is-split');
     }
 
-    function initSplitText() {
-        document.querySelectorAll('.split-text').forEach(splitTextNodes);
+    // High-Performance In-Memory Wave Physics Tracker
+    function attachWavePhysics(container) {
+        const chars = Array.from(container.querySelectorAll('.char'));
+        if (chars.length === 0) return;
+
+        let charBoxes = [];
+        let activeIndex = -1;
+
+        // Cache positions to memory so we NEVER hit test the DOM on movement
+        const updateBoxes = () => {
+            charBoxes = chars.map(c => {
+                const rect = c.getBoundingClientRect();
+                return {
+                    left: rect.left - 2,
+                    right: rect.right + 2,
+                    top: rect.top - 10,
+                    bottom: rect.bottom + 10
+                };
+            });
+        };
+
+        const clearClasses = () => {
+            if (activeIndex > -1) {
+                chars[activeIndex].classList.remove('hovered');
+                if (chars[activeIndex - 1]) chars[activeIndex - 1].classList.remove('neighbor');
+                if (chars[activeIndex + 1]) chars[activeIndex + 1].classList.remove('neighbor');
+                activeIndex = -1;
+            }
+        };
+
+        const setActive = (index) => {
+            if (activeIndex === index) return;
+            clearClasses();
+            activeIndex = index;
+            if (index > -1) {
+                chars[index].classList.add('hovered');
+                if (chars[index - 1]) chars[index - 1].classList.add('neighbor');
+                if (chars[index + 1]) chars[index + 1].classList.add('neighbor');
+            }
+        };
+
+        const handleMove = (clientX, clientY) => {
+            for (let i = 0; i < charBoxes.length; i++) {
+                const b = charBoxes[i];
+                if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
+                    setActive(i);
+                    return;
+                }
+            }
+            clearClasses();
+        };
+
+        // Desktop High-Speed Tracking
+        container.addEventListener('mouseenter', updateBoxes, { passive: true });
+        container.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY), { passive: true });
+        container.addEventListener('mouseleave', clearClasses, { passive: true });
+
+        // Mobile High-Speed Tracking
+        container.addEventListener('touchstart', (e) => {
+            updateBoxes();
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+        container.addEventListener('touchmove', (e) => {
+            handleMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: true });
+        container.addEventListener('touchend', clearClasses, { passive: true });
+        container.addEventListener('touchcancel', clearClasses, { passive: true });
     }
 
-    initSplitText();
+    document.querySelectorAll('.split-text').forEach(el => {
+        splitTextNodes(el);
+        attachWavePhysics(el);
+    });
 
     const observerSplit = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
@@ -1279,6 +1513,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (target && target.classList && target.classList.contains('split-text') && !target.querySelector('.char')) {
                     target.classList.remove('is-split');
                     splitTextNodes(target);
+                    attachWavePhysics(target);
                 }
             }
         });
@@ -1430,7 +1665,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === document.getElementById('modal')) closeModal();
     });
 
-    // Scroll reveal with Intersection Observer
+    // Scroll reveal
     const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
     const observerReveal = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
