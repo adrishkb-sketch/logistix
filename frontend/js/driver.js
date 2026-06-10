@@ -2686,7 +2686,68 @@ async function initDriverDashboard(isRetry = false) {
 }
 
 window.retryLocation = function() {
-    initDriverDashboard(true);
+    let promptEl = document.getElementById('custom-location-prompt');
+    if (!promptEl) {
+        promptEl = document.createElement('div');
+        promptEl.id = 'custom-location-prompt';
+        promptEl.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:200000; width:90%; max-width:340px; background:var(--card, #1e293b); border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.5); border:1px solid var(--border, #334155); overflow:hidden; font-family:sans-serif;';
+        promptEl.innerHTML = `
+            <div style="padding:20px; text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:15px; color:var(--primary, #3b82f6);">📍</div>
+                <h3 style="margin:0 0 10px 0; font-size:1.1rem; font-weight:600; color:var(--text, #f8fafc);">Allow Logistix to access this device's location?</h3>
+            </div>
+            <div style="border-top:1px solid var(--border, #334155); display:flex; flex-direction:column;">
+                <button style="padding:15px; border:none; background:transparent; color:var(--text, #f8fafc); font-size:1rem; border-bottom:1px solid var(--border, #334155); cursor:pointer; text-align:left; padding-left:20px;" onclick="handleCustomLocation('allow')">While using the app</button>
+                <button style="padding:15px; border:none; background:transparent; color:var(--text, #f8fafc); font-size:1rem; border-bottom:1px solid var(--border, #334155); cursor:pointer; text-align:left; padding-left:20px;" onclick="handleCustomLocation('once')">Only this time</button>
+                <button style="padding:15px; border:none; background:transparent; color:var(--danger, #ef4444); font-size:1rem; cursor:pointer; text-align:left; padding-left:20px;" onclick="handleCustomLocation('deny')">Deny</button>
+            </div>
+        `;
+        document.body.appendChild(promptEl);
+    }
+    promptEl.style.display = 'block';
+};
+
+window.handleCustomLocation = async function(choice) {
+    const promptEl = document.getElementById('custom-location-prompt');
+    if (promptEl) promptEl.style.display = 'none';
+    
+    if (choice === 'allow' || choice === 'once') {
+        const overlay = document.getElementById('location-lock-overlay');
+        const btn = overlay ? overlay.querySelector('button') : null;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "Getting location...";
+        }
+        
+        try {
+            const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
+            const ipData = await ipRes.json();
+            if (ipData.latitude && ipData.longitude) {
+                const pos = {
+                    coords: {
+                        latitude: parseFloat(ipData.latitude),
+                        longitude: parseFloat(ipData.longitude)
+                    }
+                };
+                if (typeof updateLocation === 'function') {
+                    updateLocation(pos);
+                }
+            }
+            if (overlay) overlay.style.display = 'none';
+            document.querySelector('.driver-layout').style.filter = 'none';
+            document.querySelector('.driver-layout').style.pointerEvents = 'auto';
+            loadMissions();
+        } catch (e) {
+            showNotification("Failed to get location", "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = "🚀 Enable Location Access";
+            }
+        }
+    } else {
+        showNotification(getTranslation('location_error_denied') || "Location access denied", "error");
+    }
 };
 
 initDriverDashboard();
