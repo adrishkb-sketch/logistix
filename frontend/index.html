@@ -19,7 +19,7 @@
     /* Dark Mode (Deep Obsidian & Vivid Neon) */
     --bg-base: #010308;
     --text-main: #ffffff;
-    --text-muted: #8b9bb4;
+    --text-muted: rgba(255, 255, 255, 0.7);
 
     /* Striking Accents */
     --accent-1: #00f0ff; /* Pure Neon Cyan */
@@ -33,28 +33,26 @@
     --border-highlight: rgba(255, 255, 255, 0.15);
     --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.8);
     --neon-glow: rgba(0, 240, 255, 0.25);
-    --grid-color: rgba(255, 255, 255, 0.02);
 }
 
 body.light-mode {
-    /* Light Mode (Premium Pearl & Iridescent) */
-    --bg-base: #f0f4f8;
-    --text-main: #0a0f1c;
-    --text-muted: #5a6b85;
+    /* Enhanced Light Mode (Premium Slate & Vibrant Pastels) */
+    --bg-base: #f8fafc;
+    --text-main: #0f172a;
+    --text-muted: rgba(15, 23, 42, 0.65);
 
-    /* Vibrant Accents */
-    --accent-1: #0055ff; /* Deep Ultramarine */
-    --accent-2: #b400ff; /* Electric Magenta */
-    --accent-3: #00b3ff; /* Vivid Sky */
+    /* Much more vibrant light mode accents */
+    --accent-1: #0ea5e9; /* Sky Blue */
+    --accent-2: #8b5cf6; /* Violet */
+    --accent-3: #10b981; /* Emerald */
 
     /* Surfaces & Glassmorphism */
-    --surface: rgba(255, 255, 255, 0.7);
-    --surface-hover: rgba(255, 255, 255, 1);
-    --border: rgba(0, 0, 0, 0.05);
-    --border-highlight: rgba(0, 0, 0, 0.12);
-    --glow-shadow: 0 15px 40px -5px rgba(0, 85, 255, 0.12);
-    --neon-glow: rgba(0, 85, 255, 0.2);
-    --grid-color: rgba(0, 0, 0, 0.03);
+    --surface: rgba(255, 255, 255, 0.65);
+    --surface-hover: rgba(255, 255, 255, 0.95);
+    --border: rgba(0, 0, 0, 0.06);
+    --border-highlight: rgba(0, 0, 0, 0.18);
+    --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+    --neon-glow: rgba(14, 165, 233, 0.25);
 }
 
 /* ── RESET & BASE ────────────────────────────────────── */
@@ -77,91 +75,114 @@ body {
 
 ::selection { background: var(--accent-1); color: #fff; }
 
-/* ── ANIMATED BACKGROUND MAGIC & GRID ────────────────── */
+/* ── HIGH PERFORMANCE WAVE BACKGROUND MAGIC ──────────── */
 .bg-blobs {
     position: fixed;
     inset: 0;
-    z-index: -2;
+    z-index: 0; /* Brought forward to establish base layer */
     overflow: hidden;
     pointer-events: none;
     background: var(--bg-base);
     transition: background 0.6s ease;
 }
+
 .blob {
     position: absolute;
-    filter: blur(120px);
-    border-radius: 50%;
-    opacity: 0.35;
-    animation: floatBlob 25s infinite alternate ease-in-out;
-    mix-blend-mode: screen;
-    transform: translate3d(0, 0, 0); /* Hardware acceleration */
-}
-body.light-mode .blob { mix-blend-mode: multiply; opacity: 0.25; filter: blur(90px); }
-
-.blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: var(--accent-1); animation-delay: 0s; }
-.blob-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: var(--accent-2); animation-delay: -5s; }
-.blob-3 { top: 30%; left: 40%; width: 40vw; height: 40vw; background: var(--accent-3); animation-delay: -10s; }
-
-@keyframes floatBlob {
-    0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-    33% { transform: translate3d(5vw, 5vh, 0) scale(1.1) rotate(10deg); }
-    66% { transform: translate3d(-5vw, 10vh, 0) scale(0.9) rotate(-10deg); }
-    100% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+    filter: blur(55px);
+    opacity: 0.7;
+    will-change: transform, border-radius;
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    transform: translateZ(0); /* Force hardware acceleration */
 }
 
-.bg-grid {
+body.light-mode .blob {
+    opacity: 0.65; /* Boosted opacity for light mode pop */
+    filter: blur(45px);
+}
+
+.blob-1 {
+    top: -20%; left: -10%;
+    width: max(65vw, 450px); height: max(65vh, 450px);
+    background: var(--accent-1);
+    animation: wavePush1 14s infinite alternate ease-in-out;
+}
+.blob-2 {
+    bottom: -20%; right: -10%;
+    width: max(65vw, 450px); height: max(65vh, 450px);
+    background: var(--accent-2);
+    animation: wavePush2 17s infinite alternate ease-in-out;
+}
+.blob-3 {
+    top: 15%; left: 15%;
+    width: max(60vw, 400px); height: max(60vh, 400px);
+    background: var(--accent-3);
+    animation: wavePush3 21s infinite alternate ease-in-out;
+}
+
+@keyframes wavePush1 {
+    0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+    50%  { transform: translate3d(40vw, 30vh, 0) scale(1.3); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    100% { transform: translate3d(10vw, 60vh, 0) scale(0.9); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; }
+}
+@keyframes wavePush2 {
+    0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    50%  { transform: translate3d(-40vw, -30vh, 0) scale(1.4); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+    100% { transform: translate3d(-10vw, -60vh, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+}
+@keyframes wavePush3 {
+    0%   { transform: translate3d(0, 0, 0) scale(0.9); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+    50%  { transform: translate3d(-30vw, 20vh, 0) scale(1.35); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; }
+    100% { transform: translate3d(30vw, -15vh, 0) scale(1.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+}
+
+/* Interactive Canvas Grid */
+#interactive-grid {
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: 1; /* Sat safely between the background and content */
     pointer-events: none;
-    background-size: 50px 50px;
-    background-image:
-        linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
-    mask-image: radial-gradient(circle at center, black 20%, transparent 80%);
-    -webkit-mask-image: radial-gradient(circle at 50% 30%, black 20%, transparent 80%);
+    width: 100%;
+    height: 100%;
 }
 
-/* ── ADVANCED LETTER WAVE EFFECT (Optimized for H1/H2) ── */
+/* ── ADVANCED LETTER WAVE EFFECT ──────────────────────── */
 .split-text { display: inline-block; word-wrap: break-word; }
 .split-text .char {
     display: inline-block;
     transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s ease, text-shadow 0.2s ease;
     white-space: pre;
 }
+.text-shine-hover { display: inline-block; transition: transform 0.2s ease; }
 
-.split-text .char:hover {
-    transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg);
-    color: var(--accent-1);
-    text-shadow: 0 10px 20px var(--neon-glow);
-    transition: transform 0.05s ease-out, color 0.05s ease-out, text-shadow 0.05s ease-out;
-    z-index: 2;
-    position: relative;
-}
-.split-text .char:hover + .char {
-    transform: translate3d(0, -4px, 0) scale(1.05);
-    color: var(--accent-2);
-    transition: transform 0.1s ease-out, color 0.1s ease-out;
-}
-.split-text .char:has(+ .char:hover) {
-    transform: translate3d(0, -4px, 0) scale(1.05);
-    color: var(--accent-2);
-    transition: transform 0.1s ease-out, color 0.1s ease-out;
-}
+@media (hover: hover) and (pointer: fine) {
+    .split-text .char:hover {
+        transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg);
+        color: var(--accent-1);
+        text-shadow: 0 10px 20px var(--neon-glow);
+        transition: transform 0.05s ease-out, color 0.05s ease-out, text-shadow 0.05s ease-out;
+        z-index: 2;
+        position: relative;
+    }
+    .split-text .char:hover + .char {
+        transform: translate3d(0, -4px, 0) scale(1.05);
+        color: var(--accent-2);
+        transition: transform 0.1s ease-out, color 0.1s ease-out;
+    }
+    .split-text .char:has(+ .char:hover) {
+        transform: translate3d(0, -4px, 0) scale(1.05);
+        color: var(--accent-2);
+        transition: transform 0.1s ease-out, color 0.1s ease-out;
+    }
 
-/* ── LIGHTWEIGHT TEXT SHINE (For Pills & Small Text) ── */
-.text-shine-hover {
-    display: inline-block;
-    transition: transform 0.2s ease;
-}
-.text-shine-hover:hover {
-    transform: translateY(-2px);
-    background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
-    background-size: 300% 100%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: textShineSweep 2s linear infinite;
+    .text-shine-hover:hover {
+        transform: translateY(-2px);
+        background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+        background-size: 300% 100%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: textShineSweep 2s linear infinite;
+    }
 }
 @keyframes textShineSweep { to { background-position: 300% 50%; } }
 
@@ -204,7 +225,7 @@ body.light-mode .blob { mix-blend-mode: multiply; opacity: 0.25; filter: blur(90
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease; /* Snappy */
+    transition: all 0.2s ease;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     display: flex;
     align-items: center;
@@ -306,7 +327,8 @@ body.scrolled .controls-right { transform: scale(0.92); opacity: 0.98; }
 /* Hero Subtitle */
 .hero-sub {
     font-size: clamp(1.1rem, 2.5vw, 1.35rem);
-    color: var(--text-muted);
+    color: var(--text-main);
+    opacity: 0.9;
     line-height: 1.6;
     margin-bottom: 40px;
     font-weight: 500;
@@ -335,7 +357,7 @@ body.scrolled .controls-right { transform: scale(0.92); opacity: 0.98; }
     color: var(--text-main);
     background: var(--surface);
     backdrop-filter: blur(10px);
-    transition: all 0.2s ease; /* Snappy */
+    transition: all 0.2s ease;
 }
 .hero-tagline-pill:hover {
     border-color: var(--border-highlight);
@@ -347,7 +369,7 @@ body.scrolled .controls-right { transform: scale(0.92); opacity: 0.98; }
 .pill-ai {
     background: linear-gradient(135deg, rgba(176, 38, 255, 0.1), rgba(255, 0, 127, 0.1));
     border-color: rgba(176, 38, 255, 0.4);
-    color: var(--accent-2);
+    color: var(--text-main);
 }
 .pill-ai:hover {
     box-shadow: 0 0 20px rgba(176, 38, 255, 0.3);
@@ -384,7 +406,7 @@ body.scrolled .controls-right { transform: scale(0.92); opacity: 0.98; }
 }
 .btn:active { transform: scale(0.96) !important; }
 
-/* Primary Button - Snappy & Responsive */
+/* Primary Button */
 .btn-primary {
     background: var(--text-main);
     color: var(--bg-base);
@@ -395,7 +417,7 @@ body.light-mode .btn-primary { background: var(--text-main); color: var(--bg-bas
     transform: translateY(-3px);
     box-shadow: 0 12px 25px var(--neon-glow);
     background: var(--accent-1);
-    color: #000;
+    color: #fff;
 }
 
 /* Outline Button */
@@ -465,7 +487,7 @@ section h2 {
     text-align: center;
 }
 
-/* ── STATS SECTION (Fixed Layout) ────────────────────── */
+/* ── STATS SECTION ────────────────────── */
 .stats {
     display: flex;
     flex-wrap: wrap;
@@ -475,7 +497,6 @@ section h2 {
 .stat {
     flex: 1;
     min-width: 200px;
-    /* Forces items onto separate lines perfectly */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -507,7 +528,8 @@ section h2 {
     color: var(--accent-1);
 }
 .stat p {
-    color: var(--text-muted);
+    color: var(--text-main);
+    opacity: 0.85;
     font-size: 1.1rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -529,7 +551,6 @@ section h2 {
     border: 1px solid var(--border);
     border-radius: 28px;
     padding: 40px 32px;
-    /* CSS transitions disabled for transform here because we drive it purely via JS for instant 1:1 mouse tracking */
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
@@ -541,6 +562,7 @@ section h2 {
     transform-style: preserve-3d;
     will-change: transform;
 }
+
 /* Glowing Inner Edge Spotlight */
 .card::before {
     content: '';
@@ -553,10 +575,13 @@ section h2 {
     opacity: 0;
     pointer-events: none;
 }
-.card:hover::before { opacity: 1; }
-.card:hover {
-    border-color: var(--border-highlight);
-    box-shadow: 0 20px 50px -10px var(--glow-shadow);
+
+@media (hover: hover) and (pointer: fine) {
+    .card:hover::before { opacity: 1; }
+    .card:hover {
+        border-color: var(--border-highlight);
+        box-shadow: 0 20px 50px -10px var(--glow-shadow);
+    }
 }
 .card:active { transform: scale3d(0.98, 0.98, 0.98) !important; transition: transform 0.05s; }
 
@@ -575,11 +600,14 @@ section h2 {
     box-shadow: inset 0 2px 10px rgba(255,255,255,0.05), 0 8px 20px rgba(0,0,0,0.2);
     color: var(--text-main);
 }
-.card:hover .icon-box {
-    transform: translate3d(0, -6px, 20px) scale(1.05);
-    border-color: var(--accent-1);
-    color: var(--accent-1);
-    box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px var(--neon-glow);
+@media (hover: hover) and (pointer: fine) {
+    .card:hover .icon-box {
+        transform: translate3d(0, -6px, 20px) scale(1.05);
+        border-color: var(--accent-1);
+        color: var(--accent-1);
+        box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px var(--neon-glow);
+    }
+    .card:hover h3 { color: var(--accent-1); }
 }
 .icon-box svg {
     width: 32px;
@@ -601,9 +629,9 @@ section h2 {
     transition: color 0.2s ease, transform 0.2s ease;
     transform: translateZ(10px);
 }
-.card:hover h3 { color: var(--accent-1); }
 .card p {
-    color: var(--text-muted);
+    color: var(--text-main);
+    opacity: 0.85;
     line-height: 1.7;
     font-size: 1rem;
     font-weight: 500;
@@ -642,16 +670,19 @@ section h2 {
 .ai-header-badge span:last-child {
     font-size: 0.85rem;
     font-weight: 800;
-    color: var(--accent-2);
+    color: var(--text-main);
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
-.ai-section .card:hover .icon-box {
-    border-color: var(--accent-2);
-    color: var(--accent-2);
-    box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px rgba(176, 38, 255, 0.3);
+
+@media (hover: hover) and (pointer: fine) {
+    .ai-section .card:hover .icon-box {
+        border-color: var(--accent-2);
+        color: var(--accent-2);
+        box-shadow: inset 0 2px 15px rgba(255,255,255,0.1), 0 12px 25px rgba(176, 38, 255, 0.3);
+    }
+    .ai-section .card:hover h3 { color: var(--accent-2); }
 }
-.ai-section .card:hover h3 { color: var(--accent-2); }
 
 /* ── PLATFORM CARDS ──────────────────────────────────── */
 .platform-grid .card {
@@ -666,7 +697,7 @@ section h2 {
 .platform-grid .icon-box svg { width: 40px; height: 40px; }
 a { text-decoration: none; color: inherit; }
 
-/* ── MODAL (INCH-PERFECT FINISHING) ──────────────────── */
+/* ── MODAL ──────────────────── */
 .modal {
     display: none;
     position: fixed;
@@ -753,7 +784,8 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
     right: 24px;
     font-size: 1.4rem;
     cursor: pointer;
-    color: var(--text-muted);
+    color: var(--text-main);
+    opacity: 0.7;
     transition: all 0.2s ease;
     width: 40px;
     height: 40px;
@@ -766,6 +798,7 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
 }
 .modal-close:hover {
     color: var(--accent-3);
+    opacity: 1;
     background: var(--surface-hover);
     transform: rotate(90deg);
     border-color: var(--accent-3);
@@ -824,13 +857,15 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
 
 <body>
 
-<!-- ── ANIMATED BACKGROUND MAGIC ── -->
+<!-- ── ANIMATED HIGH PERF WAVES ── -->
 <div class="bg-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
 </div>
-<div class="bg-grid"></div>
+
+<!-- ── PHYSICS DOT GRID (NEW) ── -->
+<canvas id="interactive-grid"></canvas>
 
 <!-- ── FIXED CONTROLS ── -->
 <div class="fixed-control-bar">
@@ -888,15 +923,15 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
         </a>
 
         <!-- High Performance Split Text applied ONLY to main headers -->
-        <h1 class="split-text" data-i18n="hero_title" style="margin-bottom: 24px; display:block;">Ship with<br> Automated      Precision</h1>
+        <h1 class="split-text" data-i18n="hero_title" style="margin-bottom: 24px; display:block;">Ship with<br> Automated   Precision</h1>
 
         <div class="hero-tagline">
             <span class="hero-tagline-pill">Predict Delays</span>
-            <span style="color:var(--text-muted); font-size:1.2rem; font-weight:300;">+</span>
+            <span style="color:var(--text-main); opacity:0.6; font-size:1.2rem; font-weight:300;">+</span>
             <span class="hero-tagline-pill">Optimize Routes</span>
-            <span style="color:var(--text-muted); font-size:1.2rem; font-weight:300;">+</span>
+            <span style="color:var(--text-main); opacity:0.6; font-size:1.2rem; font-weight:300;">+</span>
             <span class="hero-tagline-pill">Prevent Chaos</span>
-            <span style="color:var(--text-muted); font-size:1.2rem; margin: 0 10px;">|</span>
+            <span style="color:var(--text-main); opacity:0.6; font-size:1.2rem; margin: 0 10px;">|</span>
             <span class="hero-tagline-pill pill-ai">
                 Built with Gemini AI
             </span>
@@ -971,7 +1006,7 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
             <span>Powered by Google Gemini 1.5</span>
         </div>
         <h2 class="split-text" style="margin-bottom:0;">AI at Every Step</h2>
-        <p style="color:var(--text-muted); max-width:650px; font-size:1.1rem; line-height:1.7; margin-top:8px;">Logistix integrates Gemini 1.5 Flash across the entire logistics chain — from manager briefings to real-time driver routing.</p>
+        <p style="color:var(--text-main); opacity:0.9; max-width:650px; font-size:1.1rem; line-height:1.7; margin-top:8px;">Logistix integrates Gemini 1.5 Flash across the entire logistics chain — from manager briefings to real-time driver routing.</p>
     </div>
     <div class="features-grid">
         <div class="card">
@@ -1084,7 +1119,105 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
-    // ── ADVANCED LETTER WAVE LOGIC (High Performance version) ──
+    /* ── HIGH-PERFORMANCE PHYSICS DOT GRID ── */
+    const canvas = document.getElementById('interactive-grid');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    let width, height;
+    let dots = [];
+    const pointer = { x: -1000, y: -1000 };
+
+    // Physics constants (Amped up for a prominent, "buttery" feel)
+    const pushRadius = 220; // Much larger room for the cursor
+    const pushForce = 30; // Stronger snap away
+    const spring = 0.05; // Softer, more organic return
+    const friction = 0.8; // Longer glide
+
+    function initGrid() {
+        const dpr = window.devicePixelRatio || 1;
+        width = window.innerWidth;
+        height = window.innerHeight;
+
+        // Scale canvas for crisp rendering on high-DPI (Retina) screens
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+
+        // Denser, cleaner grid spacing
+        const spacing = window.innerWidth < 768 ? 35 : 30;
+        dots = [];
+
+        for (let x = 0; x < width; x += spacing) {
+            for (let y = 0; y < height; y += spacing) {
+                dots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+            }
+        }
+    }
+
+    // Interaction Listeners
+    window.addEventListener('mousemove', (e) => {
+        pointer.x = e.clientX;
+        pointer.y = e.clientY;
+    });
+
+    window.addEventListener('touchmove', (e) => {
+        pointer.x = e.touches[0].clientX;
+        pointer.y = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+    window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
+
+    // Debounced Resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(initGrid, 200);
+    });
+
+    function animateGrid() {
+        ctx.clearRect(0, 0, width, height);
+
+        // Dynamic color based on current theme, heavily bumped opacity
+        const isLight = document.body.classList.contains('light-mode');
+        ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.35)';
+
+        const pushRadiusSq = pushRadius * pushRadius;
+
+        for (let i = 0; i < dots.length; i++) {
+            let p = dots[i];
+
+            let dx = pointer.x - p.x;
+            let dy = pointer.y - p.y;
+            let distSq = dx * dx + dy * dy;
+
+            // Repulsion logic
+            if (distSq < pushRadiusSq) {
+                let dist = Math.sqrt(distSq);
+                let force = (pushRadius - dist) / pushRadius;
+                p.vx -= (dx / dist) * force * pushForce;
+                p.vy -= (dy / dist) * force * pushForce;
+            }
+
+            // Spring back to base position
+            p.vx += (p.bx - p.x) * spring;
+            p.vy += (p.by - p.y) * spring;
+
+            // Apply friction and move
+            p.vx *= friction;
+            p.vy *= friction;
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // Slightly thicker dots for visibility
+            ctx.fillRect(p.x, p.y, 2.5, 2.5);
+        }
+        requestAnimationFrame(animateGrid);
+    }
+
+    initGrid();
+    animateGrid();
+
+    // ── ADVANCED LETTER WAVE LOGIC ──
     function splitTextNodes(element) {
         if (element.classList.contains('is-split')) return;
 
@@ -1094,12 +1227,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!text.trim() && !text.includes(' ')) return;
 
                 const fragment = document.createDocumentFragment();
-                // Split by spaces to safely isolate words
                 const words = text.split(/(\s+)/);
 
                 words.forEach(word => {
                     if (/^\s+$/.test(word)) {
-                        // Normalize any amount of whitespace into exactly 1 space gap
                         const spaceSpan = document.createElement('span');
                         spaceSpan.className = 'char space';
                         spaceSpan.innerHTML = '&nbsp;';
@@ -1108,7 +1239,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                     if (word === '') return;
 
-                    // Wrap the entire word to prevent mid-word line breaks
                     const wordSpan = document.createElement('span');
                     wordSpan.style.display = 'inline-block';
                     wordSpan.style.whiteSpace = 'nowrap';
@@ -1125,13 +1255,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 node.parentNode.replaceChild(fragment, node);
             } else if (node.nodeType === 1) {
-                // Preserve <br> tags and do not re-process already processed spans
                 if (node.classList.contains('char') || node.tagName === 'BR') return;
                 Array.from(node.childNodes).forEach(processNode);
             }
         };
 
-        // Clone childNodes to array first so iteration is stable during replacement
         Array.from(element.childNodes).forEach(processNode);
         element.classList.add('is-split');
     }
@@ -1142,7 +1270,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     initSplitText();
 
-    // Safely re-apply split if translator.js overwrites the content
     const observerSplit = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.type === 'childList' || mutation.type === 'characterData') {
@@ -1159,13 +1286,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     observerSplit.observe(document.body, { childList: true, characterData: true, subtree: true });
 
-
     // Navbar scroll effect
     window.addEventListener('scroll', () => {
         document.body.classList.toggle('scrolled', window.scrollY > 40);
     }, { passive: true });
 
-    // Premium Processing Click Handler - ultra fast visual response
+    // Premium Processing Click Handler
     window.handleActionClick = function(event, element, callback) {
         event.preventDefault();
 
@@ -1174,41 +1300,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setTimeout(() => {
             element.classList.remove('is-processing');
-            if (callback) callback();
-        }, 300); // Super fast 300ms transition
+            if (callback) {
+                callback();
+            } else if (element.hasAttribute('href')) {
+                window.location.href = element.href;
+            }
+        }, 300);
     };
 
-    // 3D Tilt Effect on Cards - Optimised with RequestAnimationFrame
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
-        let rafId;
+    // 3D Tilt Effect on Cards (Only enables strictly on non-touch interactions)
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
-        card.addEventListener('mousemove', e => {
-            cancelAnimationFrame(rafId);
-            rafId = requestAnimationFrame(() => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+    if (!isTouchDevice) {
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            let rafId;
 
-                const xPct = (x / rect.width) - 0.5;
-                const yPct = (y / rect.height) - 0.5;
-                const rotateX = yPct * -8;
-                const rotateY = xPct * 8;
+            card.addEventListener('mousemove', e => {
+                cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
 
-                // Pure JS transform, removing CSS transition conflict
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-                card.style.setProperty('--mouse-x', `${x}px`);
-                card.style.setProperty('--mouse-y', `${y}px`);
+                    const xPct = (x / rect.width) - 0.5;
+                    const yPct = (y / rect.height) - 0.5;
+                    const rotateX = yPct * -8;
+                    const rotateY = xPct * 8;
+
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                    card.style.setProperty('--mouse-x', `${x}px`);
+                    card.style.setProperty('--mouse-y', `${y}px`);
+                });
+            });
+
+            card.addEventListener('mouseleave', () => {
+                cancelAnimationFrame(rafId);
+                card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+                card.style.setProperty('--mouse-x', `50%`);
+                card.style.setProperty('--mouse-y', `50%`);
             });
         });
-
-        card.addEventListener('mouseleave', () => {
-            cancelAnimationFrame(rafId);
-            card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
-            card.style.setProperty('--mouse-x', `50%`);
-            card.style.setProperty('--mouse-y', `50%`);
-        });
-    });
+    }
 
     // Modal Builder
     function openModal(type) {
@@ -1250,7 +1383,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <button id="signup-otp-btn" type="button" class="btn btn-primary" onclick="handleActionClick(event, this, () => { if(typeof requestOTP === 'function') requestOTP() })" data-i18n="btn_request_otp">Request Access OTP</button>
                 </div>
                 <div id="step-2" style="display:none;">
-                    <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:10px;text-align:center;font-weight:600;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
+                    <p style="font-size:0.9rem;color:var(--text-main);opacity:0.8;margin-bottom:10px;text-align:center;font-weight:600;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
                     <div class="pin-row" id="signup-pin-row">
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
@@ -1260,7 +1393,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                     </div>
                     <button type="button" class="btn btn-primary" onclick="handleActionClick(event, this)" data-i18n="btn_verify_register">Verify & Launch Platform</button>
-                    <p id="resend-timer-container" style="text-align:center;margin-top:20px;font-size:0.9rem;color:var(--text-muted);">
+                    <p id="resend-timer-container" style="text-align:center;margin-top:20px;font-size:0.9rem;color:var(--text-main);opacity:0.8;">
                         <span data-i18n="didnt_receive_code">Didn't receive code?</span>
                         <span id="resend-link" style="color:var(--accent-1);cursor:pointer;font-weight:800;opacity:0.5;pointer-events:none;transition:0.2s;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
                     </p>
@@ -1274,7 +1407,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             const firstInput = content.querySelector('input');
             if(firstInput) firstInput.focus();
-        }, 50); // Faster focus
+        }, 50);
 
         if (typeof updatePageTranslations === 'function') updatePageTranslations();
         document.getElementById('modal-close-btn')?.addEventListener('click', e => { e.stopPropagation(); closeModal(); });
