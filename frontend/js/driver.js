@@ -2607,7 +2607,7 @@ async function applyOfficialBorders(mapInstance) {
     }
 }
 
-async function initDriverDashboard() {
+async function initDriverDashboard(isRetry = false) {
     const overlay = document.getElementById('location-lock-overlay');
     const btn = overlay ? overlay.querySelector('button') : null;
     const originalText = btn ? btn.innerText : '';
@@ -2633,24 +2633,28 @@ async function initDriverDashboard() {
                 });
             });
         } catch (err) {
-            console.warn("Geolocation API failed, falling back to IP location", err);
-            try {
-                const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
-                const ipData = await ipRes.json();
-                if (ipData.latitude && ipData.longitude) {
-                    pos = {
-                        coords: {
-                            latitude: parseFloat(ipData.latitude),
-                            longitude: parseFloat(ipData.longitude)
+            if (isRetry) {
+                console.warn("Geolocation API failed, falling back to IP location", err);
+                try {
+                    const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
+                    const ipData = await ipRes.json();
+                    if (ipData.latitude && ipData.longitude) {
+                        pos = {
+                            coords: {
+                                latitude: parseFloat(ipData.latitude),
+                                longitude: parseFloat(ipData.longitude)
+                            }
+                        };
+                        if (typeof updateLocation === 'function') {
+                            updateLocation(pos);
                         }
-                    };
-                    if (typeof updateLocation === 'function') {
-                        updateLocation(pos);
+                    } else {
+                        throw err;
                     }
-                } else {
+                } catch (fallbackErr) {
                     throw err;
                 }
-            } catch (fallbackErr) {
+            } else {
                 throw err;
             }
         }
@@ -2682,7 +2686,7 @@ async function initDriverDashboard() {
 }
 
 window.retryLocation = function() {
-    initDriverDashboard();
+    initDriverDashboard(true);
 };
 
 initDriverDashboard();
