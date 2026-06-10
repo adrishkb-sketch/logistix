@@ -1296,6 +1296,9 @@ def complete_delivery(driver_id: str, shipment_id: str, otp: str, image_url: Opt
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
     
+    if shipment.get("is_leg"):
+        raise HTTPException(status_code=403, detail="Intermediate legs can only be marked as arrived by the receiving Hub Manager.")
+    
     if shipment.get("delivery_otp") != otp:
         raise HTTPException(status_code=400, detail="Invalid Delivery OTP")
         
@@ -1561,6 +1564,9 @@ def complete_delivery_code(driver_id: str, shipment_id: str, code: str = Query(.
     verify_context(driver_id, x_logistix_context)
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    if shipment.get("is_leg"):
+        raise HTTPException(status_code=403, detail="Intermediate legs can only be marked as arrived by the receiving Hub Manager.")
     
     # Verify code
     expected = shipment.get("delivery_code")
