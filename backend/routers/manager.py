@@ -1734,8 +1734,10 @@ def reset_all_operations(data: dict, x_logistix_context: Optional[str] = Header(
     if provided_pw != str(company.get("password", "")).strip():
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
-    # 1. Clear Operational Data (Shipments, Ledger, Reviews, Funds)
+    # 1. Clear Operational Data (Shipments, Receivers, Alerts, Ledger, Reviews, Funds)
     JSONDatabase("shipments").delete_many("data->>company_id", cid)
+    JSONDatabase("receivers").delete_many("data->>company_id", cid)
+    JSONDatabase("alerts").delete_many("data->>company_id", cid)
     JSONDatabase("ledger").delete_many("data->>company_id", cid)
     JSONDatabase("journey_reviews").delete_many("data->>company_id", cid)
     JSONDatabase("fund_requests").delete_many("data->>company_id", cid)
@@ -1789,7 +1791,11 @@ def reset_shipments(data: dict, x_logistix_context: Optional[str] = Header(None)
     # Atomic bulk delete using indexed company_id
     deleted_count = s_db.delete_many("data->>company_id", cid)
     
-    return {"message": f"All {deleted_count} shipment records for {company['name']} have been cleared."}
+    # Also delete receivers and alerts
+    JSONDatabase("receivers").delete_many("data->>company_id", cid)
+    JSONDatabase("alerts").delete_many("data->>company_id", cid)
+    
+    return {"message": f"All {deleted_count} shipment records, associated receivers, and alerts for {company['name']} have been cleared."}
 
 @router.post("/system/reset-drivers")
 def reset_drivers(data: dict, x_logistix_context: Optional[str] = Header(None)):
