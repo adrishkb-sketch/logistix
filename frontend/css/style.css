@@ -67,7 +67,7 @@ body {
     letter-spacing: -0.01em;
     transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease;
     overflow-x: hidden;
-    
+
     /* STUNNING DARK MODE GRADIENT */
     background: linear-gradient(
         110deg,
@@ -891,7 +891,7 @@ body.light-mode .action-btn-pill {
         padding: 16px;
         z-index: 20000;
     }
-    
+
     .map-picker-map-container {
         border-radius: 8px;
     }
@@ -1289,7 +1289,7 @@ body.light-mode .action-btn-pill {
     .responsive-grid-2, .responsive-grid-3 {
         grid-template-columns: 1fr !important; /* Force single column on mobile */
     }
-    
+
     .responsive-flex-column {
         flex-direction: column !important;
         align-items: stretch !important;
@@ -1352,7 +1352,7 @@ body.light-mode .action-btn-pill {
     :root {
         --sidebar-w: 240px;
     }
-    
+
     .sidebar {
         position: fixed;
         top: 0;
@@ -1362,15 +1362,15 @@ body.light-mode .action-btn-pill {
         height: 100vh;
         z-index: 2000;
     }
-    
+
     .sidebar.open {
         transform: translateX(var(--sidebar-w));
     }
-    
+
     .menu-toggle {
         display: block;
     }
-    
+
     .dashboard-layout {
         flex-direction: column;
         height: auto;
@@ -1381,7 +1381,7 @@ body.light-mode .action-btn-pill {
     body:has(.dashboard-layout) {
         overflow: auto !important; /* Force unlock body scroll */
     }
-    
+
     .main-content {
         width: 100%;
         padding: 80px 16px 20px;
@@ -1394,11 +1394,11 @@ body.light-mode .action-btn-pill {
         align-items: flex-start;
         gap: 16px;
     }
-    
+
     .top-bar h1 {
         font-size: 1.5rem;
     }
-    
+
     /* Top Menu Bar on Mobile */
     .mobile-header {
         position: fixed;
@@ -1421,11 +1421,11 @@ body.light-mode .action-btn-pill {
     .form-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .glass-card {
         padding: 20px;
     }
-    
+
     .hero h1 {
         font-size: 2.2rem !important;
     }
@@ -1439,7 +1439,7 @@ body.light-mode .action-btn-pill {
         width: 95% !important;
         padding: 20px !important;
     }
-    
+
     /* Stats Mobile Fix */
     .stats {
         grid-template-columns: 1fr 1fr;
@@ -1451,7 +1451,7 @@ body.light-mode .action-btn-pill {
     .stats {
         grid-template-columns: 1fr;
     }
-    
+
     .btn {
         width: 100%;
         margin: 8px 0;
@@ -1501,7 +1501,7 @@ body.light-mode .action-btn-pill {
         overflow-y: auto !important;
         overflow-x: hidden !important;
     }
-    
+
     /* Allow grids to shrink below table minimum widths */
     .responsive-grid-2 > *,
     .responsive-grid-3 > *,
@@ -1523,7 +1523,7 @@ body.light-mode .action-btn-pill {
         grid-template-columns: 1fr !important;
         gap: 16px !important;
     }
-    
+
     /* Handle modal/profile stats grid (6 columns -> 2 columns) */
     div[style*="grid-template-columns: repeat(6, 1fr)"],
     div[style*="grid-template-columns:repeat(6,1fr)"] {
@@ -1611,7 +1611,7 @@ body.light-mode .brand-logo {
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
         color: var(--text) !important;
     }
-    
+
     body.light-mode #modify-dash-btn,
     body.light-mode .top-bar .glass-card,
     body.light-mode .top-actions .glass-card,
@@ -1654,7 +1654,7 @@ body.light-mode .brand-logo {
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
         color: var(--text) !important;
     }
-    
+
     body.light-mode #voice-trigger + button,
     body.light-mode .top-actions .circle-help-btn {
         background: rgba(0, 0, 0, 0.04) !important;
