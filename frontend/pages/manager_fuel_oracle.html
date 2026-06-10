@@ -652,14 +652,14 @@
     <!-- ── SIDEBAR ── -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <h2><span data-i18n="logistix_brand">Logistix</span></h2>
-            <button class="sidebar-close-btn" onclick="document.querySelector('.sidebar').classList.remove('open'); document.querySelector('.sidebar-overlay').classList.remove('active');">
-                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <h2><span>Logistix</span></h2>
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
 
         <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
-            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+            <a class="nav-link active" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <span data-i18n="nav_analytics">Executive Analytics</span>
             </a>
@@ -676,7 +676,7 @@
                 <span data-i18n="nav_receivers">Receivers</span>
             </a>
             <a class="nav-link" data-layout-id="nav-drivers" href="manager_drivers.html">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
                 <span data-i18n="nav_fleet">Drivers & Fleet</span>
             </a>
             <a class="nav-link" data-layout-id="nav-weather" href="manager_weather.html">
@@ -696,15 +696,14 @@
                 <span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span>
             </a>
             <a class="nav-link" data-layout-id="nav-safety" href="manager_safety.html" id="btn-nav-safety">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
                 <span data-i18n="nav_safety">Safety Center</span><span class="badge" id="safety-badge"></span>
             </a>
             <a class="nav-link" data-layout-id="nav-oracle" href="manager_oracle.html">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
                 <span data-i18n="nav_oracle">Strategy Oracle</span>
             </a>
-            <!-- Bharat-Fuel Oracle (ACTIVE) -->
-            <a class="nav-link active" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
+            <a class="nav-link" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
                 <span data-i18n="nav_fuel">Bharat-Fuel Oracle</span>
             </a>
@@ -730,9 +729,8 @@
             </a>
         </div>
 
-        <!-- Pinned Logout to the bottom -->
         <div class="sidebar-footer">
-            <a class="nav-link" href="#" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); border:1px solid rgba(239, 68, 68, 0.2);">
+            <a class="nav-link" href="#" onclick="logout()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                 <span data-i18n="sign_out">Logout</span>
             </a>
@@ -744,10 +742,9 @@
 
         <!-- ── TOP BAR ── -->
         <header class="top-bar">
-            <!-- Mobile wrapping header (unwraps on desktop) -->
             <div class="top-bar-mobile-header">
                 <div class="top-bar-left">
-                    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.add('open'); document.querySelector('.sidebar-overlay').classList.add('active');">
+                    <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
                         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
                     <div class="mobile-logo-container">
@@ -758,21 +755,15 @@
                             <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
                         </svg>
                     </div>
-                    <h1><span data-i18n="dashboard">Dashboard</span> <span class="title-separator">/</span> <span id="manager-name" class="manager-name-hl">---</span></h1>
+                    <h1><span class="split-text" data-i18n="dashboard">Dashboard</span> <span class="title-separator">/</span> <span id="manager-name" class="manager-name-hl text-shine-hover">---</span></h1>
                 </div>
 
-                <!-- Mobile Only Theme Toggle -->
                 <div class="theme-switch mobile-theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                 </div>
             </div>
 
             <div class="top-bar-controls">
-                <button class="btn-primary btn-outline" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()" style="padding:10px 16px; font-size:0.85rem; border-radius:12px;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                    Modify Dashboard
-                </button>
-
                 <!-- Language Selector Dropdown -->
                 <div class="glass-select-container">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
@@ -795,27 +786,24 @@
                         <option value="ur">اردو (UR)</option>
                         <option value="ne">नेपाली (NE)</option>
                         <option value="sa">संस्कृतम् (SA)</option>
-                        <option value="sd">سنڌي (SD)</option>
+                        <option value="sd">سنڌी (SD)</option>
                         <option value="gom">कोंकणी (GOM)</option>
                         <option value="doi">डोगरी (DOI)</option>
                         <option value="mni">মৈতৈলোন (MNI)</option>
                     </select>
                 </div>
-
-                <!-- Voice Control Group -->
-                <div class="automated-group">
-                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                
+                <div class="automated-group" style="display: flex; gap: 8px;">
+                    <button class="glass-btn voice-btn" id="voice-trigger" onclick="window.logistixVoice ? window.logistixVoice.toggle() : alert('Voice control initializing...')" data-i18n="btn_voice_control">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                         Automated Control
                     </button>
-
-                    <!-- Highly Visible Voice Help Button -->
-                    <button class="theme-switch help-btn" onclick="window.logistixVoice.showInstructions()" title="Voice Help">
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice ? window.logistixVoice.showInstructions() : alert('Help document loading...')" title="Voice Help">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                     </button>
                 </div>
 
-                <!-- Desktop Theme Toggle -->
+                <!-- Desktop Only Theme Toggle -->
                 <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                 </div>
@@ -1128,5 +1116,6 @@
     setTheme(localStorage.getItem('theme') || 'dark');
 </script>
 
+<script src="../js/premium_theme.js"></script>
 </body>
 </html>
