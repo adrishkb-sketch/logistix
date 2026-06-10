@@ -261,13 +261,25 @@
 </link></head>
 <body class="dashboard-body">
 <div class="background-animation"></div>
+<div class="background-animation"></div>
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+<div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
 <div class="dashboard-layout">
 <!-- Sidebar -->
 <aside class="sidebar">
-<div class="sidebar-logo" onclick="location.reload()" style="cursor:pointer;">Logistix</div>
-<div class="nav-links-wrapper">
-<nav class="nav-links">
-<a class="nav-link-v3 active" href="#" id="nav-dash" onclick="switchTab('dash')"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect><line x1="3" x2="21" y1="9" y2="9"></line><line x1="9" x2="9" y1="21" y2="9"></line></svg>
+        <div class="sidebar-header">
+            <h2><span>Logistix</span></h2>
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
+            <a class="nav-link-v3 active" href="#" id="nav-dash" onclick="switchTab('dash')"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect><line x1="3" x2="21" y1="9" y2="9"></line><line x1="9" x2="9" y1="21" y2="9"></line></svg>
                          <span data-i18n="nav_dashboard" style="margin-left:12px;">Analytics</span>
 </a>
 <a class="nav-link-v3" href="#" id="nav-verifications" onclick="switchTab('verifications')"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
@@ -293,12 +305,15 @@
 <a class="nav-link-v3" href="warehouse_manager_drones.html" id="nav-drones"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-3"></path><path d="M9 9v2"></path><path d="M9 13v2"></path></svg><span style="margin-left:12px;">Drone Hub</span></a><a class="nav-link-v3" href="#" id="nav-settings" onclick="switchTab('settings')"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         ️ <span data-i18n="nav_settings" style="margin-left:12px;">Settings</span>
 </a>
-</nav>
-</div>
-<button class="btn-signout-v3" onclick="logout()">
-                Sign Out
-            </button>
-</aside>
+        </div>
+
+        <div class="sidebar-footer">
+            <a class="nav-link" href="#" onclick="logout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span data-i18n="sign_out">Logout</span>
+            </a>
+        </div>
+    </aside>
 <!-- Main Content -->
 <main class="main-content">
 <header class="top-bar">

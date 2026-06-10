@@ -351,37 +351,84 @@
         </div>
     </aside>
 <main class="main-content" data-layout-container="main-sections">
-<div class="top-bar" style="display:flex; align-items:center; gap:20px;">
-<h1 style="flex:1;"><span data-i18n="dashboard">Dashboard</span> - <span id="manager-name">---</span></h1>
-<button class="btn-primary btn-outline" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()" style="padding:8px 16px; font-size:0.85rem;">📐 Modify Dashboard</button>
-<!-- Language Selector Dropdown -->
-<div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;">
-<span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
-<select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
-<option value="en">English (EN)</option>
-<option value="bn">বাংলা (BN)</option>
-<option value="hi">हिंदी (HI)</option>
-<option value="te">తెలుగు (TE)</option>
-<option value="mr">मराठी (MR)</option>
-<option value="ta">தமிழ் (TA)</option>
-<option value="gu">ગુજરાતી (GU)</option>
-<option value="kn">ಕನ್ನಡ (KN)</option>
-<option value="or">ଓଡ଼ିଆ (OR)</option>
-<option value="ml">മലയാളം (ML)</option>
-<option value="pa">ਪੰਜਾਬੀ (PA)</option>
-<option value="as">অসমীয়া (AS)</option>
-<option value="mai">मैथिলি (MAI)</option>
-<option value="sat">संताली (SAT)</option>
-<option value="ks">کٲشُر (KS)</option>
-<option value="ur">اردو (UR)</option>
-<option value="ne">नेपाली (NE)</option>
-<option value="sa">संस्कृतम् (SA)</option>
-<option value="sd">سنڌي (SD)</option>
-<option value="gom">कोंकणी (GOM)</option>
-<option value="doi">डोगरी (DOI)</option>
-<option value="mni">মৈতৈলোন (MNI)</option>
-</select>
-</div>
+<header class="top-bar">
+            <div class="top-bar-mobile-header">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                    <div class="mobile-logo-container">
+                        <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
+                            <defs>
+                                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient>
+                            </defs>
+                            <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
+                        </svg>
+                    </div>
+                    <h1>
+                        <span class="split-text" data-i18n="dashboard">Dashboard</span>
+                        <span class="title-separator">/</span>
+                        <span id="manager-name" class="manager-name-hl text-shine-hover">---</span>
+                    </h1>
+                </div>
+
+                <div class="theme-switch mobile-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+
+            <div class="top-bar-controls">
+                <button class="glass-btn" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Modify Dashboard
+                </button>
+
+                <!-- Language Selector -->
+                <div class="glass-select-container">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    <select onchange="setLanguage(this.value)" aria-label="Language">
+                        <option value="en">English (EN)</option>
+                        <option value="bn">বাংলা (BN)</option>
+                        <option value="hi">हिंदी (HI)</option>
+                        <option value="te">తెలుగు (TE)</option>
+                        <option value="mr">मराठी (MR)</option>
+                        <option value="ta">தமிழ் (TA)</option>
+                        <option value="gu">ગુજરાતી (GU)</option>
+                        <option value="kn">ಕನ್ನಡ (KN)</option>
+                        <option value="or">ଓଡ଼ିଆ (OR)</option>
+                        <option value="ml">മലയാളം (ML)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                        <option value="as">অসমীয়া (AS)</option>
+                        <option value="mai">मैथिली (MAI)</option>
+                        <option value="sat">संताली (SAT)</option>
+                        <option value="ks">کٲشُر (KS)</option>
+                        <option value="ur">اردو (UR)</option>
+                        <option value="ne">नेपाली (NE)</option>
+                        <option value="sa">संस्कृतम् (SA)</option>
+                        <option value="sd">سنڌी (SD)</option>
+                        <option value="gom">कोंकणी (GOM)</option>
+                        <option value="doi">डोगरी (DOI)</option>
+                        <option value="mni">মৈতৈলোন (MNI)</option>
+                    </select>
+                </div>
+
+                <!-- Voice Control -->
+                <div class="automated-group" style="display: flex; gap: 8px;">
+                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        Automated Control
+                    </button>
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice.showInstructions()" title="Voice Help">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </button>
+                </div>
+
+                <!-- Desktop Theme Switcher -->
+                <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+        </header>
 <!-- Voice Control Button & Help -->
 <div style="display:flex; align-items:center; gap:6px;">
 <button class="glass-card" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);">🎙️ Automated Control</button>
