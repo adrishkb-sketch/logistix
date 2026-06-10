@@ -1,7 +1,7 @@
-// Dedicated script for manager_analytics.html
-
 let volumeChart, fleetChart;
 let co2Chart, volTrendChart;
+let weightChart, statusPieChart, hubCongestionChart, deliveryTimeChart;
+let perishableChart, vehicleTypeChart, revenueByDayChart, driverPerfChart;
 const _sparkCharts = {};
 
 // ── Animated Counter ─────────────────────────────────────────
@@ -72,6 +72,9 @@ async function loadInsights() {
             apiCall(`/manager/finance/p-and-l?company_id=${company_id}`).catch(err => { console.error("P&L failed:", err); return { net_profit: 0 }; })
         ]);
         
+        const alertsList = Array.isArray(alerts) ? alerts : [];
+        const netProfit = pl?.net_profit || 0;
+        
         // Update Stats Grid with animated counters if stats loaded
         if (stats) {
             animateCounter(document.getElementById('stat-timely'), stats.timely_percent || 0, 'percent');
@@ -107,7 +110,7 @@ async function loadInsights() {
             drawSparkline('sparkline-drivers', vol.map(() => stats.total_drivers || 0), '#a855f7');
             drawSparkline('sparkline-wh', vol.map(() => stats.total_warehouses || 0), '#4f8cff');
             drawSparkline('sparkline-veh', vol.map(() => stats.total_vehicles || 0), '#6366f1');
-            drawSparkline('sparkline-revenue', vol.map((v, i) => (pl.net_profit || 0) * (0.8 + i * 0.04)), '#10b981');
+            drawSparkline('sparkline-revenue', vol.map((v, i) => netProfit * (0.8 + i * 0.04)), '#10b981');
             drawSparkline('sparkline-co2-km', vol.map((v, i) => (stats.avg_co2_per_km || 0.18) * (1 - i * 0.02)), '#10b981');
 
             // CO₂ Trend Chart
@@ -125,10 +128,20 @@ async function loadInsights() {
 
             // Render Main Charts
             renderManagerCharts(stats);
+
+            // Render operational deep dive charts
+            if (stats.weight_distribution) renderWeightHistogram(stats.weight_distribution);
+            if (stats.status_distribution) renderStatusPie(stats.status_distribution);
+            if (stats.perishable_ratio) renderPerishableRatio(stats.perishable_ratio);
+            if (stats.delivery_time_distribution) renderDeliveryTimeHistogram(stats.delivery_time_distribution);
+            if (stats.vehicle_type_breakdown) renderVehicleTypeDist(stats.vehicle_type_breakdown);
+            if (stats.revenue_by_day) renderRevenueByDay(stats.revenue_by_day);
+            if (stats.driver_performance_dist) renderDriverPerfDist(stats.driver_performance_dist);
+            if (stats.hub_congestion) renderHubCongestion(stats.hub_congestion);
         }
         
         if (document.getElementById('stat-profits')) {
-            animateCounter(document.getElementById('stat-profits'), pl.net_profit || 0, 'money');
+            animateCounter(document.getElementById('stat-profits'), netProfit, 'money');
         }
 
         // Render Charts & Cascade
@@ -136,19 +149,19 @@ async function loadInsights() {
         renderCascadePredictor(cascade);
 
         // Safety Badge Update
-        const safetyAlerts = alerts.filter(a => (a.type === 'fatigue' || a.type === 'breakdown'));
+        const safetyAlerts = alertsList.filter(a => (a.type === 'fatigue' || a.type === 'breakdown'));
         const badge = document.getElementById('safety-badge');
         if (badge) {
             badge.innerText = safetyAlerts.length;
             badge.style.display = safetyAlerts.length > 0 ? 'inline' : 'none';
         }
 
-        if (alerts.length === 0) {
+        if (alertsList.length === 0) {
             container.innerHTML = `<p style="font-size:0.85rem; color:var(--text-muted);">No active system alerts.</p>`;
             return;
         }
 
-        container.innerHTML = alerts.map(a => `
+        container.innerHTML = alertsList.map(a => `
             <div style="background: rgba(255, 255, 255, 0.05); border-left: 3px solid ${a.severity==='critical'?'var(--danger)':'var(--warning)'}; padding: 10px; margin-bottom: 10px; border-radius: 8px; position:relative;">
                 <button style="position:absolute; top:8px; right:8px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem;" onclick="resolveAlert('${a.id}')">✖</button>
                 <p style="margin:0; padding-right:20px; font-size: 0.9rem;"><strong>${a.type.toUpperCase()}:</strong> ${a.description}<br>
@@ -156,7 +169,9 @@ async function loadInsights() {
                 <button class="btn-primary" style="padding:2px 10px; font-size:0.7rem; margin-top:8px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);" onclick="resolveAlert('${a.id}')">Dismiss Alert</button>
             </div>
         `).join('');
-    } catch(e) {}
+    } catch(e) {
+        console.error("Error in loadInsights:", e);
+    }
 }
 
 function renderManagerCharts(stats) {
@@ -369,11 +384,11 @@ async function loadEsgData() {
         // Render ESG Map
         if (document.getElementById('esg-map')) {
             if (!esgMapInstance) {
-                esgMapInstance = L.map('esg-map', { zoomControl: false }).setView([22.59, 88.40], 12);
+                esgMapInstance = L.map('esg-map', { zoomControl: true }).setView([22.59, 88.40], 12);
                 updateMapTheme(esgMapInstance);
             } else {
                 esgMapInstance.eachLayer(layer => {
-                    if (layer instanceof L.Polyline) {
+                    if (layer instanceof L.Polyline || layer instanceof L.Marker) {
                         esgMapInstance.removeLayer(layer);
                     }
                 });
@@ -394,9 +409,38 @@ async function loadEsgData() {
                 dashArray: '10, 10'
             }).addTo(esgMapInstance);
 
+            // Add starting (pickup) and ending (destination) markers
+            if (data.standard_route && data.standard_route.length > 0) {
+                const start = data.standard_route[0];
+                const end = data.standard_route[data.standard_route.length - 1];
+
+                L.marker(start, {
+                    icon: L.divIcon({
+                        html: '<div style="background:#ff9a00;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px #ff9a00"></div>',
+                        className: '',
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 9]
+                    })
+                }).bindPopup('<b>Standard Pickup Point</b>').addTo(esgMapInstance);
+
+                L.marker(end, {
+                    icon: L.divIcon({
+                        html: '<div style="background:#10b981;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px #10b981"></div>',
+                        className: '',
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 9]
+                    })
+                }).bindPopup('<b>Eco-Optimized Destination</b>').addTo(esgMapInstance);
+            }
+
             // Fit map boundaries
             const group = new L.featureGroup([standardPoly, ecoPoly]);
-            esgMapInstance.fitBounds(group.getBounds(), { padding: [20, 20] });
+            esgMapInstance.fitBounds(group.getBounds(), { padding: [25, 25] });
+            
+            // Invalidate size to ensure rendering is correct
+            setTimeout(() => {
+                esgMapInstance.invalidateSize();
+            }, 200);
         }
     } catch(err) {
         console.error("ESG Load failed:", err);
@@ -409,7 +453,7 @@ function downloadGreenCertificate() {
         return;
     }
 
-    const companyName = localStorage.getItem('company_name') || "Logistix Partner";
+    const companyName = localStorage.getItem('company_name') || localStorage.getItem('manager_name') || "Logistix Partner";
     const integrityHash = esgDataGlobal.cryptographic_hash;
     const offsetWeight = esgDataGlobal.offsets_accumulated_kg;
     const fuelSaved = esgDataGlobal.fuel_saved_liters;
@@ -624,6 +668,221 @@ function downloadGreenCertificate() {
     `);
     certWindow.document.close();
 }
+const PALETTE = {
+    blue:    ['#4f8cff','rgba(79,140,255,0.12)'],
+    green:   ['#10b981','rgba(16,185,129,0.12)'],
+    purple:  ['#a855f7','rgba(168,85,247,0.12)'],
+    orange:  ['#f59e0b','rgba(245,158,11,0.12)'],
+    red:     ['#ef4444','rgba(239,68,68,0.12)'],
+    cyan:    ['#06b6d4','rgba(6,182,212,0.12)'],
+    indigo:  ['#6366f1','rgba(99,102,241,0.12)'],
+    emerald: ['#34d399','rgba(52,211,153,0.12)'],
+};
+const MULTI_COLORS = ['#4f8cff','#10b981','#a855f7','#f59e0b','#ef4444','#06b6d4','#6366f1','#f472b6'];
+const MULTI_BG = MULTI_COLORS.map(c => c + '33');
+
+const BASE_CHART_OPTIONS = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { labels: { color: '#94a3b8', font: { family: "'Manrope', sans-serif", size: 11, weight: '600' }, padding: 14, usePointStyle: true } }
+    },
+    scales: {
+        y: {
+            grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+            ticks: { color: '#94a3b8', font: { size: 11 }, padding: 8 }
+        },
+        x: {
+            grid: { display: false },
+            ticks: { color: '#94a3b8', font: { size: 11 }, padding: 8 }
+        }
+    }
+};
+
+function renderWeightHistogram(data) {
+    const ctx = document.getElementById('weightHistChart')?.getContext('2d');
+    if (!ctx) return;
+    if (weightChart) weightChart.destroy();
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    weightChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Shipments',
+                data: values,
+                backgroundColor: [PALETTE.blue[0], PALETTE.purple[0], PALETTE.orange[0], PALETTE.red[0]],
+                borderRadius: 8, borderSkipped: false
+            }]
+        },
+        options: {
+            ...BASE_CHART_OPTIONS,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.raw} shipments` } } }
+        }
+    });
+}
+
+function renderStatusPie(data) {
+    const ctx = document.getElementById('statusPieChart')?.getContext('2d');
+    if (!ctx) return;
+    if (statusPieChart) statusPieChart.destroy();
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    statusPieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels,
+            datasets: [{ data: values, backgroundColor: MULTI_COLORS.slice(0, labels.length), borderWidth: 0, hoverOffset: 10 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: "'Manrope', sans-serif", size: 11 }, padding: 12, usePointStyle: true } } }
+        }
+    });
+}
+
+function renderPerishableRatio(data) {
+    const ctx = document.getElementById('perishableChart')?.getContext('2d');
+    if (!ctx) return;
+    if (perishableChart) perishableChart.destroy();
+    perishableChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{ data: Object.values(data), backgroundColor: ['#f59e0b','#6366f1'], borderWidth: 0, hoverOffset: 10 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '70%',
+            plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 12, usePointStyle: true } } }
+        }
+    });
+}
+
+function renderDeliveryTimeHistogram(data) {
+    const ctx = document.getElementById('deliveryTimeChart')?.getContext('2d');
+    if (!ctx) return;
+    if (deliveryTimeChart) deliveryTimeChart.destroy();
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    const total = values.reduce((a, b) => a + b, 0) || 1;
+    deliveryTimeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Deliveries',
+                data: values,
+                backgroundColor: ['#10b981','#34d399','#f59e0b','#f97316','#ef4444'],
+                borderRadius: 8, borderSkipped: false
+            }]
+        },
+        options: {
+            ...BASE_CHART_OPTIONS,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => `${ctx.raw} (${((ctx.raw / total) * 100).toFixed(1)}%)` } }
+            }
+        }
+    });
+}
+
+function renderRevenueByDay(data) {
+    const ctx = document.getElementById('revenueByDayChart')?.getContext('2d');
+    if (!ctx) return;
+    if (revenueByDayChart) revenueByDayChart.destroy();
+    const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    revenueByDayChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Revenue (₹)',
+                data: data,
+                backgroundColor: '#10b981',
+                borderRadius: 8, borderSkipped: false
+            }]
+        },
+        options: {
+            ...BASE_CHART_OPTIONS,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `₹ ${(ctx.raw || 0).toLocaleString('en-IN')}` } } }
+        }
+    });
+}
+
+function renderDriverPerfDist(data) {
+    const ctx = document.getElementById('driverPerfChart')?.getContext('2d');
+    if (!ctx) return;
+    if (driverPerfChart) driverPerfChart.destroy();
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    driverPerfChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{ data: values, backgroundColor: ['#10b981','#4f8cff','#f59e0b','#ef4444'], borderWidth: 0, hoverOffset: 10 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
+            plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, padding: 10, usePointStyle: true } } }
+        }
+    });
+}
+
+function renderVehicleTypeDist(data) {
+    const ctx = document.getElementById('vehicleTypeChart')?.getContext('2d');
+    if (!ctx) return;
+    if (vehicleTypeChart) vehicleTypeChart.destroy();
+    const labels = Object.keys(data);
+    vehicleTypeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Count',
+                data: Object.values(data),
+                backgroundColor: MULTI_COLORS.slice(0, labels.length),
+                borderRadius: 8, borderSkipped: false
+            }]
+        },
+        options: { ...BASE_CHART_OPTIONS, plugins: { legend: { display: false } } }
+    });
+}
+
+function renderHubCongestion(hubs) {
+    const ctx = document.getElementById('hubCongestionChart')?.getContext('2d');
+    if (!ctx || !hubs || !hubs.length) return;
+    if (hubCongestionChart) hubCongestionChart.destroy();
+    const colors = hubs.map(h => h.utilization_pct > 80 ? '#ef4444' : h.utilization_pct > 50 ? '#f59e0b' : '#10b981');
+    hubCongestionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: hubs.map(h => h.name),
+            datasets: [{
+                label: 'Utilization %',
+                data: hubs.map(h => h.utilization_pct),
+                backgroundColor: colors,
+                borderRadius: 6, borderSkipped: false
+            }, {
+                label: 'Capacity',
+                data: hubs.map(h => h.capacity),
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderColor: 'rgba(255,255,255,0.1)',
+                borderWidth: 1, borderRadius: 6, borderSkipped: false
+            }]
+        },
+        options: {
+            ...BASE_CHART_OPTIONS,
+            indexAxis: 'y',
+            plugins: { legend: { display: true, labels: { color: '#94a3b8', font: { size: 10 }, padding: 10 } } },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#94a3b8' } },
+                y: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+            }
+        }
+    });
+}
+
 window.downloadGreenCertificate = downloadGreenCertificate;
 window.loadEsgData = loadEsgData;
 

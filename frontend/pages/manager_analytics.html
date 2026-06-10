@@ -473,6 +473,70 @@
 </div>
 </div>
 </div>
+
+<!-- Operational Intelligence Deep-Dive Grid -->
+<div class="chart-section-label" style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-muted); margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+    <span>📊 Operational & Performance Intelligence Deep-Dive</span>
+</div>
+<div class="analytics-deep-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; margin-bottom:32px;">
+    <!-- Weight Distribution Histogram -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Weight Distribution</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Shipments categorized by weight buckets</p>
+        <div style="height:220px; position:relative;"><canvas id="weightHistChart"></canvas></div>
+    </div>
+    
+    <!-- Shipment Status Distribution -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Shipment Status</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Active vs Delivered vs Cancelled Share</p>
+        <div style="height:220px; position:relative;"><canvas id="statusPieChart"></canvas></div>
+    </div>
+
+    <!-- Perishable vs Non-Perishable -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Cold Chain Proportion</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Perishable vs standard cargo ratio</p>
+        <div style="height:220px; position:relative;"><canvas id="perishableChart"></canvas></div>
+    </div>
+
+    <!-- Delivery Time Distribution -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Punctuality (Late Buckets)</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Shipments segmented by delay duration</p>
+        <div style="height:220px; position:relative;"><canvas id="deliveryTimeChart"></canvas></div>
+    </div>
+
+    <!-- Revenue by Day -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Revenue Trend (7-Day)</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Daily income logged in ledger database</p>
+        <div style="height:220px; position:relative;"><canvas id="revenueByDayChart"></canvas></div>
+    </div>
+
+    <!-- Driver Performance Rating -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Driver Safety Rating</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Classification based on safe driving scores</p>
+        <div style="height:220px; position:relative;"><canvas id="driverPerfChart"></canvas></div>
+    </div>
+</div>
+
+<div class="analytics-deep-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:32px;">
+    <!-- Vehicle Type Breakdown -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Fleet Mix (Vehicle Types)</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Distribution of trucks, vans, and bikes</p>
+        <div style="height:240px; position:relative;"><canvas id="vehicleTypeChart"></canvas></div>
+    </div>
+
+    <!-- Hub Congestion comparison -->
+    <div class="glass-card">
+        <h3 style="margin-top:0; font-size:1.1rem;">Warehouse Hub Congestion</h3>
+        <p class="subtitle" style="font-size:0.8rem; color:var(--text-muted); margin:-4px 0 16px 0;">Utilized capacity based on incoming active shipments</p>
+        <div style="height:240px; position:relative;"><canvas id="hubCongestionChart"></canvas></div>
+    </div>
+</div>
 <!-- ESG & Carbon Offset Dashboard -->
 <div class="glass-card section-card" data-layout-id="analytics-esg" style="margin-bottom:2rem; border-top:4px solid #10b981; background:rgba(16,185,129,0.02);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
