@@ -1190,6 +1190,8 @@ async function loadMissions(autoStartNext = false) {
             container.innerHTML = `<div class="glass-card"><p>${getTranslation('no_active_shipments')}</p></div>`;
             document.getElementById('route-map').style.display = 'none';
             document.getElementById('fullscreen-btn').style.display = 'none';
+            document.getElementById('ai-routing-controls').style.display = 'none';
+            document.getElementById('nearby-pois-toggle').style.display = 'none';
             return;
         }
 
@@ -1201,6 +1203,8 @@ async function loadMissions(autoStartNext = false) {
             
             document.getElementById('route-map').style.display = 'none';
             document.getElementById('fullscreen-btn').style.display = 'none';
+            document.getElementById('ai-routing-controls').style.display = 'none';
+            document.getElementById('nearby-pois-toggle').style.display = 'none';
             
             container.innerHTML = `
                 <div style="display:flex; justify-content:center; align-items:center; min-height:60vh; width:100%;">
@@ -1477,6 +1481,11 @@ async function loadMissions(autoStartNext = false) {
             }
             
             setTimeout(() => { if (map) map.invalidateSize(true); }, 300);
+            
+            // Un-hide the routing controls now that map is showing
+            document.getElementById('ai-routing-controls').style.display = 'flex';
+            document.getElementById('nearby-pois-toggle').style.display = 'flex';
+            
             drawMultiStopRoute(orderedStops);
             
         } else if (me && me.verification_status !== "verified") {
