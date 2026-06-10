@@ -451,9 +451,9 @@
             box-shadow: var(--glow-shadow);
         }
 
-        .weather-controls { top: 24px; left: 24px; width: 300px; }
+        .weather-controls { top: 90px; left: 24px; width: 300px; }
         .weather-legend { bottom: 24px; left: 24px; font-size: 0.85rem; font-weight: 600; padding: 16px; border-radius: 16px; }
-        .ai-suggestion-panel { top: 24px; right: 24px; width: 340px; display: none; border-color: var(--accent-1); box-shadow: 0 0 30px rgba(0, 229, 255, 0.1); }
+        .ai-suggestion-panel { top: 24px; right: 24px; width: 340px; display: block; border-color: var(--accent-1); box-shadow: 0 0 30px rgba(0, 229, 255, 0.1); }
         .timeline-controls {
             bottom: 24px; left: 50%; transform: translateX(-50%);
             width: max(50%, 400px); max-width: 90%;
@@ -734,6 +734,16 @@
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                     Radar Settings
                 </h3>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label>Map Style</label>
+                    <select id="map-style-select">
+                        <option value="dark">Dark Matter</option>
+                        <option value="light">Light Positron</option>
+                        <option value="satellite">Satellite Imagery</option>
+                        <option value="terrain">Terrain Data</option>
+                        <option value="street">Street Map</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label data-i18n="layer_type">Weather Layer</label>
                     <select id="weather-layer-select">
@@ -787,19 +797,6 @@
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
                 </button>
             </div>
-
-            <!-- OVERLAY: Map Base Switcher -->
-            <div class="weather-overlay-panel" style="top: 16px; left: 16px; width: 180px;">
-                <h3 style="margin: 0 0 10px 0; font-size: 0.9rem; font-weight: 800; color: var(--text-main);">Map Style</h3>
-                <select id="map-style-select" style="width:100%; padding: 6px; border-radius: 6px; background: rgba(0,0,0,0.5); color: white; border: 1px solid var(--border);">
-                    <option value="dark">Dark Matter</option>
-                    <option value="light">Light Positron</option>
-                    <option value="satellite">Satellite Imagery</option>
-                    <option value="terrain">Terrain Data</option>
-                    <option value="street">Street Map</option>
-                </select>
-            </div>
-            
         </div>
 
         <!-- ── WEATHER DATA ANALYTICS (Charts & Tables) ── -->

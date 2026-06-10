@@ -128,6 +128,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateDashboardElements(weatherDataArray);
     }
 
+    // RainViewer Radar Integration (Real Weather Cloud/Rain Data)
+    let radarLayer = null;
+    async function fetchRainViewer() {
+        try {
+            const response = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+            const data = await response.json();
+            const latestPast = data.radar.past[data.radar.past.length - 1];
+            const timestamp = latestPast.time;
+            const tileUrl = `https://tilecache.rainviewer.com/v2/radar/${timestamp}/256/{z}/{x}/{y}/2/1_1.png`;
+            
+            if(radarLayer) map.removeLayer(radarLayer);
+            radarLayer = L.tileLayer(tileUrl, {
+                opacity: 0.8,
+                zIndex: 1000,
+                attribution: 'Radar Data © RainViewer'
+            });
+            radarLayer.addTo(map);
+        } catch(e) {
+            console.error("RainViewer API failed", e);
+        }
+    }
+
     // 3. Update AI Panel, Chart, and Table
     let impactChart = null;
 
@@ -209,7 +231,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Initial Fetch
     fetchWeatherData();
-    document.getElementById('refresh-weather-btn').addEventListener('click', fetchWeatherData);
+    fetchRainViewer();
+    document.getElementById('refresh-weather-btn').addEventListener('click', () => {
+        fetchWeatherData();
+        fetchRainViewer();
+    });
 
     // 4. Simulation Sandbox (Leaflet.draw) & Turf.js Spatial Analysis
     const drawnItems = new L.FeatureGroup();
