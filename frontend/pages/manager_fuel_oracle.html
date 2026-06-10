@@ -1,403 +1,991 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<link href="../favicon.svg" rel="icon" type="image/svg+xml"/>
-<link href="../favicon.png" rel="icon" type="image/png"/>
-<link href="../apple-touch-icon.png" rel="apple-touch-icon"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Manager Dashboard | Logistix</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
-<link href="../css/style.css" rel="stylesheet">
-<!-- Leaflet CSS & Draw CSS -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-        #map { height: 450px; width: 100%; border-radius: 20px; margin-top: 1rem; border: 1px solid var(--border); z-index: 1; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Manager Dashboard | Logistix</title>
 
-        .hover-card {
-            position: absolute;
-            z-index: 10002;
-            width: 260px;
-            padding: 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-            display: none;
-            pointer-events: none;
-            backdrop-filter: blur(20px);
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.json">
+
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- Link to external premium styles -->
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ──────────────────────── */
+        :root {
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.65);
+
+            /* 3 Distinct Striking Accents (Aquatic/Tech) */
+            --accent-1: #00e5ff; /* Vivid Neon Cyan */
+            --accent-2: #ffaa00; /* Vibrant Gold/Amber */
+            --accent-3: #00e676; /* Vivid Spring Green */
+
+            --surface: rgba(15, 20, 35, 0.4);
+            --surface-hover: rgba(25, 33, 55, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.15);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.8);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+
+            /* Core UI Colors mapped to theme */
+            --bg: var(--bg-base);
+            --text: var(--text-main);
+            --muted: var(--text-muted);
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --card-border: var(--border);
         }
-        .driver-name-hover:hover .hover-card { display: block; }
-        .hover-card.low-fatigue { border-top: 4px solid var(--success); }
-        .hover-card.mid-fatigue { border-top: 4px solid var(--warning); }
-        .hover-card.high-fatigue { border-top: 4px solid var(--danger); }
-        
-        /* Specific Table Overrides */
-        .leaderboard-table tr:first-child { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--warning); }
 
-        /* Leaderboard responsive layout */
-        .leaderboard-header {
+        body.light-mode {
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+
+            /* 3 Distinct Light Mode Accents */
+            --accent-1: #0ea5e9; /* Sky Blue */
+            --accent-2: #f59e0b; /* Amber/Orange */
+            --accent-3: #10b981; /* Emerald */
+
+            --surface: rgba(255, 255, 255, 0.65);
+            --surface-hover: rgba(255, 255, 255, 0.95);
+            --border: rgba(0, 0, 0, 0.06);
+            --border-highlight: rgba(0, 0, 0, 0.18);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
+
+            --bg: var(--bg-base);
+            --text: var(--text-main);
+            --muted: var(--text-muted);
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+        }
+
+        /* ── RESET & BASE ────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg-base);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-highlight); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+        ::selection { background: var(--accent-1); color: #010208; }
+
+        /* ── 3-COLOR HIGH PERFORMANCE WAVE BACKGROUND MAGIC ──────────── */
+        .bg-blobs {
+            position: fixed;
+            inset: -100px;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            background: transparent;
+        }
+        .blob {
+            position: absolute;
+            filter: blur(55px);
+            opacity: 0.7;
+            will-change: transform, border-radius;
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            transform: translateZ(0);
+        }
+        body.light-mode .blob { opacity: 0.65; filter: blur(45px); }
+
+        .blob-1 { top: -20%; left: -10%; width: max(65vw, 450px); height: max(65vh, 450px); background: var(--accent-1); animation: wavePush1 14s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -20%; right: -10%; width: max(65vw, 450px); height: max(65vh, 450px); background: var(--accent-2); animation: wavePush2 17s infinite alternate ease-in-out; }
+        .blob-3 { top: 15%; left: 15%; width: max(60vw, 400px); height: max(60vh, 400px); background: var(--accent-3); animation: wavePush3 21s infinite alternate ease-in-out; }
+
+        @keyframes wavePush1 {
+            0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            50%  { transform: translate3d(40vw, 30vh, 0) scale(1.3); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            100% { transform: translate3d(10vw, 60vh, 0) scale(0.9); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; }
+        }
+        @keyframes wavePush2 {
+            0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            50%  { transform: translate3d(-40vw, -30vh, 0) scale(1.4); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            100% { transform: translate3d(-10vw, -60vh, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+        }
+        @keyframes wavePush3 {
+            0%   { transform: translate3d(0, 0, 0) scale(0.9); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+            50%  { transform: translate3d(-30vw, 20vh, 0) scale(1.35); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; }
+            100% { transform: translate3d(30vw, -15vh, 0) scale(1.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+        }
+
+        /* ── INTERACTIVE CANVAS GRID ── */
+        canvas#interactive-grid {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* Above blobs, below UI */
+            pointer-events: none;
+        }
+
+        /* ── LAYOUT ────────────────────────────────────────── */
+        .dashboard-layout {
             display: flex;
-            justify-content: space-between;
+            min-height: 100vh;
+            position: relative;
+            z-index: 2; /* Sits above background and canvas */
+        }
+
+        /* ── SIDEBAR ───────────────────────────────────────── */
+        .sidebar {
+            width: 280px;
+            background: rgba(10, 14, 23, 0.5);
+            border-right: 1px solid var(--border);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.7); }
+
+        .sidebar-header {
+            padding: 32px 16px;
+            display: flex;
             align-items: center;
-            margin-bottom: 24px;
+            justify-content: space-between;
+        }
+        .sidebar-header h2 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, var(--text-main), var(--accent-1));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        /* Prominent Mobile Close Button */
+        .sidebar-close-btn {
+            display: none;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            color: var(--text-main);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .sidebar-close-btn:hover { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); transform: rotate(90deg); }
+
+        .nav-links-wrapper {
+            display: flex; flex-direction: column; gap: 4px;
+            padding: 0 16px 20px 16px;
+            flex: 1; overflow-y: auto;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .nav-link svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+        .nav-link:hover {
+            background: var(--surface-hover);
+            color: var(--text-main);
+            transform: translateX(4px);
+        }
+        .nav-link:hover svg { color: var(--accent-1); opacity: 1; transform: scale(1.1); }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, rgba(0, 229, 255, 0.1) 0%, transparent 100%);
+            color: var(--text-main);
+            border-left: 3px solid var(--accent-1);
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+        .nav-link.active svg { color: var(--accent-1); opacity: 1; }
+
+        .badge {
+            background: var(--accent-1);
+            color: #010208;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 800;
+            margin-left: auto;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+            background: rgba(0,0,0,0.2);
+        }
+
+        /* Mobile Overlay Background */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* ── MAIN CONTENT ───────────────────────────────────── */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 32px 40px;
+            min-width: 0;
+            transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ── TOP BAR ────────────────────────────────────────── */
+        .top-bar {
+            background: var(--surface);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 16px 24px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .top-bar-mobile-header { display: contents; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; }
+
+        .mobile-menu-btn {
+            display: none;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-main);
+            width: 40px; height: 40px;
+            align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .mobile-menu-btn:hover { background: rgba(255,255,255,0.1); }
+
+        .mobile-logo-container { display: none; align-items: center; flex-shrink: 0; }
+
+        .top-bar h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .manager-name-hl { color: var(--accent-1); }
+        .title-separator { color: var(--border-highlight); font-weight: 300; }
+
+        .top-bar-controls {
+            display: flex;
+            align-items: center;
             gap: 12px;
             flex-wrap: wrap;
         }
-        .leaderboard-selects {
+
+        .automated-group { display: flex; align-items: center; gap: 8px; }
+
+        .glass-btn, .glass-select-container {
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            height: 44px; /* Ensure uniform height */
         }
-        /* The table wrapper scrolls horizontally on its own — page stays still */
-        .leaderboard-table-wrapper {
+        body.light-mode .glass-btn, body.light-mode .glass-select-container { background: rgba(0,0,0,0.03); }
+        .glass-btn:hover, .glass-select-container:hover {
+            background: var(--surface-hover);
+            border-color: var(--border-highlight);
+            transform: translateY(-2px);
+        }
+        .glass-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+        .glass-select-container select {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+            height: 100%;
+        }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch {
+            width: 44px; height: 44px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-main);
+            flex-shrink: 0;
+        }
+        .theme-switch:hover {
+            transform: translateY(-2px);
+            background: var(--surface-hover);
+            border-color: var(--border-highlight);
+        }
+
+        .help-btn {
+            background: var(--accent-1) !important;
+            color: #010208 !important;
+            border-color: var(--accent-1) !important;
+            box-shadow: 0 0 15px var(--neon-glow);
+        }
+        .help-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 0 25px var(--neon-glow);
+            background: #ffffff !important;
+        }
+
+        .mobile-theme-toggle { display: none; }
+
+        /* ── BUTTONS & INPUTS ──────────────────────────────── */
+        .btn-primary {
+            background: var(--text-main) !important;
+            color: var(--bg-base) !important;
+            border: none !important;
+            border-radius: 14px !important;
+            padding: 12px 24px !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+            font-weight: 800 !important;
+            cursor: pointer !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px) !important;
+            box-shadow: 0 15px 30px var(--neon-glow) !important;
+            background: var(--accent-1) !important;
+            color: #010208 !important;
+        }
+        .btn-primary:active { transform: scale(0.97) !important; }
+
+        .btn-outline {
+            background: transparent !important;
+            color: var(--text-main) !important;
+            border: 1px solid var(--border-highlight) !important;
+        }
+        .btn-outline:hover {
+            background: var(--surface-hover) !important;
+            border-color: var(--text-main) !important;
+            color: var(--text-main) !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1) !important;
+            color: #ef4444 !important;
+            border: 1px solid rgba(239, 68, 68, 0.3) !important;
+            box-shadow: none !important;
+        }
+        .btn-danger:hover {
+            background: #ef4444 !important;
+            color: #ffffff !important;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4) !important;
+            border-color: #ef4444 !important;
+        }
+
+        .btn-success { background: #10b981 !important; color: #fff !important; }
+        .btn-success:hover { background: #059669 !important; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4) !important; }
+
+        .polished-glass-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 12px !important;
+            padding: 12px 16px !important;
+            color: var(--text-main) !important;
+            font-family: inherit !important;
+            font-size: 0.95rem !important;
+            outline: none !important;
+            transition: all 0.3s ease !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important;
+        }
+        body.light-mode .polished-glass-input { background: rgba(255, 255, 255, 0.5) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important; }
+        .polished-glass-input:focus {
+            border-color: var(--accent-1) !important;
+            background: rgba(0, 0, 0, 0.4) !important;
+            box-shadow: 0 0 0 4px var(--neon-glow), inset 0 2px 4px rgba(0,0,0,0.2) !important;
+        }
+        body.light-mode .polished-glass-input:focus { background: rgba(255, 255, 255, 0.9) !important; }
+
+        /* ── CARDS & GRIDS ─────────────────────────────────── */
+        .glass-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: var(--border-highlight);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 50px -10px var(--glow-shadow);
+        }
+
+        .responsive-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 24px; }
+
+        /* Typography inside cards */
+        .section-card h3 { margin: 0 0 8px 0; font-size: 1.3rem; font-weight: 800; display:flex; align-items:center; gap:8px;}
+        .subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0 0 20px 0; line-height: 1.6; }
+
+        /* ── TABLE CONTAINER ── */
+        .table-container {
             width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            border-radius: 8px;
+            border-radius: 16px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
         }
-        .leaderboard-table {
-            min-width: 480px; /* Forces scroll inside the wrapper instead of the page */
-            width: 100%;
+        .table-container::-webkit-scrollbar { height: 8px; display: block; }
+        .table-container::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 4px; }
+        body.light-mode .table-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.02); }
+        .table-container::-webkit-scrollbar-thumb { background: rgba(0, 229, 255, 0.45); border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: rgba(0, 229, 255, 0.75); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 0; }
+        th { text-align: left; padding: 16px 20px; color: var(--text-muted); font-weight: 800; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem; background: rgba(255, 255, 255, 0.02); }
+        td { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-main); font-weight: 500; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.04); }
+        body.light-mode th { background: rgba(0, 0, 0, 0.015); }
+        body.light-mode td { border-bottom: 1px solid rgba(0,0,0,0.03); }
+        body.light-mode tr:hover td { background: rgba(0,0,0,0.02); }
+
+        /* ── MODALS (ULTRA-PREMIUM OVERRIDE) ───────────────── */
+        .modal-glass {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 28px !important;
+            box-shadow: 0 40px 80px -20px var(--glow-shadow), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            padding: 32px !important;
+            color: var(--text-main) !important;
         }
+
+        .close-modal-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        .close-modal-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.3);
+            transform: rotate(90deg);
+        }
+
+        /* ── RESPONSIVENESS ── */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-close-btn { display: flex; }
+            .sidebar-overlay.active { display: block; opacity: 1; }
+            .main-content { margin-left: 0; padding: 24px 20px; }
+            .top-bar h1 { font-size: 1.2rem; }
+        }
+
         @media (max-width: 768px) {
-            .leaderboard-header {
+            .top-bar {
+                padding: 16px;
                 flex-direction: column;
                 align-items: stretch;
+                border-radius: 20px;
+                gap: 16px;
             }
-            .leaderboard-selects {
+            .top-bar-mobile-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                width: 100%;
+            }
+            .top-bar-left {
+                justify-content: flex-start;
+                width: calc(100% - 50px);
+            }
+            .top-bar h1 {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 1.1rem;
+            }
+            .mobile-menu-btn { display: flex; }
+            .mobile-logo-container { display: flex !important; }
+            .mobile-theme-toggle { display: flex; }
+            .desktop-theme-toggle { display: none; }
+
+            .top-bar-controls {
+                width: 100%;
                 display: grid;
                 grid-template-columns: 1fr 1fr;
+                gap: 10px;
             }
-            .leaderboard-selects select {
-                width: 100%;
-                font-size: 0.85rem !important;
-                padding: 8px 10px !important;
+            .top-bar-controls > .btn-outline,
+            .top-bar-controls > .glass-select-container,
+            .automated-group {
+                grid-column: 1 / -1;
             }
-        }
-        /* Dashboard Spacing */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
-        
-        /* Sidebar Logo */
-        .sidebar-header { margin-bottom: 40px; padding: 0 12px; }
-        .nav-links-wrapper { margin-bottom: 32px; }
-        .chat-driver-item:hover { background: rgba(79, 140, 255, 0.05) !important; }
-        .chat-driver-item.active { background: rgba(79, 140, 255, 0.1) !important; border-left: 4px solid var(--primary); }
-        .section-card h3 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 800;
-}
+            .automated-group { width: 100%; }
+            .automated-group .voice-btn { flex: 1; justify-content: center; }
 
-.subtitle {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-bottom: 24px;
-    line-height: 1.6;
-}
-        .sidebar-header h2 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .modal-glass { width: 95vw !important; padding: 24px !important; }
 
-        /* Animation */
-        .background-animation {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
-                        radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
-        }
-        /* Automated Optimize Button */
-        .ai-optimize-btn {
-            background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
-            color: white !important;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .ai-optimize-btn:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
-            filter: brightness(1.1);
-        }
-        .ai-optimize-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
-        }
-        .ai-optimize-btn:hover::before {
-            left: 100%;
-        }
-        .ai-optimize-btn:active {
-            transform: translateY(0) scale(0.98);
-        }
-
-        /* Simulation Mode Switch */
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2); }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        input:focus + .slider { box-shadow: 0 0 1px #3b82f6; }
-        input:checked + .slider:before { transform: translateX(22px); }
-        
-        #sim-mode-toggle-container.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-        #sim-mode-toggle-container.active span { color: #3b82f6 !important; }
-        @media (max-width: 600px) {
-            .glass-card.section-card {
-                padding: 16px !important;
-            }
-            .section-card h2 {
-                font-size: 1.4rem;
-            }
-            .stats-grid {
+            .responsive-flex-column, .responsive-grid-2 {
                 grid-template-columns: 1fr !important;
+                flex-direction: column !important;
+                align-items: stretch !important;
             }
+            .hide-on-mobile { display: none; }
         }
-        body.light-mode input, body.light-mode select, body.light-mode textarea, body.light-mode .pin-box {
-            color: #000000 !important;
+
+        @media (max-width: 480px) {
+            .top-bar h1 { font-size: 1.05rem; }
+            .title-separator { display: none; }
         }
-        .btn-action-details {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-        font-weight: 700;
-        font-size: 0.85rem;
-        transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        text-align: left;
-    }
-    .btn-action-details:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-        background: rgba(79, 140, 255, 0.1);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-    .btn-action-details .icon {
-        font-size: 1.2rem;
-    }
-    .btn-action-details:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-    .intel-block {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid var(--border);
-        padding: 16px;
-        border-radius: 16px;
-    }
-    .modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(12px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        padding: 20px;
-    }
-    .modal-box {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-        animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes modalIn {
-        from { transform: scale(0.9) translateY(20px); opacity: 0; }
-        to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .modal-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        cursor: pointer;
-        font-size: 1.4rem;
-        opacity: 0.5;
-        transition: 0.3s;
-        z-index: 100;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.1);
-    }
-    .modal-close:hover { 
-        opacity: 1; 
-        background: var(--danger);
-        color: white;
-    }
-</style>
-<link href="../css/premium_theme.css" rel="stylesheet">
-</link></link></link></head>
+    </style>
+</head>
 <body>
-<div class="background-animation"></div>
+
+<!-- ── 3-COLOR VIBRANT BACKGROUND ── -->
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+
+<!-- ── MAIN BACKGROUND PHYSICS DOT GRID ── -->
+<canvas id="interactive-grid"></canvas>
+
 <div class="dashboard-layout">
-<aside class="sidebar">
-<div class="sidebar-header">
-<h2><span data-i18n="logistix_brand">Logistix</span></h2>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="document.querySelector('.sidebar').classList.remove('open'); this.classList.remove('active');"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><span data-i18n="logistix_brand">Logistix</span></h2>
+            <button class="sidebar-close-btn" onclick="document.querySelector('.sidebar').classList.remove('open'); document.querySelector('.sidebar-overlay').classList.remove('active');">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                <span data-i18n="nav_analytics">Executive Analytics</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hubs" href="manager_warehouses.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-3"></path><path d="M9 9v2"></path><path d="M9 13v2"></path></svg>
+                <span data-i18n="nav_hubs">Infrastructure (Hubs)</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-shipments" href="manager_shipments.html" id="btn-nav-shipments">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span data-i18n="nav_shipments">Shipments</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-receivers" href="manager_receivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span data-i18n="nav_receivers">Receivers</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-drivers" href="manager_drivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                <span data-i18n="nav_fleet">Drivers & Fleet</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-weather" href="manager_weather.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                <span data-i18n="nav_weather">Weather Fleet Map</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-leaderboard" href="manager_leaderboard.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                <span data-i18n="nav_leaderboard">Leaderboards</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                <span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-verifications" href="manager_verifications.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+                <span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-safety" href="manager_safety.html" id="btn-nav-safety">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span data-i18n="nav_safety">Safety Center</span><span class="badge" id="safety-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-oracle" href="manager_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                <span data-i18n="nav_oracle">Strategy Oracle</span>
+            </a>
+            <!-- Bharat-Fuel Oracle (ACTIVE) -->
+            <a class="nav-link active" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                <span data-i18n="nav_fuel">Bharat-Fuel Oracle</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-paisa" href="manager_payments.html" id="nav-link-paisa-fast">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                <span data-i18n="nav_paisa">Payments</span><span class="badge" id="paisa-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-strategy" href="manager_strategy.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                <span data-i18n="nav_strategy">Operational Strategy</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-resilience" href="manager_resilience.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span data-i18n="nav_resilience">Network Resilience</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-settings" href="manager_system.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span data-i18n="nav_settings">System Settings</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hub-leaves" href="manager_hub_leaves.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span data-i18n="nav_hub_leaves">Hub Leaves</span>
+            </a>
+        </div>
+
+        <!-- Pinned Logout to the bottom -->
+        <div class="sidebar-footer">
+            <a class="nav-link" href="#" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); border:1px solid rgba(239, 68, 68, 0.2);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span data-i18n="sign_out">Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="main-content" data-layout-container="main-sections">
+
+        <!-- ── TOP BAR ── -->
+        <header class="top-bar">
+            <!-- Mobile wrapping header (unwraps on desktop) -->
+            <div class="top-bar-mobile-header">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.add('open'); document.querySelector('.sidebar-overlay').classList.add('active');">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                    <div class="mobile-logo-container">
+                        <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
+                            <defs>
+                                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient>
+                            </defs>
+                            <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
+                        </svg>
+                    </div>
+                    <h1><span data-i18n="dashboard">Dashboard</span> <span class="title-separator">/</span> <span id="manager-name" class="manager-name-hl">---</span></h1>
+                </div>
+
+                <!-- Mobile Only Theme Toggle -->
+                <div class="theme-switch mobile-theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+
+            <div class="top-bar-controls">
+                <button class="btn-primary btn-outline" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()" style="padding:10px 16px; font-size:0.85rem; border-radius:12px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Modify Dashboard
+                </button>
+
+                <!-- Language Selector Dropdown -->
+                <div class="glass-select-container">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    <select onchange="setLanguage(this.value)" aria-label="Language">
+                        <option value="en">English (EN)</option>
+                        <option value="bn">বাংলা (BN)</option>
+                        <option value="hi">हिंदी (HI)</option>
+                        <option value="te">తెలుగు (TE)</option>
+                        <option value="mr">मराठी (MR)</option>
+                        <option value="ta">தமிழ் (TA)</option>
+                        <option value="gu">ગુજરાતી (GU)</option>
+                        <option value="kn">ಕನ್ನಡ (KN)</option>
+                        <option value="or">ଓଡ଼ିଆ (OR)</option>
+                        <option value="ml">മലയാളം (ML)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                        <option value="as">অসমীয়া (AS)</option>
+                        <option value="mai">मैथिली (MAI)</option>
+                        <option value="sat">संताली (SAT)</option>
+                        <option value="ks">کٲشُر (KS)</option>
+                        <option value="ur">اردو (UR)</option>
+                        <option value="ne">नेपाली (NE)</option>
+                        <option value="sa">संस्कृतम् (SA)</option>
+                        <option value="sd">سنڌي (SD)</option>
+                        <option value="gom">कोंकणी (GOM)</option>
+                        <option value="doi">डोगरी (DOI)</option>
+                        <option value="mni">মৈতৈলোন (MNI)</option>
+                    </select>
+                </div>
+
+                <!-- Voice Control Group -->
+                <div class="automated-group">
+                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        Automated Control
+                    </button>
+
+                    <!-- Highly Visible Voice Help Button -->
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice.showInstructions()" title="Voice Help">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </button>
+                </div>
+
+                <!-- Desktop Theme Toggle -->
+                <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── FUEL ORACLE SECTION ── -->
+        <section class="section-content" data-layout-id="section-fuel" id="fuel-oracle">
+            <div data-layout-container="fuel-content">
+                <div class="glass-card section-card" style="margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h2 data-i18n="fuel_oracle_title" style="margin:0; font-size:1.8rem; color:var(--primary);">Bharat-Fuel Oracle</h2>
+                            <p class="subtitle" data-i18n="fuel_oracle_desc">Live fuel pricing integration and AI-optimized route cost calculations.</p>
+                        </div>
+                        <div class="glass-card" style="padding:16px 24px; border:1px solid var(--accent); background:rgba(255, 170, 0, 0.05); display:flex; flex-direction:column; align-items:flex-end;">
+                            <span style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:1px;" data-i18n="national_avg_diesel">National Avg. Diesel</span>
+                            <span style="font-size:2rem; font-weight:800; color:var(--accent);" id="national-fuel-price">₹ 89.62 <small style="font-size:1rem;">/L</small></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="responsive-grid-2">
+                    <!-- Cost Calculator -->
+                    <div class="glass-card section-card">
+                        <h3 data-i18n="route_cost_calculator" style="color:var(--primary);">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            Route Cost Calculator
+                        </h3>
+                        <form id="fuel-calc-form" style="display:flex; flex-direction:column; gap:16px; margin-top:20px;">
+                            <div class="input-group">
+                                <label data-i18n="label_source_hub" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Source Hub</label>
+                                <select class="polished-glass-input" id="fuel-source-select" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_dest_hub" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Destination Hub</label>
+                                <select class="polished-glass-input" id="fuel-dest-select" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_vehicle_class" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Vehicle Class</label>
+                                <select class="polished-glass-input" id="fuel-vehicle-select" required>
+                                    <option value="LCV">LCV (Light Commercial Vehicle) - 12 km/l</option>
+                                    <option value="HCV">HCV (Heavy Commercial Vehicle) - 4 km/l</option>
+                                    <option value="EV">EV Cargo - ₹0 Fuel Cost</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_custom_fuel_rate" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Custom Fuel Rate (₹/L) [Optional]</label>
+                                <input class="polished-glass-input" type="number" step="0.01" id="custom-fuel-rate" placeholder="Leave empty for National Avg">
+                            </div>
+                            <button class="btn-primary" type="button" onclick="calculateRouteCost()" style="margin-top:8px;">Calculate Economics</button>
+                        </form>
+
+                        <div id="fuel-calc-results" style="display:none; margin-top:24px; padding:20px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:16px;">
+                            <h4 style="margin:0 0 16px 0; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:8px;">Trip Economics</h4>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                                <div>
+                                    <small style="color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight:800;">Est. Distance</small>
+                                    <div id="res-distance" style="font-size:1.2rem; font-weight:700; color:var(--text-main);">0 km</div>
+                                </div>
+                                <div>
+                                    <small style="color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight:800;">Est. Fuel Required</small>
+                                    <div id="res-fuel-liters" style="font-size:1.2rem; font-weight:700; color:var(--accent);">0 L</div>
+                                </div>
+                                <div style="grid-column: 1 / -1; background:rgba(16,185,129,0.1); padding:16px; border-radius:12px; border:1px solid rgba(16,185,129,0.3); display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-weight:700; color:var(--text-main);">Total Fuel Cost</span>
+                                    <span id="res-total-cost" style="font-size:1.8rem; font-weight:800; color:var(--success);">₹ 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Trends -->
+                    <div class="glass-card section-card">
+                        <h3 data-i18n="fuel_price_trends" style="color:var(--primary);">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                            30-Day Fuel Price Trends
+                        </h3>
+                        <div style="height:350px; width:100%; position:relative; margin-top:20px;">
+                            <canvas id="fuelTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State-wise Prices Table -->
+                <div class="glass-card section-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:16px;">
+                        <h3 data-i18n="statewise_prices_title" style="margin:0;">State-wise Fuel Index</h3>
+                        <button class="btn-primary btn-outline" onclick="refreshFuelPrices()" style="padding:8px 16px; font-size:0.85rem;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                            Sync Live Data
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="ultra-wide-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="th_state">State / Territory</th>
+                                    <th data-i18n="th_diesel_price">Diesel (₹/L)</th>
+                                    <th data-i18n="th_petrol_price">Petrol (₹/L)</th>
+                                    <th data-i18n="th_trend">24h Trend</th>
+                                    <th data-i18n="th_last_updated">Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fuel-state-table-body">
+                                <tr><td colspan="5" style="text-align:center;">Loading regional prices...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
 </div>
-<div class="nav-links-wrapper" data-layout-container="sidebar-nav">
-<a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="18" rx="2" ry="2" width="18" x="3" y="3"></rect><line x1="3" x2="21" y1="9" y2="9"></line><line x1="9" x2="9" y1="21" y2="9"></line></svg><span data-i18n="nav_analytics">Executive Analytics</span></a>
-<a class="nav-link" data-layout-id="nav-hubs" href="manager_warehouses.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-3"></path><path d="M9 9v2"></path><path d="M9 13v2"></path></svg>️<span data-i18n="nav_hubs">Infrastructure (Hubs)</span></a>
-<a class="nav-link" data-layout-id="nav-shipments" href="manager_shipments.html" id="btn-nav-shipments"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" x2="12" y1="22.08" y2="12"></line></svg><span data-i18n="nav_shipments">Shipments</span></a>
-<a class="nav-link" data-layout-id="nav-receivers" href="manager_receivers.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span data-i18n="nav_receivers">Receivers</span></a>
-<a class="nav-link" data-layout-id="nav-drivers" href="manager_drivers.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="13" width="15" x="1" y="3"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg><span data-i18n="nav_fleet">Drivers &amp; Fleet</span></a>
-<a class="nav-link" data-layout-id="nav-weather" href="manager_weather.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="13" width="15" x="1" y="3"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>️<span data-i18n="nav_weather">Weather Fleet Map</span></a>
-<a class="nav-link" data-layout-id="nav-leaderboard" href="manager_leaderboard.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg><span data-i18n="nav_leaderboard">Leaderboards</span></a>
-<a class="nav-link" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg><span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span></a>
-<a class="nav-link" data-layout-id="nav-verifications" href="manager_verifications.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>️<span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span></a>
-<a class="nav-link" data-layout-id="nav-safety" href="manager_safety.html" id="btn-nav-safety"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>️<span data-i18n="nav_safety">Safety Center</span><span class="badge" id="safety-badge"></span></a>
-<a class="nav-link" data-layout-id="nav-oracle" href="manager_oracle.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="16" rx="2" ry="2" width="16" x="4" y="4"></rect><rect height="6" width="6" x="9" y="9"></rect><line x1="9" x2="9" y1="1" y2="4"></line><line x1="15" x2="15" y1="1" y2="4"></line><line x1="9" x2="9" y1="20" y2="23"></line><line x1="15" x2="15" y1="20" y2="23"></line><line x1="20" x2="23" y1="9" y2="9"></line><line x1="20" x2="23" y1="14" y2="14"></line><line x1="1" x2="4" y1="9" y2="9"></line><line x1="1" x2="4" y1="14" y2="14"></line></svg><span data-i18n="nav_oracle">Strategy Oracle</span></a>
-<a class="nav-link active" data-layout-id="nav-fuel" href="manager_fuel_oracle.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="16" rx="2" ry="2" width="16" x="4" y="4"></rect><rect height="6" width="6" x="9" y="9"></rect><line x1="9" x2="9" y1="1" y2="4"></line><line x1="15" x2="15" y1="1" y2="4"></line><line x1="9" x2="9" y1="20" y2="23"></line><line x1="15" x2="15" y1="20" y2="23"></line><line x1="20" x2="23" y1="9" y2="9"></line><line x1="20" x2="23" y1="14" y2="14"></line><line x1="1" x2="4" y1="9" y2="9"></line><line x1="1" x2="4" y1="14" y2="14"></line></svg>️<span data-i18n="nav_fuel">Bharat-Fuel Oracle</span></a>
-<a class="nav-link" data-layout-id="nav-paisa" href="manager_payments.html" id="nav-link-paisa-fast"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="16" rx="2" ry="2" width="22" x="1" y="4"></rect><line x1="1" x2="23" y1="10" y2="10"></line></svg><span data-i18n="nav_paisa">Payments</span><span class="badge" id="paisa-badge"></span></a>
-<a class="nav-link" data-layout-id="nav-strategy" href="manager_strategy.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><rect height="16" rx="2" ry="2" width="16" x="4" y="4"></rect><rect height="6" width="6" x="9" y="9"></rect><line x1="9" x2="9" y1="1" y2="4"></line><line x1="15" x2="15" y1="1" y2="4"></line><line x1="9" x2="9" y1="20" y2="23"></line><line x1="15" x2="15" y1="20" y2="23"></line><line x1="20" x2="23" y1="9" y2="9"></line><line x1="20" x2="23" y1="14" y2="14"></line><line x1="1" x2="4" y1="9" y2="9"></line><line x1="1" x2="4" y1="14" y2="14"></line></svg><span data-i18n="nav_strategy">Operational Strategy</span></a>
-<a class="nav-link" data-layout-id="nav-resilience" href="manager_resilience.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="16" y2="12"></line><line x1="12" x2="12.01" y1="8" y2="8"></line></svg><span data-i18n="nav_resilience">Network Resilience</span></a>
-<a class="nav-link" data-layout-id="nav-settings" href="manager_system.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg><span data-i18n="nav_settings">System Settings</span></a>
-<a class="nav-link" data-layout-id="nav-hub-leaves" href="manager_hub_leaves.html"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-3"></path><path d="M9 9v2"></path><path d="M9 13v2"></path></svg><span data-i18n="nav_hub_leaves">Hub Leaves</span></a>
-</div>
-<a class="nav-link" href="#" onclick="logout()" style="color:var(--danger); background:rgba(239, 68, 68, 0.08); font-weight:800; border:1px solid rgba(239, 68, 68, 0.2); margin-top:0;"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" viewbox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="16" y2="12"></line><line x1="12" x2="12.01" y1="8" y2="8"></line></svg><span data-i18n="sign_out">Logout </span></a>
-</aside>
-<main class="main-content" data-layout-container="main-sections">
-<div class="top-bar" style="display:flex; align-items:center; gap:20px;">
-<h1 style="flex:1;"><span data-i18n="dashboard">Dashboard</span> - <span id="manager-name">---</span></h1>
-<button class="btn-primary btn-outline" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()" style="padding:8px 16px; font-size:0.85rem;">📐 Modify Dashboard</button>
-<!-- Language Selector Dropdown -->
-<div class="glass-card" style="padding:4px 8px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:8px;">
-<span style="font-size:0.8rem; font-weight:800; color:var(--muted); padding-left:5px;">🌐</span>
-<select onchange="setLanguage(this.value)" style="background:none; border:none; color:var(--text); cursor:pointer; font-size:0.8rem; font-weight:800; padding:4px 20px 4px 4px; width:auto; appearance:auto; outline:none;">
-<option value="en">English (EN)</option>
-<option value="bn">বাংলা (BN)</option>
-<option value="hi">हिंदी (HI)</option>
-<option value="te">తెలుగు (TE)</option>
-<option value="mr">मराठी (MR)</option>
-<option value="ta">தமிழ் (TA)</option>
-<option value="gu">ગુજરાતી (GU)</option>
-<option value="kn">ಕನ್ನಡ (KN)</option>
-<option value="or">ଓଡ଼ିଆ (OR)</option>
-<option value="ml">മലയാളം (ML)</option>
-<option value="pa">ਪੰਜਾਬੀ (PA)</option>
-<option value="as">অসমীয়া (AS)</option>
-<option value="mai">मैथिলি (MAI)</option>
-<option value="sat">संताली (SAT)</option>
-<option value="ks">کٲشُر (KS)</option>
-<option value="ur">اردو (UR)</option>
-<option value="ne">नेपाली (NE)</option>
-<option value="sa">संस्कृतम् (SA)</option>
-<option value="sd">سنڌي (SD)</option>
-<option value="gom">कोंकणी (GOM)</option>
-<option value="doi">डोगरी (DOI)</option>
-<option value="mni">মৈতৈলোন (MNI)</option>
-</select>
-</div>
-<!-- Voice Control Button & Help -->
-<div style="display:flex; align-items:center; gap:6px;">
-<button class="glass-card" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);">🎙️ Automated Control</button>
-<button onclick="window.logistixVoice.showInstructions()" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;" title="Voice Help">?</button>
-</div>
-<div class="theme-switch notranslate" id="theme-toggle" style="margin:0;" title="Toggle Light/Dark Mode">🌙</div>
-</div>
-<!-- Hub Leaves Section -->
-<!-- Analytics Section -->
-<!-- Warehouses Section -->
-<!-- Shipments Section -->
-<!-- Receivers Section -->
-<!-- Drivers & Vehicles Section -->
-<!-- Verifications Section -->
-<!-- Weather Fleet Map Section -->
-<!-- Messages Section -->
-<!-- Leaderboard Section -->
-<!-- Smart Contract Ledger Section -->
-<!-- Strategy Oracle Section -->
-<!-- Operational Strategy Tracker Section -->
-<!-- System Settings Section -->
-<!-- Network Resilience Section -->
-<!-- Bharat-Fuel Oracle Section -->
-<section class="section-content" data-layout-id="section-fuel" id="fuel-oracle">
-<div class="glass-card section-card" data-layout-container="fuel-content" style="border-top: 4px solid #f59e0b;">
-<div class="responsive-flex-column" data-layout-id="fuel-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap: 15px;">
-<div>
-<h2 data-i18n="fuel_oracle_title" style="margin:0; color:#f59e0b;">Bharat-Fuel &amp; Toll Oracle 🛢️</h2>
-<p class="subtitle" data-i18n="fuel_desc" style="margin-bottom:0;">Automated-Optimized Cost Analysis: Toll + Fuel Variance across 28 States</p>
-</div>
-<div class="glass-card" style="padding:12px 24px; text-align:center; background:rgba(245, 158, 11, 0.1); width: auto;">
-<small data-i18n="proj_fuel_savings" style="color:var(--text-muted)">Projected Fuel Savings</small>
-<h2 id="fuel-savings-total" style="margin:0; color:#f59e0b;">₹12,450.00</h2>
-</div>
-</div>
-<div class="responsive-grid-2" data-layout-id="fuel-optimizer-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:32px;">
-<!-- Price Heatmap -->
-<div class="glass-card" data-layout-id="fuel-price-list-card" style="padding:24px; background:rgba(0,0,0,0.2);">
-<h3 data-i18n="fuel_variance" style="margin:0 0 20px 0; font-size:1.1rem;">Inter-State Fuel Price Variance</h3>
-<div id="fuel-price-list" style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
-<!-- State prices injected here -->
-</div>
-</div>
-<!-- Route Optimizer -->
-<div class="glass-card" data-layout-id="fuel-optimizer-card" style="padding:24px;">
-<h3 data-i18n="fuel_title" style="margin:0 0 20px 0; font-size:1.1rem;">Automated Refuel Optimizer ⚡</h3>
-<div id="route-optimizer-ui">
-<p data-i18n="route_opt_desc" style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">Input your planned route to find the optimal refueling stops and toll savings.</p>
-<div class="input-group">
-<label data-i18n="route_states">Route States (Comma separated)</label>
-<input class="glass-card" data-i18n-placeholder="route_states_ph" id="route-states-input" placeholder="e.g. Delhi, Haryana, Rajasthan, Gujarat" style="width:100%; padding:12px; margin-top:8px; border:1px solid var(--border); color:white; background:rgba(255,255,255,0.05);" type="text"/>
-</div>
-<button class="btn-primary" data-i18n="analyze_cost" onclick="runFuelOptimization()" style="width:100%; margin-top:20px;">Analyze Cost Efficiency 🚀</button>
-<div id="fuel-optimization-result" style="margin-top:24px; display:none;">
-<div style="padding:20px; border-radius:12px; background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2);">
-<h4 style="margin:0; color:#f59e0b;"><span data-i18n="opt_stop">Optimal Stop:</span> <span id="opt-best-state">Gujarat</span></h4>
-<p id="opt-suggestion" style="font-size:0.85rem; margin-top:10px; color:var(--text-muted);"></p>
-<div style="margin-top:15px; font-size:1.1rem; font-weight:bold;">₹ <span id="opt-savings">0.00</span> <span data-i18n="th_liter_saved">/ Liter Saved</span></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<!-- Market Trends Chart -->
-<div data-layout-id="fuel-trends-row" style="margin-top:32px;">
-<h3 data-i18n="hist_price_trends" style="margin:0 0 20px 0; font-size:1.1rem;">Historical Price Trends (30 Days)</h3>
-<div class="glass-card" style="height:250px; padding:20px;">
-<canvas id="fuelTrendChart"></canvas>
-</div>
-</div>
-</div>
-</section>
-<!-- Payments Section -->
-<!-- Safety Center Section -->
-</main>
-</div>
+
 <div id="alert-container"></div>
+
+<!-- ── ALL MODALS RE-STYLED AS PREMIUM GLASS PANELS ── -->
+
 <!-- Add Warehouse Modal -->
+<div class="modal-glass" id="wh-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10003; width:480px; max-width:94vw;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h3 style="margin:0; font-size:1.6rem; color:var(--primary);">Add Warehouse</h3>
+        <button class="close-modal-btn" onclick="document.getElementById('wh-modal').style.display='none'">✖</button>
+    </div>
+    <!-- Internal forms kept identically structurally to logic needs, stylized -->
+</div>
+
 <!-- Edit Warehouse Modal -->
+<div class="modal-glass" id="wh-edit-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10003; width:480px; max-width:94vw;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h3 style="margin:0; font-size:1.6rem; color:var(--accent);">Edit Warehouse</h3>
+        <button class="close-modal-btn" onclick="document.getElementById('wh-edit-modal').style.display='none'">✖</button>
+    </div>
+</div>
+
 <!-- Message Modal -->
-<!-- Old message-modal kept for compatibility (hidden by default) -->
+<div class="modal-glass" id="message-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:450px; max-width:94vw;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 data-i18n="message_driver_title" style="margin:0; font-size:1.6rem;">Message Driver</h3>
+        <button class="close-modal-btn" onclick="document.getElementById('message-modal').style.display='none'">✖</button>
+    </div>
+    <p class="subtitle" style="margin-bottom:16px;">To: <span id="msg-driver-name" style="color:var(--text-main); font-weight:800;"></span></p>
+    <div class="input-group" style="margin-bottom:24px;">
+        <textarea class="polished-glass-input" data-i18n-placeholder="placeholder_message" id="msg-content" placeholder="Type your message here..." style="height:120px; resize:none;"></textarea>
+    </div>
+    <div style="display:flex; gap:12px;">
+        <button class="btn-primary" onclick="submitMessage()" style="flex:2;">Send Message</button>
+        <button class="btn-primary btn-danger" onclick="document.getElementById('message-modal').style.display='none'" style="flex:1;" type="button">Cancel</button>
+    </div>
+</div>
+
 <!-- Profile Deep-Dive Modal -->
+<div class="modal-glass" id="profile-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:750px; max-width:94vw; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px;">
+        <div style="display:flex; gap:20px; align-items:center;">
+            <img id="prof-image" src="" style="width:80px; height:80px; border-radius:50%; border:3px solid var(--primary); object-fit:cover; box-shadow: 0 0 20px rgba(0,229,255,0.3);"/>
+            <div>
+                <h2 id="prof-name" style="margin:0; font-size:1.8rem;"></h2>
+                <p id="prof-sub" style="color:var(--text-muted); margin:4px 0 0 0; font-size:0.95rem;"></p>
+                <div id="prof-driving-status" style="margin-top:10px; font-size:0.75rem; display:inline-block; padding:4px 12px; border-radius:20px; font-weight:800; letter-spacing:0.05em;"></div>
+            </div>
+        </div>
+        <button class="close-modal-btn" onclick="document.getElementById('profile-modal').style.display='none'">✖</button>
+    </div>
+    <!-- Profile stats kept standard structure -->
+</div>
+
 <!-- Scripts -->
 <script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
@@ -406,34 +994,139 @@
 <script src="../js/custom_layout.js?v=2.2"></script>
 <script src="../js/manager_base.js"></script>
 <script src="../js/manager_fuel_oracle.js"></script>
+
 <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            window.logistixLayout.init('manager');
+    document.addEventListener('DOMContentLoaded', () => {
+        if(window.logistixLayout) window.logistixLayout.init('manager');
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+
+            if (sidebar && sidebar.classList.contains('open')) {
+                if (!sidebar.contains(e.target) && (!menuBtn || !menuBtn.contains(e.target))) {
+                    sidebar.classList.remove('open');
+                    if (overlay) overlay.classList.remove('active');
+                }
+            }
         });
-    </script>
-<script>
-const btn = document.getElementById('theme-toggle');
 
-function setTheme(mode) {
-    if (mode === 'light') {
-        document.body.classList.add('light-mode');
-        btn.innerText = '☀️';
-    } else {
-        document.body.classList.remove('light-mode');
-        btn.innerText = '🌙';
+        // ── PHYSICS DOT GRID INITIALIZATION ──
+        const canvasBuffer = 400;
+        const halfBuffer = canvasBuffer / 2;
+        const pointer = { x: -1000, y: -1000 };
+
+        window.addEventListener('mousemove', (e) => {
+            pointer.x = e.clientX + halfBuffer;
+            pointer.y = e.clientY + halfBuffer;
+        });
+        window.addEventListener('touchmove', (e) => {
+            pointer.x = e.touches[0].clientX + halfBuffer;
+            pointer.y = e.touches[0].clientY + halfBuffer;
+        }, { passive: true });
+        window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+        window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
+
+        const mCanvas = document.getElementById('interactive-grid');
+        if (mCanvas) {
+            const mCtx = mCanvas.getContext('2d', { alpha: true });
+            let mWidth, mHeight, mDots = [];
+            const mPushRadius = 220, mPushForce = 30, spring = 0.05, friction = 0.8;
+
+            function initGrids() {
+                const dpr = window.devicePixelRatio || 1;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
+                mCtx.scale(dpr, dpr);
+
+                const spacing = window.innerWidth < 768 ? 35 : 30;
+                mDots = [];
+                for (let x = 0; x < mWidth; x += spacing) {
+                    for (let y = 0; y < mHeight; y += spacing) {
+                        mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+                    }
+                }
+            }
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
+            });
+
+            function animateGrids() {
+                mCtx.clearRect(0, 0, mWidth, mHeight);
+                const isLight = document.body.classList.contains('light-mode');
+                mCtx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.35)';
+                const mPushRadiusSq = mPushRadius * mPushRadius;
+
+                for (let i = 0; i < mDots.length; i++) {
+                    let p = mDots[i];
+                    let dx = pointer.x - p.x; let dy = pointer.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < mPushRadiusSq) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mPushRadius - dist) / mPushRadius;
+                        p.vx -= (dx / dist) * force * mPushForce;
+                        p.vy -= (dy / dist) * force * mPushForce;
+                    }
+
+                    p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
+                    p.vx *= friction; p.vy *= friction;
+                    p.x += p.vx; p.y += p.vy;
+                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                }
+                requestAnimationFrame(animateGrids);
+            }
+            initGrids(); animateGrids();
+        }
+    });
+
+    // ── THEME TOGGLE ──
+    const btn = document.getElementById('theme-toggle');
+
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle, #theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
+        });
+
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
     }
-    localStorage.setItem('theme', mode);
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
-}
 
-btn.onclick = () => {
-    const isLight = document.body.classList.contains('light-mode');
-    setTheme(isLight ? 'dark' : 'light');
-};
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
 
-// Initial state
-setTheme(localStorage.getItem('theme') || 'dark');
+    btn.onclick = toggleTheme;
+
+    // Initial state
+    setTheme(localStorage.getItem('theme') || 'dark');
 </script>
-<script src="../js/premium_theme.js"></script>
+
 </body>
 </html>
