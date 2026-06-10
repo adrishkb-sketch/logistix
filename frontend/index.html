@@ -734,85 +734,66 @@ a { text-decoration: none; color: inherit; }
     z-index: 1;
 }
 
-/* ── MODAL ──────────────────── */
+/* ── ULTRA-PREMIUM MODAL UI ──────────────────── */
 .modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    background: rgba(1, 2, 8, 0.75);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
     justify-content: center;
     align-items: center;
     z-index: 10000;
-    animation: fadeInModal 0.2s ease forwards;
+    animation: fadeInModal 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
+body.light-mode .modal {
+    background: rgba(241, 245, 249, 0.65);
+}
+
 @keyframes fadeInModal {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); }
+    to { opacity: 1; backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); }
 }
 
 .modal-box {
     position: relative;
-    background: rgba(8, 12, 20, 0.95);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 48px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 48px 40px;
     border-radius: 32px;
     width: 90%;
     max-width: 440px;
-    box-shadow: 0 40px 100px rgba(0,0,0,0.8), inset 0 0 40px rgba(255,255,255,0.02);
-    animation: popModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-body.light-mode .modal-box {
-    background: rgba(255, 255, 255, 0.98);
-    border-color: rgba(0, 0, 0, 0.08);
-    box-shadow: 0 40px 100px rgba(0,0,0,0.15), inset 0 0 40px rgba(0,0,0,0.02);
+    box-shadow: 0 40px 80px -20px var(--glow-shadow), inset 0 1px 0 rgba(255,255,255,0.05);
+    animation: popModal 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    overflow: hidden;
 }
 
 @keyframes popModal {
-    from { transform: scale3d(0.9, 0.9, 1) translateY(20px); opacity: 0; }
+    from { transform: scale3d(0.92, 0.92, 1) translateY(30px); opacity: 0; }
     to { transform: scale3d(1, 1, 1) translateY(0); opacity: 1; }
 }
 
-.modal-box h2 {
-    font-family: 'Space Grotesk', sans-serif;
-    margin-bottom: 28px;
-    font-size: 1.8rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: var(--text-main);
+/* Decorative Ambient Blob Inside Modal */
+.modal-blob {
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 250px;
+    height: 250px;
+    background: var(--accent-1);
+    filter: blur(70px);
+    opacity: 0.2;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+}
+body.light-mode .modal-blob { opacity: 0.15; }
+
+.modal-content-inner {
+    position: relative;
+    z-index: 2;
     text-align: center;
-}
-
-.modal-box input {
-    width: 100%;
-    padding: 16px 20px;
-    margin: 10px 0;
-    border-radius: 16px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.03);
-    color: var(--text-main);
-    font-size: 1rem;
-    font-weight: 500;
-    font-family: inherit;
-    transition: all 0.2s ease;
-    outline: none;
-}
-body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
-
-.modal-box input:focus {
-    border-color: var(--accent-1);
-    background: rgba(255,255,255,0.08);
-    box-shadow: 0 0 0 4px var(--neon-glow);
-    transform: translateY(-2px);
-}
-
-.modal-box .btn {
-    width: 100%;
-    margin-top: 20px;
-    justify-content: center;
-    padding: 18px;
-    font-size: 1.15rem;
 }
 
 .modal-close {
@@ -822,27 +803,133 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
     font-size: 1.4rem;
     cursor: pointer;
     color: var(--text-main);
-    opacity: 0.7;
-    transition: all 0.2s ease;
-    width: 40px;
-    height: 40px;
+    transition: all 0.3s ease;
+    width: 38px;
+    height: 38px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: var(--surface);
+    background: rgba(255,255,255,0.05);
     border: 1px solid var(--border);
+    z-index: 10;
 }
+body.light-mode .modal-close { background: rgba(0,0,0,0.04); }
+
 .modal-close:hover {
-    color: var(--accent-3);
-    opacity: 1;
-    background: var(--surface-hover);
-    transform: rotate(90deg);
-    border-color: var(--accent-3);
-    box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+    border-color: rgba(255, 59, 48, 0.3);
+    transform: rotate(90deg) scale(1.05);
 }
 
-/* PIN Row */
+.modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    margin-bottom: 8px;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text-main);
+}
+.modal-subtitle {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+}
+
+/* Premium Form Inputs */
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    text-align: left;
+}
+
+.input-group {
+    position: relative;
+    width: 100%;
+}
+
+.input-icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    transition: color 0.3s ease;
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.premium-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px 18px 52px;
+    color: var(--text-main);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+body.light-mode .premium-input {
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+.premium-input::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+/* Input Focus States */
+.input-group:focus-within .premium-input,
+.premium-input:focus {
+    border-color: var(--accent-1);
+    background: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 4px var(--neon-glow), inset 0 2px 4px rgba(0,0,0,0.2);
+}
+body.light-mode .input-group:focus-within .premium-input,
+body.light-mode .premium-input:focus {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 4px var(--neon-glow), inset 0 2px 4px rgba(0,0,0,0.02);
+}
+.input-group:focus-within .input-icon { color: var(--accent-1); }
+
+/* Premium Modal Button */
+.premium-submit-btn {
+    margin-top: 10px;
+    width: 100%;
+    background: var(--text-main);
+    color: var(--bg-base);
+    border: none;
+    border-radius: 16px;
+    padding: 18px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+.premium-submit-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px var(--neon-glow);
+    background: var(--accent-1);
+    color: #010208;
+}
+body.light-mode .premium-submit-btn:hover { color: #ffffff; }
+.premium-submit-btn:active { transform: scale(0.97); }
+
+.btn-arrow { transition: transform 0.3s ease; }
+.premium-submit-btn:hover .btn-arrow { transform: translateX(5px); }
+
+/* OTP/PIN Row overrides to match premium theme */
 .pin-row {
     display: flex;
     gap: 12px;
@@ -853,23 +940,26 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
     width: 54px !important;
     height: 60px;
     border-radius: 16px !important;
-    border: 2px solid var(--border) !important;
-    background: rgba(255,255,255,0.02) !important;
+    border: 1px solid var(--border) !important;
+    background: rgba(0,0,0,0.2) !important;
     color: var(--text-main) !important;
     font-size: 1.6rem !important;
     font-weight: 800 !important;
     text-align: center;
     outline: none;
-    transition: all 0.2s ease !important;
+    transition: all 0.3s ease !important;
     padding: 0 !important;
     margin: 0 !important;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
+body.light-mode .pin-box { background: rgba(255,255,255,0.5) !important; }
 .pin-box:focus {
     border-color: var(--accent-1) !important;
-    background: rgba(255,255,255,0.08) !important;
-    box-shadow: 0 10px 25px var(--neon-glow) !important;
+    background: rgba(0,0,0,0.4) !important;
+    box-shadow: 0 0 0 4px var(--neon-glow), inset 0 2px 4px rgba(0,0,0,0.2) !important;
     transform: translateY(-4px) !important;
 }
+body.light-mode .pin-box:focus { background: rgba(255,255,255,0.9) !important; }
 
 /* ── MOBILE RESPONSIVENESS ───────────────────────────── */
 @media (max-width: 768px) {
@@ -884,7 +974,10 @@ body.light-mode .modal-box input { background: rgba(0,0,0,0.02); }
     .fixed-control-bar { padding: 0 10px; top: 15px; }
     #landing-brand-container .brand-logo { width: 110px !important; height: 28px !important; }
     .glass-control { padding: 8px 12px; font-size: 0.75rem; border-radius: 12px; }
-    .modal-box { padding: 32px 20px; }
+    .modal-box { padding: 40px 24px; border-radius: 28px; }
+    .modal-title { font-size: 1.7rem; }
+    .premium-input { padding: 16px 20px 16px 48px; font-size: 0.95rem; }
+    .input-icon { left: 16px; }
     .pin-box { width: 44px !important; height: 50px; font-size: 1.3rem !important; }
     .pin-row { gap: 6px; }
     .hero h1 { font-size: 2.5rem; }
@@ -1578,64 +1671,177 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Modal Builder
+    // ── STUNNING NEW UI MODAL BUILDER ──
     function openModal(type) {
         const modal = document.getElementById('modal');
         const content = document.getElementById('modal-content');
-        let html = `<span class="modal-close" id="modal-close-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></span>`;
+
+        let html = `
+            <div class="modal-blob"></div>
+            <span class="modal-close" id="modal-close-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </span>
+            <div class="modal-content-inner">
+        `;
 
         if (type === 'manager') {
-            html += `<form id="manager-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
-                <h2 data-i18n="modal_manager_title">Manager Portal</h2>
-                <input id="manager-email" type="email" placeholder="Email Address" data-i18n-placeholder="placeholder_email" required>
-                <input id="manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login Securely</button>
-            </form>`;
-        } else if (type === 'wh-manager') {
-            html += `<form id="wh-manager-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
-                <h2 data-i18n="modal_wh_manager_title">Warehouse Manager</h2>
-                <input id="wh-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
-                <input id="wh-manager-email" type="email" placeholder="Manager Email" data-i18n-placeholder="placeholder_email" required>
-                <input id="wh-manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Login Securely</button>
-            </form>`;
-        } else if (type === 'driver') {
-            html += `<form id="driver-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
-                <h2 data-i18n="modal_driver_title">Driver Login</h2>
-                <input id="driver-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
-                <input id="driver-id" type="text" placeholder="Driver ID" data-i18n-placeholder="placeholder_driver_id" required>
-                <input id="driver-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                <button type="submit" class="btn btn-primary" data-i18n="btn_login">Access Portal</button>
-            </form>`;
-        } else {
-            html += `<form id="signup-form">
-                <h2 data-i18n="modal_register_title">Register Company</h2>
-                <div id="step-1">
-                    <input id="signup-name" type="text" placeholder="Company Name" data-i18n-placeholder="placeholder_company_name" required>
-                    <input id="signup-email" type="email" placeholder="Email Address" data-i18n-placeholder="placeholder_email" required oninput="if(typeof validateSignupEmail === 'function') validateSignupEmail(this.value)">
-                    <small id="email-warning" style="color:var(--accent-3);display:none;font-size:0.8rem;font-weight:600;margin-left:5px;" data-i18n="error_email_registered">🚨 Email already registered!</small>
-                    <input id="signup-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
-                    <button id="signup-otp-btn" type="button" class="btn btn-primary" onclick="handleActionClick(event, this, () => { if(typeof requestOTP === 'function') requestOTP() })" data-i18n="btn_request_otp">Request Access OTP</button>
-                </div>
-                <div id="step-2" style="display:none;">
-                    <p style="font-size:0.9rem;color:var(--text-main);opacity:0.8;margin-bottom:10px;text-align:center;font-weight:600;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
-                    <div class="pin-row" id="signup-pin-row">
-                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
-                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
-                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
-                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
-                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
-                        <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+            html += `
+                <h2 class="modal-title" data-i18n="modal_manager_title">Manager Portal</h2>
+                <p class="modal-subtitle">Securely authenticate to access your dashboard</p>
+                <form class="auth-form" id="manager-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        <input class="premium-input" id="manager-email" type="email" placeholder="Email Address" data-i18n-placeholder="placeholder_email" required>
                     </div>
-                    <button type="button" class="btn btn-primary" onclick="handleActionClick(event, this)" data-i18n="btn_verify_register">Verify & Launch Platform</button>
-                    <p id="resend-timer-container" style="text-align:center;margin-top:20px;font-size:0.9rem;color:var(--text-main);opacity:0.8;">
-                        <span data-i18n="didnt_receive_code">Didn't receive code?</span>
-                        <span id="resend-link" style="color:var(--accent-1);cursor:pointer;font-weight:800;opacity:0.5;pointer-events:none;transition:0.2s;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
-                    </p>
-                </div>
-            </form>`;
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input class="premium-input" id="manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
+                    </div>
+                    <button type="submit" class="premium-submit-btn">
+                        <span data-i18n="btn_login">Login Securely</span>
+                        <svg class="btn-arrow" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </form>
+            `;
+        } else if (type === 'wh-manager') {
+            html += `
+                <h2 class="modal-title" data-i18n="modal_wh_manager_title">Warehouse Manager</h2>
+                <p class="modal-subtitle">Login to manage local hub operations</p>
+                <form class="auth-form" id="wh-manager-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <input class="premium-input" id="wh-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
+                    </div>
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        <input class="premium-input" id="wh-manager-email" type="email" placeholder="Manager Email" data-i18n-placeholder="placeholder_email" required>
+                    </div>
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input class="premium-input" id="wh-manager-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
+                    </div>
+                    <button type="submit" class="premium-submit-btn">
+                        <span data-i18n="btn_login">Login Securely</span>
+                        <svg class="btn-arrow" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </form>
+            `;
+        } else if (type === 'driver') {
+            html += `
+                <h2 class="modal-title" data-i18n="modal_driver_title">Driver Login</h2>
+                <p class="modal-subtitle">Access your logistics tasks and routing</p>
+                <form class="auth-form" id="driver-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="1" y="3" width="15" height="13"></rect>
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                        </svg>
+                        <input class="premium-input" id="driver-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
+                    </div>
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <input class="premium-input" id="driver-id" type="text" placeholder="Driver ID" data-i18n-placeholder="placeholder_driver_id" required>
+                    </div>
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input class="premium-input" id="driver-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
+                    </div>
+                    <button type="submit" class="premium-submit-btn">
+                        <span data-i18n="btn_login">Access Portal</span>
+                        <svg class="btn-arrow" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                </form>
+            `;
+        } else {
+            // SIGNUP MODAL
+            html += `
+                <h2 class="modal-title" data-i18n="modal_register_title">Register Company</h2>
+                <p class="modal-subtitle">Join the intelligent logistics network</p>
+                <form class="auth-form" id="signup-form">
+                    <div id="step-1" style="display:flex; flex-direction:column; gap:18px;">
+                        <div class="input-group">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="3" y1="9" x2="21" y2="9"></line>
+                                <line x1="9" y1="21" x2="9" y2="9"></line>
+                            </svg>
+                            <input class="premium-input" id="signup-name" type="text" placeholder="Company Name" data-i18n-placeholder="placeholder_company_name" required>
+                        </div>
+                        <div class="input-group">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            <input class="premium-input" id="signup-email" type="email" placeholder="Email Address" data-i18n-placeholder="placeholder_email" required oninput="if(typeof validateSignupEmail === 'function') validateSignupEmail(this.value)">
+                        </div>
+                        <small id="email-warning" style="color:var(--accent-3);display:none;font-size:0.8rem;font-weight:600;margin-left:5px;margin-top:-10px;" data-i18n="error_email_registered">🚨 Email already registered!</small>
+
+                        <div class="input-group">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <input class="premium-input" id="signup-password" type="password" placeholder="Password" data-i18n-placeholder="placeholder_password" required>
+                        </div>
+                        <button id="signup-otp-btn" type="button" class="premium-submit-btn" onclick="handleActionClick(event, this, () => { if(typeof requestOTP === 'function') requestOTP() })">
+                            <span data-i18n="btn_request_otp">Request Access OTP</span>
+                            <svg class="btn-arrow" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                    </div>
+
+                    <div id="step-2" style="display:none; flex-direction:column;">
+                        <p style="font-size:0.9rem;color:var(--text-main);opacity:0.8;margin-bottom:10px;text-align:center;font-weight:600;" data-i18n="otp_sent_to_email">OTP sent to your email.</p>
+                        <div class="pin-row" id="signup-pin-row">
+                            <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                            <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                            <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                            <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                            <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                            <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
+                        </div>
+                        <button type="button" class="premium-submit-btn" onclick="handleActionClick(event, this)">
+                            <span data-i18n="btn_verify_register">Verify & Launch Platform</span>
+                            <svg class="btn-arrow" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                        <p id="resend-timer-container" style="text-align:center;margin-top:24px;font-size:0.9rem;color:var(--text-main);opacity:0.8;">
+                            <span data-i18n="didnt_receive_code">Didn't receive code?</span>
+                            <span id="resend-link" style="color:var(--accent-1);cursor:pointer;font-weight:800;opacity:0.5;pointer-events:none;transition:0.2s;"><span data-i18n="resend_otp">Resend OTP</span> (<span id="timer-val">10</span>s)</span>
+                        </p>
+                    </div>
+                </form>
+            `;
         }
 
+        html += `</div>`; // Close inner content
         content.innerHTML = html;
         modal.style.display = 'flex';
 
@@ -1650,19 +1856,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function closeModal() {
         const modalBox = document.getElementById('modal-content');
-        modalBox.style.animation = 'popModal 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) reverse forwards';
-        document.getElementById('modal').style.animation = 'fadeInModal 0.2s ease reverse forwards';
+        modalBox.style.animation = 'popModal 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) reverse forwards';
+        document.getElementById('modal').style.animation = 'fadeInModal 0.3s ease reverse forwards';
         setTimeout(() => {
             document.getElementById('modal').style.display = 'none';
             modalBox.style.animation = '';
             document.getElementById('modal').style.animation = '';
-        }, 200);
+        }, 300);
     }
 
     window.openModal = openModal;
 
     window.addEventListener('click', e => {
         if (e.target === document.getElementById('modal')) closeModal();
+    });
+
+    // Handle Escape key to close
+    document.addEventListener('keydown', e => {
+        if (e.key === "Escape" && document.getElementById('modal').style.display === 'flex') {
+            closeModal();
+        }
     });
 
     // Scroll reveal
