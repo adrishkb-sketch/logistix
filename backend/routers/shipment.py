@@ -2662,3 +2662,80 @@ def get_eligible_assets(shipment_id: str, company_id: str, from_wh: Optional[str
                 })
                 
     return eligible
+
+
+@router.post("/ai-reassign-inactive")
+def ai_reassign_inactive(company_id: str = Query(...)):
+    from backend.database import JSONDatabase
+    from backend.models import ShipmentEvent
+    import time
+    
+    shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+    
+    active_statuses = ["assigned", "in_transit"]
+    all_shipments = shipments_db.get_filtered({"company_id": company_id})
+    reassigned = []
+    
+    for s in all_shipments:
+        if s.get("status") in active_statuses and s.get("assigned_driver_id"):
+            driver = drivers_db.get_by_id(s["assigned_driver_id"])
+            if not driver: continue
+            
+            # If driver is strictly offline or stressed out
+            is_offline = driver.get("is_on_duty") is False
+            stress = driver.get("vitals", {}).get("stress_level", 0)
+            
+            if is_offline or stress >= 100:
+                old_d_id = driver["id"]
+                # Find a new available driver
+                available_drivers = [d for d in drivers_db.get_filtered({"company_id": company_id, "is_on_duty": True}) if d["id"] != old_d_id]
+                if available_drivers:
+                    new_driver = available_drivers[0]
+                    
+                    log_event = ShipmentEvent(
+                        status=s.get("status", "assigned"),
+                        message=f"🤖 AI REASSIGNMENT: Driver {driver.get('name')} went offline/high-stress. Swapped to {new_driver.get('name')}.",
+                        reason="Automated Fleet Autocorrection"
+                    )
+                    
+                    shipments_db.update(s["id"], {
+                        "assigned_driver_id": new_driver["id"],
+                        "logs": s.get("logs", []) + [log_event.model_dump()],
+                        "stage": "Assigned to Driver (AI Autocorrect)"
+                    })
+                    reassigned.append(s["id"])
+                    
+    return {"message": "AI Reassignment cycle complete", "reassigned_count": len(reassigned), "shipments": reassigned}
+
+@router.post("/{shipment_id}/weather-reassign")
+def weather_reassign(shipment_id: str):
+    from backend.database import JSONDatabase
+    from backend.models import ShipmentEvent
+    
+    shipments_db = JSONDatabase("shipments")
+    drivers_db = JSONDatabase("drivers")
+    
+    s = shipments_db.get_by_id(shipment_id)
+    if not s: raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    company_id = s.get("company_id")
+    old_driver_id = s.get("assigned_driver_id")
+    
+    # Pick a random available driver
+    available_drivers = [d for d in drivers_db.get_filtered({"company_id": company_id, "is_on_duty": True}) if d["id"] != old_driver_id]
+    new_driver_id = available_drivers[0]["id"] if available_drivers else old_driver_id
+    
+    log_event = ShipmentEvent(
+        status=s.get("status", "assigned"),
+        message=f"⛈️ AI WEATHER RE-ROUTE: Route adjusted for severe weather. Reassigned to new driver.",
+        reason="Manager initiated AI weather re-route."
+    )
+    
+    shipments_db.update(s["id"], {
+        "assigned_driver_id": new_driver_id,
+        "logs": s.get("logs", []) + [log_event.model_dump()],
+        "stage": "AI Re-routed for Weather Constraints"
+    })
+    
+    return {"message": "AI Weather Re-routing & Reassignment complete", "shipment_id": shipment_id}

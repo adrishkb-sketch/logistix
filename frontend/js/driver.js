@@ -888,10 +888,13 @@ function replaceDutyAndWatchButtons(me, activeShipments) {
                             ${isOnDuty ? 'ON DUTY' : 'NOT WORKING'}
                         </span>
                     </span>
-                    <label class="switch">
-                        <input type="checkbox" id="duty-switch" ${isOnDuty ? 'checked' : ''} ${hasActiveTrip ? 'disabled' : ''}>
-                        <span class="slider"></span>
-                    </label>
+                    ${hasActiveTrip 
+                        ? `<span style="font-size:0.75rem; color:var(--warning); font-weight:bold; background:rgba(245,158,11,0.1); padding:4px 8px; border-radius:8px;">Locked During Mission</span>`
+                        : `<label class="switch">
+                               <input type="checkbox" id="duty-switch" ${isOnDuty ? 'checked' : ''}>
+                               <span class="slider"></span>
+                           </label>`
+                    }
                 </div>
             `;
             

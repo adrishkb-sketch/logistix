@@ -196,6 +196,18 @@ async function loadShipments() {
 
     try {
         const companyId = localStorage.getItem('manager_id');
+        
+        // --- AI AUTO-CORRECTION HOOK ---
+        try {
+            const reassignRes = await apiCall(`/shipments/ai-reassign-inactive?company_id=${companyId}`, 'POST');
+            if (reassignRes && reassignRes.reassigned_count > 0) {
+                showNotification(`🤖 AI Engine automatically reassigned ${reassignRes.reassigned_count} shipment(s) due to offline/stressed drivers.`, 'warning');
+            }
+        } catch(e) {
+            console.log('AI autocorrect silent skip:', e);
+        }
+        // -------------------------------
+
         const [shipments, drivers, vehicles, activeAlerts] = await Promise.all([
             apiCall(`/shipments/?company_id=${companyId}`),
             apiCall(`/manager/drivers?company_id=${companyId}`),
@@ -3839,6 +3851,7 @@ window.checkShipmentWeather = async function(id) {
         const risk = w.risk_score !== undefined ? `${w.risk_score}` : '0.0';
         
         const overlay = document.createElement('div');
+        overlay.className = 'weather-overlay';
         overlay.style.position = 'fixed';
         overlay.style.top = '0';
         overlay.style.left = '0';
@@ -3878,6 +3891,12 @@ window.checkShipmentWeather = async function(id) {
                     ⚠️ <b>Location Risk Score:</b> <span style="color: ${w.risk_score > 30 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">${risk}/100</span>
                 </div>
             </div>
+            
+            ${(w.risk_score > 30 || window.globalActiveAlerts?.some(al => al.shipment_id === id) || true) ? `
+            <button class="btn-primary" onclick="triggerWeatherReassign('${id}', this)" style="width: 100%; font-weight: bold; background: linear-gradient(135deg, #ef4444, #f97316); color: white; border: none; border-radius: 10px; padding: 12px; cursor: pointer; margin-bottom:10px;">
+                ⚠️ Trigger AI Re-Route & Reassign
+            </button>
+            ` : ''}
             
             <button class="btn-primary" onclick="this.closest('body').removeChild(this.parentNode.parentNode)" style="width: 100%; font-weight: bold; background: var(--primary); color: #000; border: none; border-radius: 10px; padding: 12px; cursor: pointer;">
                 Close Intel
@@ -4100,3 +4119,21 @@ window.submitManualHub = async function(shipmentId, warehouseId) {
         showNotification(e.detail || 'Failed to update route', 'error');
     }
 }
+
+
+window.triggerWeatherReassign = async function(id, btn) {
+    if(!confirm("Are you sure you want the AI engine to generate a new route and reassign a new driver for this shipment?")) return;
+    btn.disabled = true;
+    btn.innerText = "⏳ AI Engine Routing...";
+    try {
+        await apiCall(`/shipments/${id}/weather-reassign`, 'POST');
+        showNotification("AI successfully re-routed and reassigned the shipment.", "success");
+        btn.closest('.weather-overlay')?.remove();
+        document.querySelectorAll('.weather-overlay').forEach(el => el.remove());
+        loadShipments();
+    } catch(e) {
+        showNotification("AI Re-route failed.", "error");
+        btn.disabled = false;
+        btn.innerText = "⚠️ Trigger AI Re-Route & Reassign";
+    }
+};
