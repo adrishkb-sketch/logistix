@@ -57,7 +57,14 @@
 
         /* ── RESET & BASE ────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; }
+
+        /* Unified Background to completely eliminate edge flashes during overscroll */
+        html {
+            scroll-behavior: smooth;
+            background-color: var(--bg-base);
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             color: var(--text-main);
@@ -78,12 +85,11 @@
         /* ── HIGH PERFORMANCE WAVE BACKGROUND MAGIC ──────────── */
         .bg-blobs {
             position: fixed;
-            inset: 0;
+            inset: -100px; /* Extreme oversize to ensure edge bleed never shows */
             z-index: 0;
             overflow: hidden;
             pointer-events: none;
-            background: var(--bg-base);
-            transition: background 0.6s ease;
+            background: transparent;
         }
 
         .blob {
@@ -123,11 +129,9 @@
         /* Interactive Canvas Grid Background */
         canvas#interactive-grid {
             position: fixed;
-            inset: 0;
             z-index: 1;
             pointer-events: none;
-            width: 100%;
-            height: 100%;
+            /* Dimensions dynamically bound via JS to massively overshoot viewport */
         }
 
         /* ── FLOATING CONTROLS (HEADER) ──────────────────────── */
@@ -142,6 +146,7 @@
             align-items: center;
             z-index: 10002;
             pointer-events: none;
+            transition: all 0.3s ease;
         }
         .fixed-control-bar > * { pointer-events: auto; }
 
@@ -191,6 +196,19 @@
         }
         .glass-control select option { background: var(--bg-base); color: var(--text-main); }
 
+        /* Premium Circular Icon Buttons */
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            padding: 0 !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50% !important;
+            flex-shrink: 0;
+        }
+        .icon-btn svg { margin: 0 !important; }
+
         body.scrolled .fixed-control-bar { top: 10px; }
         body.scrolled .controls-left,
         body.scrolled .controls-right { transform: scale(0.95); opacity: 0.98; }
@@ -208,6 +226,8 @@
             text-align: center;
             margin-bottom: 70px;
             perspective: 1000px;
+            position: relative;
+            z-index: 5;
         }
 
         .subtitle {
@@ -230,6 +250,8 @@
             font-weight: 800;
             line-height: 1.1;
             letter-spacing: -0.04em;
+            position: relative;
+            z-index: 5;
         }
         .split-text .char {
             display: inline-block;
@@ -415,16 +437,52 @@
         }
         body.light-mode .update-entry:hover .feature-tag { border-color: rgba(0,0,0,0.1); }
 
-        /* ── MOBILE RESPONSIVENESS ───────────────────────────── */
+        /* ── ELEGANT MOBILE RESPONSIVENESS (SINGLE LINE FIX) ───────────────────────────── */
         @media (max-width: 768px) {
-            .fixed-control-bar { padding: 0 10px; top: 15px; flex-direction: column; gap: 10px; align-items: stretch; pointer-events: none; }
-            .controls-left { justify-content: space-between; pointer-events: auto; }
-            .controls-right { justify-content: space-between; pointer-events: auto; }
+            .fixed-control-bar {
+                position: absolute;
+                top: 15px;
+                left: 0;
+                right: 0;
+                width: 100%;
+                padding: 0 15px;
+                flex-direction: row; /* SINGLE LINE */
+                justify-content: space-between;
+                align-items: center;
+                pointer-events: auto;
 
-            .glass-control { padding: 8px 12px; font-size: 0.75rem; border-radius: 99px; }
+                background: transparent;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                border-bottom: none;
+                z-index: 10002;
+            }
+            body.light-mode .fixed-control-bar {
+                background: transparent;
+            }
+            body.scrolled .fixed-control-bar {
+                transform: none;
+                opacity: 1;
+            }
+            body.scrolled .controls-left,
+            body.scrolled .controls-right {
+                transform: none;
+            }
+
+            .controls-left, .controls-right { gap: 8px; justify-content: flex-start; }
+
+            .glass-control { padding: 6px 10px; font-size: 0.75rem; border-radius: 99px; }
             .glass-control select { font-size: 0.75rem; }
 
-            .main-wrapper { padding-top: 140px; padding-left: 15px; padding-right: 15px; }
+            .icon-btn { width: 38px; height: 38px; padding: 0 !important; }
+
+            /* Theme toggle becomes icon-only on mobile to save space */
+            #theme-toggle { padding: 0; width: 38px; height: 38px; border-radius: 50%; justify-content: center; }
+            #theme-toggle .theme-text { display: none; }
+            #theme-toggle svg { margin: 0 !important; }
+
+            /* Push main content down (reduced since header is one line) */
+            .main-wrapper { padding-top: 100px; padding-left: 15px; padding-right: 15px; }
 
             .timeline { padding-left: 24px; }
             .timeline::before { left: 8px; }
@@ -448,11 +506,18 @@
     <!-- ── MAIN BACKGROUND PHYSICS DOT GRID ── -->
     <canvas id="interactive-grid"></canvas>
 
-    <!-- ── FIXED CONTROLS ── -->
+    <!-- ── ABSOLUTE CONTROLS / MOBILE HEADER ── -->
     <div class="fixed-control-bar">
         <div class="controls-left">
-            <!-- Custom SVG Logo Matching Apple Touch Icon -->
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <!-- Brilliant SVG Back Icon -->
+            <a href="../index.html" class="glass-control icon-btn" title="Back to Home">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <!-- Custom SVG Logo -->
+            <div style="display: flex; align-items: center;">
                 <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
                     <defs>
                         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -472,10 +537,6 @@
                     <circle cx="68" cy="72" r="11" fill="#FFFFFF"/>
                     <circle cx="68" cy="72" r="7" fill="#1C2438"/>
                 </svg>
-                <a href="../index.html" class="glass-control">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    <span data-i18n="back_to_home">Back to Home</span>
-                </a>
             </div>
         </div>
 
@@ -510,7 +571,7 @@
 
             <button id="theme-toggle" class="glass-control">
                 <svg class="theme-icon" style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                Dark
+                <span class="theme-text">Dark</span>
             </button>
         </div>
     </div>
@@ -701,10 +762,19 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
 
-            // Global Pointer Coordinates for Physics grid
+            // ── OVERSCHEDULING BUFFER FOR BULLETPROOF MOBILE CANVAS RESIZING ──
+            const canvasBuffer = 400; // Oversized to absorb URL bar toggles
+            const halfBuffer = canvasBuffer / 2;
             const pointer = { x: -1000, y: -1000 };
-            window.addEventListener('mousemove', (e) => { pointer.x = e.clientX; pointer.y = e.clientY; });
-            window.addEventListener('touchmove', (e) => { pointer.x = e.touches[0].clientX; pointer.y = e.touches[0].clientY; }, { passive: true });
+
+            window.addEventListener('mousemove', (e) => {
+                pointer.x = e.clientX + halfBuffer;
+                pointer.y = e.clientY + halfBuffer;
+            });
+            window.addEventListener('touchmove', (e) => {
+                pointer.x = e.touches[0].clientX + halfBuffer;
+                pointer.y = e.touches[0].clientY + halfBuffer;
+            }, { passive: true });
             window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
             window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
 
@@ -716,9 +786,18 @@
 
             function initGrids() {
                 const dpr = window.devicePixelRatio || 1;
-                mWidth = window.innerWidth; mHeight = window.innerHeight;
-                mCanvas.width = mWidth * dpr; mCanvas.height = mHeight * dpr;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
                 mCtx.scale(dpr, dpr);
+
                 const spacing = window.innerWidth < 768 ? 35 : 30;
                 mDots = [];
                 for (let x = 0; x < mWidth; x += spacing) {
@@ -728,10 +807,13 @@
                 }
             }
 
+            // CRITICAL FIX: Only rebuild if viewport exceeds our massive buffer
             let resizeTimeout;
             window.addEventListener('resize', () => {
-                clearTimeout(resizeTimeout);
-                resizeTimeout = setTimeout(initGrids, 200);
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
             });
 
             function animateGrids() {
@@ -761,7 +843,7 @@
             }
             initGrids(); animateGrids();
 
-            // ── ADVANCED LETTER WAVE LOGIC ──
+            // ── ADVANCED LETTER WAVE LOGIC (Ultra-Optimized In-Memory Map) ──
             function splitTextNodes(element) {
                 if (element.classList.contains('is-split')) return;
                 const processNode = (node) => {
@@ -869,16 +951,18 @@
 
             if(localStorage.getItem('theme') === 'light'){
                 document.body.classList.add('light-mode');
-                btn.innerHTML = lightIcon + ' Light';
+                document.documentElement.classList.add('light-mode');
+                btn.innerHTML = lightIcon + '<span class="theme-text">Light</span>';
             } else {
-                btn.innerHTML = darkIcon + ' Dark';
+                btn.innerHTML = darkIcon + '<span class="theme-text">Dark</span>';
             }
 
             btn.addEventListener('click', () => {
                 document.body.classList.toggle('light-mode');
+                document.documentElement.classList.toggle('light-mode');
                 const isLight = document.body.classList.contains('light-mode');
                 localStorage.setItem('theme', isLight ? 'light' : 'dark');
-                btn.innerHTML = isLight ? lightIcon + ' Light' : darkIcon + ' Dark';
+                btn.innerHTML = isLight ? lightIcon + '<span class="theme-text">Light</span>' : darkIcon + '<span class="theme-text">Dark</span>';
             });
 
             const currentLang = localStorage.getItem('app_lang') || 'en';
