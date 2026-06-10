@@ -2224,15 +2224,51 @@ def _generate_legs(parent_shipment, leg_data):
 
 @router.delete("/{shipment_id}")
 def delete_shipment(shipment_id: str):
-    if shipments_db.delete(shipment_id):
-        return {"message": "Shipment deleted successfully"}
-    # Try prefix match for short IDs
+    from backend.database import JSONDatabase
+    alerts_db = JSONDatabase("alerts")
+    
     all_ships = shipments_db.get_all()
-    target = next((s for s in all_ships if s["id"].startswith(shipment_id)), None)
-    if target and shipments_db.delete(target["id"]):
-        return {"message": "Shipment deleted successfully"}
+    target = None
+    for s in all_ships:
+        if s and (s.get("id") == shipment_id or s.get("id", "").startswith(shipment_id)):
+            target = s
+            break
+            
+    if not target:
+        raise HTTPException(status_code=404, detail="Shipment not found")
         
-    raise HTTPException(status_code=404, detail="Shipment not found")
+    actual_id = target["id"]
+    
+    shipments_to_delete = {actual_id}
+    
+    parent_id = target.get("parent_id")
+    if parent_id:
+        shipments_to_delete.add(parent_id)
+        for s in all_ships:
+            if s and s.get("parent_id") == parent_id:
+                shipments_to_delete.add(s["id"])
+                
+    for s in all_ships:
+        if s and s.get("parent_id") == actual_id:
+            shipments_to_delete.add(s["id"])
+            
+    deleted_shipments_count = 0
+    for s_id in shipments_to_delete:
+        if shipments_db.delete(s_id):
+            deleted_shipments_count += 1
+            
+    all_alerts = alerts_db.get_all()
+    deleted_alerts_count = 0
+    for a in all_alerts:
+        if a and a.get("shipment_id") in shipments_to_delete:
+            alerts_db.delete(a["id"])
+            deleted_alerts_count += 1
+            
+    return {
+        "message": f"Successfully deleted {deleted_shipments_count} shipments and {deleted_alerts_count} associated alerts",
+        "deleted_shipment_ids": list(shipments_to_delete)
+    }
+
 
 @router.post("/{shipment_id}/extend-eway")
 def extend_eway_bill(shipment_id: str):

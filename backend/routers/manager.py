@@ -1082,22 +1082,38 @@ def get_analytics_esg(company_id: Optional[str] = None, x_logistix_context: Opti
 
     all_shipments = shipments_db.get_all()
     my_shipments = [s for s in all_shipments if s and s.get("company_id") == target_company]
-    delivered_ships = [s for s in my_shipments if s.get("status") == "delivered"]
+    active_ships = [s for s in my_shipments if s and s.get("status") in ["pending", "assigned", "in_transit", "delivered"]]
     
-    total_delivered = len(delivered_ships)
     base_co2 = 0.0
     eco_co2 = 0.0
     fuel_saved = 0.0
     
-    for s in delivered_ships:
+    for s in active_ships:
         w = s.get("weight") or 10.0
-        dist = 15.0 + (w * 0.5)
+        
+        pickup = s.get("pickup") or {}
+        drop = s.get("drop") or {}
+        p_lat = pickup.get("lat")
+        p_lng = pickup.get("lng")
+        d_lat = drop.get("lat")
+        d_lng = drop.get("lng")
+        
+        if p_lat is not None and p_lng is not None and d_lat is not None and d_lng is not None:
+            from backend.services.route_engine import haversine
+            try:
+                dist = haversine(float(p_lat), float(p_lng), float(d_lat), float(d_lng))
+            except Exception:
+                dist = 15.0 + (w * 0.5)
+        else:
+            dist = 15.0 + (w * 0.5)
+            
         s_co2 = w * dist * 0.15
         e_co2 = w * dist * 0.11
         
         base_co2 += s_co2
         eco_co2 += e_co2
         fuel_saved += (s_co2 - e_co2) / 2.6
+
 
     import hashlib
     offsets_accumulated = base_co2 - eco_co2

@@ -833,7 +833,26 @@ def send_message(msg: dict):
 @router.get("/alerts/active")
 def get_active_alerts(company_id: str):
     alerts_db = JSONDatabase("alerts")
-    return alerts_db.get_filtered({"company_id": company_id, "status": "active"})
+    shipments_db = JSONDatabase("shipments")
+    
+    all_active = alerts_db.get_filtered({"company_id": company_id, "status": "active"})
+    all_shipment_ids = {s["id"] for s in shipments_db.get_all() if s}
+    
+    valid_alerts = []
+    for alert in all_active:
+        s_id = alert.get("shipment_id")
+        if s_id:
+            if s_id in all_shipment_ids:
+                valid_alerts.append(alert)
+            else:
+                # Cleanup orphan alert
+                alerts_db.delete(alert["id"])
+        else:
+            # Alerts without shipment_id (e.g. driver maintenance) are valid
+            valid_alerts.append(alert)
+            
+    return valid_alerts
+
 
 @router.post("/broadcast")
 def broadcast_message(data: dict):
