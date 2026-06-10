@@ -44,9 +44,6 @@ alerts_db = JSONDatabase("alerts")
 @router.get("/{driver_id}/shipments")
 def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Header(None)):
     verify_context(driver_id, x_logistix_context)
-    driver = drivers_db.get_by_id(driver_id)
-    if driver and driver.get("company_id"):
-        check_and_run_dynamic_reassignment(driver["company_id"])
     from backend.services.cold_chain import calculate_shipment_vitality
     assigned = shipments_db.get_filtered({"assigned_driver_id": driver_id})
     

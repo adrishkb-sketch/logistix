@@ -595,8 +595,6 @@ def get_fleet_weather(company_id: str):
     from backend.services.route_engine import haversine, check_eway_bill_expiry_return
     from backend.routers.driver import check_and_run_dynamic_reassignment
 
-    check_and_run_dynamic_reassignment(company_id)
-
     # Run E-Way Bill expiry return check for all active shipments
     _eway_check_db = JSONDatabase("shipments")
     for _s in _eway_check_db.get_filtered({"company_id": company_id}):
