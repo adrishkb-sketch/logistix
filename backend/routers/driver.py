@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header, Query
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header, Query, BackgroundTasks
 from backend.services.auth_utils import verify_context
 from backend.database import JSONDatabase
 from typing import Dict, Any, Optional
@@ -776,13 +776,13 @@ def report_incident(driver_id: str, data: dict):
     return {"message": "Incident logged successfully"}
 
 @router.get("/{driver_id}/dashboard/stats")
-def get_driver_stats(driver_id: str):
+def get_driver_stats(driver_id: str, background_tasks: BackgroundTasks):
     driver = drivers_db.get_by_id(driver_id)
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
         
     if driver.get("company_id"):
-        check_and_run_dynamic_reassignment(driver["company_id"])
+        background_tasks.add_task(check_and_run_dynamic_reassignment, driver["company_id"])
         # Reload driver after potential notifications update
         driver = drivers_db.get_by_id(driver_id)
 
