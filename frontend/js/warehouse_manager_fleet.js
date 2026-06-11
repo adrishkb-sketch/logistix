@@ -8,21 +8,21 @@ if (!whId || !companyId) {
 
 window.switchTab = function(tab) {
     const tabToPage = {
-        'dash': 'warehouse_manager_dash.html',
-        'verifications': 'warehouse_manager_verifications.html',
-        'fleet': 'warehouse_manager_fleet.html',
-        'gate': 'warehouse_manager_gate.html',
-        'audit': 'warehouse_manager_audit.html',
-        'leaderboard': 'warehouse_manager_leaderboard.html',
-        'settings': 'warehouse_manager_settings.html',
-        'shipments': 'warehouse_manager_shipments.html',
-        'payments': 'warehouse_manager_payments.html',
-        'drones': 'warehouse_manager_drones.html'
+        'dash': 'warehouse_manager_dash',
+        'verifications': 'warehouse_manager_verifications',
+        'fleet': 'warehouse_manager_fleet',
+        'gate': 'warehouse_manager_gate',
+        'audit': 'warehouse_manager_audit',
+        'leaderboard': 'warehouse_manager_leaderboard',
+        'settings': 'warehouse_manager_settings',
+        'shipments': 'warehouse_manager_shipments',
+        'payments': 'warehouse_manager_payments',
+        'drones': 'warehouse_manager_drones'
     };
-    const currentFilename = window.location.pathname.split('/').pop();
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const expectedPage = tabToPage[tab];
     if (expectedPage && expectedPage !== currentFilename) {
-        window.location.href = expectedPage;
+        window.location.href = expectedPage + '.html';
     }
 };
 

@@ -797,26 +797,26 @@ async function drawRouteWithTraffic(start, end) {
 
 function showSection(id) {
     const pageToSection = {
-        'manager_analytics.html': 'analytics',
-        'manager_warehouses.html': 'warehouses',
-        'manager_shipments.html': 'shipments',
-        'manager_receivers.html': 'receivers',
-        'manager_drivers.html': 'drivers',
-        'manager_weather.html': 'weather',
-        'manager_messages.html': 'messages',
-        'manager_leaderboard.html': 'leaderboard',
-        'manager_verifications.html': 'verifications',
-        'manager_safety.html': 'safety',
+        'manager_analytics': 'analytics',
+        'manager_warehouses': 'warehouses',
+        'manager_shipments': 'shipments',
+        'manager_receivers': 'receivers',
+        'manager_drivers': 'drivers',
+        'manager_weather': 'weather',
+        'manager_messages': 'messages',
+        'manager_leaderboard': 'leaderboard',
+        'manager_verifications': 'verifications',
+        'manager_safety': 'safety',
         
-        'manager_oracle.html': 'oracle',
-        'manager_fuel_oracle.html': 'fuel-oracle',
-        'manager_payments.html': 'paisa-fast',
-        'manager_strategy.html': 'strategy-plan',
-        'manager_resilience.html': 'network-resilience',
-        'manager_system.html': 'system',
-        'manager_hub_leaves.html': 'hub-leaves'
+        'manager_oracle': 'oracle',
+        'manager_fuel_oracle': 'fuel-oracle',
+        'manager_payments': 'paisa-fast',
+        'manager_strategy': 'strategy-plan',
+        'manager_resilience': 'network-resilience',
+        'manager_system': 'system',
+        'manager_hub_leaves': 'hub-leaves'
     };
-    const currentFilename = window.location.pathname.split('/').pop();
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const currentSection = pageToSection[currentFilename] || 'analytics';
     
     if (id !== currentSection && pageToSection[currentFilename]) {
@@ -898,26 +898,26 @@ function loadVerifications() {
 }
 
 const pageToSectionInit = {
-    'manager_analytics.html': 'analytics',
-    'manager_warehouses.html': 'warehouses',
-    'manager_shipments.html': 'shipments',
-    'manager_receivers.html': 'receivers',
-    'manager_drivers.html': 'drivers',
-    'manager_weather.html': 'weather',
-    'manager_messages.html': 'messages',
-    'manager_leaderboard.html': 'leaderboard',
-    'manager_verifications.html': 'verifications',
-    'manager_safety.html': 'safety',
+    'manager_analytics': 'analytics',
+    'manager_warehouses': 'warehouses',
+    'manager_shipments': 'shipments',
+    'manager_receivers': 'receivers',
+    'manager_drivers': 'drivers',
+    'manager_weather': 'weather',
+    'manager_messages': 'messages',
+    'manager_leaderboard': 'leaderboard',
+    'manager_verifications': 'verifications',
+    'manager_safety': 'safety',
     
-    'manager_oracle.html': 'oracle',
-    'manager_fuel_oracle.html': 'fuel-oracle',
-    'manager_payments.html': 'paisa-fast',
-    'manager_strategy.html': 'strategy-plan',
-    'manager_resilience.html': 'network-resilience',
-    'manager_system.html': 'system',
-    'manager_hub_leaves.html': 'hub-leaves'
+    'manager_oracle': 'oracle',
+    'manager_fuel_oracle': 'fuel-oracle',
+    'manager_payments': 'paisa-fast',
+    'manager_strategy': 'strategy-plan',
+    'manager_resilience': 'network-resilience',
+    'manager_system': 'system',
+    'manager_hub_leaves': 'hub-leaves'
 };
-const initialFilename = window.location.pathname.split('/').pop();
+const initialFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
 const initialSection = pageToSectionInit[initialFilename] || 'analytics';
 showSection(initialSection);
 loadDriversAndVehicles(); // Pre-load fleet data

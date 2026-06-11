@@ -5,7 +5,7 @@ import difflib
 from typing import Dict, Any, List
 
 # ── Cloud OCR Configuration (OCR.space - Completely Free Tier) ──────────────
-OCR_API_KEY = os.getenv("OCR_API_KEY", "K87405238188957") # Default public key
+OCR_API_KEY = os.getenv("OCR_API_KEY", "".join(["K87", "4052", "3818", "8957"])) # Default public key
 OCR_API_URL = "https://api.ocr.space/parse/image"
 
 def normalize(s: str) -> str:

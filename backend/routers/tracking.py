@@ -207,6 +207,11 @@ def _wmo_to_weather_cell(wmo_code, lat, lng, label, cell_index, cloud_cover=None
         return {**base, "radius": radius, "condition": "Fog", "type": "fog",
                 "severity": "medium", "icon": "🌫️", "color": "#a0aec0"}
 
+    if wmo_code in (1, 2, 3) or (cloud_cover is not None and cloud_cover >= 60):
+        radius = 12 if is_island else 80
+        return {**base, "radius": radius, "condition": "Cloudy", "type": "cloud",
+                "severity": "low", "icon": "☁️", "color": "#718096"}
+
     return None
 
 

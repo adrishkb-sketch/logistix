@@ -171,18 +171,18 @@ let isHalted = false;
 let lastBearing = 0;
 
 const ICON_PICKUP = L.divIcon({
-    html: `<div style="background:#f6ad55; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 10px rgba(246,173,85,0.5); font-size:16px;">🏢</div>`,
-    className: 'custom-marker', iconSize: [30, 30], iconAnchor: [15, 15]
+    html: `<div style="background:#f6ad55; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px rgba(246,173,85,0.8), 0 0 30px rgba(246,173,85,0.4); font-size:18px;">🏢</div>`,
+    className: 'custom-marker', iconSize: [36, 36], iconAnchor: [18, 18]
 });
 
 const ICON_DROP = L.divIcon({
-    html: `<div style="background:#48bb78; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 10px rgba(72,187,120,0.5); font-size:16px;">🏁</div>`,
-    className: 'custom-marker', iconSize: [30, 30], iconAnchor: [15, 15]
+    html: `<div style="background:#48bb78; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px rgba(72,187,120,0.8), 0 0 30px rgba(72,187,120,0.4); font-size:18px;">🏁</div>`,
+    className: 'custom-marker', iconSize: [36, 36], iconAnchor: [18, 18]
 });
 
 function getVehicleIcon(bearing = 0) {
     return L.divIcon({
-        html: `<div style="transform:rotate(${bearing}deg); font-size:24px; transition: transform 0.5s ease; filter: drop-shadow(0 0 5px var(--primary));">🚀</div>`,
+        html: `<div style="transform:rotate(${bearing}deg); font-size:26px; transition: transform 0.5s ease; filter: drop-shadow(0 0 10px rgba(0,229,255,0.8)); text-align:center;">🚛</div>`,
         className: 'vehicle-marker', iconSize: [30, 30], iconAnchor: [15, 15]
     });
 }
@@ -291,18 +291,18 @@ setInterval(async () => {
 
 function switchDriverTab(tab) {
     const tabToPage = {
-        'dash': 'driver_tasks.html',
-        'active': 'driver_live.html',
-        'chat': 'driver_chat.html',
-        'completed': 'driver_history.html',
+        'dash': 'driver_tasks',
+        'active': 'driver_live',
+        'chat': 'driver_chat',
+        'completed': 'driver_history',
         
-        'wallet': 'driver_wallet.html',
-        'profile': 'driver_account.html'
+        'wallet': 'driver_wallet',
+        'profile': 'driver_account'
     };
-    const currentFilename = window.location.pathname.split('/').pop();
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const expectedPage = tabToPage[tab];
-    if (expectedPage && expectedPage !== currentFilename && (currentFilename.startsWith('driver_') || currentFilename === 'driver.html')) {
-        window.location.href = expectedPage;
+    if (expectedPage && expectedPage !== currentFilename && (currentFilename.startsWith('driver_') || currentFilename === 'driver' || currentFilename === 'driver.html')) {
+        window.location.href = expectedPage + '.html';
         return;
     }
 
@@ -1440,8 +1440,8 @@ async function loadMissions(autoStartNext = false) {
             setTimeout(() => { if (map) map.invalidateSize(true); }, 300);
             
             // Un-hide the routing controls now that map is showing
-            document.getElementById('ai-routing-controls').style.display = 'flex';
-            document.getElementById('nearby-pois-toggle').style.display = 'flex';
+            const toolsContainer = document.getElementById('unified-tools-container');
+            if (toolsContainer) toolsContainer.style.display = 'block';
             
             drawMultiStopRoute(orderedStops);
             

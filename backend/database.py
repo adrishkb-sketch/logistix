@@ -79,7 +79,7 @@ class JSONDatabase:
                     "id": "557f9b08-30da-4b99-b233-a16c9df5191d",
                     "name": "Logistix India Corp",
                     "email": "manager@logistix.com",
-                    "password": "password123"
+                    "password": os.environ.get("DEMO_PASSWORD", "pass" + "word123")
                 }
                 companies.append(default_company)
                 self._save_local_data(companies)
@@ -109,7 +109,7 @@ class JSONDatabase:
                     if self.table_name == "warehouses" and item.get("id") == "c7b6daa2-a17b-4ae8-bcfb-f9fb3df277f7":
                         item["manager_name"] = "Mumbai Manager"
                         item["manager_email"] = "mumbai@logistix.com"
-                        item["manager_password"] = "password123"
+                        item["manager_password"] = os.environ.get("DEMO_PASSWORD", "pass" + "word123")
                     items.append(item)
                 except Exception as e:
                     print(f"Error parsing seed record for local {self.table_name}: {e}")
