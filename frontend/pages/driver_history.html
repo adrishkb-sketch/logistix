@@ -336,30 +336,30 @@
     </header>
 
     <!-- ── SCROLLABLE TABS ── -->
-    <div class="tabs-container">
-        <button class="tab-btn">
+    <div class="tabs-container" data-layout-container="driver-tabs">
+        <button class="tab-btn" data-layout-id="tab-tasks" id="btn-tab-dash" onclick="window.location.href='driver_tasks.html'">
             <svg class="icon-md" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            <span>Tasks</span>
+            <span data-i18n="tab_tasks">Tasks</span>
         </button>
-        <button class="tab-btn">
+        <button class="tab-btn" data-layout-id="tab-live" id="btn-tab-active" onclick="switchDriverTab('active')">
             <svg class="icon-md" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
-            <span>Live Route</span>
+            <span data-i18n="tab_live_route">Live Route</span>
         </button>
-        <button class="tab-btn">
+        <button class="tab-btn" data-layout-id="tab-chat" id="btn-tab-chat" onclick="switchDriverTab('chat')">
             <svg class="icon-md" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-            <span>Chat</span>
+            <span data-i18n="tab_chat">Chat</span>
         </button>
-        <button class="tab-btn active">
+        <button class="tab-btn active" data-layout-id="tab-history" id="btn-tab-completed" onclick="switchDriverTab('completed')">
             <svg class="icon-md" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
-            <span>History</span>
+            <span data-i18n="tab_history">History</span>
         </button>
-        <button class="tab-btn">
+        <button class="tab-btn" data-layout-id="tab-wallet" id="btn-tab-wallet" onclick="switchDriverTab('wallet')">
             <svg class="icon-md" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
-            <span>Wallet</span>
+            <span data-i18n="tab_wallet">Wallet</span>
         </button>
-        <button class="tab-btn">
+        <button class="tab-btn" data-layout-id="tab-account" id="btn-tab-profile" onclick="switchDriverTab('profile')">
             <svg class="icon-md" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            <span>Account</span>
+            <span data-i18n="tab_account">Account</span>
         </button>
     </div>
 
@@ -575,8 +575,24 @@
 
 </div> <!-- /driver-layout -->
 
+<!-- Restoring original scripts for app functionality (SPA, translating, layouts) -->
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="../js/translator.js?v=2.2"></script>
+<script src="../js/logo.js"></script>
+<script src="../js/voice.js?v=2.2"></script>
+<script src="../js/api.js?v=2.3"></script>
+<script src="../js/custom_layout.js?v=2.2"></script>
+<script src="../js/driver.js?v=2.2"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+
+        if (typeof window.logistixLayout !== 'undefined') {
+            window.logistixLayout.init('driver');
+        }
+        if (typeof switchDriverTab === 'function') {
+            switchDriverTab('completed');
+        }
 
         // ── PHYSICS BACKGROUND CANVAS DOTS INITIALIZATION ──
         const canvasBuffer = 400;
@@ -768,18 +784,6 @@
 
         // Initialize theme based on preference or local storage
         setTheme(localStorage.getItem('theme') || 'dark');
-
-        // ── TAB CLICK LOGIC ──
-        // This allows the tabs to be visually clicked and activated
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Remove active class from all tabs
-                tabBtns.forEach(b => b.classList.remove('active'));
-                // Add active class to the clicked tab
-                btn.classList.add('active');
-            });
-        });
     });
 </script>
 
