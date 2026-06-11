@@ -379,6 +379,9 @@
             <button class="icon-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" title="Voice Control">
                 <svg class="icon-md" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
             </button>
+            <button class="icon-btn" onclick="if(window.logistixVoice){window.logistixVoice.showInstructions();}" title="Voice Help" style="font-weight:900; font-size:1.4rem;">
+                ?
+            </button>
             <button class="icon-btn notranslate" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
                 <svg class="icon-md" id="theme-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
             </button>

@@ -243,6 +243,19 @@ class AutomatedControl {
                         this.showSection('shipments');
                     }
                 }
+            },
+            "request_help": {
+                role: "driver",
+                desc: "request_help",
+                action: () => {
+                    if (typeof submitIncident === 'function') {
+                        submitIncident('breakdown');
+                        const rescueInfo = document.getElementById('breakdown-rescue-info');
+                        if (rescueInfo) rescueInfo.style.display = 'block';
+                    } else {
+                        alert('Emergency Help Requested. Manager notified to assign another driver for the remaining journey.');
+                    }
+                }
             }
         };
 
@@ -310,7 +323,10 @@ class AutomatedControl {
                 "otp override": "verify_shipment",
                 "show certificate": "show_certificate",
                 "green certificate": "show_certificate",
-                "esg certificate": "show_certificate"
+                "esg certificate": "show_certificate",
+                "help": "request_help",
+                "emergency": "request_help",
+                "rescue": "request_help"
 
             },
             hi: {
@@ -372,7 +388,9 @@ class AutomatedControl {
                 "रिपोर्ट बताओ": "status_check",
                 "ढाबा खोजें": "food_check",
                 "खाना कहां है": "food_check",
-                "भोजन गृह": "food_check"
+                "भोजन गृह": "food_check",
+                "मदद": "request_help",
+                "बचाओ": "request_help"
             },
             bn: {
                 "সমস্যা": "report_issue",

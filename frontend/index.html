@@ -1856,10 +1856,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
         } else if (type === 'driver') {
             html += `
-                <div style="position: relative;">
-                    <button type="button" onclick="document.getElementById('voice-help-modal').style.display='block'" title="Voice Command Guide" style="position: absolute; right: 0; top: 0; background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text-main); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; font-size:0.8rem; z-index:10;">?</button>
-                    <h2 class="modal-title" data-i18n="modal_driver_title">Driver Login</h2>
-                </div>
+                <h2 class="modal-title" data-i18n="modal_driver_title">Driver Login</h2>
                 <p class="modal-subtitle">Access your logistics tasks and routing</p>
                 <form class="auth-form" id="driver-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
                     <div class="input-group">
