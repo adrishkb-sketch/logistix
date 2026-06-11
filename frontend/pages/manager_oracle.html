@@ -1,270 +1,267 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<link href="../favicon.svg" rel="icon" type="image/svg+xml"/>
-<link href="../favicon.png" rel="icon" type="image/png"/>
-<link href="../apple-touch-icon.png" rel="apple-touch-icon"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Manager Dashboard | Logistix</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
-<link href="../css/style.css" rel="stylesheet">
-<!-- Leaflet CSS & Draw CSS -->
-<style>
-        #map { height: 450px; width: 100%; border-radius: 20px; margin-top: 1rem; border: 1px solid var(--border); z-index: 1; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Fuel Oracle | Logistix</title>
 
-        .hover-card {
-            position: absolute;
-            z-index: 10002;
-            width: 260px;
-            padding: 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-            display: none;
-            pointer-events: none;
-            backdrop-filter: blur(20px);
-        }
-        .driver-name-hover:hover .hover-card { display: block; }
-        .hover-card.low-fatigue { border-top: 4px solid var(--success); }
-        .hover-card.mid-fatigue { border-top: 4px solid var(--warning); }
-        .hover-card.high-fatigue { border-top: 4px solid var(--danger); }
-        
-        /* Specific Table Overrides */
-        .leaderboard-table tr:first-child { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--warning); }
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 
-        /* Leaderboard responsive layout */
-        .leaderboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            gap: 12px;
-            flex-wrap: wrap;
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- External Base Styles -->
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        .text-shine-hover {
+    display: inline-block;
+    white-space: nowrap !important;   /* prevents vertical breaking */
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    letter-spacing: normal !important;
+}
+.mobile-menu-btn {
+    z-index: 3000;
+    position: relative;
+}
+.sidebar {
+    z-index: 3001 !important;
+}
+.sidebar-overlay {
+    z-index: 3000 !important;
+}
+        :root {
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --accent-1: #00e5ff;
+            --accent-2: #ff9900;
+            --accent-3: #00ff73;
+            --surface: rgba(15, 20, 35, 0.45);
+            --surface-hover: rgba(25, 33, 55, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.18);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
         }
-        .leaderboard-selects {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+
+        body.light-mode {
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+            --accent-1: #0ea5e9;
+            --accent-2: #f59e0b;
+            --accent-3: #10b981;
+            --surface: rgba(255, 255, 255, 0.75);
+            --surface-hover: rgba(255, 255, 255, 0.98);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-highlight: rgba(0, 0, 0, 0.2);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
         }
-        /* The table wrapper scrolls horizontally on its own — page stays still */
-        .leaderboard-table-wrapper {
+
+        /* ── RESET & BASE ENFORCEMENT ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; overflow-x: hidden !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s ease, color 0.5s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+        /* ── BACKGROUND ANIMATIONS ── */
+        .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg-base); transition: background 0.6s ease; }
+        .blob { position: absolute; filter: blur(55px); opacity: 0.6; will-change: transform, border-radius; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateZ(0); }
+        body.light-mode .blob { opacity: 0.55; filter: blur(45px); }
+        .blob-1 { top: -10%; left: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-1); animation: wavePush1 15s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -10%; right: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-2); animation: wavePush2 18s infinite alternate ease-in-out; }
+        .blob-3 { top: 25%; left: 20%; width: max(50vw, 350px); height: max(50vh, 350px); background: var(--accent-3); animation: wavePush3 22s infinite alternate ease-in-out; }
+
+        @keyframes wavePush1 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 50% { transform: translate3d(20vw, 15vh, 0) scale(1.2); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 100% { transform: translate3d(5vw, 30vh, 0) scale(0.95); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; } }
+        @keyframes wavePush2 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 50% { transform: translate3d(-20vw, -15vh, 0) scale(1.25); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } }
+        @keyframes wavePush3 { 0% { transform: translate3d(0, 0, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } 50% { transform: translate3d(-15vw, 10vh, 0) scale(1.2); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; } 100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } }
+
+        /* Stable Text Effects */
+        .text-shine-hover { display: inline-block; transition: color 0.3s ease, text-shadow 0.3s ease; white-space: normal; word-break: normal; }
+        @media (hover: hover) and (pointer: fine) {
+            .text-shine-hover:hover { color: var(--accent-1) !important; text-shadow: 0 0 12px var(--neon-glow); }
+        }
+
+        /* ── LAYOUT & SIDEBAR ── */
+        .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
+        .sidebar { width: 280px !important; background: rgba(8, 11, 22, 0.7) !important; border-right: 1px solid var(--border) !important; backdrop-filter: blur(30px) !important; -webkit-backdrop-filter: blur(30px) !important; display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0; z-index: 2000 !important; transition: transform 0.4s ease; }
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.75) !important; border-right: 1px solid var(--border) !important; }
+        .sidebar-header { padding: 30px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 { font-size: 1.7rem !important; font-weight: 800 !important; margin: 0; background: linear-gradient(135deg, var(--text-main), var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sidebar-close-btn { display: none; background: none; border: none; color: var(--text-main); cursor: pointer; transition: transform 0.2s ease; }
+        .nav-links-wrapper { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--text-muted) !important; font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: all 0.3s ease; border: 1px solid transparent; }
+        .nav-link svg { width: 20px; height: 20px; stroke-width: 1.8; stroke: currentColor; fill: none; transition: transform 0.3s ease; }
+        .nav-link:hover { color: var(--text-main) !important; background: var(--surface-hover); border-color: var(--border-highlight); transform: translateX(4px); }
+        .nav-link:hover svg { transform: scale(1.1); }
+        .nav-link.active { color: var(--text-main) !important; background: var(--surface); border-color: var(--border-highlight); border-left: 3px solid var(--accent-1) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+        body.light-mode .nav-link.active { box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
+
+        .main-content { flex: 1; margin-left: 280px; padding: 40px; width: auto; max-width: calc(100vw - 280px); box-sizing: border-box; overflow-x: hidden !important; transition: margin-left 0.4s ease; }
+
+        /* ── TOP BAR ── */
+        .top-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 16px 30px; display: flex; align-items: center; justify-content: space-between; gap: 24px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); margin-bottom: 40px; box-shadow: var(--glow-shadow); height: 76px; box-sizing: border-box; }
+        .mobile-menu-btn, .mobile-theme-toggle, .mobile-logo-container { display: none; }
+        .top-bar-mobile-header { display: flex; align-items: center; height: 100%; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; height: 100%; }
+        .top-bar-left h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; margin: 0; line-height: 1; white-space: nowrap; }
+        .title-separator { opacity: 0.3; }
+        .manager-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; align-items: center; gap: 14px; height: 100%; }
+
+        /* ── BUTTONS & SELECTS ── */
+        .glass-btn { background: var(--surface); color: var(--text-main); border: 1px solid var(--border); height: 44px; padding: 0 20px; border-radius: 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s ease; backdrop-filter: blur(10px); box-sizing: border-box; white-space: nowrap; }
+        .glass-btn:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); color: var(--text-main); }
+        .glass-btn:active { transform: scale(0.96); }
+
+        .glass-select-container { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 0 16px; border-radius: 14px; height: 44px; backdrop-filter: blur(10px); transition: all 0.3s ease; box-sizing: border-box; white-space: nowrap; }
+        .glass-select-container:hover { border-color: var(--border-highlight); background: var(--surface-hover); }
+        .glass-select-container select { background: transparent; border: none; color: var(--text-main); font-weight: 700; font-size: 0.85rem; cursor: pointer; outline: none; padding-right: 4px; height: 100%; display: flex; align-items: center; }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); color: var(--text-main); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px); box-sizing: border-box; flex-shrink: 0; }
+        .theme-switch:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+
+        /* Inner Action Buttons */
+        .btn-primary { background: var(--text-main) !important; color: var(--bg-base) !important; border: none !important; border-radius: 14px !important; padding: 12px 24px !important; font-family: 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; cursor: pointer !important; transition: all 0.3s ease !important; box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
+        .btn-primary:hover { transform: translateY(-3px) !important; box-shadow: 0 15px 30px var(--neon-glow) !important; background: var(--accent-1) !important; color: #010208 !important; }
+        .btn-primary:active { transform: scale(0.97) !important; }
+
+        .btn-outline { background: transparent !important; color: var(--text-main) !important; border: 1px solid var(--border-highlight) !important; }
+        .btn-outline:hover { background: var(--surface-hover) !important; border-color: var(--text-main) !important; color: var(--text-main) !important; box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important; }
+
+        .polished-glass-input { width: 100%; background: rgba(0, 0, 0, 0.2) !important; border: 1px solid var(--border) !important; border-radius: 12px !important; padding: 12px 16px !important; color: var(--text-main) !important; font-family: inherit !important; font-size: 0.95rem !important; outline: none !important; transition: all 0.3s ease !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important; }
+        body.light-mode .polished-glass-input { background: rgba(255, 255, 255, 0.5) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important; }
+        .polished-glass-input:focus { border-color: var(--accent-1) !important; background: rgba(0, 0, 0, 0.4) !important; box-shadow: 0 0 0 4px var(--neon-glow), inset 0 2px 4px rgba(0,0,0,0.2) !important; }
+        body.light-mode .polished-glass-input:focus { background: rgba(255, 255, 255, 0.9) !important; }
+
+        /* ── GLASS CARD (Stable Animation) ── */
+        .glass-card {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 28px !important;
+            padding: 30px;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .glass-card:hover {
+                transform: translateY(-4px);
+                border-color: var(--border-highlight) !important;
+                box-shadow: 0 20px 45px -10px var(--glow-shadow) !important;
+            }
+        }
+        .section-card h2, .section-card h3 { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .section-card .subtitle { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px; font-weight: 500; }
+        .responsive-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px; }
+
+        /* ── RESPONSIVE TABLES ── */
+        .table-responsive {
             width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            border-radius: 8px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
         }
-        .leaderboard-table {
-            min-width: 480px; /* Forces scroll inside the wrapper instead of the page */
-            width: 100%;
+        body.light-mode .table-responsive { background: rgba(0,0,0,0.02); }
+
+        table { width: 100%; font-size: 0.9rem; border-collapse: collapse; white-space: nowrap; min-width: 600px; }
+        th { font-size: 0.8rem; color: var(--text-muted); padding: 18px 16px; font-weight: 800; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); text-align: left; text-transform: uppercase; }
+        td { padding: 18px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.2s; color: var(--text-main); font-weight: 500; }
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+        body.light-mode tbody tr:hover { background: rgba(0, 0, 0, 0.04); }
+        tr:last-child td { border-bottom: none; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%) !important; }
+            .sidebar.open { transform: translateX(0) !important; }
+            .sidebar-close-btn { display: flex !important; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1999; transition: opacity 0.4s ease; }
+            .sidebar-overlay.active { display: block; }
+            .main-content { margin-left: 0 !important; padding: 24px 16px !important; max-width: 100vw !important; width: 100% !important; }
+
+            /* TOP BAR MOBILE SYNC */
+            .top-bar { padding: 16px 20px; height: auto; flex-direction: column; align-items: stretch; border-radius: 20px; gap: 16px; }
+            .top-bar-mobile-header { display: flex; justify-content: space-between; align-items: center; width: 100%; height: auto; }
+            .top-bar-left { justify-content: flex-start; width: calc(100% - 50px); }
+            .top-bar h1 { font-size: 1.2rem; white-space: normal; }
+
+            .mobile-menu-btn { display: flex !important; background: none; border: none; color: var(--text-main); cursor: pointer; margin-right: 12px; transition: transform 0.2s ease; padding: 0; }
+            .mobile-menu-btn:active { transform: scale(0.9); }
+            .mobile-theme-toggle { display: flex !important; }
+            .mobile-logo-container { display: flex !important; margin-right: 10px; align-items: center; justify-content: center; }
+            .desktop-theme-toggle { display: none !important; }
+
+            .top-bar-controls { width: 100% !important; display: flex !important; flex-flow: row wrap !important; gap: 10px !important; justify-content: flex-start !important; height: auto; }
+            .glass-select-container { flex: 1 1 auto !important; min-width: 120px !important; }
+            .automated-group { flex: 2 1 auto !important; display: flex !important; min-width: 180px !important; justify-content: space-between !important; }
+            .automated-group .voice-btn { flex: 1 !important; justify-content: center !important; }
         }
         @media (max-width: 768px) {
-            .leaderboard-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .leaderboard-selects {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-            }
-            .leaderboard-selects select {
-                width: 100%;
-                font-size: 0.85rem !important;
-                padding: 8px 10px !important;
-            }
+            .glass-card { padding: 20px 16px !important; border-radius: 20px !important; }
+            .section-card h2 { font-size: 1.3rem; }
+            .responsive-grid-2 { grid-template-columns: 1fr !important; }
         }
-        /* Dashboard Spacing */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
-        
-        /* Sidebar Logo */
-        .sidebar-header { margin-bottom: 40px; padding: 0 12px; }
-        .nav-links-wrapper { margin-bottom: 32px; }
-        .chat-driver-item:hover { background: rgba(79, 140, 255, 0.05) !important; }
-        .chat-driver-item.active { background: rgba(79, 140, 255, 0.1) !important; border-left: 4px solid var(--primary); }
-        .section-card h3 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 800;
-}
-
-.subtitle {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-bottom: 24px;
-    line-height: 1.6;
-}
-        .sidebar-header h2 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        /* Animation */
-        .background-animation {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
-                        radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
-        }
-        /* Automated Optimize Button */
-        .ai-optimize-btn {
-            background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
-            color: white !important;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .ai-optimize-btn:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
-            filter: brightness(1.1);
-        }
-        .ai-optimize-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
-        }
-        .ai-optimize-btn:hover::before {
-            left: 100%;
-        }
-        .ai-optimize-btn:active {
-            transform: translateY(0) scale(0.98);
-        }
-
-        /* Simulation Mode Switch */
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2); }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        input:focus + .slider { box-shadow: 0 0 1px #3b82f6; }
-        input:checked + .slider:before { transform: translateX(22px); }
-        
-        #sim-mode-toggle-container.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-        #sim-mode-toggle-container.active span { color: #3b82f6 !important; }
-        @media (max-width: 600px) {
-            .glass-card.section-card {
-                padding: 16px !important;
-            }
-            .section-card h2 {
-                font-size: 1.4rem;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr !important;
-            }
-        }
-        body.light-mode input, body.light-mode select, body.light-mode textarea, body.light-mode .pin-box {
-            color: #000000 !important;
-        }
-        .btn-action-details {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-        font-weight: 700;
-        font-size: 0.85rem;
-        transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        text-align: left;
-    }
-    .btn-action-details:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-        background: rgba(79, 140, 255, 0.1);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-    .btn-action-details .icon {
-        font-size: 1.2rem;
-    }
-    .btn-action-details:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-    .intel-block {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid var(--border);
-        padding: 16px;
-        border-radius: 16px;
-    }
-    .modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(12px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        padding: 20px;
-    }
-    .modal-box {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-        animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes modalIn {
-        from { transform: scale(0.9) translateY(20px); opacity: 0; }
-        to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .modal-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        cursor: pointer;
-        font-size: 1.4rem;
-        opacity: 0.5;
-        transition: 0.3s;
-        z-index: 100;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.1);
-    }
-    .modal-close:hover { 
-        opacity: 1; 
-        background: var(--danger);
-        color: white;
-    }
-</style>
-<link href="../css/premium_theme.css" rel="stylesheet">
-</link></link></link></head>
+    </style>
+</head>
 <body>
-<div class="background-animation"></div>
+
+<!-- ── BACKGROUND BLOBS ── -->
 <div class="bg-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
 </div>
-<div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
 <div class="dashboard-layout">
-<aside class="sidebar">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
         <div class="sidebar-header">
             <h2><span>Logistix</span></h2>
             <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
@@ -273,7 +270,7 @@
         </div>
 
         <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
-            <a class="nav-link active" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <span data-i18n="nav_analytics">Executive Analytics</span>
             </a>
@@ -317,7 +314,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
                 <span data-i18n="nav_oracle">Strategy Oracle</span>
             </a>
-            <a class="nav-link" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
+            <a class="nav-link active" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
                 <span data-i18n="nav_fuel">Bharat-Fuel Oracle</span>
             </a>
@@ -350,8 +347,12 @@
             </a>
         </div>
     </aside>
-<main class="main-content" data-layout-container="main-sections">
-<header class="top-bar">
+
+    <!-- ── MAIN PANEL ── -->
+    <main class="main-content">
+
+        <!-- ── HEADER (TOP BAR) ── -->
+        <header class="top-bar">
             <div class="top-bar-mobile-header">
                 <div class="top-bar-left">
                     <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
@@ -359,16 +360,14 @@
                     </button>
                     <div class="mobile-logo-container">
                         <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
-                            <defs>
-                                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient>
-                            </defs>
+                            <defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient></defs>
                             <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
                         </svg>
                     </div>
                     <h1>
-                        <span class="split-text" data-i18n="dashboard">Dashboard</span>
+                        <span data-i18n="dashboard">Dashboard</span>
                         <span class="title-separator">/</span>
-                        <span id="manager-name" class="manager-name-hl text-shine-hover">---</span>
+                        <span class="manager-name-hl">Bharat-Fuel Oracle</span>
                     </h1>
                 </div>
 
@@ -378,247 +377,210 @@
             </div>
 
             <div class="top-bar-controls">
-                <button class="glass-btn" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()">
+                <button class="glass-btn" data-i18n="modify_dashboard" onclick="window.logistixLayout && window.logistixLayout.toggleEditMode()">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     Modify Dashboard
                 </button>
 
-                <!-- Language Selector -->
                 <div class="glass-select-container">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                    <select onchange="setLanguage(this.value)" aria-label="Language">
+                    <select onchange="window.setLanguage && setLanguage(this.value)" aria-label="Language">
                         <option value="en">English (EN)</option>
-                        <option value="bn">বাংলা (BN)</option>
                         <option value="hi">हिंदी (HI)</option>
-                        <option value="te">తెలుగు (TE)</option>
-                        <option value="mr">मराठी (MR)</option>
-                        <option value="ta">தமிழ் (TA)</option>
-                        <option value="gu">ગુજરાતી (GU)</option>
-                        <option value="kn">ಕನ್ನಡ (KN)</option>
-                        <option value="or">ଓଡ଼ିଆ (OR)</option>
-                        <option value="ml">മലയാളം (ML)</option>
-                        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
-                        <option value="as">অসমীয়া (AS)</option>
-                        <option value="mai">मैथिली (MAI)</option>
-                        <option value="sat">संताली (SAT)</option>
-                        <option value="ks">کٲشُر (KS)</option>
-                        <option value="ur">اردو (UR)</option>
-                        <option value="ne">नेपाली (NE)</option>
-                        <option value="sa">संस्कृतम् (SA)</option>
-                        <option value="sd">سنڌी (SD)</option>
-                        <option value="gom">कोंकणी (GOM)</option>
-                        <option value="doi">डोगरी (DOI)</option>
-                        <option value="mni">মৈতৈলোন (MNI)</option>
                     </select>
                 </div>
 
-                <!-- Voice Control -->
                 <div class="automated-group" style="display: flex; gap: 8px;">
-                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()">
+                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" onclick="window.logistixVoice && window.logistixVoice.toggle()">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                         Automated Control
                     </button>
-                    <button class="theme-switch help-btn" onclick="window.logistixVoice.showInstructions()" title="Voice Help">
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice && window.logistixVoice.showInstructions()" title="Voice Help">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                     </button>
                 </div>
 
-                <!-- Desktop Theme Switcher -->
                 <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                 </div>
             </div>
         </header>
-<!-- Voice Control Button & Help -->
-<div style="display:flex; align-items:center; gap:6px;">
-<button class="glass-card" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);">🎙️ Automated Control</button>
-<button onclick="window.logistixVoice.showInstructions()" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;" title="Voice Help">?</button>
+
+        <!-- ── FUEL ORACLE CONTENT SECTION ── -->
+        <section class="section-content" data-layout-id="section-fuel" id="fuel-oracle">
+            <div data-layout-container="fuel-content">
+
+                <div class="glass-card section-card" style="margin-bottom:24px; border-top: 4px solid var(--accent-1);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                        <div style="flex: 1 1 auto; min-width: 250px;">
+                            <h2 class="text-shine-hover" data-i18n="fuel_oracle_title" style="margin:0; font-size:1.8rem; font-weight:800; color:var(--text-main); white-space: nowrap;">Bharat-Fuel Oracle</h2>
+                            <p class="subtitle" data-i18n="fuel_oracle_desc" style="margin-top:6px; margin-bottom:0;">Live fuel pricing integration and AI-optimized route cost calculations.</p>
+                        </div>
+                        <div class="glass-card" style="padding:16px 24px; border:1px solid var(--accent-2); background:rgba(255, 153, 0, 0.05); display:flex; flex-direction:column; align-items:flex-end; box-shadow: none; transform: none; flex-shrink: 0;">
+                            <span style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:1px;" data-i18n="national_avg_diesel">National Avg. Diesel</span>
+                            <span style="font-size:2rem; font-weight:800; color:var(--accent-2);" id="national-fuel-price">₹ 89.62 <small style="font-size:1rem;">/L</small></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="responsive-grid-2">
+                    <!-- Cost Calculator -->
+                    <div class="glass-card section-card">
+                        <h3 class="text-shine-hover" data-i18n="route_cost_calculator" style="color:var(--text-main); white-space: nowrap;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                            Route Cost Calculator
+                        </h3>
+                        <form id="fuel-calc-form" style="display:flex; flex-direction:column; gap:16px; margin-top:20px;">
+                            <div class="input-group">
+                                <label data-i18n="label_source_hub" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Source Hub</label>
+                                <select class="polished-glass-input" id="fuel-source-select" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_dest_hub" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Destination Hub</label>
+                                <select class="polished-glass-input" id="fuel-dest-select" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_vehicle_class" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Vehicle Class</label>
+                                <select class="polished-glass-input" id="fuel-vehicle-select" required>
+                                    <option value="LCV">LCV (Light Commercial Vehicle) - 12 km/l</option>
+                                    <option value="HCV">HCV (Heavy Commercial Vehicle) - 4 km/l</option>
+                                    <option value="EV">EV Cargo - ₹0 Fuel Cost</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label data-i18n="label_custom_fuel_rate" style="font-size:0.85rem; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;">Custom Fuel Rate (₹/L) [Optional]</label>
+                                <input class="polished-glass-input" type="number" step="0.01" id="custom-fuel-rate" placeholder="Leave empty for National Avg">
+                            </div>
+                            <button class="btn-primary" type="button" onclick="calculateRouteCost()" style="margin-top:8px;">Calculate Economics</button>
+                        </form>
+
+                        <div id="fuel-calc-results" style="display:none; margin-top:24px; padding:20px; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:16px;">
+                            <h4 style="margin:0 0 16px 0; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:8px;">Trip Economics</h4>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                                <div>
+                                    <small style="color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight:800;">Est. Distance</small>
+                                    <div id="res-distance" style="font-size:1.2rem; font-weight:700; color:var(--text-main);">0 km</div>
+                                </div>
+                                <div>
+                                    <small style="color:var(--text-muted); font-size:0.75rem; text-transform:uppercase; font-weight:800;">Est. Fuel Required</small>
+                                    <div id="res-fuel-liters" style="font-size:1.2rem; font-weight:700; color:var(--accent-2);">0 L</div>
+                                </div>
+                                <div style="grid-column: 1 / -1; background:rgba(0, 255, 115, 0.1); padding:16px; border-radius:12px; border:1px solid rgba(0, 255, 115, 0.3); display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-weight:700; color:var(--text-main);">Total Fuel Cost</span>
+                                    <span id="res-total-cost" style="font-size:1.8rem; font-weight:800; color:var(--success);">₹ 0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Trends -->
+                    <div class="glass-card section-card">
+                        <h3 class="text-shine-hover" data-i18n="fuel_price_trends" style="color:var(--text-main); white-space: nowrap;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                            30-Day Fuel Price Trends
+                        </h3>
+                        <div style="height:350px; width:100%; position:relative; margin-top:20px;">
+                            <canvas id="fuelTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State-wise Prices Table -->
+                <div class="glass-card section-card" style="border-top: 4px solid var(--accent-1);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:16px;">
+                        <div style="flex: 1 1 auto; min-width: 250px;">
+                            <h3 class="text-shine-hover" data-i18n="statewise_prices_title" style="margin:0; color:var(--text-main); white-space: nowrap;">State-wise Fuel Index</h3>
+                        </div>
+                        <button class="btn-outline btn-primary" onclick="refreshFuelPrices()" style="padding:10px 16px; font-size:0.85rem; border-radius:12px; flex-shrink: 0;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                            Sync Live Data
+                        </button>
+                    </div>
+
+                    <!-- Wrapper for horizontal scrolling without breaking page -->
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="th_state">State / Territory</th>
+                                    <th data-i18n="th_diesel_price">Diesel (₹/L)</th>
+                                    <th data-i18n="th_petrol_price">Petrol (₹/L)</th>
+                                    <th data-i18n="th_trend">24h Trend</th>
+                                    <th data-i18n="th_last_updated">Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fuel-state-table-body">
+                                <tr><td colspan="5" style="text-align:center;">Loading regional prices...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
 </div>
-<div class="theme-switch notranslate" id="theme-toggle" style="margin:0;" title="Toggle Light/Dark Mode">🌙</div>
-</div>
-<!-- Hub Leaves Section -->
-<!-- Analytics Section -->
-<!-- Warehouses Section -->
-<!-- Shipments Section -->
-<!-- Receivers Section -->
-<!-- Drivers & Vehicles Section -->
-<!-- Verifications Section -->
-<!-- Weather Fleet Map Section -->
-<!-- Messages Section -->
-<!-- Leaderboard Section -->
-<!-- Smart Contract Ledger Section -->
-<!-- Strategy Oracle Section -->
-<section class="section-content" id="oracle">
-<div class="glass-card section-card">
-<div class="responsive-flex-column" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap: 15px;">
-<div>
-<h2 data-i18n="oracle_title" style="margin:0; color:var(--primary);">Automated Strategy 🧠</h2>
-<p class="subtitle" data-i18n="oracle_subtitle" style="margin-bottom:0;">Simulate future growth scenarios and business strategies in a Digital Twin environment.</p>
-</div>
-<button class="btn-primary" onclick="runOracleSimulation()" style="width:auto; padding:12px 25px;"><span data-i18n="run_forecast">Run Automated Forecast</span></button>
-</div>
-<div class="responsive-grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
-<!-- Parameters -->
-<div class="glass-card" style="padding:20px; background:rgba(255,255,255,0.03);">
-<h3 data-i18n="sim_params" style="margin-top:0; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">Simulation Parameters</h3>
-<div class="input-group" style="margin-top:32px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="wh_expansion">Warehouse Expansion</span>
-<span class="info-icon" data-tip="Adding hubs reduces last-mile distance and improves delivery speed, but increases fixed operational costs." onclick="showInfoTip(this)">ⓘ</span>
-<span><b id="val-wh">0</b> <span data-i18n="new_hubs">New Hubs</span></span>
-</label>
-<input id="param-wh" max="10" min="0" oninput="document.getElementById('val-wh').innerText=this.value" style="width:100%;" type="range" value="0"/>
-</div>
-<div class="input-group" style="margin-top:32px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="hub_loc">Hub Location</span>
-<span class="info-icon" data-tip="Tier 1 cities have 25% higher demand but come with a significant rent premium per shipment." onclick="showInfoTip(this)">ⓘ</span>
-</label>
-<select id="param-loc" style="width:100%; padding:10px; border-radius:8px; background:rgba(0,0,0,0.3); color:white; border:1px solid var(--card-border);">
-<option data-i18n="tier1_desc" value="tier1">Tier 1 (High Demand, High Rent)</option>
-<option data-i18n="tier2_desc" selected="" value="tier2">Tier 2 (Standard Growth)</option>
-</select>
-</div>
-<div class="input-group" style="margin-top:32px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="fleet_inc">Fleet Increase</span>
-<span class="info-icon" data-tip="Increasing fleet size allows you to handle more concurrent shipments, scaling your revenue potential." onclick="showInfoTip(this)">ⓘ</span>
-<span>+<b id="val-fleet">0</b>%</span>
-</label>
-<input id="param-fleet" max="100" min="0" oninput="document.getElementById('val-fleet').innerText=this.value" style="width:100%;" type="range" value="0"/>
-</div>
-<div class="input-group" style="margin-top:32px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="driver_incen">Driver Incentives</span>
-<span class="info-icon" data-tip="Investment in driver rewards reduces turnover, lowers accident risk, and increases punctuality." onclick="showInfoTip(this)">ⓘ</span>
-<span>+<b id="val-incentive">0</b>%</span>
-</label>
-<input id="param-incentive" max="100" min="0" oninput="document.getElementById('val-incentive').innerText=this.value" style="width:100%;" type="range" value="0"/>
-</div>
-<div class="input-group" style="margin-top:32px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="green_fleet">Green Fleet (EV) Ratio</span>
-<span class="info-icon" data-tip="Converting to Electric Vehicles dramatically reduces CO2 emissions and fuel/maintenance costs." onclick="showInfoTip(this)">ⓘ</span>
-<span><b id="val-green">0</b>%</span>
-</label>
-<input id="param-green" max="100" min="0" oninput="document.getElementById('val-green').innerText=this.value" style="width:100%;" type="range" value="0"/>
-</div>
-<div class="input-group" style="margin-top:32px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="wh_auto">Warehouse Automation</span>
-<span class="info-icon" data-tip="Robotic sorting and IoT tracking reduces manual labor costs and eliminates processing delays." onclick="showInfoTip(this)">ⓘ</span>
-<span>Level <b id="val-auto">0</b></span>
-</label>
-<input id="param-auto" max="100" min="0" oninput="document.getElementById('val-auto').innerText=this.value" style="width:100%;" type="range" value="0"/>
-</div>
-<div class="input-group" style="margin-top:20px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="budget_allocation">Budget Allocation</span>
-<span class="info-icon" data-tip="Amount of capital to inject into the active strategy for fleet financing or driver bonuses." onclick="showInfoTip(this)">ⓘ</span>
-<span>₹<b id="val-budget">0</b>L</span>
-</label>
-<input id="param-budget" max="500" min="0" oninput="document.getElementById('val-budget').innerText=this.value" step="10" style="width:100%;" type="range" value="0"/>
-</div>
-<div class="input-group" style="margin-top:20px;">
-<label style="display:flex; justify-content:space-between;">
-<span data-i18n="forecast_horizon">Forecast Horizon</span>
-<span class="info-icon" data-tip="The period over which the Automated will simulate market fluctuations and operational results." onclick="showInfoTip(this)">ⓘ</span>
-<span><b id="val-months">6</b> <span data-i18n="months_label">Months</span></span>
-</label>
-<input id="param-months" max="24" min="1" oninput="document.getElementById('val-months').innerText=this.value" style="width:100%;" type="range" value="6"/>
-</div>
-</div>
-<!-- Results -->
-<div class="glass-card" id="oracle-results" style="padding:20px; background:rgba(0,0,0,0.3); border:1px dashed var(--card-border); display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
-<div id="oracle-placeholder">
-<div style="font-size:3rem; margin-bottom:15px;">🔮</div>
-<h3 data-i18n="ready_forecast">Ready to Forecast</h3>
-<p data-i18n="strategy_desc" style="color:var(--text-muted); font-size:0.9rem;">Adjust parameters and click "<span data-i18n="run_forecast">Run Automated Forecast</span>" to see the future of your fleet.</p>
-</div>
-<div id="oracle-data" style="display:none; width:100%; text-align:left;">
-<h3 data-i18n="forecast_summary" style="margin-top:0; color:var(--success);">Forecast Summary</h3>
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:15px; margin-bottom:20px;">
-<div class="glass-card result-card" id="profit-card" style="padding:10px; position:relative; cursor:help;">
-<small data-i18n="proj_profit" style="color:var(--text-muted)">Projected Profit</small>
-<h2 id="res-profit" style="margin:5px 0; color:var(--success);"></h2>
-<div class="calc-tooltip" data-i18n="breakdown_loading" id="profit-calc">Breakdown loading...</div>
-</div>
-<div class="glass-card" style="padding:10px;">
-<small data-i18n="eta_success" style="color:var(--text-muted)">ETA Success Rate</small>
-<h2 id="res-eta" style="margin:5px 0; color:var(--accent);"></h2>
-</div>
-<div class="glass-card" style="padding:10px;">
-<small data-i18n="co2_red" style="color:var(--text-muted)">CO2 Reduction</small>
-<h2 id="res-co2" style="margin:5px 0; color:var(--warning);"></h2>
-</div>
-<div class="glass-card" style="padding:10px;">
-<small data-i18n="roi_perc" style="color:var(--text-muted)">ROI Percentage</small>
-<h2 id="res-roi" style="margin:5px 0; color:white;"></h2>
-</div>
-</div>
-<div class="glass-card" style="padding:15px; background:rgba(49, 130, 206, 0.1); border-left:4px solid var(--primary);">
-<h4 data-i18n="auto_rec" style="margin:0 0 5px 0; color:var(--primary);">Automated Recommendation</h4>
-<p id="res-ai-msg" style="font-size:0.9rem; margin:0; line-height:1.4;"></p>
-</div>
-<div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
-<span><span data-i18n="risk_level_label">Risk Level:</span> <b id="res-risk"></b></span>
-<button class="btn-primary" data-i18n="apply_strategy" onclick="applyOracleStrategy()" style="width:auto; padding:5px 15px; font-size:0.8rem;">Apply to Strategy Plan</button>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- Operational Strategy Tracker Section -->
-<!-- System Settings Section -->
-<!-- Network Resilience Section -->
-<!-- Bharat-Fuel Oracle Section -->
-<!-- Payments Section -->
-<!-- Safety Center Section -->
-</main>
-</div>
+
 <div id="alert-container"></div>
-<!-- Add Warehouse Modal -->
-<!-- Edit Warehouse Modal -->
-<!-- Message Modal -->
-<!-- Old message-modal kept for compatibility (hidden by default) -->
-<!-- Profile Deep-Dive Modal -->
-<!-- Scripts -->
+
+<!-- ── SCRIPTS ── -->
 <script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
 <script src="../js/voice.js?v=2.2"></script>
 <script src="../js/api.js?v=2.3"></script>
 <script src="../js/custom_layout.js?v=2.2"></script>
 <script src="../js/manager_base.js"></script>
-<script src="../js/manager_oracle.js"></script>
+<script src="../js/manager_fuel_oracle.js"></script>
+
 <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            window.logistixLayout.init('manager');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize layout engine
+        if(window.logistixLayout) window.logistixLayout.init('manager');
+
+        // Setup Mobile Sidebar
+        window.toggleMobileSidebar = function(state) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if(sidebar) {
+                if(state) {
+                    sidebar.classList.add('open');
+                    if(overlay) overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    if(overlay) overlay.classList.remove('active');
+                }
+            }
+        };
+    });
+
+    // ── THEME SWITCH SYSTEM ──
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
         });
-    </script>
-<script>
-const btn = document.getElementById('theme-toggle');
 
-function setTheme(mode) {
-    if (mode === 'light') {
-        document.body.classList.add('light-mode');
-        btn.innerText = '☀️';
-    } else {
-        document.body.classList.remove('light-mode');
-        btn.innerText = '🌙';
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
     }
-    localStorage.setItem('theme', mode);
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
-}
 
-btn.onclick = () => {
-    const isLight = document.body.classList.contains('light-mode');
-    setTheme(isLight ? 'dark' : 'light');
-};
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
 
-// Initial state
-setTheme(localStorage.getItem('theme') || 'dark');
+    // Initialize Theme
+    setTheme(localStorage.getItem('theme') || 'dark');
 </script>
-<script src="../js/premium_theme.js"></script>
 </body>
 </html>

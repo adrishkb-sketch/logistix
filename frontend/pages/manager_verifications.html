@@ -1,270 +1,244 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<link href="../favicon.svg" rel="icon" type="image/svg+xml"/>
-<link href="../favicon.png" rel="icon" type="image/png"/>
-<link href="../apple-touch-icon.png" rel="apple-touch-icon"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Manager Dashboard | Logistix</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
-<link href="../css/style.css" rel="stylesheet">
-<!-- Leaflet CSS & Draw CSS -->
-<style>
-        #map { height: 450px; width: 100%; border-radius: 20px; margin-top: 1rem; border: 1px solid var(--border); z-index: 1; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Verifications | Logistix</title>
 
-        .hover-card {
-            position: absolute;
-            z-index: 10002;
-            width: 260px;
-            padding: 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-            display: none;
-            pointer-events: none;
-            backdrop-filter: blur(20px);
-        }
-        .driver-name-hover:hover .hover-card { display: block; }
-        .hover-card.low-fatigue { border-top: 4px solid var(--success); }
-        .hover-card.mid-fatigue { border-top: 4px solid var(--warning); }
-        .hover-card.high-fatigue { border-top: 4px solid var(--danger); }
-        
-        /* Specific Table Overrides */
-        .leaderboard-table tr:first-child { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--warning); }
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
 
-        /* Leaderboard responsive layout */
-        .leaderboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            gap: 12px;
-            flex-wrap: wrap;
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- External Base Styles -->
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        :root {
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --accent-1: #00e5ff;
+            --accent-2: #ff9900;
+            --accent-3: #00ff73;
+            --surface: rgba(15, 20, 35, 0.45);
+            --surface-hover: rgba(25, 33, 55, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.18);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
         }
-        .leaderboard-selects {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+
+        body.light-mode {
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+            --accent-1: #0ea5e9;
+            --accent-2: #f59e0b;
+            --accent-3: #10b981;
+            --surface: rgba(255, 255, 255, 0.75);
+            --surface-hover: rgba(255, 255, 255, 0.98);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-highlight: rgba(0, 0, 0, 0.2);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
         }
-        /* The table wrapper scrolls horizontally on its own — page stays still */
-        .leaderboard-table-wrapper {
+
+        /* ── RESET & BASE ENFORCEMENT ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; overflow-x: hidden !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s ease, color 0.5s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, h5, h6, .split-text {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+        /* ── BACKGROUND ANIMATIONS ── */
+        .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg-base); transition: background 0.6s ease; }
+        .blob { position: absolute; filter: blur(55px); opacity: 0.6; will-change: transform, border-radius; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateZ(0); }
+        body.light-mode .blob { opacity: 0.55; filter: blur(45px); }
+        .blob-1 { top: -10%; left: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-1); animation: wavePush1 15s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -10%; right: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-2); animation: wavePush2 18s infinite alternate ease-in-out; }
+        .blob-3 { top: 25%; left: 20%; width: max(50vw, 350px); height: max(50vh, 350px); background: var(--accent-3); animation: wavePush3 22s infinite alternate ease-in-out; }
+
+        @keyframes wavePush1 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 50% { transform: translate3d(20vw, 15vh, 0) scale(1.2); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 100% { transform: translate3d(5vw, 30vh, 0) scale(0.95); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; } }
+        @keyframes wavePush2 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 50% { transform: translate3d(-20vw, -15vh, 0) scale(1.25); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } }
+        @keyframes wavePush3 { 0% { transform: translate3d(0, 0, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } 50% { transform: translate3d(-15vw, 10vh, 0) scale(1.2); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; } 100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } }
+
+        /* FIXED: Text Interactions */
+        .split-text { display: inline-block; word-wrap: break-word; pointer-events: auto; }
+        .split-text .char { display: inline-block; transition: transform 0.15s ease, color 0.15s ease, text-shadow 0.15s ease; white-space: pre; pointer-events: none; }
+        .split-text .char.hovered { transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg); color: var(--accent-1) !important; text-shadow: 0 10px 20px var(--neon-glow); z-index: 2; position: relative; }
+        .split-text .char.neighbor { transform: translate3d(0, -4px, 0) scale(1.05); color: var(--accent-2) !important; }
+        .text-shine-hover { display: inline-block; transition: color 0.3s ease, text-shadow 0.3s ease; }
+        @media (hover: hover) and (pointer: fine) {
+            .text-shine-hover:hover { color: var(--accent-1) !important; text-shadow: 0 0 12px var(--neon-glow); }
+        }
+
+        /* ── LAYOUT & SIDEBAR ── */
+        .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
+        .sidebar { width: 280px !important; background: rgba(8, 11, 22, 0.7) !important; border-right: 1px solid var(--border) !important; backdrop-filter: blur(30px) !important; -webkit-backdrop-filter: blur(30px) !important; display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0; z-index: 2000 !important; transition: transform 0.4s ease; }
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.75) !important; border-right: 1px solid var(--border) !important; }
+        .sidebar-header { padding: 30px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 { font-size: 1.7rem !important; font-weight: 800 !important; margin: 0; background: linear-gradient(135deg, var(--text-main), var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sidebar-close-btn { display: none; background: none; border: none; color: var(--text-main); cursor: pointer; }
+        .nav-links-wrapper { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--text-muted) !important; font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: all 0.3s ease; border: 1px solid transparent; }
+        .nav-link svg { width: 20px; height: 20px; stroke-width: 1.8; stroke: currentColor; fill: none; transition: transform 0.3s ease; }
+        .nav-link:hover { color: var(--text-main) !important; background: var(--surface-hover); border-color: var(--border-highlight); transform: translateX(4px); }
+        .nav-link:hover svg { transform: scale(1.1); }
+        .nav-link.active { color: var(--text-main) !important; background: var(--surface); border-color: var(--border-highlight); border-left: 3px solid var(--accent-1) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+        body.light-mode .nav-link.active { box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
+
+        .main-content { flex: 1; margin-left: 280px; padding: 40px; width: auto; max-width: calc(100vw - 280px); box-sizing: border-box; overflow-x: hidden !important; transition: margin-left 0.4s ease; }
+
+        /* ── TOP BAR ── */
+        .top-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 16px 30px; display: flex; align-items: center; justify-content: space-between; gap: 24px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); margin-bottom: 40px; box-shadow: var(--glow-shadow); height: 76px; box-sizing: border-box; }
+        .mobile-menu-btn, .mobile-theme-toggle, .mobile-logo-container { display: none; }
+        .top-bar-mobile-header { display: flex; align-items: center; height: 100%; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; height: 100%; }
+        .top-bar-left h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; margin: 0; line-height: 1; }
+        .title-separator { opacity: 0.3; }
+        .manager-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; align-items: center; gap: 14px; height: 100%; }
+
+        /* ── BUTTONS & SELECTS ── */
+        .glass-btn { background: var(--surface); color: var(--text-main); border: 1px solid var(--border); height: 44px; padding: 0 20px; border-radius: 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s ease; backdrop-filter: blur(10px); box-sizing: border-box; white-space: nowrap; }
+        .glass-btn:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); color: var(--text-main); }
+        .glass-btn:active { transform: scale(0.96); }
+
+        .glass-select-container { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 0 16px; border-radius: 14px; height: 44px; backdrop-filter: blur(10px); transition: all 0.3s ease; box-sizing: border-box; white-space: nowrap; }
+        .glass-select-container:hover { border-color: var(--border-highlight); background: var(--surface-hover); }
+        .glass-select-container select { background: transparent; border: none; color: var(--text-main); font-weight: 700; font-size: 0.85rem; cursor: pointer; outline: none; padding-right: 4px; height: 100%; display: flex; align-items: center; }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); color: var(--text-main); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px); box-sizing: border-box; flex-shrink: 0; }
+        .theme-switch:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+
+        /* ── GLASS CARD (FIXED STABILITY) ── */
+        .glass-card {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 28px !important;
+            padding: 30px;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .glass-card:hover {
+                transform: translateY(-4px);
+                border-color: var(--border-highlight) !important;
+                box-shadow: 0 20px 45px -10px var(--glow-shadow) !important;
+            }
+        }
+        .section-card h2, .section-card h3 { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .section-card .subtitle { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px; font-weight: 500; }
+
+        /* ── RESPONSIVE TABLES (CRITICAL FIX) ── */
+        .table-responsive {
             width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            border-radius: 8px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
         }
-        .leaderboard-table {
-            min-width: 480px; /* Forces scroll inside the wrapper instead of the page */
-            width: 100%;
+        body.light-mode .table-responsive { background: rgba(0,0,0,0.02); }
+
+        table { width: 100%; font-size: 0.9rem; border-collapse: collapse; white-space: nowrap; min-width: 600px; }
+        th { font-size: 0.8rem; color: var(--text-muted); padding: 18px 16px; font-weight: 800; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); text-align: left; text-transform: uppercase; }
+        td { padding: 18px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.2s; color: var(--text-main); font-weight: 500; }
+        tbody tr { transition: background 0.2s; }
+        tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+        body.light-mode tbody tr:hover { background: rgba(0, 0, 0, 0.04); }
+        tr:last-child td { border-bottom: none; }
+
+        /* Table Action Buttons */
+        td button { padding: 8px 16px; border-radius: 10px; border: none; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 6px; }
+        td button.approve-btn, td button.btn-success { background: rgba(0, 255, 115, 0.15); color: var(--success); border: 1px solid rgba(0, 255, 115, 0.3); }
+        td button.approve-btn:hover, td button.btn-success:hover { background: var(--success); color: #000; box-shadow: 0 4px 15px rgba(0, 255, 115, 0.4); transform: translateY(-1px); }
+        td button.reject-btn, td button.btn-danger { background: rgba(255, 59, 48, 0.15); color: var(--danger); border: 1px solid rgba(255, 59, 48, 0.3); }
+        td button.reject-btn:hover, td button.btn-danger:hover { background: var(--danger); color: #fff; box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4); transform: translateY(-1px); }
+        td button.btn-primary { background: var(--accent-1); color: #000; box-shadow: 0 4px 10px rgba(0, 229, 255, 0.2); }
+        td button.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(0, 229, 255, 0.4); }
+
+        td img { border-radius: 8px; border: 1px solid var(--border); transition: transform 0.3s; }
+        td img:hover { transform: scale(1.1); box-shadow: var(--glow-shadow); cursor: pointer; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%) !important; }
+            .sidebar.open { transform: translateX(0) !important; }
+            .sidebar-close-btn { display: flex !important; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1999; transition: opacity 0.4s ease; }
+            .sidebar-overlay.active { display: block; }
+            .main-content { margin-left: 0 !important; padding: 24px 16px !important; max-width: 100vw !important; width: 100% !important; }
+            .top-bar { padding: 16px 20px; height: auto; flex-direction: column; align-items: stretch; border-radius: 20px; gap: 16px; }
+            .top-bar-mobile-header { display: flex; justify-content: space-between; align-items: center; width: 100%; height: auto; }
+            .top-bar-left { justify-content: flex-start; width: calc(100% - 50px); }
+            .top-bar h1 { font-size: 1.2rem; }
+            .mobile-menu-btn { display: flex !important; background: none; border: none; color: var(--text-main); cursor: pointer; margin-right: 12px; transition: transform 0.2s ease; }
+            .mobile-menu-btn:active { transform: scale(0.9); }
+            .mobile-theme-toggle { display: flex !important; }
+            .mobile-logo-container { display: flex !important; margin-right: 10px; align-items: center; justify-content: center; }
+            .desktop-theme-toggle { display: none !important; }
+            .top-bar-controls { width: 100% !important; display: flex !important; flex-flow: row wrap !important; gap: 10px !important; justify-content: flex-start !important; height: auto; }
+            .glass-select-container { flex: 1 1 auto !important; min-width: 120px !important; }
+            .automated-group { flex: 2 1 auto !important; display: flex !important; min-width: 180px !important; justify-content: space-between !important; }
         }
         @media (max-width: 768px) {
-            .leaderboard-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .leaderboard-selects {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-            }
-            .leaderboard-selects select {
-                width: 100%;
-                font-size: 0.85rem !important;
-                padding: 8px 10px !important;
-            }
+            .glass-card { padding: 20px 16px !important; border-radius: 20px !important; }
+            .section-card h2 { font-size: 1.3rem; }
         }
-        /* Dashboard Spacing */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
-        
-        /* Sidebar Logo */
-        .sidebar-header { margin-bottom: 40px; padding: 0 12px; }
-        .nav-links-wrapper { margin-bottom: 32px; }
-        .chat-driver-item:hover { background: rgba(79, 140, 255, 0.05) !important; }
-        .chat-driver-item.active { background: rgba(79, 140, 255, 0.1) !important; border-left: 4px solid var(--primary); }
-        .section-card h3 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 800;
-}
-
-.subtitle {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-bottom: 24px;
-    line-height: 1.6;
-}
-        .sidebar-header h2 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        /* Animation */
-        .background-animation {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
-                        radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
-        }
-        /* Automated Optimize Button */
-        .ai-optimize-btn {
-            background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
-            color: white !important;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .ai-optimize-btn:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
-            filter: brightness(1.1);
-        }
-        .ai-optimize-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
-        }
-        .ai-optimize-btn:hover::before {
-            left: 100%;
-        }
-        .ai-optimize-btn:active {
-            transform: translateY(0) scale(0.98);
-        }
-
-        /* Simulation Mode Switch */
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2); }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        input:focus + .slider { box-shadow: 0 0 1px #3b82f6; }
-        input:checked + .slider:before { transform: translateX(22px); }
-        
-        #sim-mode-toggle-container.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-        #sim-mode-toggle-container.active span { color: #3b82f6 !important; }
-        @media (max-width: 600px) {
-            .glass-card.section-card {
-                padding: 16px !important;
-            }
-            .section-card h2 {
-                font-size: 1.4rem;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr !important;
-            }
-        }
-        body.light-mode input, body.light-mode select, body.light-mode textarea, body.light-mode .pin-box {
-            color: #000000 !important;
-        }
-        .btn-action-details {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-        font-weight: 700;
-        font-size: 0.85rem;
-        transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        text-align: left;
-    }
-    .btn-action-details:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-        background: rgba(79, 140, 255, 0.1);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-    .btn-action-details .icon {
-        font-size: 1.2rem;
-    }
-    .btn-action-details:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-    .intel-block {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid var(--border);
-        padding: 16px;
-        border-radius: 16px;
-    }
-    .modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(12px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        padding: 20px;
-    }
-    .modal-box {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-        animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes modalIn {
-        from { transform: scale(0.9) translateY(20px); opacity: 0; }
-        to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .modal-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        cursor: pointer;
-        font-size: 1.4rem;
-        opacity: 0.5;
-        transition: 0.3s;
-        z-index: 100;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.1);
-    }
-    .modal-close:hover { 
-        opacity: 1; 
-        background: var(--danger);
-        color: white;
-    }
-</style>
-<link href="../css/premium_theme.css" rel="stylesheet">
-</link></link></link></head>
+    </style>
+</head>
 <body>
-<div class="background-animation"></div>
+
+<!-- ── BACKGROUND BLOBS ── -->
 <div class="bg-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
 </div>
-<div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
 <div class="dashboard-layout">
-<aside class="sidebar">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
         <div class="sidebar-header">
             <h2><span>Logistix</span></h2>
             <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
@@ -273,7 +247,7 @@
         </div>
 
         <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
-            <a class="nav-link active" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <span data-i18n="nav_analytics">Executive Analytics</span>
             </a>
@@ -305,7 +279,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                 <span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span>
             </a>
-            <a class="nav-link" data-layout-id="nav-verifications" href="manager_verifications.html">
+            <a class="nav-link active" data-layout-id="nav-verifications" href="manager_verifications.html">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
                 <span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span>
             </a>
@@ -350,8 +324,12 @@
             </a>
         </div>
     </aside>
-<main class="main-content" data-layout-container="main-sections">
-<header class="top-bar">
+
+    <!-- ── MAIN PANEL ── -->
+    <main class="main-content">
+
+        <!-- ── HEADER (TOP BAR) ── -->
+        <header class="top-bar">
             <div class="top-bar-mobile-header">
                 <div class="top-bar-left">
                     <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
@@ -359,16 +337,14 @@
                     </button>
                     <div class="mobile-logo-container">
                         <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
-                            <defs>
-                                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient>
-                            </defs>
+                            <defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient></defs>
                             <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
                         </svg>
                     </div>
                     <h1>
-                        <span class="split-text" data-i18n="dashboard">Dashboard</span>
+                        <span class="split-text text-shine-hover" data-i18n="dashboard">Dashboard</span>
                         <span class="title-separator">/</span>
-                        <span id="manager-name" class="manager-name-hl text-shine-hover">---</span>
+                        <span class="manager-name-hl split-text text-shine-hover">Verifications</span>
                     </h1>
                 </div>
 
@@ -378,131 +354,103 @@
             </div>
 
             <div class="top-bar-controls">
-                <button class="glass-btn" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()">
+                <button class="glass-btn" data-i18n="modify_dashboard" onclick="window.logistixLayout && window.logistixLayout.toggleEditMode()">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     Modify Dashboard
                 </button>
 
-                <!-- Language Selector -->
                 <div class="glass-select-container">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-                    <select onchange="setLanguage(this.value)" aria-label="Language">
+                    <select onchange="window.setLanguage && setLanguage(this.value)" aria-label="Language">
                         <option value="en">English (EN)</option>
-                        <option value="bn">বাংলা (BN)</option>
                         <option value="hi">हिंदी (HI)</option>
-                        <option value="te">తెలుగు (TE)</option>
-                        <option value="mr">मराठी (MR)</option>
-                        <option value="ta">தமிழ் (TA)</option>
-                        <option value="gu">ગુજરાતી (GU)</option>
-                        <option value="kn">ಕನ್ನಡ (KN)</option>
-                        <option value="or">ଓଡ଼ିଆ (OR)</option>
-                        <option value="ml">മലയാളം (ML)</option>
-                        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
-                        <option value="as">অসমীয়া (AS)</option>
-                        <option value="mai">मैथिली (MAI)</option>
-                        <option value="sat">संताली (SAT)</option>
-                        <option value="ks">کٲشُر (KS)</option>
-                        <option value="ur">اردو (UR)</option>
-                        <option value="ne">नेपाली (NE)</option>
-                        <option value="sa">संस्कृतम् (SA)</option>
-                        <option value="sd">سنڌी (SD)</option>
-                        <option value="gom">कोंकणी (GOM)</option>
-                        <option value="doi">डोगरी (DOI)</option>
-                        <option value="mni">মৈতৈলোন (MNI)</option>
                     </select>
                 </div>
 
-                <!-- Voice Control -->
                 <div class="automated-group" style="display: flex; gap: 8px;">
-                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()">
+                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" onclick="window.logistixVoice && window.logistixVoice.toggle()">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                         Automated Control
                     </button>
-                    <button class="theme-switch help-btn" onclick="window.logistixVoice.showInstructions()" title="Voice Help">
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice && window.logistixVoice.showInstructions()" title="Voice Help">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                     </button>
                 </div>
 
-                <!-- Desktop Theme Switcher -->
                 <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
                 </div>
             </div>
         </header>
-<!-- Voice Control Button & Help -->
-<div style="display:flex; align-items:center; gap:6px;">
-<button class="glass-card" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);">🎙️ Automated Control</button>
-<button onclick="window.logistixVoice.showInstructions()" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;" title="Voice Help">?</button>
+
+        <!-- ── VERIFICATIONS CONTENT SECTION ── -->
+        <section class="section-content" data-layout-id="section-verifications" id="verifications">
+            <div data-layout-container="verifications-content">
+
+                <!-- ── MANUAL ML VERIFICATIONS ── -->
+                <div class="glass-card section-card" data-layout-id="verifications-manual" style="border-top: 4px solid var(--accent-1); margin-bottom: 30px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h2 class="text-shine-hover split-text" data-i18n="manual_verifications_title" style="margin:0; font-size:1.6rem; font-weight:800; color:var(--text-main);">Manual ML Verifications</h2>
+                            <p class="subtitle" data-i18n="manual_verifications_desc" style="margin-top:6px; margin-bottom:0;">Review number plates that the automated system could not confidently read.</p>
+                        </div>
+                    </div>
+
+                    <!-- Table Responsive Wrapper to prevent overflow -->
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="platform_driver">Driver</th>
+                                    <th data-i18n="label_number_plate">Vehicle Plate</th>
+                                    <th data-i18n="label_image">Image</th>
+                                    <th data-i18n="th_action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verifications-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ── VERIFIED VEHICLES REGISTRY ── -->
+                <div class="glass-card section-card" data-layout-id="verifications-verified" style="border-top: 4px solid var(--success);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h2 class="text-shine-hover split-text" data-i18n="verified_vehicles_title" style="margin:0; font-size:1.6rem; font-weight:800; color:var(--text-main);">Verified Fleet Registry</h2>
+                            <p class="subtitle" data-i18n="verified_vehicles_desc" style="margin-top:6px; margin-bottom:0;">Master list of all vehicles and drivers who have successfully completed security verification.</p>
+                        </div>
+                    </div>
+
+                    <!-- Table Responsive Wrapper to prevent overflow -->
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="vehicle_type">Vehicle Type</th>
+                                    <th data-i18n="label_number_plate">Number Plate</th>
+                                    <th data-i18n="th_id">System ID</th>
+                                    <th data-i18n="th_linked_driver">Verified Driver</th>
+                                    <th data-i18n="th_action" style="text-align:right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="verified-vehicles-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
 </div>
-<div class="theme-switch notranslate" id="theme-toggle" style="margin:0;" title="Toggle Light/Dark Mode">🌙</div>
-</div>
-<!-- Hub Leaves Section -->
-<!-- Analytics Section -->
-<!-- Warehouses Section -->
-<!-- Shipments Section -->
-<!-- Receivers Section -->
-<!-- Drivers & Vehicles Section -->
-<!-- Verifications Section -->
-<section class="section-content" data-layout-id="section-verifications" id="verifications">
-<div data-layout-container="verifications-content">
-<div class="glass-card section-card" data-layout-id="verifications-manual">
-<h2 data-i18n="manual_verifications_title" style="margin:0; font-size:1.6rem; color:var(--accent);">Manual ML Verifications</h2>
-<div style="width:50px; height:4px; background:var(--accent); margin:16px 0; border-radius:2px;"></div>
-<p class="subtitle" data-i18n="manual_verifications_desc" style="margin-bottom:40px; font-size:0.95rem;">Review number plates that the automated system could not confidently read.</p>
-<div class="table-container">
-<table>
-<thead><tr><th data-i18n="platform_driver">Driver</th><th data-i18n="label_number_plate">Vehicle Plate</th><th data-i18n="label_image">Image</th><th data-i18n="th_action">Action</th></tr></thead>
-<tbody id="verifications-table-body"></tbody>
-</table>
-</div>
-</div>
-<div class="glass-card section-card" data-layout-id="verifications-verified" style="margin-top:32px;">
-<h2 data-i18n="verified_vehicles_title" style="margin:0; font-size:1.6rem; color:var(--success);">Verified Vehicles</h2>
-<div style="width:50px; height:4px; background:var(--success); margin:16px 0; border-radius:2px;"></div>
-<p class="subtitle" data-i18n="verified_vehicles_desc" style="margin-bottom:32px; font-size:0.95rem;">List of all vehicles successfully verified automatically or Manual review.</p>
-<div style="margin-top:40px; border-top:1px solid var(--border); padding-top:30px;">
-<h3 data-i18n="title_verified_fleet" style="margin:0 0 10px 0; color:var(--success);">Verified Fleet Registry</h3>
-<p data-i18n="verified_vehicles_desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Master list of all vehicles and drivers who have successfully completed security verification.</p>
-<div class="table-container" style="background:rgba(72, 187, 120, 0.05); border-radius:12px; border:1px solid rgba(72, 187, 120, 0.1);">
-<table style="width:100%;">
-<thead>
-<tr style="text-align:left; border-bottom:1px solid var(--border);">
-<th data-i18n="vehicle_type" style="padding:12px;">Vehicle Type</th>
-<th data-i18n="label_number_plate" style="padding:12px;">Number Plate</th>
-<th data-i18n="th_id" style="padding:12px;">System ID</th>
-<th data-i18n="th_linked_driver" style="padding:12px;">Verified Driver</th>
-<th data-i18n="th_action" style="padding:12px; text-align:right;">Action</th>
-</tr>
-</thead>
-<tbody id="verified-vehicles-table-body">
-<!-- Verified vehicles injected here -->
-</tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- Weather Fleet Map Section -->
-<!-- Messages Section -->
-<!-- Leaderboard Section -->
-<!-- Smart Contract Ledger Section -->
-<!-- Strategy Oracle Section -->
-<!-- Operational Strategy Tracker Section -->
-<!-- System Settings Section -->
-<!-- Network Resilience Section -->
-<!-- Bharat-Fuel Oracle Section -->
-<!-- Payments Section -->
-<!-- Safety Center Section -->
-</main>
-</div>
+
 <div id="alert-container"></div>
-<!-- Add Warehouse Modal -->
-<!-- Edit Warehouse Modal -->
-<!-- Message Modal -->
-<!-- Old message-modal kept for compatibility (hidden by default) -->
-<!-- Profile Deep-Dive Modal -->
-<!-- Scripts -->
+
+<!-- ── SCRIPTS ── -->
 <script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
 <script src="../js/voice.js?v=2.2"></script>
@@ -510,34 +458,146 @@
 <script src="../js/custom_layout.js?v=2.2"></script>
 <script src="../js/manager_base.js"></script>
 <script src="../js/manager_verifications.js"></script>
+
 <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            window.logistixLayout.init('manager');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize layout engine
+        if(window.logistixLayout) window.logistixLayout.init('manager');
+
+        // Setup Mobile Sidebar
+        window.toggleMobileSidebar = function(state) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if(sidebar) {
+                if(state) {
+                    sidebar.classList.add('open');
+                    overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            }
+        };
+
+        // Split text animation setup (Stable colors, no clipping)
+        function splitTextNodes(element) {
+            if (element.classList.contains('is-split')) return;
+            const processNode = (node) => {
+                if (node.nodeType === 3) {
+                    const text = node.nodeValue;
+                    if (!text.trim() && !text.includes(' ')) return;
+                    const fragment = document.createDocumentFragment();
+                    const words = text.split(/(\s+)/);
+                    words.forEach(word => {
+                        if (/^\s+$/.test(word)) {
+                            const spaceSpan = document.createElement('span');
+                            spaceSpan.className = 'char space';
+                            spaceSpan.innerHTML = '&nbsp;';
+                            fragment.appendChild(spaceSpan); return;
+                        }
+                        if (word === '') return;
+                        const wordSpan = document.createElement('span');
+                        wordSpan.style.display = 'inline-block';
+                        wordSpan.style.whiteSpace = 'nowrap';
+                        Array.from(word).forEach(char => {
+                            const charSpan = document.createElement('span');
+                            charSpan.className = 'char';
+                            charSpan.textContent = char;
+                            wordSpan.appendChild(charSpan);
+                        });
+                        fragment.appendChild(wordSpan);
+                    });
+                    node.parentNode.replaceChild(fragment, node);
+                } else if (node.nodeType === 1) {
+                    if (node.classList.contains('char') || node.tagName === 'BR') return;
+                    Array.from(node.childNodes).forEach(processNode);
+                }
+            };
+            Array.from(element.childNodes).forEach(processNode);
+            element.classList.add('is-split');
+        }
+
+        function attachWavePhysics(container) {
+            const chars = Array.from(container.querySelectorAll('.char'));
+            if (chars.length === 0) return;
+            let charBoxes = [];
+            let activeIndex = -1;
+
+            const updateBoxes = () => {
+                charBoxes = chars.map(c => {
+                    const rect = c.getBoundingClientRect();
+                    return { left: rect.left - 4, right: rect.right + 4, top: rect.top - 12, bottom: rect.bottom + 12 };
+                });
+            };
+
+            const clearClasses = () => {
+                if (activeIndex > -1) {
+                    chars[activeIndex].classList.remove('hovered');
+                    if (chars[activeIndex - 1]) chars[activeIndex - 1].classList.remove('neighbor');
+                    if (chars[activeIndex + 1]) chars[activeIndex + 1].classList.remove('neighbor');
+                    activeIndex = -1;
+                }
+            };
+
+            const setActive = (index) => {
+                if (activeIndex === index) return;
+                clearClasses();
+                activeIndex = index;
+                if (index > -1) {
+                    chars[index].classList.add('hovered');
+                    if (chars[index - 1]) chars[index - 1].classList.add('neighbor');
+                    if (chars[index + 1]) chars[index + 1].classList.add('neighbor');
+                }
+            };
+
+            const handleMove = (clientX, clientY) => {
+                for (let i = 0; i < charBoxes.length; i++) {
+                    const b = charBoxes[i];
+                    if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
+                        setActive(i); return;
+                    }
+                }
+                clearClasses();
+            };
+
+            container.addEventListener('mouseenter', updateBoxes, { passive: true });
+            container.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY), { passive: true });
+            container.addEventListener('mouseleave', clearClasses, { passive: true });
+        }
+
+        document.querySelectorAll('.split-text').forEach(el => {
+            splitTextNodes(el);
+            attachWavePhysics(el);
         });
-    </script>
-<script>
-const btn = document.getElementById('theme-toggle');
+    });
 
-function setTheme(mode) {
-    if (mode === 'light') {
-        document.body.classList.add('light-mode');
-        btn.innerText = '☀️';
-    } else {
-        document.body.classList.remove('light-mode');
-        btn.innerText = '🌙';
+    // ── THEME SWITCH SYSTEM ──
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
+        });
+
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
     }
-    localStorage.setItem('theme', mode);
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
-}
 
-btn.onclick = () => {
-    const isLight = document.body.classList.contains('light-mode');
-    setTheme(isLight ? 'dark' : 'light');
-};
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
 
-// Initial state
-setTheme(localStorage.getItem('theme') || 'dark');
+    // Initialize Theme
+    setTheme(localStorage.getItem('theme') || 'dark');
 </script>
-<script src="../js/premium_theme.js"></script>
 </body>
 </html>

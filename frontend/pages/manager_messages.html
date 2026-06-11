@@ -1,270 +1,347 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<link href="../favicon.svg" rel="icon" type="image/svg+xml"/>
-<link href="../favicon.png" rel="icon" type="image/png"/>
-<link href="../apple-touch-icon.png" rel="apple-touch-icon"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Manager Dashboard | Logistix</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
-<link href="../css/style.css" rel="stylesheet"/>
-<!-- Leaflet CSS & Draw CSS -->
-<style>
-        #map { height: 450px; width: 100%; border-radius: 20px; margin-top: 1rem; border: 1px solid var(--border); z-index: 1; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Messages | Logistix Manager</title>
 
-        .hover-card {
-            position: absolute;
-            z-index: 10002;
-            width: 260px;
-            padding: 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-            display: none;
-            pointer-events: none;
-            backdrop-filter: blur(20px);
-        }
-        .driver-name-hover:hover .hover-card { display: block; }
-        .hover-card.low-fatigue { border-top: 4px solid var(--success); }
-        .hover-card.mid-fatigue { border-top: 4px solid var(--warning); }
-        .hover-card.high-fatigue { border-top: 4px solid var(--danger); }
-        
-        /* Specific Table Overrides */
-        .leaderboard-table tr:first-child { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--warning); }
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.json">
 
-        /* Leaderboard responsive layout */
-        .leaderboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            gap: 12px;
-            flex-wrap: wrap;
+    <!-- Premium Fonts matching Analytics -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- External Stylesheets Link -->
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        :root {
+            /* Dark Mode (Ultra-Deep Navy & Bioluminescent Palette) */
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+
+            /* Accents */
+            --accent-1: #00e5ff;
+            --accent-2: #ff9900;
+            --accent-3: #00ff73;
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(15, 20, 35, 0.45);
+            --surface-hover: rgba(25, 33, 55, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.18);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
         }
-        .leaderboard-selects {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+
+        body.light-mode {
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+
+            --accent-1: #0ea5e9;
+            --accent-2: #f59e0b;
+            --accent-3: #10b981;
+
+            --surface: rgba(255, 255, 255, 0.75);
+            --surface-hover: rgba(255, 255, 255, 0.98);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-highlight: rgba(0, 0, 0, 0.2);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
         }
-        /* The table wrapper scrolls horizontally on its own — page stays still */
-        .leaderboard-table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            border-radius: 8px;
+
+        /* ── RESET & BASE ENFORCEMENT ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; overflow-x: hidden !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            -webkit-font-smoothing: antialiased;
         }
-        .leaderboard-table {
-            min-width: 480px; /* Forces scroll inside the wrapper instead of the page */
-            width: 100%;
+
+        h1, h2, h3, h4, h5, h6, .split-text {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
         }
-        @media (max-width: 768px) {
-            .leaderboard-header {
-                flex-direction: column;
-                align-items: stretch;
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+        /* ── HIGH PERFORMANCE BACKDROP ── */
+        .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg-base); transition: background 0.6s ease; }
+        .blob { position: absolute; filter: blur(55px); opacity: 0.6; will-change: transform, border-radius; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateZ(0); }
+        body.light-mode .blob { opacity: 0.55; filter: blur(45px); }
+        .blob-1 { top: -10%; left: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-1); animation: wavePush1 15s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -10%; right: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-2); animation: wavePush2 18s infinite alternate ease-in-out; }
+        .blob-3 { top: 25%; left: 20%; width: max(50vw, 350px); height: max(50vh, 350px); background: var(--accent-3); animation: wavePush3 22s infinite alternate ease-in-out; }
+        @keyframes wavePush1 { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(5vw, 30vh, 0) scale(0.95); } }
+        @keyframes wavePush2 { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); } }
+        @keyframes wavePush3 { 0% { transform: translate3d(0,0,0) scale(0.95); } 100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); } }
+        #interactive-grid { position: fixed; inset: 0; z-index: 1; pointer-events: none; width: 100%; height: 100%; }
+
+        /* ── INTERACTIVE TEXT ── */
+        .text-shine-hover { display: inline-block; transition: transform 0.15s ease; }
+        @media (hover: hover) and (pointer: fine) {
+            .text-shine-hover:hover {
+                transform: translateY(-2px);
+                background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+                background-size: 300% 100%;
+                -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                animation: textShineSweep 2s linear infinite;
             }
-            .leaderboard-selects {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-            }
-            .leaderboard-selects select {
-                width: 100%;
-                font-size: 0.85rem !important;
-                padding: 8px 10px !important;
-            }
         }
-        /* Dashboard Spacing */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
-        
-        /* Sidebar Logo */
-        .sidebar-header { margin-bottom: 40px; padding: 0 12px; }
-        .nav-links-wrapper { margin-bottom: 32px; }
-        .chat-driver-item:hover { background: rgba(79, 140, 255, 0.05) !important; }
-        .chat-driver-item.active { background: rgba(79, 140, 255, 0.1) !important; border-left: 4px solid var(--primary); }
-        .section-card h3 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 800;
-}
+        @keyframes textShineSweep { to { background-position: 300% 50%; } }
 
-.subtitle {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-bottom: 24px;
-    line-height: 1.6;
-}
-        .sidebar-header h2 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        /* ── LAYOUT ── */
+        .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
 
-        /* Animation */
-        .background-animation {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
-                        radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: 280px !important; background: rgba(8, 11, 22, 0.7) !important; border-right: 1px solid var(--border) !important;
+            backdrop-filter: blur(30px) !important; -webkit-backdrop-filter: blur(30px) !important;
+            display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0;
+            z-index: 2000 !important; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        /* Automated Optimize Button */
-        .ai-optimize-btn {
-            background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
-            color: white !important;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.75) !important; border-right: 1px solid var(--border) !important; }
+        .sidebar-header { padding: 30px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 { font-size: 1.7rem !important; font-weight: 800 !important; margin: 0; background: linear-gradient(135deg, var(--text-main), var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sidebar-close-btn { display: none; background: none; border: none; color: var(--text-main); cursor: pointer; transition: transform 0.2s ease; }
+        .nav-links-wrapper { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--text-muted) !important; font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: all 0.3s; border: 1px solid transparent; }
+        .nav-link svg { width: 20px; height: 20px; stroke-width: 1.8; stroke: currentColor; fill: none; transition: transform 0.3s; }
+        .nav-link:hover { color: var(--text-main) !important; background: var(--surface-hover); border-color: var(--border-highlight); transform: translateX(4px); }
+        .nav-link:hover svg { transform: scale(1.1); }
+        .nav-link.active { color: var(--text-main) !important; background: var(--surface); border-color: var(--border-highlight); border-left: 3px solid var(--accent-1) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+        .sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
+
+        /* ── MAIN CONTENT & TOP BAR ── */
+        .main-content {
+            flex: 1; margin-left: 280px; padding: 40px; width: auto; max-width: calc(100vw - 280px);
+            box-sizing: border-box; overflow-x: hidden !important; transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .top-bar {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px 30px; display: flex;
+            align-items: center; justify-content: space-between; gap: 24px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            margin-bottom: 30px; box-shadow: var(--glow-shadow);
+        }
+        .mobile-menu-btn, .mobile-theme-toggle, .mobile-logo-container { display: none; }
+        .top-bar-mobile-header { display: flex; align-items: center; flex: 1; justify-content: space-between; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; }
+        .top-bar-left h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; margin: 0; }
+        .title-separator { opacity: 0.3; }
+        .manager-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; align-items: center; gap: 14px; }
+
+        /* ── BUTTONS & INPUTS ── */
+        .glass-btn {
+            background: var(--surface); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px;
+            border-radius: 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: all 0.3s; backdrop-filter: blur(10px);
+        }
+        .glass-btn:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+        .glass-btn:active { transform: scale(0.96); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-1), #007bff);
+            color: #000; border: none; padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 0.9rem;
+            cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+        }
+        body.light-mode .btn-primary { color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--neon-glow); filter: brightness(1.1); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .glass-select-container {
+            display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border);
+            padding: 0 16px; border-radius: 14px; height: 44px; backdrop-filter: blur(10px); transition: all 0.3s;
+        }
+        .glass-select-container:hover { border-color: var(--border-highlight); background: var(--surface-hover); }
+        .glass-select-container select { background: transparent; border: none; color: var(--text-main); font-weight: 700; font-size: 0.85rem; cursor: pointer; outline: none; height: 100%; padding: 8px 0; }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch {
+            width: 44px; height: 44px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border);
+            color: var(--text-main); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s;
+        }
+        .theme-switch:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+
+        /* ── POLISHED INPUTS ── */
+        .polished-glass-input {
+            flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-main); padding: 14px 20px;
+            border-radius: 14px; font-family: inherit; font-size: 0.95rem; transition: all 0.3s; width: 100%; box-sizing: border-box;
+        }
+        body.light-mode .polished-glass-input { background: rgba(255,255,255,0.6); border-color: var(--border-highlight); color: #000; }
+        .polished-glass-input:focus { border-color: var(--accent-1); outline: none; box-shadow: 0 0 0 3px var(--neon-glow); background: var(--surface); }
+
+        /* ── BADGES & MISC ── */
+        .badge { background: var(--accent-1); color: #000; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; margin-left: auto; box-shadow: 0 0 10px var(--neon-glow); }
+        body.light-mode .badge { color: #fff; }
+
+        .modal-glass {
+            background: var(--surface) !important; border: 1px solid var(--border) !important; backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important; color: var(--text-main); border-radius: 28px !important;
+        }
+
+        /* ── SPECIFIC CHAT UI OVERRIDES ── */
+        .chat-shell {
+            background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 28px !important;
+            backdrop-filter: blur(24px) !important; -webkit-backdrop-filter: blur(24px) !important; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            transition: all 0.4s ease; margin-bottom: 30px;
+
+            /* Flexible Layout that stops off-screen scrolling */
             display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            position: relative;
+            height: calc(100vh - 180px);
+            min-height: 500px;
+            padding: 0 !important; /* Override standard card padding */
             overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-            white-space: nowrap;
-            flex-shrink: 0;
         }
-        .ai-optimize-btn:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
-            filter: brightness(1.1);
-        }
-        .ai-optimize-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
-        }
-        .ai-optimize-btn:hover::before {
-            left: 100%;
-        }
-        .ai-optimize-btn:active {
-            transform: translateY(0) scale(0.98);
+        .chat-shell:hover {
+            border-color: var(--border-highlight) !important;
+            box-shadow: 0 20px 45px -10px var(--glow-shadow) !important;
+            transform: translateY(-4px);
         }
 
-        /* Simulation Mode Switch */
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2); }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        input:focus + .slider { box-shadow: 0 0 1px #3b82f6; }
-        input:checked + .slider:before { transform: translateX(22px); }
-        
-        #sim-mode-toggle-container.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-        #sim-mode-toggle-container.active span { color: #3b82f6 !important; }
-        @media (max-width: 600px) {
-            .glass-card.section-card {
-                padding: 16px !important;
-            }
-            .section-card h2 {
-                font-size: 1.4rem;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr !important;
-            }
+        .chat-sidebar {
+            width: 340px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.15);
         }
-        body.light-mode input, body.light-mode select, body.light-mode textarea, body.light-mode .pin-box {
-            color: #000000 !important;
+        body.light-mode .chat-sidebar { background: rgba(255,255,255,0.4); }
+
+        .chat-sidebar-header { padding: 24px; border-bottom: 1px solid var(--border); }
+
+        .chat-sidebar-actions {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        .btn-action-details {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-        font-weight: 700;
-        font-size: 0.85rem;
-        transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        text-align: left;
-    }
-    .btn-action-details:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-        background: rgba(79, 140, 255, 0.1);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-    .btn-action-details .icon {
-        font-size: 1.2rem;
-    }
-    .btn-action-details:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-    .intel-block {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid var(--border);
-        padding: 16px;
-        border-radius: 16px;
-    }
-    .modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(12px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        padding: 20px;
-    }
-    .modal-box {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-        animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes modalIn {
-        from { transform: scale(0.9) translateY(20px); opacity: 0; }
-        to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .modal-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        cursor: pointer;
-        font-size: 1.4rem;
-        opacity: 0.5;
-        transition: 0.3s;
-        z-index: 100;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.1);
-    }
-    .modal-close:hover { 
-        opacity: 1; 
-        background: var(--danger);
-        color: white;
-    }
-</style>
-<link href="../css/premium_theme.css" rel="stylesheet">
-</link></head>
+
+        /* Pre-styled chat driver items generated by JS */
+        .chat-driver-item { padding: 16px 24px; border-bottom: 1px solid var(--border); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 14px; }
+        .chat-driver-item:hover { background: var(--surface-hover) !important; }
+        .chat-driver-item.active { background: rgba(0, 229, 255, 0.1) !important; border-left: 4px solid var(--accent-1) !important; }
+
+        .chat-window-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chat-header-bar {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(255,255,255,0.02);
+        }
+
+        .chat-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-1);
+            object-fit: cover;
+        }
+
+        .chat-input-area {
+            padding: 24px 30px;
+            border-top: 1px solid var(--border);
+            background: rgba(0,0,0,0.1);
+        }
+
+        .chat-input-row { display: flex; align-items: center; gap: 12px; }
+        .chat-icon-btn {
+            background: var(--surface); border: 1px solid var(--border); color: var(--text-main); width: 48px; height: 48px;
+            border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; transition: all 0.3s; flex-shrink: 0;
+        }
+        .chat-icon-btn:hover { background: var(--surface-hover); border-color: var(--accent-1); transform: translateY(-2px); box-shadow: 0 4px 15px var(--neon-glow); }
+        .chat-text-input { flex: 1; margin-bottom: 0 !important; }
+
+        /* Generic message bubble pre-styling for JS output */
+        .message-bubble { padding: 12px 18px; border-radius: 16px; margin-bottom: 12px; max-width: 80%; line-height: 1.5; font-size: 0.95rem; }
+        .message-bubble.sent { background: var(--accent-1); color: #000; margin-left: auto; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2); }
+        .message-bubble.received { background: var(--surface); border: 1px solid var(--border); color: var(--text-main); margin-right: auto; border-bottom-left-radius: 4px; }
+
+
+        /* ── RESPONSIVE OVERRIDES ── */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%) !important; }
+            .sidebar.open { transform: translateX(0) !important; }
+            .sidebar-close-btn { display: flex !important; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1999; }
+            .sidebar-overlay.active { display: block; }
+            .main-content { margin-left: 0 !important; padding: 24px 16px !important; max-width: 100vw !important; width: 100% !important; }
+            .top-bar { padding: 16px 20px; flex-direction: column; align-items: stretch; border-radius: 20px; gap: 16px; margin-bottom: 24px; }
+            .top-bar-mobile-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .top-bar-left { justify-content: flex-start; width: calc(100% - 50px); }
+            .top-bar h1 { font-size: 1.2rem; }
+            .mobile-menu-btn { display: flex !important; background: none; border: none; color: var(--text-main); cursor: pointer; margin-right: 12px; }
+            .mobile-theme-toggle { display: flex !important; }
+            .mobile-logo-container { display: flex !important; margin-right: 10px; align-items: center; justify-content: center; }
+            .desktop-theme-toggle { display: none !important; }
+            .top-bar-controls { width: 100% !important; display: flex !important; flex-flow: row wrap !important; gap: 10px !important; justify-content: flex-start !important; }
+            .glass-select-container { flex: 1 1 auto !important; min-width: 120px !important; }
+            .automated-group { flex: 2 1 auto !important; display: flex !important; min-width: 180px !important; justify-content: space-between !important; }
+
+            /* Responsive Chat Container */
+            .chat-shell { flex-direction: column; height: calc(100vh - 120px); }
+            .chat-sidebar { width: 100%; flex: 1; border-right: none; border-bottom: 1px solid var(--border); }
+            .chat-window-panel { display: none; position: absolute; inset: 0; background: var(--bg-base); z-index: 10; }
+            .chat-window-panel.active { display: flex; }
+            .chat-back-btn { display: flex !important; background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; padding-right: 10px; }
+        }
+
+        @media (min-width: 1025px) {
+            .chat-back-btn { display: none !important; }
+        }
+    </style>
+</head>
 <body>
-<div class="background-animation"></div>
+
+<!-- ── ANIMATED HIGH PERF BLOB BACKDROP ── -->
 <div class="bg-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
 </div>
-<div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+<!-- ── INTERACTIVE CANVAS GRID ── -->
+<canvas id="interactive-grid"></canvas>
+
 <div class="dashboard-layout">
-<aside class="sidebar">
+
+    <!-- Mobile Sidebar Blur Shield Overlay -->
+    <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
         <div class="sidebar-header">
             <h2><span>Logistix</span></h2>
             <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
@@ -273,7 +350,7 @@
         </div>
 
         <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
-            <a class="nav-link active" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <span data-i18n="nav_analytics">Executive Analytics</span>
             </a>
@@ -301,7 +378,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
                 <span data-i18n="nav_leaderboard">Leaderboards</span>
             </a>
-            <a class="nav-link" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages">
+            <a class="nav-link active" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                 <span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span>
             </a>
@@ -350,8 +427,12 @@
             </a>
         </div>
     </aside>
-<main class="main-content" data-layout-container="main-sections">
-<header class="top-bar">
+
+    <!-- ── MAIN PANEL ── -->
+    <main class="main-content" data-layout-container="main-sections">
+
+        <!-- ── HEADER (TOP BAR) ── -->
+        <header class="top-bar">
             <div class="top-bar-mobile-header">
                 <div class="top-bar-left">
                     <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
@@ -366,7 +447,7 @@
                         </svg>
                     </div>
                     <h1>
-                        <span class="split-text" data-i18n="dashboard">Dashboard</span>
+                        <span class="text-shine-hover" data-i18n="nav_messages">Messages</span>
                         <span class="title-separator">/</span>
                         <span id="manager-name" class="manager-name-hl text-shine-hover">---</span>
                     </h1>
@@ -429,89 +510,81 @@
                 </div>
             </div>
         </header>
-<!-- Voice Control Button & Help -->
-<div style="display:flex; align-items:center; gap:6px;">
-<button class="glass-card" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);">🎙️ Automated Control</button>
-<button onclick="window.logistixVoice.showInstructions()" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;" title="Voice Help">?</button>
+
+        <!-- ── EXECUTIVES MESSAGES INTERFACE ── -->
+        <section class="section-content" id="messages">
+            <!-- ── Unified Chat Shell ── -->
+            <div class="chat-shell">
+
+                <!-- ── Driver List Panel ── -->
+                <div class="chat-sidebar" id="chat-sidebar">
+                    <div class="chat-sidebar-header">
+                        <h2 data-i18n="driver_comm_title" style="margin:0; font-size:1.3rem; color:var(--accent-1); letter-spacing:-0.02em; font-family: 'Space Grotesk', sans-serif;">Driver Communications</h2>
+                        <div style="width:36px; height:3px; background:var(--accent-1); margin:10px 0 6px 0; border-radius:2px;"></div>
+                        <p data-i18n="driver_comm_desc" style="margin:0; font-size:0.85rem; color:var(--text-muted); line-height:1.4;">Real-time dispatch coordination.</p>
+                    </div>
+
+                    <!-- Search + Broadcast -->
+                    <div class="chat-sidebar-actions">
+                        <input class="polished-glass-input" data-i18n-placeholder="search_driver_name" id="driver-chat-search" oninput="filterDriverChatList()" placeholder="🔍 Search driver by name..." type="text"/>
+                        <button class="btn-primary" data-i18n="btn_broadcast" onclick="openBroadcastModal()" style="width:100%; justify-content:center;">
+                            📢 Message Everyone
+                        </button>
+                    </div>
+
+                    <!-- Driver List Container -->
+                    <div id="chat-driver-list" style="flex:1; overflow-y:auto; overflow-x:hidden;">
+                        <div style="padding:20px; text-align:center; color:var(--text-muted); font-size:0.85rem;">Loading drivers...</div>
+                    </div>
+                </div>
+
+                <!-- ── Chat Window Panel ── -->
+                <div class="chat-window-panel" id="chat-window">
+
+                    <!-- Chat Header (shows when driver selected) -->
+                    <div class="chat-header-bar" id="chat-header" style="display:none;">
+                        <!-- Mobile back button -->
+                        <button class="chat-back-btn" onclick="closeMobileChat()" title="Back">←</button>
+                        <img class="chat-avatar" id="chat-driver-avatar" src="" alt="Driver"/>
+                        <div style="flex:1; min-width:0;">
+                            <h4 id="chat-driver-name" class="text-shine-hover" onclick="viewFullProfile('driver', selectedDriverChatId)" style="margin:0; font-size:1.1rem; cursor:pointer; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Driver Name</h4>
+                            <p id="chat-driver-status" style="margin:4px 0 0 0; font-size:0.75rem; color:var(--success); font-weight: 700;">● Active Route</p>
+                        </div>
+                    </div>
+
+                    <!-- Messages Stream Container -->
+                    <div id="chat-messages-container" style="flex:1; overflow-y:auto; padding:30px; display:none; flex-direction:column;"></div>
+
+                    <!-- Empty State Placeholder -->
+                    <div id="chat-placeholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); gap:16px;">
+                        <div style="font-size:4rem; filter:drop-shadow(0 0 20px var(--neon-glow));">💬</div>
+                        <p data-i18n="select_driver_msg" style="font-size:1.1rem; text-align:center; font-family: 'Space Grotesk', sans-serif;">Select a driver to initiate secure communications</p>
+                    </div>
+
+                    <!-- Chat Input Controls -->
+                    <div class="chat-input-area" id="chat-input-area" style="display:none;">
+                        <div id="main-chat-media-preview" style="display:none; margin-bottom:12px; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:14px; align-items:center; gap:12px;"></div>
+
+                        <div class="chat-input-row">
+                            <button class="chat-icon-btn" onclick="mainChatPickPhoto()" title="Attach Document/Photo">📷</button>
+                            <button class="chat-icon-btn" id="main-chat-voice-btn" onclick="mainChatToggleRecording()" title="Record Dispatch Audio">🎙️</button>
+
+                            <input accept="image/*" id="main-chat-photo-input" onchange="mainChatHandlePhoto(this)" style="display: none;" type="file"/>
+
+                            <input class="polished-glass-input chat-text-input" data-i18n-placeholder="placeholder_message" id="manager-chat-input" onkeydown="if(event.key==='Enter')sendMessageToSelectedDriver()" placeholder="Type dispatch instructions..." type="text"/>
+
+                            <button class="btn-primary" data-i18n="btn_send" onclick="sendMessageToSelectedDriver()" style="height: 48px; border-radius: 14px;">Send 🚀</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
 </div>
-<div class="theme-switch notranslate" id="theme-toggle" style="margin:0;" title="Toggle Light/Dark Mode">🌙</div>
-</div>
-<!-- Hub Leaves Section -->
-<!-- Hub Leaves Section -->
-<!-- Analytics Section -->
-<!-- Warehouses Section -->
-<!-- Shipments Section -->
-<!-- Receivers Section -->
-<!-- Drivers & Vehicles Section -->
-<!-- Verifications Section -->
-<!-- Weather Fleet Map Section -->
-<!-- Messages Section -->
-<section class="section-content" id="messages">
-<div class="chat-shell glass-card section-card">
-<!-- ── Driver List Panel ─────────────────────────────── -->
-<div class="chat-sidebar" id="chat-sidebar">
-<!-- Header -->
-<div class="chat-sidebar-header">
-<div>
-<h2 data-i18n="driver_comm_title" style="margin:0; font-size:1.3rem; color:var(--primary); letter-spacing:-0.02em;">Driver Communications</h2>
-<div style="width:36px; height:3px; background:var(--primary); margin:10px 0 6px 0; border-radius:2px;"></div>
-<p data-i18n="driver_comm_desc" style="margin:0; font-size:0.8rem; color:var(--muted); line-height:1.4;">Real-time chat with active drivers.</p>
-</div>
-</div>
-<!-- Search + Broadcast -->
-<div class="chat-sidebar-actions">
-<input class="chat-search-input" data-i18n-placeholder="search_driver_name" id="driver-chat-search" oninput="filterDriverChatList()" placeholder="🔍 Search driver by name..." type="text"/>
-<button class="btn-primary chat-broadcast-btn" data-i18n="btn_broadcast" onclick="openBroadcastModal()">
-                                📢 Message Everyone (Broadcast)
-                            </button>
-</div>
-<!-- Driver List -->
-<div id="chat-driver-list" style="flex:1; overflow-y:auto;">
-<div style="padding:20px; text-align:center; color:var(--muted); font-size:0.85rem;">Loading drivers...</div>
-</div>
-</div>
-<!-- ── Chat Window ────────────────────────────────────── -->
-<div class="chat-window-panel" id="chat-window">
-<!-- Chat Header (shown when driver selected) -->
-<div class="chat-header-bar" id="chat-header" style="display:none;">
-<!-- Mobile back button -->
-<button class="chat-back-btn" onclick="closeMobileChat()" title="Back">←</button>
-<img class="chat-avatar" id="chat-driver-avatar" src=""/>
-<div style="flex:1; min-width:0;">
-<h4 id="chat-driver-name" onclick="viewFullProfile('driver', selectedDriverChatId)" style="margin:0; font-size:1rem; cursor:pointer; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Driver Name</h4>
-<p id="chat-driver-status" style="margin:2px 0 0 0; font-size:0.75rem; color:var(--success);">● Active</p>
-</div>
-</div>
-<!-- Messages -->
-<div id="chat-messages-container" style="flex:1; overflow-y:auto; padding:20px; display:none;"></div>
-<!-- Placeholder -->
-<div id="chat-placeholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:12px;">
-<div style="font-size:3.5rem;">💬</div>
-<p data-i18n="select_driver_msg" style="font-size:0.95rem; text-align:center;">Select a driver from the left to view messages</p>
-</div>
-<!-- Input Area -->
-<div class="chat-input-area" id="chat-input-area" style="display:none;">
-<div id="main-chat-media-preview" style="display:none; margin-bottom:10px; padding:8px; background:rgba(0,0,0,0.2); border-radius:10px; align-items:center; gap:10px;"></div>
-<div class="chat-input-row">
-<button class="chat-icon-btn" onclick="mainChatPickPhoto()" title="Send Photo">📷</button>
-<button class="chat-icon-btn" id="main-chat-voice-btn" onclick="mainChatToggleRecording()" title="Voice Note">🎙️</button>
-<input accept="image/*" id="main-chat-photo-input" onchange="mainChatHandlePhoto(this)" style="display: none;" type="file"/>
-<input class="chat-text-input" data-i18n-placeholder="placeholder_message" id="manager-chat-input" onkeydown="if(event.key==='Enter')sendMessageToSelectedDriver()" placeholder="Type your message..." type="text"/>
-<button class="btn-primary chat-send-btn" data-i18n="btn_send" onclick="sendMessageToSelectedDriver()">Send 🚀</button>
-</div>
-</div>
-</div>
-</div>
-</section>
-<!-- Leaderboard Section -->
-</main>
-</div>
+
 <div id="alert-container"></div>
-<!-- Add Warehouse Modal -->
-<!-- Edit Warehouse Modal -->
-<!-- Message Modal -->
-<!-- Old message-modal kept for compatibility (hidden by default) -->
-<!-- Profile Deep-Dive Modal -->
+
 <!-- Scripts -->
 <script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
@@ -520,34 +593,136 @@
 <script src="../js/custom_layout.js?v=2.2"></script>
 <script src="../js/manager_base.js"></script>
 <script src="../js/manager_messages.js"></script>
+
 <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            window.logistixLayout.init('manager');
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize layout and edit-mode systems
+        if(window.logistixLayout) window.logistixLayout.init('manager');
+
+        // Handle Mobile Sidebar visibility state smoothly
+        window.toggleMobileSidebar = function(state) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if(sidebar) {
+                if(state) {
+                    sidebar.classList.add('open');
+                    overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            }
+        };
+
+        // ── PHYSICS BACKGROUND CANVAS DOTS INITIALIZATION ──
+        const canvasBuffer = 400;
+        const halfBuffer = canvasBuffer / 2;
+        const pointer = { x: -1000, y: -1000 };
+
+        window.addEventListener('mousemove', (e) => {
+            pointer.x = e.clientX + halfBuffer;
+            pointer.y = e.clientY + halfBuffer;
         });
-    </script>
-<script>
-const btn = document.getElementById('theme-toggle');
+        window.addEventListener('touchmove', (e) => {
+            pointer.x = e.touches[0].clientX + halfBuffer;
+            pointer.y = e.touches[0].clientY + halfBuffer;
+        }, { passive: true });
+        window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+        window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
 
-function setTheme(mode) {
-    if (mode === 'light') {
-        document.body.classList.add('light-mode');
-        btn.innerText = '☀️';
-    } else {
-        document.body.classList.remove('light-mode');
-        btn.innerText = '🌙';
+        const mCanvas = document.getElementById('interactive-grid');
+        if (mCanvas) {
+            const mCtx = mCanvas.getContext('2d', { alpha: true });
+            let mWidth, mHeight, mDots = [];
+            const mPushRadius = 220, mPushForce = 30, spring = 0.05, friction = 0.8;
+
+            function initGrids() {
+                const dpr = window.devicePixelRatio || 1;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
+                mCtx.scale(dpr, dpr);
+
+                const spacing = window.innerWidth < 768 ? 35 : 30;
+                mDots = [];
+                for (let x = 0; x < mWidth; x += spacing) {
+                    for (let y = 0; y < mHeight; y += spacing) {
+                        mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+                    }
+                }
+            }
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
+            });
+
+            function animateGrids() {
+                mCtx.clearRect(0, 0, mWidth, mHeight);
+                const isLight = document.body.classList.contains('light-mode');
+                mCtx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.3)';
+                const mPushRadiusSq = mPushRadius * mPushRadius;
+
+                for (let i = 0; i < mDots.length; i++) {
+                    let p = mDots[i];
+                    let dx = pointer.x - p.x; let dy = pointer.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < mPushRadiusSq) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mPushRadius - dist) / mPushRadius;
+                        p.vx -= (dx / dist) * force * mPushForce;
+                        p.vy -= (dy / dist) * force * mPushForce;
+                    }
+
+                    p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
+                    p.vx *= friction; p.vy *= friction;
+                    p.x += p.vx; p.y += p.vy;
+                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                }
+                requestAnimationFrame(animateGrids);
+            }
+            initGrids(); animateGrids();
+        }
+    });
+
+    // ── THEME SWITCH SYSTEM ──
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
+        });
+
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
     }
-    localStorage.setItem('theme', mode);
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
-}
 
-btn.onclick = () => {
-    const isLight = document.body.classList.contains('light-mode');
-    setTheme(isLight ? 'dark' : 'light');
-};
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
 
-// Initial state
-setTheme(localStorage.getItem('theme') || 'dark');
+    setTheme(localStorage.getItem('theme') || 'dark');
 </script>
-<script src="../js/premium_theme.js"></script>
+
 </body>
 </html>
