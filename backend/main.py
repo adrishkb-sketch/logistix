@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables globally
 load_dotenv()
 
-from backend.routers import auth, manager, driver, shipment, tracking, simulation, fuel_oracle
+from backend.routers import auth, manager, driver, shipment, tracking, simulation, fuel_oracle, iot
 
 app = FastAPI(title="Logistix API", version="1.0.0")
 
@@ -49,7 +49,7 @@ app.include_router(shipment.router, prefix="/api/shipments", tags=["Shipments"])
 app.include_router(tracking.router, prefix="/api/tracking", tags=["Tracking"])
 app.include_router(simulation.router, prefix="/api/simulation", tags=["Simulation"])
 app.include_router(fuel_oracle.router, prefix="/api/fuel", tags=["Fuel Oracle"])
-
+app.include_router(iot.router, prefix="/api/iot", tags=["IoT Hardware"])
 # Root route removed to allow static frontend to serve index.html
 
 if __name__ == "__main__":

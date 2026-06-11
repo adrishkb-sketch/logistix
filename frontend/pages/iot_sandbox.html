@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Physical IoT Sandbox | Logistix</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/premium_theme.css">
+    <style>
+        .sandbox-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            height: calc(100vh - 120px);
+        }
+
+        @media (max-width: 1024px) {
+            .sandbox-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        /* Neon Hardware Cards */
+        .hardware-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .hw-card {
+            background: rgba(20, 25, 40, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 24px;
+            backdrop-filter: blur(16px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hw-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        }
+
+        .hw-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 4px;
+            background: var(--accent);
+            opacity: 0.8;
+        }
+        
+        .hw-card.cold::before { background: #38bdf8; }
+        .hw-card.fatigue::before { background: #ef4444; }
+        .hw-card.scale::before { background: #f59e0b; }
+        .hw-card.drone::before { background: #a855f7; }
+        .hw-card.rfid::before { background: #10b981; }
+        .hw-card.shock::before { background: #f43f5e; }
+
+        .hw-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .hw-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text);
+            margin: 0 0 8px 0;
+        }
+
+        .hw-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin: 0 0 20px 0;
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        .hw-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .hw-card.cold .hw-btn:hover { background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; }
+        .hw-card.fatigue .hw-btn:hover { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; }
+        .hw-card.scale .hw-btn:hover { background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; }
+        .hw-card.drone .hw-btn:hover { background: rgba(168, 85, 247, 0.2); border-color: #a855f7; }
+        .hw-card.rfid .hw-btn:hover { background: rgba(16, 185, 129, 0.2); border-color: #10b981; }
+        .hw-card.shock .hw-btn:hover { background: rgba(244, 63, 94, 0.2); border-color: #f43f5e; }
+
+        /* Live Terminal */
+        .terminal-container {
+            background: #0f172a;
+            border-radius: 20px;
+            border: 1px solid #1e293b;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .terminal-header {
+            background: #1e293b;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+        }
+
+        .term-dots {
+            display: flex;
+            gap: 8px;
+        }
+        .term-dot {
+            width: 12px; height: 12px; border-radius: 50%;
+        }
+        .term-dot.r { background: #ef4444; }
+        .term-dot.y { background: #f59e0b; }
+        .term-dot.g { background: #10b981; }
+
+        .terminal-title {
+            font-family: monospace;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .terminal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #334155;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time { color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
+        .log-tx { color: #38bdf8; font-weight: bold; }
+        .log-ai { color: #a855f7; font-weight: bold; margin-top: 8px; display: block; padding: 8px; background: rgba(168, 85, 247, 0.1); border-radius: 8px; border-left: 3px solid #a855f7; }
+        
+        .pulse-indicator {
+            position: absolute;
+            top: 15px; right: 20px;
+            width: 8px; height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+<body class="dashboard-body">
+    <div class="background-animation"></div>
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content" style="padding: 40px; margin-left: 0;">
+        <header class="top-bar" style="margin-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px;">
+            <div>
+                <a href="manager_dashboard.html" style="color: var(--primary); text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    ← Back to Command Center
+                </a>
+                <h1 style="font-size: 2.2rem; font-weight: 800; margin: 0; background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Cyber-Physical IoT Sandbox 🛠️</h1>
+                <p style="color: var(--text-muted); font-size: 1rem; margin-top: 8px;">Simulate physical hardware events and monitor the AI orchestration in real-time.</p>
+            </div>
+            <button class="theme-circle-btn notranslate" id="theme-toggle" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 50%;">🌙</button>
+        </header>
+
+        <div class="sandbox-layout">
+            
+            <!-- Left: Hardware Controls -->
+            <div class="hardware-grid">
+                
+                <!-- Cold Chain -->
+                <div class="hw-card cold">
+                    <span class="hw-icon">🥶</span>
+                    <h3 class="hw-title">Cold-Chain Sensor</h3>
+                    <p class="hw-desc">Simulates a temperature breach inside a refrigerated truck carrying perishable goods (e.g. Vaccines).</p>
+                    <button class="hw-btn" onclick="triggerIoT('cold_chain', {temp: 11.4})">
+                        <span>📡 Trigger Temp Spike</span>
+                    </button>
+                </div>
+
+                <!-- Fatigue Monitor -->
+                <div class="hw-card fatigue">
+                    <span class="hw-icon">👁️</span>
+                    <h3 class="hw-title">Biometric Monitor</h3>
+                    <p class="hw-desc">Simulates a dashcam or smartwatch detecting dangerous driver micro-sleeps or dropping heart rates.</p>
+                    <button class="hw-btn" onclick="triggerIoT('fatigue', {heart_rate: 52, eye_closure_rate: 85})">
+                        <span>📡 Trigger Fatigue</span>
+                    </button>
+                </div>
+
+                <!-- Weighbridge -->
+                <div class="hw-card scale">
+                    <span class="hw-icon">⚖️</span>
+                    <h3 class="hw-title">Smart Weighbridge</h3>
+                    <p class="hw-desc">Simulates a truck rolling over an automated IoT scale at the warehouse gate.</p>
+                    <button class="hw-btn" onclick="triggerIoT('weighbridge', {weight: 12450, plate: 'MH-12-TX-8899'})">
+                        <span>📡 Transmit Weight</span>
+                    </button>
+                </div>
+
+                <!-- Drone -->
+                <div class="hw-card drone">
+                    <span class="hw-icon">🚁</span>
+                    <h3 class="hw-title">Drone Telemetry</h3>
+                    <p class="hw-desc">Simulates an automated last-mile delivery drone sending critical low-battery telemetry in flight.</p>
+                    <button class="hw-btn" onclick="triggerIoT('drone', {lat: 19.123, lng: 72.881, battery: 12})">
+                        <span>📡 Send Telemetry</span>
+                    </button>
+                </div>
+
+                <!-- RFID Sort -->
+                <div class="hw-card rfid">
+                    <span class="hw-icon">📦</span>
+                    <h3 class="hw-title">RFID Conveyor</h3>
+                    <p class="hw-desc">Simulates ultra-high-speed package scanning on an automated warehouse sorting belt.</p>
+                    <button class="hw-btn" onclick="triggerIoT('rfid', {scan_rate: 145})">
+                        <span>📡 Burst Scan</span>
+                    </button>
+                </div>
+
+                <!-- Shock Sensor -->
+                <div class="hw-card shock">
+                    <span class="hw-icon">💥</span>
+                    <h3 class="hw-title">Shock/Drop Sensor</h3>
+                    <p class="hw-desc">Simulates an accelerometer on a fragile shipment detecting a severe drop or impact.</p>
+                    <button class="hw-btn" onclick="triggerIoT('shock', {g_force: 8.2, axis: 'Y'})">
+                        <span>📡 Trigger Impact</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Right: Live Terminal -->
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <div class="term-dots">
+                        <div class="term-dot r"></div>
+                        <div class="term-dot y"></div>
+                        <div class="term-dot g"></div>
+                    </div>
+                    <div class="terminal-title">bash - logistix_core_listener</div>
+                    <div class="pulse-indicator" title="Socket Connected"></div>
+                </div>
+                <div class="terminal-body" id="term-body">
+                    <div style="color: #10b981; margin-bottom: 20px;">[System] Listening for secure IoT telemetry on port 8000...<br>[System] AI Orchestrator: ACTIVE</div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="../js/api.js"></script>
+    <script>
+        async function triggerIoT(deviceType, dataPayload) {
+            const term = document.getElementById('term-body');
+            const btn = event.currentTarget;
+            const originalHtml = btn.innerHTML;
+            
+            // Visual feedback
+            btn.innerHTML = '<span>⏳ Transmitting...</span>';
+            btn.style.opacity = '0.7';
+            btn.disabled = true;
+
+            try {
+                const reqBody = {
+                    company_id: localStorage.getItem('company_id') || 'demo-company',
+                    device_type: deviceType,
+                    data: dataPayload
+                };
+
+                // Add transmitting log
+                appendLog(`Attempting to send payload to /api/iot/event: \n${JSON.stringify(reqBody, null, 2)}`, '#64748b');
+
+                const res = await apiCall('/iot/event', 'POST', reqBody);
+                
+                // Add success logs
+                if (res && res.logs) {
+                    const time = new Date().toLocaleTimeString();
+                    let html = `<div class="log-entry">
+                        <span class="log-time">[${time}]</span>
+                        <span class="log-tx">>> ${res.logs[0]}</span>`;
+                    
+                    if (res.logs[1]) {
+                        html += `<span class="log-ai">✨ ${res.logs[1]}</span>`;
+                    }
+                    html += `</div>`;
+                    
+                    term.insertAdjacentHTML('beforeend', html);
+                    term.scrollTop = term.scrollHeight;
+                }
+                
+                showToast("Hardware Event Successfully Simulated!", "success");
+
+            } catch (err) {
+                console.error(err);
+                appendLog(`ERROR: Connection refused or endpoint failed. ${err.message}`, '#ef4444');
+                showToast("Simulation failed to reach backend.", "error");
+            } finally {
+                btn.innerHTML = originalHtml;
+                btn.style.opacity = '1';
+                btn.disabled = false;
+            }
+        }
+
+        function appendLog(text, color) {
+            const term = document.getElementById('term-body');
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `<span class="log-time">[${time}]</span> <span style="color:${color}; white-space:pre-wrap;">${text}</span>`;
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+        }
+    </script>
+</body>
+</html>
