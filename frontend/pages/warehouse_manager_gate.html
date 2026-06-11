@@ -99,6 +99,8 @@
         @keyframes wavePush2 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 50% { transform: translate3d(-20vw, -15vh, 0) scale(1.25); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } }
         @keyframes wavePush3 { 0% { transform: translate3d(0, 0, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } 50% { transform: translate3d(-15vw, 10vh, 0) scale(1.2); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; } 100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } }
 
+        #interactive-grid { position: fixed; inset: 0; z-index: 1; pointer-events: none; width: 100%; height: 100%; }
+
         /* ── MAIN DASHBOARD CONTAINER LAYOUT ── */
         .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
 
@@ -277,6 +279,9 @@
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
 </div>
+
+<!-- ── INTERACTIVE CANVAS GRID ── -->
+<canvas id="interactive-grid"></canvas>
 
 <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
 
