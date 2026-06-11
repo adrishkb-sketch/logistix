@@ -945,7 +945,7 @@
 </div>
 
 <!-- Map Picker Modal -->
-<div class="modal-glass" id="map-picker-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:20000; width:600px; padding:24px !important;">
+<div class="modal-glass" id="map-picker-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:30000; width:600px; max-width:95vw; max-height:95vh; overflow-y:auto; padding:24px !important; flex-direction:column !important; gap:16px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h3 id="map-picker-title" style="margin:0; font-size:1.4rem; color:var(--primary);">Select Location on Map</h3>
         <button class="close-modal-btn" onclick="closeMapPicker()" style="position:relative; right:0; top:0;">
@@ -1048,6 +1048,49 @@
 </div>
 <style>
 @keyframes fadeInModal { from { opacity:0; } to { opacity:1; } }
+@keyframes popModalFlex {
+    from { transform: scale(0.95) translateY(20px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@media (max-width: 600px) {
+    #shipment-detail-modal .modal-glass {
+        width: 100% !important;
+        max-width: 100vw !important;
+        height: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+    #shipment-detail-header {
+        padding: 16px 20px !important;
+    }
+    #shipment-detail-body {
+        padding: 20px !important;
+        max-height: calc(100vh - 180px) !important;
+    }
+    #shipment-detail-actions {
+        padding: 16px 20px !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+    .map-picker-map-container {
+        height: 250px !important;
+    }
+    #map-picker-modal {
+        padding: 16px !important;
+        border-radius: 16px !important;
+    }
+    #map-picker-modal h3 {
+        font-size: 1.1rem !important;
+    }
+    #current-pick-display {
+        font-size: 0.8rem !important;
+        padding: 8px 12px !important;
+    }
+    #map-picker-modal .btn-primary {
+        width: 100% !important;
+        text-align: center;
+    }
+}
 </style>
 
 <!-- Smart Bulk Assistant Side Drawer -->
@@ -1103,7 +1146,7 @@
 
 <!-- Shipment Detail Modal -->
 <div id="shipment-detail-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px); z-index:25000; align-items:center; justify-content:center; animation:fadeInModal 0.3s ease forwards;">
-    <div class="modal-glass" style="width:650px; max-width:95vw; padding:0 !important; overflow:hidden; display:flex; flex-direction:column;">
+    <div class="modal-glass" style="width:650px; max-width:95vw; padding:0 !important; overflow:hidden; display:flex; flex-direction:column; transform:none !important; animation:popModalFlex 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;">
         <div id="shipment-detail-header" style="padding: 24px 32px; background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(0, 255, 115, 0.1)); border-bottom: 1px solid var(--border); position: relative; display:flex; justify-content:space-between; align-items:center;">
             <div>
                 <h2 id="sd-title" style="margin: 0; font-size: 1.6rem; color:var(--text-main);">Shipment Details</h2>
