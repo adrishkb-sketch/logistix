@@ -1,0 +1,45 @@
+/* Disable 3D tilt transformation across all glass cards, pricing cards, KPI cards, history cards, and order cards */
+.glass-card, 
+.pricing-card, 
+.kpi-card, 
+.history-card, 
+.order-card, 
+.card, 
+.driver-card, 
+.vehicle-card, 
+.drone-card {
+    transform: none !important;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* Table Glow Hover Animation */
+@keyframes tableGlowPulse {
+    0% {
+        box-shadow: 0 4px 15px -5px var(--neon-glow, rgba(0, 229, 255, 0.25)), 0 0 0 1px var(--border, rgba(255, 255, 255, 0.12));
+    }
+    50% {
+        box-shadow: 0 10px 25px -3px var(--neon-glow, rgba(0, 229, 255, 0.45)), 0 0 12px 2px var(--neon-glow, rgba(0, 229, 255, 0.15)), 0 0 0 1px var(--primary, #00e5ff);
+    }
+    100% {
+        box-shadow: 0 4px 15px -5px var(--neon-glow, rgba(0, 229, 255, 0.25)), 0 0 0 1px var(--border, rgba(255, 255, 255, 0.12));
+    }
+}
+
+table, 
+.premium-table, 
+.wide-table, 
+.ultra-wide-table, 
+.sim-table, 
+.data-table {
+    transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease !important;
+}
+
+table:hover, 
+.premium-table:hover, 
+.wide-table:hover, 
+.ultra-wide-table:hover, 
+.sim-table:hover, 
+.data-table:hover {
+    animation: tableGlowPulse 2s infinite ease-in-out !important;
+    border-color: var(--primary, #00e5ff) !important;
+}
