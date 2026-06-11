@@ -1856,7 +1856,10 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
         } else if (type === 'driver') {
             html += `
-                <h2 class="modal-title" data-i18n="modal_driver_title">Driver Login</h2>
+                <div style="position: relative;">
+                    <button type="button" onclick="document.getElementById('voice-help-modal').style.display='block'" title="Voice Command Guide" style="position: absolute; right: 0; top: 0; background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text-main); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; font-size:0.8rem; z-index:10;">?</button>
+                    <h2 class="modal-title" data-i18n="modal_driver_title">Driver Login</h2>
+                </div>
                 <p class="modal-subtitle">Access your logistics tasks and routing</p>
                 <form class="auth-form" id="driver-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
                     <div class="input-group">
@@ -2018,6 +2021,49 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 </script>
+    <!-- Automated Control Guide Modal -->
+    <div id="voice-help-modal" class="glass-card modal-glass" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10010; width:90%; max-width:450px; padding:24px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); border:1px solid var(--accent-1); background: var(--bg-base); color: var(--text-main);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; color:var(--accent-1);" data-i18n="voice_help_title">Voice Command Guide</h3>
+            <button style="background:none; border:none; color:var(--text-main); font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('voice-help-modal').style.display='none'">✖</button>
+        </div>
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;" data-i18n="voice_help_desc">Use these hands-free commands to control your dashboard while driving.</p>
+        
+        <div style="max-height:60vh; overflow-y:auto; padding-right:10px;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                <thead style="border-bottom:1px solid var(--border);">
+                    <tr style="text-align:left;">
+                        <th style="padding:10px;" data-i18n="voice_command_header">Command</th>
+                        <th style="padding:10px;" data-i18n="voice_action_header">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent-1);">"Go to Active"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_map">View live route</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent-1);">"Go to Wallet"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_wallet">Check earnings</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent-1);">"Report Incident"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_report">Alert breakdown</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent-1);">"Switch Language"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_lang">Cycle languages</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <td style="padding:10px; font-weight:bold; color:var(--accent-1);">"Emergency Halt"</td>
+                        <td style="padding:10px;" data-i18n="voice_instr_stop_sim">Stop simulation movement</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <button class="btn-primary" style="margin-top:20px; width:100%;" onclick="document.getElementById('voice-help-modal').style.display='none'" data-i18n="btn_close">Close Guide</button>
+    </div>
+
     <script src="js/premium_theme.js"></script>
 </body>
 </html>
