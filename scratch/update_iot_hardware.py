@@ -1,4 +1,6 @@
-const iotHardwareData = {
+import os
+
+js_code = """const iotHardwareData = {
     cold_chain: {
         title: "Cold-Chain Sensor Array",
         subtitle: "NodeMCU ESP8266 + DHT22 High-Precision Digital Sensor",
@@ -48,7 +50,7 @@ void loop() {
     http.begin(client, serverURL);
     http.addHeader("Content-Type", "application/json");
 
-    String payload = "{\"company_id\":\"demo\",\"device_type\":\"cold_chain\", \"data\":{\"temp\":" + String(temp) + "},\"is_mock\":true}";
+    String payload = "{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"cold_chain\\", \\"data\\":{\\"temp\\":" + String(temp) + "},\\"is_mock\\":true}";
     int httpResponseCode = http.POST(payload);
     http.end();
   }
@@ -104,7 +106,7 @@ void loop() {
        HTTPClient http;
        http.begin(serverURL);
        http.addHeader("Content-Type", "application/json");
-       String json = "{\"company_id\":\"demo\",\"device_type\":\"fatigue\", \"data\":{\"heart_rate\":" + String(beatsPerMinute) + "},\"is_mock\":true}";
+       String json = "{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"fatigue\\", \\"data\\":{\\"heart_rate\\":" + String(beatsPerMinute) + "},\\"is_mock\\":true}";
        http.POST(json);
        http.end();
     }
@@ -159,7 +161,7 @@ void loop() {
     float weight = scale.get_units(10);
     if (weight > 5000.0) { // Truck detected
       if (client.connect(server, 8000)) {
-        String json = "{\"company_id\":\"demo\",\"device_type\":\"weighbridge\", \"data\":{\"weight\":" + String(weight) + "},\"is_mock\":true}";
+        String json = "{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"weighbridge\\", \\"data\\":{\\"weight\\":" + String(weight) + "},\\"is_mock\\":true}";
         client.println("POST /api/iot/event HTTP/1.1");
         client.println("Content-Type: application/json");
         client.println("Content-Length: " + String(json.length()));
@@ -273,7 +275,7 @@ void loop() {
   HTTPClient http;
   http.begin(client, "http://logistix-api.local/api/iot/event");
   http.addHeader("Content-Type", "application/json");
-  http.POST("{\"company_id\":\"demo\",\"device_type\":\"rfid\", \"data\":{\"scan_rate\": 145, \"uid\": \"" + uid + "\"},\"is_mock\":true}");
+  http.POST("{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"rfid\\", \\"data\\":{\\"scan_rate\\": 145, \\"uid\\": \\"" + uid + "\\"},\\"is_mock\\":true}");
   http.end();
   
   mfrc522.PICC_HaltA();
@@ -333,7 +335,7 @@ void loop() {
     HTTPClient http;
     http.begin("http://logistix-api.local/api/iot/event");
     http.addHeader("Content-Type", "application/json");
-    http.POST("{\"company_id\":\"demo\",\"device_type\":\"shock\", \"data\":{\"g_force\":" + String(gForce) + ", \"axis\":\"Z\"},\"is_mock\":true}");
+    http.POST("{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"shock\\", \\"data\\":{\\"g_force\\":" + String(gForce) + ", \\"axis\\":\\"Z\\"},\\"is_mock\\":true}");
     http.end();
   }
   delay(100);
@@ -449,7 +451,7 @@ async function executeIoTSimulation() {
         is_mock: true // Tell backend to not touch real db
     };
 
-    appendTermLog('Attempting to send payload to /api/iot/event: \n' + JSON.stringify(reqBody, null, 2), '#64748b');
+    appendTermLog('Attempting to send payload to /api/iot/event: \\n' + JSON.stringify(reqBody, null, 2), '#64748b');
 
     try {
         const response = await fetch('/api/iot/event', {
@@ -492,3 +494,9 @@ function appendTermLog(text, color) {
     term.insertAdjacentHTML('beforeend', html);
     term.scrollTop = term.scrollHeight;
 }
+"""
+
+with open('frontend/js/iot_hardware.js', 'w') as f:
+    f.write(js_code)
+
+print("Rewrote iot_hardware.js successfully.")
