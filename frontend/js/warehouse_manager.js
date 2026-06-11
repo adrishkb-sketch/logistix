@@ -43,15 +43,15 @@ async function init() {
     const langSelect = document.getElementById('lang-select');
     if (langSelect) langSelect.value = savedLang;
 
-    loadLeaderboard();
+    if (typeof loadLeaderboard === 'function') loadLeaderboard();
     renderCharts();
     setupFormListeners();
     setupSmartAssistantListeners();
     if (document.getElementById('payments-tab')) {
         loadHubFinance();
     }
-    if (document.getElementById('gate-tab') && typeof loadGateQueue === 'function') {
-        loadGateQueue();
+    if (document.getElementById('gate-tab') && typeof window.switchTab === 'function') {
+        window.switchTab('gate');
     }
     if (document.getElementById('settings-tab') && typeof loadLeaveHistory === 'function') {
         loadLeaveHistory();
