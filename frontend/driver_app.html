@@ -78,6 +78,7 @@
     <div id="auth-screen">
         <div class="auth-card">
             <h1>Driver App</h1>
+            <input type="text" id="company-id" placeholder="Company ID (e.g., COMP001)">
             <input type="text" id="driver-id" placeholder="Driver ID (e.g., DRV001)">
             <input type="password" id="driver-pass" placeholder="Password (admin123)">
             <button onclick="loginDriver()">Secure Login</button>
@@ -162,6 +163,7 @@
         }
 
         async function loginDriver() {
+            const cid = document.getElementById('company-id').value;
             const did = document.getElementById('driver-id').value;
             const pass = document.getElementById('driver-pass').value;
             
@@ -170,22 +172,22 @@
                 const res = await fetch(`${API_BASE}/driver/login`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id: did, pass: pass})
+                    body: JSON.stringify({company_id: cid, id: did, pass: pass})
                 });
                 
-                if (res.ok || (did && pass)) {
+                if (res.ok || (cid && did && pass)) {
                     // Force success for demo if actual API is not reachable
                     localStorage.setItem('driver_id', did);
-                    localStorage.setItem('company_id', 'COMP001'); // default
+                    localStorage.setItem('company_id', cid);
                     startApp();
                 } else {
                     alert("Invalid credentials");
                 }
             } catch(e) {
                 // Offline fallback for demo
-                if (did && pass) {
+                if (cid && did && pass) {
                     localStorage.setItem('driver_id', did);
-                    localStorage.setItem('company_id', 'COMP001');
+                    localStorage.setItem('company_id', cid);
                     startApp();
                 }
             }
