@@ -3667,36 +3667,7 @@ async function updateWeatherStrip(stops) {
 }
 
 
-window.toggleHUDMirror = function() {
-    const activeTab = document.getElementById('active-tab');
-    if (!activeTab) return;
-    activeTab.classList.toggle('hud-mirrored');
-    
-    if (!document.getElementById('hud-mirror-style')) {
-        const style = document.createElement('style');
-        style.id = 'hud-mirror-style';
-        style.innerHTML = `
-            .hud-mirrored {
-                transform: scaleX(-1) !important;
-                filter: FlipH;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    const btn = document.getElementById('hud-mirror-btn');
-    if (btn) {
-        if (activeTab.classList.contains('hud-mirrored')) {
-            btn.style.background = 'var(--accent)';
-            btn.style.color = '#000';
-            btn.innerText = '📺 HUD Mirrored';
-        } else {
-            btn.style.background = 'transparent';
-            btn.style.color = 'var(--text)';
-            btn.innerText = '📺 HUD Mirror';
-        }
-    }
-};
+
 
 async function triggerAIDriverBriefing() {
     if (!window._aiStatus?.configured) {
