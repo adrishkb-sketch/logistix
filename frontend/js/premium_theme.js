@@ -100,7 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             requestAnimationFrame(animateGrids);
         }
-        initGrids(); animateGrids();
+        // Disabled duplicate background grid loop:
+        // initGrids(); animateGrids();
     }
 
     // 3. Automated UI Makeover (Inputs, Modals, Tables, Buttons)
