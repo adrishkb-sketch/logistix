@@ -186,4 +186,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    // 5. Mobile Sidebar Auto-Close Fix
+    // Closes the sidebar automatically when a navigation link is clicked in mobile view.
+    document.querySelectorAll('.nav-link, .nav-link-v3').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 1024 && typeof window.toggleMobileSidebar === 'function') {
+                // Small delay to let tab-switch or navigation start before collapsing the menu
+                setTimeout(() => {
+                    window.toggleMobileSidebar(false);
+                }, 50);
+            }
+        });
+    });
 });

@@ -43,3 +43,34 @@ table:hover,
     animation: tableGlowPulse 2s infinite ease-in-out !important;
     border-color: var(--primary, #00e5ff) !important;
 }
+
+/* Mobile Sidebar Clickability & Layout Fixes */
+@media (max-width: 1024px) {
+    /* Prevent hover transforms from stealing the first tap on mobile */
+    .nav-link:hover, .nav-link-v3:hover {
+        transform: none !important;
+    }
+    .nav-link:hover svg, .nav-link-v3:hover svg {
+        transform: none !important;
+    }
+    /* Enhance tap targets and spacing for mobile */
+    .nav-link, .nav-link-v3 {
+        padding: 16px 20px !important;
+        margin-bottom: 8px !important;
+        font-size: 1.05rem !important;
+    }
+    /* Ensure smooth scrolling inside sidebar on mobile */
+    .nav-links-wrapper {
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 40px !important;
+    }
+}
+
+@media (hover: none) {
+    .nav-link:hover, .nav-link-v3:hover {
+        transform: none !important;
+    }
+    .nav-link:hover svg, .nav-link-v3:hover svg {
+        transform: none !important;
+    }
+}
