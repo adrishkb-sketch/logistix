@@ -1407,7 +1407,7 @@ async function loadGateQueue() {
         // Find shipments destined for this warehouse that are in transit or assigned
         const inbound = shipments.filter(s => 
             (s.status === 'in_transit' || s.status === 'assigned') && 
-            s.drop && s.drop.address && s.drop_warehouse_id === whId
+            s.drop_warehouse_id == whId
         );
         
         const tbody = document.getElementById('gate-table-body');
