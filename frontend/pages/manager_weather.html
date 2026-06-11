@@ -596,6 +596,12 @@
                     </div>
                     <div id="res-affected-list" style="max-height:220px; overflow-y:auto; padding-right:4px;"></div>
                     <button class="tool-btn tool-btn-primary" onclick="applySimulationFixes()" style="width:100%; justify-content:center; margin-top:12px;">⚡ Execute All AI Actions</button>
+                    <div style="border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px;">
+                        <button class="tool-btn tool-btn-ghost" onclick="togglePastActions()" style="width:100%; justify-content:center; font-size:0.8rem; height: 32px; padding: 0;">
+                            🕒 Past Actions (<span id="past-actions-count">0</span>)
+                        </button>
+                        <div id="past-actions-list" style="display:none; max-height:180px; overflow-y:auto; margin-top:10px; padding-right:4px;"></div>
+                    </div>
                 </div>
 
                 <!-- Map Legend -->
@@ -982,6 +988,43 @@
         catch(err) { showToast('Failed to resolve.', 'error'); }
     }
 
+    window.togglePastActions = function() {
+        const list = document.getElementById('past-actions-list');
+        if (list.style.display === 'none') {
+            list.style.display = 'block';
+            loadPastActions();
+        } else {
+            list.style.display = 'none';
+        }
+    };
+
+    async function loadPastActions() {
+        try {
+            const past = await apiCall('/tracking/alerts/past?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+            const countEl = document.getElementById('past-actions-count');
+            if (countEl) countEl.innerText = past.length;
+            
+            const list = document.getElementById('past-actions-list');
+            if (list) {
+                if (past.length === 0) {
+                    list.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:10px;">No past AI actions taken.</div>`;
+                } else {
+                    list.innerHTML = past.map(a => `
+                        <div style="font-size:0.75rem; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:3px solid var(--success); border-radius:6px; margin-bottom:6px; border-top: 1px solid rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.02);">
+                            <div style="font-weight:bold; color:var(--text-main); display:flex; justify-content:space-between;">
+                                <span>Shipment: ${a.shipment_id ? a.shipment_id.substring(0,8) : 'N/A'}</span>
+                                <span style="color:var(--text-muted); font-size:0.65rem;">${new Date(a.resolved_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <div style="margin-top:4px; color:var(--text-muted); line-height:1.3;">${a.description || 'Action verified.'}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+        } catch(e) {
+            console.error("Failed to load past actions", e);
+        }
+    }
+
     async function applySimulationFixes() {
         showToast('Executing AI contingency protocols…', 'info');
         let count = 0;
@@ -1160,7 +1203,33 @@
             updateHeatmap(data.fleet);
 
             const resultsPanel = document.getElementById('results-panel');
-            if (data.affected_count > 0) {
+            let pastCount = 0;
+            try {
+                const past = await apiCall('/tracking/alerts/past?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+                pastCount = past.length;
+                const countEl = document.getElementById('past-actions-count');
+                if (countEl) countEl.innerText = pastCount;
+                const listEl = document.getElementById('past-actions-list');
+                if (listEl && listEl.style.display === 'block') {
+                    if (pastCount === 0) {
+                        listEl.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:10px;">No past AI actions taken.</div>`;
+                    } else {
+                        listEl.innerHTML = past.map(a => `
+                            <div style="font-size:0.75rem; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:3px solid var(--success); border-radius:6px; margin-bottom:6px; border-top: 1px solid rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.02);">
+                                <div style="font-weight:bold; color:var(--text-main); display:flex; justify-content:space-between;">
+                                    <span>Shipment: ${a.shipment_id ? a.shipment_id.substring(0,8) : 'N/A'}</span>
+                                    <span style="color:var(--text-muted); font-size:0.65rem;">${new Date(a.resolved_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <div style="margin-top:4px; color:var(--text-muted); line-height:1.3;">${a.description || 'Action verified.'}</div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch(err) {
+                console.error("Failed to load past actions count", err);
+            }
+
+            if (data.affected_count > 0 || pastCount > 0) {
                 document.getElementById('res-affected-count').innerText = data.affected_count;
                 document.getElementById('res-recommendation').innerText = data.recommendation || '—';
                 document.getElementById('res-affected-list').innerHTML = (data.affected_list || []).map(s => {
@@ -1168,8 +1237,16 @@
                     const badge = aiHandled ? `<div style="margin-top:8px; display:inline-block; background:rgba(0, 255, 115, 0.15); border:1px solid var(--success); border-radius:12px; padding:6px 12px; font-size:0.75rem; color:var(--success); font-weight:800;">✅ AI Handled: ${s.stage}</div>` : '';
                     return `<div class="affected-item" data-alert-id="${s.alert_id}" data-shipment-id="${s.id}"><div class="a-title">${s.description}</div><div class="a-sub">Driver: ${s.driver_name}</div><div class="a-action">💡 ${s.ai_action}</div>${badge}${!aiHandled ? `<div class="a-btns"><button class="a-btn-ai" onclick="executeAIAction('${s.id}', '${s.alert_id}')">Verify</button><button class="a-btn-manual" onclick="manualDivert('${s.id}')">Manual</button></div>` : ''}</div>`;
                 }).join('');
+                
+                const execBtn = resultsPanel.querySelector('.tool-btn-primary');
+                if (execBtn) {
+                    execBtn.style.display = data.affected_count > 0 ? 'inline-flex' : 'none';
+                }
+                
                 if (!simulationPanelClosedByUser) resultsPanel.style.display = 'block';
-            } else resultsPanel.style.display = 'none';
+            } else {
+                resultsPanel.style.display = 'none';
+            }
 
             const tel = data.telemetry || [];
             if (tel.length > 0 && riskRadarChartObj) {

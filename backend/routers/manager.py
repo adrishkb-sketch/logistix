@@ -741,7 +741,37 @@ def get_warehouses_congestion(company_id: Optional[str] = None, x_logistix_conte
 
 @router.post("/alerts/{alert_id}/resolve")
 def resolve_alert(alert_id: str):
-    alerts_db.update(alert_id, {"status": "resolved"})
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat() + "Z"
+    
+    alerts_db = JSONDatabase("alerts")
+    alert = alerts_db.get_by_id(alert_id)
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+        
+    alerts_db.update(alert_id, {"status": "resolved", "resolved_at": now})
+    
+    # If this is a weather threat alert, execute the AI action!
+    if alert.get("type") == "calamity_divert" and alert.get("shipment_id"):
+        shipment_id = alert["shipment_id"]
+        shipment = shipments_db.get_by_id(shipment_id)
+        if shipment and shipment.get("status") in ("assigned", "in_transit"):
+            from backend.services.route_engine import check_and_reroute_calamities
+            from backend.routers.tracking import get_all_active_weather_cells
+            cells = get_all_active_weather_cells(shipment.get("company_id"))
+            
+            # Execute AI action (reroute/halt/delay)
+            check_and_reroute_calamities(shipment, cells)
+            
+            # Find the resulting outcome alert created by check_and_reroute_calamities and mark it resolved/approved
+            new_active_alert = next((a for a in alerts_db.get_all() if a and a.get("shipment_id") == shipment_id and a.get("type") == "calamity_divert" and a.get("status") == "active"), None)
+            if new_active_alert:
+                alerts_db.update(new_active_alert["id"], {
+                    "status": "resolved",
+                    "resolved_at": now,
+                    "description": new_active_alert.get("description", "").replace("AI AUTO-", "AI ").replace("AI EMERGENCY ", "AI ")
+                })
+                
     return {"message": "Alert resolved"}
 
 @router.post("/warehouses/suggest")

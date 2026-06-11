@@ -606,7 +606,8 @@ def get_fleet_weather(company_id: str):
     vehicles_db = JSONDatabase("vehicles")
 
     drivers = drivers_db.get_filtered({"company_id": company_id})
-    shipments = shipments_db.get_filtered({"company_id": company_id, "status": "in_transit"})
+    all_shipments = shipments_db.get_filtered({"company_id": company_id})
+    shipments = [s for s in all_shipments if s and s.get("status") in ("assigned", "in_transit")]
 
     # ── 1. Build a de-duplicated list of coordinates to query ──────────────
     # Collect active vehicle locations
@@ -771,6 +772,24 @@ def get_fleet_weather(company_id: str):
                 alerts_db_inst = JSONDatabase("alerts")
                 active_alert = next((a for a in alerts_db_inst.get_all() if a and a.get("shipment_id") == s["id"] and a.get("type") == "calamity_divert" and a.get("status") == "active"), None)
                 
+                if not active_alert:
+                    resolved_alert = next((a for a in alerts_db_inst.get_all() if a and a.get("shipment_id") == s["id"] and a.get("type") == "calamity_divert" and a.get("status") == "resolved"), None)
+                    if not resolved_alert:
+                        import uuid
+                        new_alert = {
+                            "id": str(uuid.uuid4()),
+                            "company_id": company_id,
+                            "type": "calamity_divert",
+                            "severity": "critical" if cell_type in ("cyclone", "flood", "storm") else "warning",
+                            "description": f"AI PROPOSED ACTION: {ai_action} due to active {cell_type.upper()}.",
+                            "suggestion": f"Please verify and execute AI actions on the weather fleet map.",
+                            "shipment_id": s["id"],
+                            "driver_id": s.get("assigned_driver_id"),
+                            "status": "active"
+                        }
+                        alerts_db_inst.insert(new_alert)
+                        active_alert = new_alert
+                
                 alert_id = active_alert["id"] if active_alert else None
                 alert_status = "active" if active_alert else "none"
                 
@@ -848,8 +867,16 @@ def get_active_alerts(company_id: str):
         else:
             # Alerts without shipment_id (e.g. driver maintenance) are valid
             valid_alerts.append(alert)
-            
     return valid_alerts
+
+
+@router.get("/alerts/past")
+def get_past_alerts(company_id: str):
+    from backend.database import JSONDatabase
+    alerts_db = JSONDatabase("alerts")
+    all_resolved = alerts_db.get_filtered({"company_id": company_id, "status": "resolved"})
+    calamity_resolved = [a for a in all_resolved if a and a.get("type") == "calamity_divert"]
+    return sorted(calamity_resolved, key=lambda x: x.get("resolved_at") or "", reverse=True)
 
 
 @router.post("/broadcast")
