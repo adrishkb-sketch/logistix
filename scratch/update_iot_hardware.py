@@ -4,7 +4,7 @@ js_code = """const iotHardwareData = {
     cold_chain: {
         title: "Cold-Chain Sensor Array",
         subtitle: "NodeMCU ESP8266 + DHT22 High-Precision Digital Sensor",
-        description: "Monitors the ambient temperature of perishable shipments (e.g. Vaccines). If the temperature breaches the safe threshold (8°C), it triggers an automated reroute to the nearest cold-storage facility and alerts the driver.",
+        description: "Monitors the ambient temperature of perishable shipments (e.g. Vaccines) in real-time. If the temperature breaches the safe threshold (8°C), it triggers an automated reroute to the nearest cold-storage facility and alerts the driver. This ensures compliance with FDA/pharma regulations.",
         mermaid: `graph TD
     ESP8266[NodeMCU ESP8266 WiFi]
     DHT22[DHT22 Temp/Humidity Sensor]
@@ -16,7 +16,7 @@ js_code = """const iotHardwareData = {
     ESP8266 -->|GND| DHT22
     DHT22 -.->|Data Pin D4| ESP8266
     ESP8266 ==== WIFI
-    WIFI -.->|POST /api/iot/event| LogistixAPI[Logistix Backend]
+    WIFI -.->|POST api/iot/event| LogistixAPI[Logistix Backend]
 
     classDef hardware fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#fff;
     classDef sensor fill:#1e293b,stroke:#a855f7,stroke-width:2px,color:#fff;
@@ -57,12 +57,13 @@ void loop() {
   delay(60000); // Poll every 60s
 }`,
         language: 'cpp',
-        payload: { temp: 11.4 }
+        payload: { temp: 11.4 },
+        randomize: () => ({ temp: (Math.random() * 20 - 5).toFixed(1) }) // -5 to 15
     },
     fatigue: {
         title: "Biometric Fatigue Monitor",
         subtitle: "ESP32 + MAX30102 Pulse Oximeter",
-        description: "Monitors the driver's heart rate and micro-sleeps using biometric sensors. If signs of severe fatigue are detected, the AI orchestrator forces an emergency 15-minute rest stop.",
+        description: "Worn by truck drivers, this sensor monitors heart rate variability and micro-sleeps. If severe fatigue (low HR, high eye closure) is detected, the AI orchestrator forces an emergency 15-minute rest stop, preventing catastrophic accidents.",
         mermaid: `graph LR
     ESP32[ESP32 Microcontroller]
     MAX30102[MAX30102 Heart Rate & SpO2]
@@ -70,8 +71,8 @@ void loop() {
     
     BATTERY --> ESP32
     ESP32 -->|3.3V / GND| MAX30102
-    MAX30102 -.->|I2C SDA: Pin 21| ESP32
-    MAX30102 -.->|I2C SCL: Pin 22| ESP32
+    MAX30102 -.->|I2C SDA Pin 21| ESP32
+    MAX30102 -.->|I2C SCL Pin 22| ESP32
     
     classDef hardware fill:#0f172a,stroke:#ef4444,stroke-width:2px,color:#fff;
     class ESP32,MAX30102 hardware;`,
@@ -106,19 +107,23 @@ void loop() {
        HTTPClient http;
        http.begin(serverURL);
        http.addHeader("Content-Type", "application/json");
-       String json = "{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"fatigue\\", \\"data\\":{\\"heart_rate\\":" + String(beatsPerMinute) + "},\\"is_mock\\":true}";
+       String json = "{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"fatigue\\", \\"data\\":{\\"heart_rate\\":" + String(beatsPerMinute) + ", \\"eye_closure_rate\\": 85},\\"is_mock\\":true}";
        http.POST(json);
        http.end();
     }
   }
 }`,
         language: 'cpp',
-        payload: { heart_rate: 52, eye_closure_rate: 85 }
+        payload: { heart_rate: 52, eye_closure_rate: 85 },
+        randomize: () => ({ 
+            heart_rate: Math.floor(Math.random() * 40) + 45, // 45 to 85
+            eye_closure_rate: Math.floor(Math.random() * 60) + 40 // 40 to 100
+        })
     },
     weighbridge: {
         title: "Automated Smart Weighbridge",
         subtitle: "Arduino Uno + HX711 Amplifier + 50kg Load Cells",
-        description: "Automatically records the payload weight of trucks passing through the hub gates. Cross-references the measured weight with the cargo manifest to detect theft or misdeclarations instantly.",
+        description: "Automatically records the payload weight of trucks passing through the hub gates. The AI cross-references this measured weight with the digital cargo manifest to detect theft, smuggling, or misdeclarations instantly without human intervention.",
         mermaid: `graph TD
     UNO[Arduino Uno]
     HX711[HX711 24-bit ADC]
@@ -129,10 +134,10 @@ void loop() {
     ETHERNET[W5100 Ethernet Shield]
     
     LC1 & LC2 & LC3 & LC4 -->|Wheatstone Bridge| HX711
-    HX711 -.->|DT: Pin 3| UNO
-    HX711 -.->|SCK: Pin 2| UNO
+    HX711 -.->|DT Pin 3| UNO
+    HX711 -.->|SCK Pin 2| UNO
     UNO --> ETHERNET
-    ETHERNET ===|TCP/IP| API[Logistix Gate Server]
+    ETHERNET ===|TCP IP| API[Logistix Gate Server]
 
     classDef hw fill:#1e293b,stroke:#f59e0b,stroke-width:2px,color:#fff;
     class UNO,HX711,LC1,LC2,LC3,LC4 hw;`,
@@ -161,7 +166,7 @@ void loop() {
     float weight = scale.get_units(10);
     if (weight > 5000.0) { // Truck detected
       if (client.connect(server, 8000)) {
-        String json = "{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"weighbridge\\", \\"data\\":{\\"weight\\":" + String(weight) + "},\\"is_mock\\":true}";
+        String json = "{\\"company_id\\":\\"demo\\",\\"device_type\\":\\"weighbridge\\", \\"data\\":{\\"weight\\":" + String(weight) + ", \\"plate\\": \\"MH-12-TX-8899\\"},\\"is_mock\\":true}";
         client.println("POST /api/iot/event HTTP/1.1");
         client.println("Content-Type: application/json");
         client.println("Content-Length: " + String(json.length()));
@@ -173,18 +178,25 @@ void loop() {
   }
 }`,
         language: 'cpp',
-        payload: { weight: 12450, plate: 'MH-12-TX-8899' }
+        payload: { weight: 12450, plate: 'MH-12-TX-8899' },
+        randomize: () => {
+            const plates = ['MH-12-TX-8899', 'KA-01-AB-1234', 'DL-4C-AW-9090', 'TN-09-CQ-4545'];
+            return {
+                weight: Math.floor(Math.random() * 20000) + 2000,
+                plate: plates[Math.floor(Math.random() * plates.length)]
+            };
+        }
     },
     drone: {
         title: "Drone Telemetry Unit",
         subtitle: "Raspberry Pi Zero W + MAVLink Pixhawk",
-        description: "A companion computer that interfaces with a delivery drone's flight controller. It streams live altitude, GPS, and battery telemetry to the Logistix AI orchestrator for autonomous last-mile delivery tracking.",
+        description: "A companion computer that interfaces with a delivery drone's flight controller. It streams live altitude, GPS, and battery telemetry to the Logistix AI orchestrator. If the battery is critically low, the AI automatically recalculates a safe descent path to the nearest landing pad.",
         mermaid: `graph LR
     PI[Raspberry Pi Zero W]
     PIX[Pixhawk Flight Controller]
     LTE[4G LTE USB Modem]
     
-    PIX -.->|UART / MAVLink| PI
+    PIX -.->|UART MAVLink| PI
     PI -->|USB| LTE
     LTE ==== |Internet| MQTT[Logistix Telemetry Endpoint]
 
@@ -225,18 +237,24 @@ while True:
         print("Error reading MAVLink stream")
 `,
         language: 'python',
-        payload: { lat: 19.123, lng: 72.881, battery: 12, alt: 120 }
+        payload: { lat: 19.123, lng: 72.881, battery: 12, alt: 120 },
+        randomize: () => ({
+            lat: (19.0 + Math.random() * 0.2).toFixed(4),
+            lng: (72.8 + Math.random() * 0.2).toFixed(4),
+            battery: Math.floor(Math.random() * 100),
+            alt: Math.floor(Math.random() * 300) + 10
+        })
     },
     rfid: {
         title: "RFID Conveyor Scanner",
         subtitle: "ESP8266 + MFRC522 High-Speed Reader",
-        description: "Scans packages as they move down a high-speed warehouse conveyor belt. If the AI detects a downstream bottleneck, it uses this real-time flow data to instantly divert packages to alternative sorting docks.",
+        description: "Scans packages as they move down a high-speed warehouse conveyor belt. By analyzing the scan rate (packages per second), the AI orchestrator can predict downstream bottlenecks and instantly divert packages to alternative sorting docks before a jam occurs.",
         mermaid: `graph TD
     ESP[ESP8266]
     RFID[MFRC522 RFID Reader]
     CONV[Conveyor Belt Motor Controller]
     
-    RFID -.->|SPI (MISO/MOSI/SCK/CS)| ESP
+    RFID -.->|SPI MISO MOSI SCK CS| ESP
     ESP -.->|PWM Control| CONV
     ESP ==== |WiFi| API[Logistix Sorting Node]
 
@@ -281,21 +299,28 @@ void loop() {
   mfrc522.PICC_HaltA();
 }`,
         language: 'cpp',
-        payload: { scan_rate: 145, uid: 'A4:F2:C9:8B' }
+        payload: { scan_rate: 145, uid: 'A4:F2:C9:8B' },
+        randomize: () => {
+            const hex = () => Math.floor(Math.random() * 256).toString(16).toUpperCase().padStart(2, '0');
+            return {
+                scan_rate: Math.floor(Math.random() * 300) + 10,
+                uid: \`\${hex()}:\${hex()}:\${hex()}:\${hex()}\`
+            };
+        }
     },
     shock: {
         title: "Shock & Drop Sensor",
         subtitle: "ESP32 + MPU6050 6-Axis Accelerometer",
-        description: "Measures extreme G-forces experienced by fragile packages (like electronics). If a package is dropped, it registers the impact axis and force, instantly triggering an automated damage assessment and pre-authorizing replacements.",
+        description: "Measures extreme G-forces experienced by fragile packages (like electronics). If a package is dropped, it registers the exact impact axis and force, instantly triggering an automated damage assessment and pre-authorizing replacement shipments.",
         mermaid: `graph LR
     ESP[ESP32 Deep Sleep Node]
-    MPU[MPU6050 Accel/Gyro]
+    MPU[MPU6050 Accel Gyro]
     BATT[18650 Battery]
     
     BATT --> ESP
     ESP -->|3.3V| MPU
-    MPU -.->|I2C SDA: 21| ESP
-    MPU -.->|I2C SCL: 22| ESP
+    MPU -.->|I2C SDA 21| ESP
+    MPU -.->|I2C SCL 22| ESP
     MPU -.->|Interrupt INT| ESP
 
     classDef hw fill:#0f172a,stroke:#f43f5e,stroke-width:2px,color:#fff;
@@ -341,17 +366,27 @@ void loop() {
   delay(100);
 }`,
         language: 'cpp',
-        payload: { g_force: 8.2, axis: 'Z' }
+        payload: { g_force: 8.2, axis: 'Z' },
+        randomize: () => {
+            const axes = ['X', 'Y', 'Z'];
+            return {
+                g_force: (Math.random() * 15 + 2).toFixed(1), // 2 to 17 G
+                axis: axes[Math.floor(Math.random() * axes.length)]
+            };
+        }
     }
 };
 
 let currentActiveIoT = null;
+let currentMockPayload = {};
 
 async function openIoTModal(deviceKey) {
     const data = iotHardwareData[deviceKey];
     if (!data) return;
     
     currentActiveIoT = deviceKey;
+    currentMockPayload = { ...data.payload }; // deep copy initial
+    
     document.getElementById('iotModalTitle').innerText = data.title;
     document.getElementById('iotModalSubtitle').innerText = data.subtitle;
     
@@ -395,12 +430,71 @@ async function openIoTModal(deviceKey) {
         Prism.highlightElement(codeBlock);
     }
 
+    // Render Payload Editor
+    renderPayloadEditor();
+
     // Reset Terminal
     const term = document.getElementById('iot-term-body');
     term.innerHTML = '<span style="color:#10b981;">[System] Secure connection established to Mock Engine.</span><br>';
 
     switchIoTTab('schematic');
     document.getElementById('iotModal').style.display = 'flex';
+}
+
+function renderPayloadEditor() {
+    let editorContainer = document.getElementById('payload-editor');
+    if(!editorContainer) {
+        const testSection = document.getElementById('tab-testing');
+        const triggerDiv = testSection.children[0];
+        
+        editorContainer = document.createElement('div');
+        editorContainer.id = 'payload-editor';
+        editorContainer.style.marginTop = '15px';
+        editorContainer.style.background = 'var(--bg-base)';
+        editorContainer.style.padding = '12px';
+        editorContainer.style.borderRadius = '8px';
+        editorContainer.style.border = '1px solid var(--border-highlight)';
+        
+        triggerDiv.insertBefore(editorContainer, document.getElementById('iot-trigger-btn'));
+        
+        const controls = document.createElement('div');
+        controls.innerHTML = '<button class="btn btn-outline" onclick="randomizePayload()" style="width:100%; margin-bottom:15px; padding:8px; font-size:0.85rem;">🎲 Randomize Values</button>';
+        triggerDiv.insertBefore(controls, editorContainer);
+    }
+    
+    editorContainer.innerHTML = '<h4 style="margin:0 0 10px 0; font-size:0.9rem; color:var(--text-muted);">Edit JSON Payload Data</h4>';
+    
+    Object.keys(currentMockPayload).forEach(key => {
+        const val = currentMockPayload[key];
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.marginBottom = '8px';
+        
+        row.innerHTML = \`
+            <label style="flex:1; font-family:monospace; font-size:0.85rem; color:var(--text-main);">"\${key}":</label>
+            <input type="text" onchange="updatePayloadValue('\${key}', this.value)" value="\${val}" style="flex:2; padding:6px; border-radius:4px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-family:monospace; outline:none;">
+        \`;
+        editorContainer.appendChild(row);
+    });
+}
+
+function updatePayloadValue(key, value) {
+    // Try to parse as number if it looks like one
+    if(!isNaN(value) && value.trim() !== '') {
+        currentMockPayload[key] = Number(value);
+    } else {
+        currentMockPayload[key] = value;
+    }
+}
+
+function randomizePayload() {
+    if (!currentActiveIoT) return;
+    const randomizeFunc = iotHardwareData[currentActiveIoT].randomize;
+    if(randomizeFunc) {
+        currentMockPayload = randomizeFunc();
+        renderPayloadEditor();
+    }
 }
 
 function switchIoTTab(tabName) {
@@ -439,7 +533,6 @@ async function executeIoTSimulation() {
     
     const btn = document.getElementById('iot-trigger-btn');
     const term = document.getElementById('iot-term-body');
-    const data = iotHardwareData[currentActiveIoT];
     
     btn.innerHTML = '⏳ Transmitting...';
     btn.disabled = true;
@@ -447,7 +540,7 @@ async function executeIoTSimulation() {
     const reqBody = {
         company_id: 'mock-environment', // Use mock ID to isolate logic
         device_type: currentActiveIoT,
-        data: data.payload,
+        data: currentMockPayload,
         is_mock: true // Tell backend to not touch real db
     };
 
