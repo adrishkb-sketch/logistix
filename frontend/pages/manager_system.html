@@ -1,270 +1,290 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<link href="../favicon.svg" rel="icon" type="image/svg+xml"/>
-<link href="../favicon.png" rel="icon" type="image/png"/>
-<link href="../apple-touch-icon.png" rel="apple-touch-icon"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Manager Dashboard | Logistix</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
-<link href="../css/style.css" rel="stylesheet">
-<!-- Leaflet CSS & Draw CSS -->
-<style>
-        #map { height: 450px; width: 100%; border-radius: 20px; margin-top: 1rem; border: 1px solid var(--border); z-index: 1; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>System Settings | Logistix</title>
 
-        .hover-card {
-            position: absolute;
-            z-index: 10002;
-            width: 260px;
-            padding: 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
-            display: none;
-            pointer-events: none;
-            backdrop-filter: blur(20px);
-        }
-        .driver-name-hover:hover .hover-card { display: block; }
-        .hover-card.low-fatigue { border-top: 4px solid var(--success); }
-        .hover-card.mid-fatigue { border-top: 4px solid var(--warning); }
-        .hover-card.high-fatigue { border-top: 4px solid var(--danger); }
-        
-        /* Specific Table Overrides */
-        .leaderboard-table tr:first-child { background: rgba(245, 158, 11, 0.08); border-left: 4px solid var(--warning); }
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.json">
 
-        /* Leaderboard responsive layout */
-        .leaderboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            gap: 12px;
-            flex-wrap: wrap;
+    <!-- Premium Fonts matching index.html -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- External Stylesheets Link -->
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        :root {
+            /* Dark Mode (Ultra-Deep Navy & Bioluminescent Palette) */
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+
+            /* Accents */
+            --accent-1: #00e5ff;
+            --accent-2: #ff9900;
+            --accent-3: #00ff73;
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(15, 20, 35, 0.45);
+            --surface-hover: rgba(25, 33, 55, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.18);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
         }
-        .leaderboard-selects {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
+
+        body.light-mode {
+            /* Enhanced Light Mode */
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+
+            --accent-1: #0ea5e9;
+            --accent-2: #f59e0b;
+            --accent-3: #10b981;
+
+            --surface: rgba(255, 255, 255, 0.75);
+            --surface-hover: rgba(255, 255, 255, 0.98);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-highlight: rgba(0, 0, 0, 0.2);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
         }
-        /* The table wrapper scrolls horizontally on its own — page stays still */
-        .leaderboard-table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            border-radius: 8px;
+
+        /* ── RESET & BASE ENFORCEMENT ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; overflow-x: hidden !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            -webkit-font-smoothing: antialiased;
         }
-        .leaderboard-table {
-            min-width: 480px; /* Forces scroll inside the wrapper instead of the page */
-            width: 100%;
+
+        h1, h2, h3, h4, h5, h6, .split-text {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
         }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+        /* ── HIGH PERFORMANCE BACKDROP GRAPHICS ── */
+        .bg-blobs {
+            position: fixed; inset: 0; z-index: 0;
+            overflow: hidden; pointer-events: none;
+            background: var(--bg-base);
+            transition: background 0.6s ease;
+        }
+        .blob {
+            position: absolute; filter: blur(55px); opacity: 0.6;
+            will-change: transform, border-radius;
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            transform: translateZ(0);
+        }
+        body.light-mode .blob { opacity: 0.55; filter: blur(45px); }
+        .blob-1 { top: -10%; left: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-1); animation: wavePush1 15s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -10%; right: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-2); animation: wavePush2 18s infinite alternate ease-in-out; }
+        .blob-3 { top: 25%; left: 20%; width: max(50vw, 350px); height: max(50vh, 350px); background: var(--accent-3); animation: wavePush3 22s infinite alternate ease-in-out; }
+
+        @keyframes wavePush1 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 50% { transform: translate3d(20vw, 15vh, 0) scale(1.2); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 100% { transform: translate3d(5vw, 30vh, 0) scale(0.95); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; } }
+        @keyframes wavePush2 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 50% { transform: translate3d(-20vw, -15vh, 0) scale(1.25); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } }
+        @keyframes wavePush3 { 0% { transform: translate3d(0, 0, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } 50% { transform: translate3d(-15vw, 10vh, 0) scale(1.2); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; } 100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } }
+
+        #interactive-grid { position: fixed; inset: 0; z-index: 1; pointer-events: none; width: 100%; height: 100%; }
+
+        /* ── INTERACTIVE TEXT ── */
+        .split-text { display: inline-block; word-wrap: break-word; pointer-events: auto; touch-action: pan-y; }
+        .split-text .char { display: inline-block; transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.15s ease, text-shadow 0.15s ease; white-space: pre; will-change: transform, color; pointer-events: none; }
+        .split-text .char.hovered { transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg); color: var(--accent-1) !important; text-shadow: 0 10px 20px var(--neon-glow); transition: transform 0.03s ease-out, color 0.03s ease-out, text-shadow 0.03s ease-out; z-index: 2; position: relative; }
+        .split-text .char.neighbor { transform: translate3d(0, -4px, 0) scale(1.05); color: var(--accent-2) !important; transition: transform 0.04s ease-out, color 0.04s ease-out; }
+        .text-shine-hover { display: inline-block; transition: transform 0.15s ease; }
+        @media (hover: hover) and (pointer: fine) {
+            .text-shine-hover:hover { transform: translateY(-2px); background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1)); background-size: 300% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: textShineSweep 2s linear infinite; }
+        }
+        @keyframes textShineSweep { to { background-position: 300% 50%; } }
+
+        /* ── LAYOUT & SIDEBAR ── */
+        .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
+        .sidebar {
+            width: 280px !important; background: rgba(8, 11, 22, 0.7) !important; border-right: 1px solid var(--border) !important;
+            backdrop-filter: blur(30px) !important; -webkit-backdrop-filter: blur(30px) !important;
+            display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0;
+            z-index: 2000 !important; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.75) !important; border-right: 1px solid var(--border) !important; }
+        .sidebar-header { padding: 30px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 { font-size: 1.7rem !important; font-weight: 800 !important; margin: 0; background: linear-gradient(135deg, var(--text-main), var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sidebar-close-btn { display: none; background: none; border: none; color: var(--text-main); cursor: pointer; transition: transform 0.2s ease; }
+        .sidebar-close-btn:active { transform: scale(0.9); }
+        .nav-links-wrapper { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--text-muted) !important; font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid transparent; }
+        .nav-link svg { width: 20px; height: 20px; stroke-width: 1.8; stroke: currentColor; fill: none; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-link:hover { color: var(--text-main) !important; background: var(--surface-hover); border-color: var(--border-highlight); transform: translateX(4px); }
+        .nav-link:hover svg { transform: scale(1.1); }
+        .nav-link.active { color: var(--text-main) !important; background: var(--surface); border-color: var(--border-highlight); border-left: 3px solid var(--accent-1) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+        body.light-mode .nav-link.active { box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
+        .sidebar-footer .nav-link { border: 1px solid rgba(255, 59, 48, 0.15); background: rgba(255, 59, 48, 0.05); color: #ff3b30 !important; }
+        .sidebar-footer .nav-link:hover { background: rgba(255, 59, 48, 0.15); border-color: rgba(255, 59, 48, 0.3); }
+
+        .main-content {
+            flex: 1; margin-left: 280px; padding: 40px;
+            width: auto; max-width: calc(100vw - 280px);
+            box-sizing: border-box; overflow-x: hidden !important;
+            transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* ── HEADER ── */
+        .top-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px 30px; display: flex; align-items: center; justify-content: space-between; gap: 24px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); margin-bottom: 40px; box-shadow: var(--glow-shadow); }
+        .mobile-menu-btn, .mobile-theme-toggle, .mobile-logo-container { display: none; }
+        .top-bar-mobile-header { display: flex; align-items: center; flex: 1; justify-content: space-between; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; }
+        .top-bar-left h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; margin: 0; }
+        .title-separator { opacity: 0.3; }
+        .manager-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; align-items: center; gap: 14px; }
+
+        /* Buttons & Inputs */
+        .glass-btn {
+            background: var(--surface); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px;
+            border-radius: 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); justify-content: center;
+        }
+        .glass-btn:hover:not(:disabled) { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+        .glass-btn:active:not(:disabled) { transform: scale(0.96); }
+
+        .btn-danger { color: var(--danger) !important; border: 1px solid rgba(255, 59, 48, 0.3) !important; background: rgba(255, 59, 48, 0.05) !important; }
+        .btn-danger:hover:not(:disabled) { background: rgba(255, 59, 48, 0.15) !important; border-color: var(--danger) !important; box-shadow: 0 6px 20px rgba(255, 59, 48, 0.2) !important; }
+        .btn-solid-danger { background: var(--danger) !important; color: #fff !important; border: none !important; }
+        .btn-solid-danger:hover:not(:disabled) { box-shadow: 0 6px 25px rgba(255, 59, 48, 0.4) !important; filter: brightness(1.1); }
+
+        .glass-input {
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-main);
+            padding: 12px 16px; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif;
+            outline: none; transition: all 0.3s ease; width: 100%;
+        }
+        body.light-mode .glass-input { background: rgba(255,255,255,0.5); }
+        .glass-input:focus { border-color: var(--accent-1); box-shadow: 0 0 15px var(--neon-glow); background: var(--surface); }
+
+        .glass-select-container { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 0 16px; border-radius: 14px; height: 44px; backdrop-filter: blur(10px); transition: all 0.3s ease; }
+        .glass-select-container:hover { border-color: var(--border-highlight); background: var(--surface-hover); }
+        .glass-select-container select { background: transparent; border: none; color: var(--text-main); font-weight: 700; font-size: 0.85rem; cursor: pointer; outline: none; padding-right: 12px; height: 100%; }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); }
+        .theme-switch:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+        .theme-switch:active { transform: scale(0.9); }
+
+        /* ── CARDS ── */
+        .glass-card {
+            background: var(--surface) !important; border: 1px solid var(--border) !important;
+            border-radius: 28px !important; padding: 30px;
+            backdrop-filter: blur(24px) !important; -webkit-backdrop-filter: blur(24px) !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            transition: border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative; overflow: hidden; transform-style: preserve-3d; will-change: transform;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .glass-card:hover { border-color: var(--border-highlight) !important; box-shadow: 0 20px 45px -10px var(--glow-shadow) !important; }
+        }
+        .section-card h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .subtitle { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px; font-weight: 500; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 30px; }
+
+        /* ── SYSTEM SPECIFIC ── */
+        .pin-row { display: flex; gap: 12px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
+        .pin-box {
+            width: 50px; height: 60px; text-align: center; font-size: 1.6rem; font-weight: 800;
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-main);
+            border-radius: 12px; transition: all 0.3s ease; outline: none;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        body.light-mode .pin-box { background: rgba(255,255,255,0.5); }
+        .pin-box:focus { border-color: var(--danger); box-shadow: 0 0 15px rgba(255, 59, 48, 0.3); background: var(--surface); transform: translateY(-2px); }
+
+        .badge {
+            background: var(--accent-1); color: #000; font-size: 0.7rem; font-weight: 800;
+            padding: 2px 8px; border-radius: 10px; margin-left: auto; box-shadow: 0 0 10px var(--neon-glow);
+        }
+        body.light-mode .badge { color: #fff; }
+
+        .company-id-box {
+            background: rgba(0,0,0,0.3); padding: 12px 20px; border-radius: 12px;
+            font-weight: 800; color: var(--primary); font-size: 1.2rem;
+            border: 1px solid var(--border); letter-spacing: 2px;
+            font-family: 'Space Grotesk', monospace; text-align: center;
+        }
+        body.light-mode .company-id-box { background: rgba(255,255,255,0.6); }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%) !important; }
+            .sidebar.open { transform: translateX(0) !important; }
+            .sidebar-close-btn { display: flex !important; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1999; transition: opacity 0.4s ease; }
+            .sidebar-overlay.active { display: block; }
+            .main-content { margin-left: 0 !important; padding: 24px 16px !important; max-width: 100vw !important; width: 100% !important; }
+            .top-bar { padding: 16px 20px; flex-direction: column; align-items: stretch; border-radius: 20px; gap: 16px; }
+            .top-bar-mobile-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .top-bar-left { justify-content: flex-start; width: calc(100% - 50px); }
+            .top-bar h1 { font-size: 1.2rem; }
+            .mobile-menu-btn { display: flex !important; background: none; border: none; color: var(--text-main); cursor: pointer; margin-right: 12px; transition: transform 0.2s ease; }
+            .mobile-menu-btn:active { transform: scale(0.9); }
+            .mobile-theme-toggle { display: flex !important; }
+            .mobile-logo-container { display: flex !important; margin-right: 10px; align-items: center; justify-content: center; }
+            .desktop-theme-toggle { display: none !important; }
+            .top-bar-controls { width: 100% !important; display: flex !important; flex-flow: row wrap !important; gap: 10px !important; justify-content: flex-start !important; }
+            .glass-select-container { flex: 1 1 auto !important; min-width: 120px !important; }
+            .automated-group { flex: 2 1 auto !important; display: flex !important; min-width: 180px !important; justify-content: space-between !important; }
+            .automated-group .voice-btn { flex: 1 !important; justify-content: center !important; }
+        }
+
         @media (max-width: 768px) {
-            .leaderboard-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .leaderboard-selects {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-            }
-            .leaderboard-selects select {
-                width: 100%;
-                font-size: 0.85rem !important;
-                padding: 8px 10px !important;
-            }
+            .stats-grid { grid-template-columns: 1fr !important; gap: 16px !important; width: 100% !important; }
+            .glass-card { padding: 20px 16px !important; border-radius: 20px !important; }
         }
-        /* Dashboard Spacing */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
-        
-        /* Sidebar Logo */
-        .sidebar-header { margin-bottom: 40px; padding: 0 12px; }
-        .nav-links-wrapper { margin-bottom: 32px; }
-        .chat-driver-item:hover { background: rgba(79, 140, 255, 0.05) !important; }
-        .chat-driver-item.active { background: rgba(79, 140, 255, 0.1) !important; border-left: 4px solid var(--primary); }
-        .section-card h3 {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 800;
-}
-
-.subtitle {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-bottom: 24px;
-    line-height: 1.6;
-}
-        .sidebar-header h2 { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, var(--text), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-        /* Animation */
-        .background-animation {
-            position: fixed;
-            inset: 0;
-            z-index: -1;
-            background: radial-gradient(circle at 15% 15%, rgba(79, 140, 255, 0.1), transparent),
-                        radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08), transparent);
-        }
-        /* Automated Optimize Button */
-        .ai-optimize-btn {
-            background: linear-gradient(135deg, #4f8cff 0%, #a855f7 100%);
-            color: white !important;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            letter-spacing: 0.3px;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .ai-optimize-btn:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5);
-            filter: brightness(1.1);
-        }
-        .ai-optimize-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
-        }
-        .ai-optimize-btn:hover::before {
-            left: 100%;
-        }
-        .ai-optimize-btn:active {
-            transform: translateY(0) scale(0.98);
-        }
-
-        /* Simulation Mode Switch */
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2); }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-        input:focus + .slider { box-shadow: 0 0 1px #3b82f6; }
-        input:checked + .slider:before { transform: translateX(22px); }
-        
-        #sim-mode-toggle-container.active { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-        #sim-mode-toggle-container.active span { color: #3b82f6 !important; }
-        @media (max-width: 600px) {
-            .glass-card.section-card {
-                padding: 16px !important;
-            }
-            .section-card h2 {
-                font-size: 1.4rem;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr !important;
-            }
-        }
-        body.light-mode input, body.light-mode select, body.light-mode textarea, body.light-mode .pin-box {
-            color: #000000 !important;
-        }
-        .btn-action-details {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
-        border-radius: 14px;
-        border: 1px solid var(--border);
-        background: var(--card);
-        color: var(--text);
-        cursor: pointer;
-        font-weight: 700;
-        font-size: 0.85rem;
-        transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        text-align: left;
-    }
-    .btn-action-details:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-        background: rgba(79, 140, 255, 0.1);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-    }
-    .btn-action-details .icon {
-        font-size: 1.2rem;
-    }
-    .btn-action-details:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-    .intel-block {
-        background: rgba(255,255,255,0.02);
-        border: 1px solid var(--border);
-        padding: 16px;
-        border-radius: 16px;
-    }
-    .modal {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(12px);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        padding: 20px;
-    }
-    .modal-box {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-        animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes modalIn {
-        from { transform: scale(0.9) translateY(20px); opacity: 0; }
-        to { transform: scale(1) translateY(0); opacity: 1; }
-    }
-    .modal-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        cursor: pointer;
-        font-size: 1.4rem;
-        opacity: 0.5;
-        transition: 0.3s;
-        z-index: 100;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.1);
-    }
-    .modal-close:hover { 
-        opacity: 1; 
-        background: var(--danger);
-        color: white;
-    }
-</style>
-<link href="../css/premium_theme.css" rel="stylesheet">
-</link></link></link></head>
+    </style>
+</head>
 <body>
-<div class="background-animation"></div>
+
+<!-- ── ANIMATED HIGH PERF BLOB BACKDROP ── -->
 <div class="bg-blobs">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
 </div>
-<div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+<!-- ── INTERACTIVE CANVAS GRID ── -->
+<canvas id="interactive-grid"></canvas>
+
 <div class="dashboard-layout">
-<aside class="sidebar">
+    <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
         <div class="sidebar-header">
             <h2><span>Logistix</span></h2>
             <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
@@ -273,7 +293,7 @@
         </div>
 
         <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
-            <a class="nav-link active" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <span data-i18n="nav_analytics">Executive Analytics</span>
             </a>
@@ -333,7 +353,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                 <span data-i18n="nav_resilience">Network Resilience</span>
             </a>
-            <a class="nav-link" data-layout-id="nav-settings" href="manager_system.html">
+            <a class="nav-link active" data-layout-id="nav-settings" href="manager_system.html">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 <span data-i18n="nav_settings">System Settings</span>
             </a>
@@ -350,8 +370,12 @@
             </a>
         </div>
     </aside>
-<main class="main-content" data-layout-container="main-sections">
-<header class="top-bar">
+
+    <!-- ── MAIN PANEL ── -->
+    <main class="main-content" data-layout-container="main-sections">
+
+        <!-- ── HEADER (TOP BAR) ── -->
+        <header class="top-bar">
             <div class="top-bar-mobile-header">
                 <div class="top-bar-left">
                     <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
@@ -366,7 +390,7 @@
                         </svg>
                     </div>
                     <h1>
-                        <span class="split-text" data-i18n="dashboard">Dashboard</span>
+                        <span class="split-text" data-i18n="nav_settings">System Settings</span>
                         <span class="title-separator">/</span>
                         <span id="manager-name" class="manager-name-hl text-shine-hover">---</span>
                     </h1>
@@ -429,140 +453,138 @@
                 </div>
             </div>
         </header>
-<!-- Voice Control Button & Help -->
-<div style="display:flex; align-items:center; gap:6px;">
-<button class="glass-card notranslate" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()" style="padding:8px 16px; font-size:0.9rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:8px; color:var(--text);">🎙️ Automated Control</button>
-<button onclick="window.logistixVoice.showInstructions()" style="background:rgba(128,128,128,0.2); border:1px solid var(--border); color:var(--text); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold;" title="Voice Help">?</button>
-</div>
-<div class="theme-switch notranslate" id="theme-toggle" style="margin:0;" title="Toggle Light/Dark Mode">🌙</div>
-</div>
-<!-- Hub Leaves Section -->
-<!-- Analytics Section -->
-<!-- Warehouses Section -->
-<!-- Shipments Section -->
-<!-- Receivers Section -->
-<!-- Drivers & Vehicles Section -->
-<!-- Verifications Section -->
-<!-- Weather Fleet Map Section -->
-<!-- Messages Section -->
-<!-- Leaderboard Section -->
-<!-- Smart Contract Ledger Section -->
-<!-- Strategy Oracle Section -->
-<!-- Operational Strategy Tracker Section -->
-<!-- System Settings Section -->
-<!-- Network Resilience Section -->
-<!-- Bharat-Fuel Oracle Section -->
-<!-- Payments Section -->
-<section class="section-content" data-layout-id="section-system" id="system">
-<div class="glass-card section-card" data-layout-container="system-content">
-<h3 data-i18n="sys_mgmt">System Management</h3>
-<p data-i18n="sys_mgmt_desc" style="color:var(--text-muted); margin-bottom: 20px;">Use these tools to reset database tables or manage your company account.</p>
-<div class="glass-card" style="padding:15px; background:rgba(79, 140, 255, 0.1); border-left:4px solid var(--primary); margin-bottom:30px; display:flex; justify-content:space-between; align-items:center;">
-<div>
-<h4 data-i18n="company_id_label" style="margin:0; color:var(--primary);">Your Company ID</h4>
-<p data-i18n="company_id_desc" style="margin:5px 0 0 0; font-size:0.8rem; color:var(--text-muted);">Share this ID with your drivers so they can log in.</p>
-</div>
-<div style="display:flex; gap:10px; align-items:center;">
-<code id="display-company-id" style="background:rgba(0,0,0,0.3); padding:10px 15px; border-radius:8px; font-weight:bold; color:var(--primary); font-size:1.1rem; border:1px solid var(--primary);">LOADING...</code>
-<button class="btn-primary" onclick="copyCompanyID()" style="width:auto; padding:8px 12px; font-size:0.8rem;">📋 Copy</button>
-</div>
-</div>
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:20px;">
-<div class="glass-card" style="padding:20px; border:1px solid rgba(229,62,62,0.3); background:rgba(255,255,255,0.02);">
-<h4 data-i18n="reset_shipments" style="color:var(--danger)">Reset Shipments</h4>
-<p data-i18n="reset_shipments_desc" style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);">Permanently delete all shipment records and history.</p>
-<button class="btn-primary" data-i18n="btn_clear_shipments" onclick="systemReset('shipments')" style="background:var(--danger); width:auto;">Clear All Shipments</button>
-</div>
-<div class="glass-card" style="padding:20px; border:1px solid rgba(229,62,62,0.3); background:rgba(255,255,255,0.02);">
-<h4 data-i18n="reset_drivers" style="color:var(--danger)">Reset Drivers</h4>
-<p data-i18n="reset_drivers_desc" style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);">Permanently delete all driver records and unlink vehicles.</p>
-<button class="btn-primary" data-i18n="btn_clear_drivers" onclick="systemReset('drivers')" style="background:var(--danger); width:auto;">Clear All Drivers</button>
-</div>
-<div class="glass-card" style="padding:20px; border:1px solid rgba(229,62,62,0.3); background:rgba(255,255,255,0.02);">
-<h4 data-i18n="reset_vehicles" style="color:var(--danger)">Reset Vehicles</h4>
-<p data-i18n="reset_vehicles_desc" style="font-size:0.8rem; margin-bottom:15px; color:var(--text-muted);">Permanently delete all vehicle records and unlink drivers.</p>
-<button class="btn-primary" data-i18n="btn_clear_vehicles" onclick="systemReset('vehicles')" style="background:var(--danger); width:auto;">Clear All Vehicles</button>
-</div>
-</div>
-<div class="glass-card" style="padding:25px; border:2px solid var(--danger); background:rgba(229,62,62,0.05); margin-top:30px;">
-<div style="display:flex; justify-content:space-between; align-items:center; gap:20px;">
-<div>
-<h4 data-i18n="full_ops_reset" style="color:var(--danger); margin:0; font-size:1.2rem;">Full Operational Reset</h4>
-<p data-i18n="full_ops_reset_desc" style="font-size:0.9rem; margin:10px 0 0 0; color:var(--text);">Set all wallets, profit, and shipments to zero. <br/>
-<span data-i18n="full_ops_reset_warning" style="color:var(--text-muted); font-size:0.8rem;">Warehouses, Drivers, and Vehicles will remain unchanged, but all their history and balances will be wiped.</span></p>
-</div>
-<button class="btn-primary" data-i18n="btn_reset_all_functions" onclick="systemReset('operations')" style="background:var(--danger); width:auto; padding:12px 24px; font-weight:bold; box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);">RESET ALL FUNCTIONS ⚠️</button>
-</div>
 
+        <!-- ── SYSTEM SETTINGS CONTENT ── -->
+        <section class="section-content" data-layout-id="section-system" id="system">
+            <div data-layout-container="system-content">
 
-            </section>
-            
-            <!-- Gemini Settings Section -->
-            <section class="section-content" id="system-gemini">
-                <div class="glass-card section-card">
-                    <h3 data-i18n="gemini_mgmt">AI API Configuration</h3>
-                    <p data-i18n="gemini_mgmt_desc" style="color:var(--text-muted); margin-bottom: 20px;">Manage your Google Gemini API Keys for LLM-powered features.</p>
-                    <div class="glass-card" id="gemini-config-card" style="padding:25px; margin-top:30px; border:1px solid var(--primary); background:rgba(79, 140, 255, 0.03);">
-<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-<h4 style="margin:0; color:var(--primary); font-size:1.2rem;">🔮 Gemini AI Key Pool</h4>
-<span id="ai-status-badge" style="font-size:0.75rem; font-weight:800; padding:4px 14px; border-radius:20px; background:rgba(255,70,70,0.15); color:#f87171; border:1px solid rgba(248,113,113,0.3);">Not Configured 🔴</span>
-</div>
-<p style="font-size:0.85rem; margin:12px 0 20px 0; color:var(--text-muted);">
-    Add one or more <b>Google Gemini API keys</b>. The system will rotate through them automatically to stay within free-tier limits.
-    All AI features (Safety Audit, ESG Audit, Fleet Analysis, Strategy Optimizer, Driver Briefing, etc.) will only activate once at least one key is saved.
-    <br/><a href="https://aistudio.google.com/app/apikey" style="color:var(--primary); font-weight:700;" target="_blank">👉 Get free Gemini API key</a>
-</p>
-<!-- Existing Keys List -->
-<div id="gemini-keys-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px; min-height:40px;">
-<div id="gemini-no-keys-msg" style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:20px;">No API keys configured yet.</div>
-</div>
-<!-- Add New Key -->
-<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.07); padding-top:18px;">
-<input id="gemini-new-key-input" onkeydown="if(event.key==='Enter') addGeminiKey()" placeholder="Paste new Gemini API Key..." style="flex:1; min-width:240px; padding:12px 16px; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,0.3); color:white; font-family:monospace;" type="password"/>
-<button class="btn-primary" id="add-key-btn" onclick="addGeminiKey()" style="width:auto; padding:12px 22px; font-weight:800; background:linear-gradient(135deg,var(--primary),var(--accent));">
-        ➕ Add Key
-    </button>
-</div>
-</div>
+                <!-- Company ID Box -->
+                <div class="glass-card section-card" style="margin-bottom: 30px; border-left: 4px solid var(--primary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
+                        <div>
+                            <h3 data-i18n="company_id_label" class="split-text" style="color:var(--primary);">Your Company ID</h3>
+                            <p data-i18n="company_id_desc" class="subtitle" style="margin-bottom:0;">Share this ID with your drivers so they can log in.</p>
+                        </div>
+                        <div style="display:flex; gap:12px; align-items:center;">
+                            <div id="display-company-id" class="company-id-box">LOADING...</div>
+                            <button class="glass-btn" onclick="copyCompanyID()" style="border-color: var(--primary);">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                Copy
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </section>
-            
-            <section class="section-content">
-            <hr style="border-color:rgba(255,255,255,0.1); margin:40px 0;"/>
-<div class="glass-card" style="padding:30px; border:1px solid var(--danger); background:rgba(229,62,62,0.05);">
-<h3 data-i18n="danger_zone" style="color:var(--danger)">⚠️ Danger Zone</h3>
-<p data-i18n="delete_account_desc" style="color:var(--text-muted); margin-bottom:20px;">Once you delete your company account, there is no going back. Please be certain.</p>
-<div id="delete-account-step1">
-<button class="btn-primary" data-i18n="btn_delete_account" id="request-del-btn" onclick="requestDeleteAccount()" style="background:var(--danger); width:auto; padding:12px 30px;">Delete Company Account</button>
+
+                <!-- ── GEMINI API CONFIGURATION (EXTRACTED) ── -->
+                <div class="glass-card section-card" id="system-gemini" style="margin-bottom: 30px; border-top: 4px solid var(--primary);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom: 12px;">
+                        <h3 data-i18n="gemini_mgmt" class="split-text" style="margin:0;">AI API Configuration</h3>
+                        <span id="ai-status-badge" style="font-size:0.75rem; font-weight:800; padding:6px 14px; border-radius:20px; background:rgba(255,70,70,0.15); color:var(--danger); border:1px solid rgba(255,59,48,0.3);">Not Configured 🔴</span>
+                    </div>
+                    <p data-i18n="gemini_mgmt_desc" class="subtitle">Manage your Google Gemini API Keys for LLM-powered features.</p>
+
+                    <div style="padding:25px; border-radius: 16px; border:1px solid rgba(0, 229, 255, 0.2); background:rgba(0, 229, 255, 0.03);">
+                        <p style="font-size:0.9rem; margin:0 0 20px 0; color:var(--text-muted); line-height: 1.6;">
+                            Add one or more <strong style="color:var(--text-main);">Google Gemini API keys</strong>. The system will rotate through them automatically to stay within free-tier limits.
+                            All AI features (Safety Audit, ESG Audit, Fleet Analysis, Strategy Optimizer, Driver Briefing, etc.) will activate once at least one key is saved.
+                            <br/><a href="https://aistudio.google.com/app/apikey" style="color:var(--primary); font-weight:700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-top: 8px;" target="_blank">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                Get free Gemini API key
+                            </a>
+                        </p>
+
+                        <!-- Existing Keys List -->
+                        <div id="gemini-keys-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px; min-height:40px;">
+                            <div id="gemini-no-keys-msg" style="color:var(--text-muted); font-size:0.9rem; font-weight:500; text-align:center; padding:20px; border: 1px dashed var(--border); border-radius: 12px;">No API keys configured yet.</div>
+                        </div>
+
+                        <!-- Add New Key -->
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:20px;">
+                            <input id="gemini-new-key-input" class="glass-input" onkeydown="if(event.key==='Enter') addGeminiKey()" placeholder="Paste new Gemini API Key..." type="password" style="flex:1; min-width:240px;"/>
+                            <button class="glass-btn" id="add-key-btn" onclick="addGeminiKey()" style="background:linear-gradient(135deg, var(--primary), var(--accent)); color:#000; font-weight:800; border:none; padding: 12px 24px;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                Add Key
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Management Resets -->
+                <div class="glass-card section-card" style="margin-bottom: 30px;">
+                    <h3 data-i18n="sys_mgmt" class="split-text">System Management</h3>
+                    <p data-i18n="sys_mgmt_desc" class="subtitle">Use these tools to reset database tables or manage your company account.</p>
+
+                    <div class="stats-grid">
+                        <div class="glass-card" style="padding: 24px; border: 1px solid rgba(255, 59, 48, 0.2) !important;">
+                            <h4 data-i18n="reset_shipments" style="color:var(--danger); font-size: 1.1rem; margin-bottom: 8px;">Reset Shipments</h4>
+                            <p data-i18n="reset_shipments_desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Permanently delete all shipment records and history.</p>
+                            <button class="glass-btn btn-danger" data-i18n="btn_clear_shipments" onclick="systemReset('shipments')" style="width:100%;">Clear All Shipments</button>
+                        </div>
+                        <div class="glass-card" style="padding: 24px; border: 1px solid rgba(255, 59, 48, 0.2) !important;">
+                            <h4 data-i18n="reset_drivers" style="color:var(--danger); font-size: 1.1rem; margin-bottom: 8px;">Reset Drivers</h4>
+                            <p data-i18n="reset_drivers_desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Permanently delete all driver records and unlink vehicles.</p>
+                            <button class="glass-btn btn-danger" data-i18n="btn_clear_drivers" onclick="systemReset('drivers')" style="width:100%;">Clear All Drivers</button>
+                        </div>
+                        <div class="glass-card" style="padding: 24px; border: 1px solid rgba(255, 59, 48, 0.2) !important;">
+                            <h4 data-i18n="reset_vehicles" style="color:var(--danger); font-size: 1.1rem; margin-bottom: 8px;">Reset Vehicles</h4>
+                            <p data-i18n="reset_vehicles_desc" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Permanently delete all vehicle records and unlink drivers.</p>
+                            <button class="glass-btn btn-danger" data-i18n="btn_clear_vehicles" onclick="systemReset('vehicles')" style="width:100%;">Clear All Vehicles</button>
+                        </div>
+                    </div>
+
+                    <div style="padding: 24px; border-radius: 20px; border: 2px solid rgba(255, 59, 48, 0.4); background: rgba(255, 59, 48, 0.05); margin-top: 10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:20px;">
+                            <div style="flex:1; min-width:280px;">
+                                <h4 data-i18n="full_ops_reset" style="color:var(--danger); margin:0; font-size:1.3rem; font-weight:800;">Full Operational Reset</h4>
+                                <p data-i18n="full_ops_reset_desc" style="font-size:0.95rem; margin:10px 0 0 0; color:var(--text-main);">Set all wallets, profit, and shipments to zero. <br/>
+                                <span data-i18n="full_ops_reset_warning" style="color:var(--text-muted); font-size:0.85rem; display:block; margin-top:4px;">Warehouses, Drivers, and Vehicles will remain unchanged, but all their history and balances will be wiped.</span></p>
+                            </div>
+                            <button class="glass-btn btn-solid-danger" data-i18n="btn_reset_all_functions" onclick="systemReset('operations')" style="padding: 16px 24px; font-size: 0.95rem;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                RESET ALL FUNCTIONS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="glass-card section-card" style="border-top: 4px solid var(--danger);">
+                    <h3 data-i18n="danger_zone" class="split-text" style="color:var(--danger);">⚠️ Danger Zone</h3>
+                    <p data-i18n="delete_account_desc" class="subtitle" style="margin-bottom:24px;">Once you delete your company account, there is no going back. Please be certain.</p>
+
+                    <div id="delete-account-step1">
+                        <button class="glass-btn btn-solid-danger" data-i18n="btn_delete_account" id="request-del-btn" onclick="requestDeleteAccount()">Delete Company Account</button>
+                    </div>
+
+                    <div id="delete-account-step2" style="display:none; margin-top:24px; padding-top:24px; border-top: 1px solid var(--border);">
+                        <p data-i18n="delete_otp_msg" style="color:var(--warning); font-weight:700; margin-bottom:16px;">OTP sent to your email. Enter it below to confirm deletion:</p>
+
+                        <div class="pin-row" id="delete-pin-row">
+                            <input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
+                            <input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
+                            <input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
+                            <input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
+                            <input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
+                            <input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
+                        </div>
+
+                        <button class="glass-btn btn-solid-danger" data-i18n="btn_confirm" id="confirm-del-btn" onclick="confirmDeleteAccount()" style="width:100%; margin-top: 10px; font-size: 1.1rem; padding: 14px;">Confirm Permanent Deletion</button>
+
+                        <p id="resend-timer-container-del" style="margin-top:20px; font-size:0.9rem; color:var(--text-muted); text-align: center;">
+                            Didn't receive code? <span id="resend-link-del" style="color:var(--danger); cursor:pointer; font-weight:800; opacity:0.5; pointer-events:none; transition: 0.3s;">Resend OTP (<span id="timer-val-del">10</span>s)</span>
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
 </div>
-<div id="delete-account-step2" style="display:none; margin-top:20px;">
-<p data-i18n="delete_otp_msg" style="color:var(--warning); font-weight:bold; margin-bottom:10px;">OTP sent to your email. Enter it below to confirm deletion:</p>
-<div class="pin-row" id="delete-pin-row">
-<input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
-<input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
-<input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
-<input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
-<input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
-<input class="pin-box delete-pin" inputmode="numeric" maxlength="1" type="text"/>
-</div>
-<button class="btn-primary" data-i18n="btn_confirm" id="confirm-del-btn" onclick="confirmDeleteAccount()" style="background:var(--danger); width:100%;">Confirm Deletion</button>
-<p id="resend-timer-container-del" style="margin-top:15px; font-size:0.85rem; color:var(--text-muted);">
-                                Didn't receive code? <span id="resend-link-del" style="color:var(--danger); cursor:pointer; font-weight:bold; opacity:0.5; pointer-events:none;">Resend OTP (<span id="timer-val-del">10</span>s)</span>
-</p>
-</div>
-</div>
-</div>
-</div></section>
-<!-- Safety Center Section -->
-</main>
-</div>
+
 <div id="alert-container"></div>
-<!-- Add Warehouse Modal -->
-<!-- Edit Warehouse Modal -->
-<!-- Message Modal -->
-<!-- Old message-modal kept for compatibility (hidden by default) -->
-<!-- Profile Deep-Dive Modal -->
-<!-- Scripts -->
+
+<!-- ── SYSTEM PLATFORM INJECTS ── -->
 <script src="../js/translator.js?v=2.2"></script>
 <script src="../js/logo.js"></script>
 <script src="../js/voice.js?v=2.2"></script>
@@ -570,34 +592,265 @@
 <script src="../js/custom_layout.js?v=2.2"></script>
 <script src="../js/manager_base.js"></script>
 <script src="../js/manager_system.js"></script>
+
 <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            window.logistixLayout.init('manager');
+    document.addEventListener('DOMContentLoaded', () => {
+        if(window.logistixLayout) window.logistixLayout.init('manager');
+
+        // Mobile Sidebar
+        window.toggleMobileSidebar = function(state) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if(sidebar) {
+                if(state) {
+                    sidebar.classList.add('open');
+                    overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            }
+        };
+
+        // ── SPLIT TEXT PHYSICS FOR DYNAMIC HEADLINES ──
+        function splitTextNodes(element) {
+            if (element.classList.contains('is-split')) return;
+            const processNode = (node) => {
+                if (node.nodeType === 3) {
+                    const text = node.nodeValue;
+                    if (!text.trim() && !text.includes(' ')) return;
+                    const fragment = document.createDocumentFragment();
+                    const words = text.split(/(\s+)/);
+                    words.forEach(word => {
+                        if (!word) return;
+                        if (/^\s+$/.test(word)) {
+                            fragment.appendChild(document.createTextNode(word));
+                            return;
+                        }
+                        const wordSpan = document.createElement('span');
+                        wordSpan.style.display = 'inline-block';
+                        Array.from(word).forEach(char => {
+                            const charSpan = document.createElement('span');
+                            charSpan.className = 'char';
+                            charSpan.textContent = char;
+                            wordSpan.appendChild(charSpan);
+                        });
+                        fragment.appendChild(wordSpan);
+                    });
+                    node.parentNode.replaceChild(fragment, node);
+                } else if (node.nodeType === 1) {
+                    if (node.classList.contains('char') || node.tagName === 'BR') return;
+                    Array.from(node.childNodes).forEach(processNode);
+                }
+            };
+            Array.from(element.childNodes).forEach(processNode);
+            element.classList.add('is-split');
+        }
+
+        function attachWavePhysics(container) {
+            const chars = Array.from(container.querySelectorAll('.char'));
+            if (chars.length === 0) return;
+            let charBoxes = [];
+            let activeIndex = -1;
+
+            const updateBoxes = () => {
+                charBoxes = chars.map(c => {
+                    const rect = c.getBoundingClientRect();
+                    return { left: rect.left - 4, right: rect.right + 4, top: rect.top - 12, bottom: rect.bottom + 12 };
+                });
+            };
+
+            const clearClasses = () => {
+                if (activeIndex > -1) {
+                    chars[activeIndex].classList.remove('hovered');
+                    if (chars[activeIndex - 1]) chars[activeIndex - 1].classList.remove('neighbor');
+                    if (chars[activeIndex + 1]) chars[activeIndex + 1].classList.remove('neighbor');
+                    activeIndex = -1;
+                }
+            };
+
+            const setActive = (index) => {
+                if (activeIndex === index) return;
+                clearClasses();
+                activeIndex = index;
+                if (index > -1) {
+                    chars[index].classList.add('hovered');
+                    if (chars[index - 1]) chars[index - 1].classList.add('neighbor');
+                    if (chars[index + 1]) chars[index + 1].classList.add('neighbor');
+                }
+            };
+
+            const handleMove = (clientX, clientY) => {
+                for (let i = 0; i < charBoxes.length; i++) {
+                    const b = charBoxes[i];
+                    if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
+                        setActive(i); return;
+                    }
+                }
+                clearClasses();
+            };
+
+            container.addEventListener('mouseenter', updateBoxes, { passive: true });
+            container.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY), { passive: true });
+            container.addEventListener('mouseleave', clearClasses, { passive: true });
+            container.addEventListener('touchstart', (e) => { updateBoxes(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+            container.addEventListener('touchmove', (e) => { handleMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+            container.addEventListener('touchend', clearClasses, { passive: true });
+            container.addEventListener('touchcancel', clearClasses, { passive: true });
+        }
+
+        document.querySelectorAll('.split-text').forEach(el => {
+            splitTextNodes(el);
+            attachWavePhysics(el);
         });
-    </script>
-<script>
-const btn = document.getElementById('theme-toggle');
 
-function setTheme(mode) {
-    if (mode === 'light') {
-        document.body.classList.add('light-mode');
-        btn.innerText = '☀️';
-    } else {
-        document.body.classList.remove('light-mode');
-        btn.innerText = '🌙';
+        // ── PHYSICS BACKGROUND CANVAS DOTS INITIALIZATION ──
+        const canvasBuffer = 400;
+        const halfBuffer = canvasBuffer / 2;
+        const pointer = { x: -1000, y: -1000 };
+
+        window.addEventListener('mousemove', (e) => {
+            pointer.x = e.clientX + halfBuffer;
+            pointer.y = e.clientY + halfBuffer;
+        });
+        window.addEventListener('touchmove', (e) => {
+            pointer.x = e.touches[0].clientX + halfBuffer;
+            pointer.y = e.touches[0].clientY + halfBuffer;
+        }, { passive: true });
+        window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+        window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
+
+        const mCanvas = document.getElementById('interactive-grid');
+        if (mCanvas) {
+            const mCtx = mCanvas.getContext('2d', { alpha: true });
+            let mWidth, mHeight, mDots = [];
+            const mPushRadius = 220, mPushForce = 30, spring = 0.05, friction = 0.8;
+
+            function initGrids() {
+                const dpr = window.devicePixelRatio || 1;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
+                mCtx.scale(dpr, dpr);
+
+                const spacing = window.innerWidth < 768 ? 35 : 30;
+                mDots = [];
+                for (let x = 0; x < mWidth; x += spacing) {
+                    for (let y = 0; y < mHeight; y += spacing) {
+                        mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+                    }
+                }
+            }
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
+            });
+
+            function animateGrids() {
+                mCtx.clearRect(0, 0, mWidth, mHeight);
+                const isLight = document.body.classList.contains('light-mode');
+                mCtx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.3)';
+                const mPushRadiusSq = mPushRadius * mPushRadius;
+
+                for (let i = 0; i < mDots.length; i++) {
+                    let p = mDots[i];
+                    let dx = pointer.x - p.x; let dy = pointer.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < mPushRadiusSq) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mPushRadius - dist) / mPushRadius;
+                        p.vx -= (dx / dist) * force * mPushForce;
+                        p.vy -= (dy / dist) * force * mPushForce;
+                    }
+
+                    p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
+                    p.vx *= friction; p.vy *= friction;
+                    p.x += p.vx; p.y += p.vy;
+                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                }
+                requestAnimationFrame(animateGrids);
+            }
+            initGrids(); animateGrids();
+        }
+
+        // ── 3D TILT EFFECT ON GLASSCARDS ──
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        if (!isTouchDevice) {
+            document.querySelectorAll('.glass-card').forEach(card => {
+                let rafId;
+                card.addEventListener('mousemove', e => {
+                    cancelAnimationFrame(rafId);
+                    rafId = requestAnimationFrame(() => {
+                        const rect = card.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        const xPct = (x / rect.width) - 0.5;
+                        const yPct = (y / rect.height) - 0.5;
+                        card.style.transform = `perspective(1000px) rotateX(${yPct * -6}deg) rotateY(${xPct * 6}deg) scale3d(1.01, 1.01, 1.01)`;
+                    });
+                });
+                card.addEventListener('mouseleave', () => {
+                    cancelAnimationFrame(rafId);
+                    card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+                });
+            });
+        }
+
+        // OTP Input Auto-advance logic
+        const pinInputs = document.querySelectorAll('.delete-pin');
+        pinInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                if(e.target.value.length === 1 && index < pinInputs.length - 1) {
+                    pinInputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', (e) => {
+                if(e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    pinInputs[index - 1].focus();
+                }
+            });
+        });
+    });
+
+    // ── THEME SWITCH SYSTEM ──
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
+        });
+
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
     }
-    localStorage.setItem('theme', mode);
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
-}
 
-btn.onclick = () => {
-    const isLight = document.body.classList.contains('light-mode');
-    setTheme(isLight ? 'dark' : 'light');
-};
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
 
-// Initial state
-setTheme(localStorage.getItem('theme') || 'dark');
+    setTheme(localStorage.getItem('theme') || 'dark');
 </script>
-<script src="../js/premium_theme.js"></script>
+
 </body>
 </html>
