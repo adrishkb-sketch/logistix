@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Drivers & Fleet | Logistix Manager</title>
+
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.json">
+
+    <!-- Premium Fonts matching Analytics -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- External Stylesheets Link -->
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        :root {
+            /* Dark Mode (Ultra-Deep Navy & Bioluminescent Palette) */
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+
+            /* Accents */
+            --accent-1: #00e5ff;
+            --accent-2: #ff9900;
+            --accent-3: #00ff73;
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(15, 20, 35, 0.45);
+            --surface-hover: rgba(25, 33, 55, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.18);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
+        }
+
+        body.light-mode {
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+
+            --accent-1: #0ea5e9;
+            --accent-2: #f59e0b;
+            --accent-3: #10b981;
+
+            --surface: rgba(255, 255, 255, 0.75);
+            --surface-hover: rgba(255, 255, 255, 0.98);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-highlight: rgba(0, 0, 0, 0.2);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
+        }
+
+        /* ── RESET & BASE ENFORCEMENT ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; overflow-x: hidden !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, h5, h6, .split-text {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+        /* ── HIGH PERFORMANCE BACKDROP ── */
+        .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg-base); transition: background 0.6s ease; }
+        .blob { position: absolute; filter: blur(55px); opacity: 0.6; will-change: transform, border-radius; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateZ(0); }
+        body.light-mode .blob { opacity: 0.55; filter: blur(45px); }
+        .blob-1 { top: -10%; left: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-1); animation: wavePush1 15s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -10%; right: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-2); animation: wavePush2 18s infinite alternate ease-in-out; }
+        .blob-3 { top: 25%; left: 20%; width: max(50vw, 350px); height: max(50vh, 350px); background: var(--accent-3); animation: wavePush3 22s infinite alternate ease-in-out; }
+        @keyframes wavePush1 { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(5vw, 30vh, 0) scale(0.95); } }
+        @keyframes wavePush2 { 0% { transform: translate3d(0,0,0) scale(1); } 100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); } }
+        @keyframes wavePush3 { 0% { transform: translate3d(0,0,0) scale(0.95); } 100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); } }
+        #interactive-grid { position: fixed; inset: 0; z-index: 1; pointer-events: none; width: 100%; height: 100%; }
+
+        /* ── INTERACTIVE TEXT ── */
+        .text-shine-hover { display: inline-block; transition: transform 0.15s ease; }
+        @media (hover: hover) and (pointer: fine) {
+            .text-shine-hover:hover {
+                transform: translateY(-2px);
+                background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+                background-size: 300% 100%;
+                -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                animation: textShineSweep 2s linear infinite;
+            }
+        }
+        @keyframes textShineSweep { to { background-position: 300% 50%; } }
+
+        /* ── LAYOUT ── */
+        .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: 280px !important; background: rgba(8, 11, 22, 0.7) !important; border-right: 1px solid var(--border) !important;
+            backdrop-filter: blur(30px) !important; -webkit-backdrop-filter: blur(30px) !important;
+            display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0;
+            z-index: 2000 !important; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.75) !important; border-right: 1px solid var(--border) !important; }
+        .sidebar-header { padding: 30px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 { font-size: 1.7rem !important; font-weight: 800 !important; margin: 0; background: linear-gradient(135deg, var(--text-main), var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sidebar-close-btn { display: none; background: none; border: none; color: var(--text-main); cursor: pointer; transition: transform 0.2s ease; }
+        .nav-links-wrapper { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--text-muted) !important; font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: all 0.3s; border: 1px solid transparent; }
+        .nav-link svg { width: 20px; height: 20px; stroke-width: 1.8; stroke: currentColor; fill: none; transition: transform 0.3s; }
+        .nav-link:hover { color: var(--text-main) !important; background: var(--surface-hover); border-color: var(--border-highlight); transform: translateX(4px); }
+        .nav-link:hover svg { transform: scale(1.1); }
+        .nav-link.active { color: var(--text-main) !important; background: var(--surface); border-color: var(--border-highlight); border-left: 3px solid var(--accent-1) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+        .sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
+
+        /* ── MAIN CONTENT & TOP BAR ── */
+        .main-content {
+            flex: 1; margin-left: 280px; padding: 40px; width: auto; max-width: calc(100vw - 280px);
+            box-sizing: border-box; overflow-x: hidden !important; transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .top-bar {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px 30px; display: flex;
+            align-items: center; justify-content: space-between; gap: 24px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            margin-bottom: 40px; box-shadow: var(--glow-shadow);
+        }
+        .mobile-menu-btn, .mobile-theme-toggle, .mobile-logo-container { display: none; }
+        .top-bar-mobile-header { display: flex; align-items: center; flex: 1; justify-content: space-between; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; }
+        .top-bar-left h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; margin: 0; }
+        .title-separator { opacity: 0.3; }
+        .manager-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; align-items: center; gap: 14px; }
+
+        /* ── BUTTONS & INPUTS ── */
+        .glass-btn {
+            background: var(--surface); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px;
+            border-radius: 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: all 0.3s; backdrop-filter: blur(10px);
+        }
+        .glass-btn:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+        .glass-btn:active { transform: scale(0.96); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-1), #007bff);
+            color: #000; border: none; padding: 12px 24px; border-radius: 14px; font-weight: 800; font-size: 0.9rem;
+            cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+        }
+        body.light-mode .btn-primary { color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px var(--neon-glow); filter: brightness(1.1); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .glass-select-container {
+            display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border);
+            padding: 0 16px; border-radius: 14px; height: 44px; backdrop-filter: blur(10px); transition: all 0.3s;
+        }
+        .glass-select-container:hover { border-color: var(--border-highlight); background: var(--surface-hover); }
+        .glass-select-container select { background: transparent; border: none; color: var(--text-main); font-weight: 700; font-size: 0.85rem; cursor: pointer; outline: none; height: 100%; padding: 8px 0; }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch {
+            width: 44px; height: 44px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border);
+            color: var(--text-main); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s;
+        }
+        .theme-switch:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+
+        /* ── FORMS & CARDS ── */
+        .glass-card {
+            background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: 28px !important; padding: 30px;
+            backdrop-filter: blur(24px) !important; -webkit-backdrop-filter: blur(24px) !important; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            transition: all 0.4s ease; position: relative; margin-bottom: 30px;
+        }
+        .glass-card:hover {
+            border-color: var(--border-highlight) !important;
+            box-shadow: 0 20px 45px -10px var(--glow-shadow) !important;
+            transform: translateY(-4px);
+        }
+
+        .section-card h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; color: var(--text-main); }
+        .subtitle { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px; font-weight: 500; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        .input-group label { font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .input-group input, .input-group select {
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-main); padding: 14px 16px;
+            border-radius: 14px; font-family: inherit; font-size: 0.95rem; transition: all 0.3s; width: 100%;
+        }
+        body.light-mode .input-group input, body.light-mode .input-group select { background: rgba(255,255,255,0.6); color: var(--text-main); border-color: var(--border-highlight); }
+        .input-group input:focus, .input-group select:focus { border-color: var(--accent-1); outline: none; box-shadow: 0 0 0 3px var(--neon-glow); background: var(--surface); }
+        .span-2 { grid-column: span 2; }
+
+        .polished-glass-input {
+            flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-main); padding: 14px 20px;
+            border-radius: 14px; font-family: inherit; font-size: 0.95rem; transition: all 0.3s;
+        }
+        body.light-mode .polished-glass-input { background: rgba(255,255,255,0.6); }
+        .polished-glass-input:focus { border-color: var(--accent-1); outline: none; box-shadow: 0 0 0 3px var(--neon-glow); }
+
+        /* ── RESPONSIVE TABLES ── */
+        .table-container { width: 100%; overflow-x: auto; border-radius: 16px; border: 1px solid var(--border); background: rgba(0,0,0,0.1); margin-top: 10px; }
+        body.light-mode .table-container { background: rgba(255,255,255,0.4); }
+        table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: left; }
+        th { background: rgba(255,255,255,0.03); padding: 16px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 0.95rem; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--surface-hover); }
+
+        /* ── BADGES & MISC ── */
+        .badge { background: var(--accent-1); color: #000; font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; margin-left: auto; box-shadow: 0 0 10px var(--neon-glow); }
+        body.light-mode .badge { color: #fff; }
+
+        .modal-glass {
+            background: var(--surface) !important; border: 1px solid var(--border) !important; backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important; color: var(--text-main); border-radius: 28px !important;
+        }
+
+        /* ── RESPONSIVE OVERRIDES ── */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%) !important; }
+            .sidebar.open { transform: translateX(0) !important; }
+            .sidebar-close-btn { display: flex !important; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1999; }
+            .sidebar-overlay.active { display: block; }
+            .main-content { margin-left: 0 !important; padding: 24px 16px !important; max-width: 100vw !important; width: 100% !important; }
+            .top-bar { padding: 16px 20px; flex-direction: column; align-items: stretch; border-radius: 20px; gap: 16px; }
+            .top-bar-mobile-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .top-bar-left { justify-content: flex-start; width: calc(100% - 50px); }
+            .top-bar h1 { font-size: 1.2rem; }
+            .mobile-menu-btn { display: flex !important; background: none; border: none; color: var(--text-main); cursor: pointer; margin-right: 12px; }
+            .mobile-theme-toggle { display: flex !important; }
+            .mobile-logo-container { display: flex !important; margin-right: 10px; align-items: center; justify-content: center; }
+            .desktop-theme-toggle { display: none !important; }
+            .top-bar-controls { width: 100% !important; display: flex !important; flex-flow: row wrap !important; gap: 10px !important; justify-content: flex-start !important; }
+            .glass-select-container { flex: 1 1 auto !important; min-width: 120px !important; }
+            .automated-group { flex: 2 1 auto !important; display: flex !important; min-width: 180px !important; justify-content: space-between !important; }
+            .span-2 { grid-column: span 1; }
+        }
+        @media (max-width: 768px) {
+            .glass-card { padding: 20px 16px !important; border-radius: 20px !important; }
+            .section-card h3 { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .section-card h3 > div { width: 100%; display: flex; gap: 8px; flex-wrap: wrap; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── ANIMATED HIGH PERF BLOB BACKDROP ── -->
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+
+<!-- ── INTERACTIVE CANVAS GRID ── -->
+<canvas id="interactive-grid"></canvas>
+
+<div class="dashboard-layout">
+
+    <!-- Mobile Sidebar Blur Shield Overlay -->
+    <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><span>Logistix</span></h2>
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                <span data-i18n="nav_analytics">Executive Analytics</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hubs" href="manager_warehouses.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-3"></path><path d="M9 9v2"></path><path d="M9 13v2"></path></svg>
+                <span data-i18n="nav_hubs">Infrastructure (Hubs)</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-shipments" href="manager_shipments.html" id="btn-nav-shipments">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span data-i18n="nav_shipments">Shipments</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-receivers" href="manager_receivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span data-i18n="nav_receivers">Receivers</span>
+            </a>
+            <a class="nav-link active" data-layout-id="nav-drivers" href="manager_drivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                <span data-i18n="nav_fleet">Drivers & Fleet</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-weather" href="manager_weather.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                <span data-i18n="nav_weather">Weather Fleet Map</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-leaderboard" href="manager_leaderboard.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                <span data-i18n="nav_leaderboard">Leaderboards</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                <span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-verifications" href="manager_verifications.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+                <span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-safety" href="manager_safety.html" id="btn-nav-safety">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span data-i18n="nav_safety">Safety Center</span><span class="badge" id="safety-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-oracle" href="manager_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                <span data-i18n="nav_oracle">Strategy Oracle</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                <span data-i18n="nav_fuel">Bharat-Fuel Oracle</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-paisa" href="manager_payments.html" id="nav-link-paisa-fast">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                <span data-i18n="nav_paisa">Payments</span><span class="badge" id="paisa-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-strategy" href="manager_strategy.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                <span data-i18n="nav_strategy">Operational Strategy</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-resilience" href="manager_resilience.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span data-i18n="nav_resilience">Network Resilience</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-settings" href="manager_system.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span data-i18n="nav_settings">System Settings</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hub-leaves" href="manager_hub_leaves.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span data-i18n="nav_hub_leaves">Hub Leaves</span>
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <a class="nav-link" href="#" onclick="logout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span data-i18n="sign_out">Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ── MAIN PANEL ── -->
+    <main class="main-content" data-layout-container="main-sections">
+
+        <!-- ── HEADER (TOP BAR) ── -->
+        <header class="top-bar">
+            <div class="top-bar-mobile-header">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                    <div class="mobile-logo-container">
+                        <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
+                            <defs>
+                                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient>
+                            </defs>
+                            <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
+                        </svg>
+                    </div>
+                    <h1>
+                        <span class="split-text" data-i18n="nav_fleet">Fleet</span>
+                        <span class="title-separator">/</span>
+                        <span id="manager-name" class="manager-name-hl text-shine-hover">---</span>
+                    </h1>
+                </div>
+
+                <div class="theme-switch mobile-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+
+            <div class="top-bar-controls">
+                <button class="glass-btn" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Modify Dashboard
+                </button>
+
+                <!-- Language Selector -->
+                <div class="glass-select-container">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    <select onchange="setLanguage(this.value)" aria-label="Language">
+                        <option value="en">English (EN)</option>
+                        <option value="bn">বাংলা (BN)</option>
+                        <option value="hi">हिंदी (HI)</option>
+                        <option value="te">తెలుగు (TE)</option>
+                        <option value="mr">मराठी (MR)</option>
+                        <option value="ta">தமிழ் (TA)</option>
+                        <option value="gu">ગુજરાતી (GU)</option>
+                        <option value="kn">ಕನ್ನಡ (KN)</option>
+                        <option value="or">ଓଡ଼ିଆ (OR)</option>
+                        <option value="ml">മലയാളം (ML)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                        <option value="as">অসমীয়া (AS)</option>
+                        <option value="mai">मैथिली (MAI)</option>
+                        <option value="sat">संताली (SAT)</option>
+                        <option value="ks">کٲشُر (KS)</option>
+                        <option value="ur">اردو (UR)</option>
+                        <option value="ne">नेपाली (NE)</option>
+                        <option value="sa">संस्कृतम् (SA)</option>
+                        <option value="sd">سنڌी (SD)</option>
+                        <option value="gom">कोंकणी (GOM)</option>
+                        <option value="doi">डोगरी (DOI)</option>
+                        <option value="mni">মৈতৈলোন (MNI)</option>
+                    </select>
+                </div>
+
+                <!-- Voice Control -->
+                <div class="automated-group" style="display: flex; gap: 8px;">
+                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        Automated Control
+                    </button>
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice.showInstructions()" title="Voice Help">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </button>
+                </div>
+
+                <!-- Desktop Theme Switcher -->
+                <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── EXECUTIVES DRIVERS GRID CONTAINER ── -->
+        <section class="section-content" data-layout-id="section-drivers" id="drivers">
+            <div data-layout-container="drivers-content">
+
+                <!-- AI Fleet Audit Section (Promoted to Top) -->
+                <div class="glass-card section-card" id="ai-fleet-audit" style="border-top: 4px solid var(--accent-1);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin-bottom: 20px;">
+                        <div>
+                            <h3 class="split-text text-shine-hover" style="color:var(--accent-1); margin:0;">
+                                🤖 AI Fleet &amp; Driver Audit
+                                <span style="font-size:0.65rem; padding:4px 12px; border-radius:20px; background:rgba(0, 229, 255, 0.15); color:var(--accent-1); border:1px solid rgba(0, 229, 255, 0.3); font-weight:800; margin-left: 10px;">POWERED BY GEMINI</span>
+                            </h3>
+                            <p class="subtitle" style="margin:6px 0 0 0;">Run a full AI audit of your entire driver pool, vehicle fleet, fatigue scores, safety compliance, and recommend optimizations.</p>
+                        </div>
+                        <button class="btn-primary" id="run-fleet-audit-btn" onclick="runFleetAudit()" style="width:auto; padding:14px 28px; font-weight:800; box-shadow: 0 4px 20px var(--neon-glow); border-radius:14px; font-size:0.95rem;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            Run AI Fleet Audit
+                        </button>
+                    </div>
+
+                    <div id="fleet-audit-loading" style="display:none; text-align:center; padding:40px;">
+                        <div style="width:40px; height:40px; border:3px solid rgba(0, 229, 255, 0.3); border-top-color:var(--accent-1); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 15px;"></div>
+                        <p style="color:var(--text-muted);">🤖 Gemini is auditing your fleet and driver pool...</p>
+                    </div>
+
+                    <div id="fleet-audit-result" style="display:none; margin-top:25px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0; color:var(--accent-1); font-size:1.2rem;">📊 Fleet Audit Report</h3>
+                            <button class="glass-btn" onclick="document.getElementById('fleet-audit-result').style.display='none'" style="padding:8px 16px;">✖ Close</button>
+                        </div>
+                        <div id="fleet-audit-body" style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; line-height:1.8; font-size:0.95rem; max-height:60vh; overflow-y:auto;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Link Driver to Vehicle Section -->
+                <div class="glass-card section-card" data-layout-id="drivers-link" style="border-top: 4px solid var(--accent-3);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                        <div>
+                            <h3 class="split-text text-shine-hover" data-i18n="link_driver_vehicle_title">Link Driver to Vehicle</h3>
+                            <p class="subtitle" data-i18n="link_driver_vehicle_desc">Assign a driver to a vehicle based on license compatibility.</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="btn-primary" data-i18n="btn_unlink_all_idle" onclick="unlinkAllIdleFleet()" style="background:var(--danger); padding:10px 18px; font-size:0.85rem;">🔗 Unlink All Idle</button>
+                            <button class="btn-primary" data-i18n="btn_auto_assign_all" onclick="autoAssignFleet()" style="background:linear-gradient(135deg, var(--accent-3), #00b35c); padding:10px 18px; font-size:0.85rem;">🚀 Auto Assign All</button>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="link-form">
+                        <div class="input-group">
+                            <label data-i18n="label_select_driver">Select Driver</label>
+                            <div class="glass-select-container" style="padding:0; height:auto;">
+                                <select id="link-driver" required style="width:100%; padding:14px 16px;">
+                                    <option data-i18n="option_select_driver" value="">Select Driver</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_select_vehicle">Select Vehicle</label>
+                            <div class="glass-select-container" style="padding:0; height:auto;">
+                                <select id="link-vehicle" required style="width:100%; padding:14px 16px;">
+                                    <option data-i18n="option_select_vehicle" value="">Select Vehicle</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group span-2" style="justify-content: flex-end;">
+                            <button class="btn-primary" data-i18n="btn_link_pair" type="submit" style="width:100%;">Link Pair Systemically</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Active Links Grid -->
+                <div class="glass-card section-card" data-layout-id="drivers-active-links" style="border-top: 4px solid var(--accent-2);">
+                    <h3 class="split-text text-shine-hover" data-i18n="active_fleet_links_title">Active Fleet Links</h3>
+                    <p class="subtitle" data-i18n="active_fleet_links_desc">Currently active driver-vehicle pairs. Unlinking will free up both assets.</p>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="platform_driver">Driver</th>
+                                    <th data-i18n="vehicle">Vehicle</th>
+                                    <th data-i18n="label_base_hub">Base Hub</th>
+                                    <th data-i18n="th_action" style="text-align:center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="linked-pairs-table-body">
+                                <!-- Pairs injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Add & Manage Drivers Section -->
+                <div class="glass-card section-card" data-layout-id="drivers-add">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                        <div>
+                            <h3 class="split-text text-shine-hover" data-i18n="add_driver_title">Add Driver</h3>
+                            <p class="subtitle">Onboard new platform operators</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="btn-primary" data-i18n="btn_smart_assistant" onclick="openSmartAssistant('driver')" style="background:linear-gradient(135deg, #a855f7, var(--accent-1)); padding:10px 18px; font-size:0.85rem;">✨ Smart Assistant</button>
+                            <button class="btn-primary" data-i18n="btn_bulk_drivers" onclick="openDriverBulkModal()" style="background:var(--accent-2); padding:10px 18px; font-size:0.85rem;">📤 Bulk Upload</button>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="add-driver-form">
+                        <div class="input-group">
+                            <label data-i18n="label_full_name">Full Name</label>
+                            <input data-i18n-placeholder="placeholder_receiver" id="d-name" placeholder="e.g. John Doe" required type="text"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_login_id">Login ID</label>
+                            <input data-i18n-placeholder="placeholder_login_id" id="d-login" placeholder="e.g. john_d" required type="text"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_password">Security Password</label>
+                            <input data-i18n-placeholder="placeholder_password" id="d-pass" placeholder="••••••••" required type="password"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_license_type">License Type</label>
+                            <div class="glass-select-container" style="padding:0; height:auto;">
+                                <select id="d-license" required style="width:100%; padding:14px 16px;">
+                                    <option data-i18n="license_truck_small" value="Truck (Small)">Truck (Small)</option>
+                                    <option data-i18n="license_truck_heavy" value="Truck (Heavy)">Truck (Heavy)</option>
+                                    <option data-i18n="license_delivery_van" value="Delivery Van">Delivery Van</option>
+                                    <option data-i18n="license_bike_scooty" value="Bike/Scooty">Bike/Scooty</option>
+                                    <option data-i18n="license_ev_cargo" value="EV-Cargo">EV-Cargo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_base_hub">Base Warehouse Hub</label>
+                            <div class="glass-select-container" style="padding:0; height:auto;">
+                                <select id="d-hub" required style="width:100%; padding:14px 16px;">
+                                    <option data-i18n="option_select_hub" value="">Select Base Hub</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_experience">Years of Experience</label>
+                            <input id="d-exp" placeholder="e.g. 5" required step="0.5" type="number"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="phone_number">Contact Number</label>
+                            <input id="d-contact" placeholder="e.g. 9876543210" required type="text"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_accidents">Past Accidents</label>
+                            <input id="d-accidents" min="0" placeholder="Count" required type="number"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_violations">Traffic Violations</label>
+                            <input id="d-challans" min="0" placeholder="Challans" required type="number"/>
+                        </div>
+                        <div class="input-group span-2">
+                            <button class="btn-primary" data-i18n="btn_register_driver" type="submit" style="width:100%;">Register New Driver</button>
+                        </div>
+                    </form>
+
+                    <div style="display:flex; gap:10px; margin: 25px 0 15px 0;">
+                        <input class="polished-glass-input" data-i18n-placeholder="search_driver_placeholder" id="driver-search" oninput="renderDriversTable()" placeholder="Search by name or ID..." type="text"/>
+                        <button class="btn-primary" onclick="renderDriversTable()" style="padding:0 20px;">🔍</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="th_name_id">Name / System ID</th>
+                                    <th data-i18n="label_login_id">Login ID</th>
+                                    <th data-i18n="label_password">Password</th>
+                                    <th data-i18n="label_license_type">License Type</th>
+                                    <th data-i18n="th_metrics">Metrics</th>
+                                    <th data-i18n="th_score_safety">Driving Score / Safety</th>
+                                    <th data-i18n="label_accidents">Accidents</th>
+                                    <th data-i18n="label_violations">Challans</th>
+                                    <th data-i18n="reward_points">Reward Points</th>
+                                    <th data-i18n="label_base_hub">Base Hub</th>
+                                    <th data-i18n="th_linked_vehicle">Linked Vehicle</th>
+                                    <th data-i18n="th_actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drivers-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Add & Manage Vehicles Section -->
+                <div class="glass-card section-card" data-layout-id="drivers-vehicles-add">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                        <div>
+                            <h3 class="split-text text-shine-hover" data-i18n="add_vehicle_title">Add Vehicle</h3>
+                            <p class="subtitle">Register hardware onto network ledger</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="btn-primary" data-i18n="btn_smart_assistant" onclick="openSmartAssistant('vehicle')" style="background:linear-gradient(135deg, #a855f7, var(--accent-1)); padding:10px 18px; font-size:0.85rem;">✨ Smart Assistant</button>
+                            <button class="btn-primary" data-i18n="btn_bulk_vehicles" onclick="openVehicleBulkModal()" style="background:var(--accent-2); padding:10px 18px; font-size:0.85rem;">📤 Bulk Upload</button>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="add-vehicle-form">
+                        <div class="input-group">
+                            <label data-i18n="label_vehicle_type">Vehicle Type</label>
+                            <div class="glass-select-container" style="padding:0; height:auto;">
+                                <select id="v-type" required style="width:100%; padding:14px 16px;">
+                                    <option data-i18n="license_truck_small" value="Truck (Small)">Truck (Small)</option>
+                                    <option data-i18n="license_truck_heavy" value="Truck (Heavy)">Truck (Heavy)</option>
+                                    <option data-i18n="license_delivery_van" value="Delivery Van">Delivery Van</option>
+                                    <option data-i18n="license_bike_scooty" value="Bike/Scooty">Bike/Scooty</option>
+                                    <option data-i18n="license_ev_cargo" value="EV-Cargo">EV-Cargo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_base_hub">Base Warehouse Hub</label>
+                            <div class="glass-select-container" style="padding:0; height:auto;">
+                                <select id="v-hub" required style="width:100%; padding:14px 16px;">
+                                    <option data-i18n="option_select_hub" value="">Select Base Hub</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_number_plate">Number Plate</label>
+                            <input data-i18n-placeholder="placeholder_plate" id="v-plate" maxlength="13" oninput="handlePlateInput(this)" placeholder="e.g. MH 12 AB 1234" required type="text"/>
+                            <small data-i18n="error_plate_registered" id="plate-warning" style="color:var(--danger); display:none; margin-top: 4px;">🚨 Plate already registered!</small>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="capacity">Load Capacity (kg)</label>
+                            <input id="v-cap" placeholder="e.g. 500" required type="number"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_vehicle_age">Vehicle Age (Years)</label>
+                            <input id="v-age" min="0" placeholder="e.g. 3.5 (0 for EV)" required step="0.1" type="number" value="0"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_fuel_efficiency">Fuel Efficiency (km/l)</label>
+                            <input id="v-eff" placeholder="e.g. 45" required type="number"/>
+                        </div>
+                        <div class="input-group span-2">
+                            <button class="btn-primary" data-i18n="btn_register_vehicle" type="submit" style="width:100%;">Register New Vehicle</button>
+                        </div>
+                    </form>
+
+                    <div style="display:flex; gap:10px; margin: 25px 0 15px 0;">
+                        <input class="polished-glass-input" data-i18n-placeholder="search_vehicle_placeholder" id="vehicle-search" oninput="renderVehiclesTable()" placeholder="Search by plate or ID..." type="text"/>
+                        <button class="btn-primary" onclick="renderVehiclesTable()" style="padding:0 20px;">🔍</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="th_type_id">Type / System ID</th>
+                                    <th data-i18n="label_number_plate">Plate</th>
+                                    <th data-i18n="th_health">Health</th>
+                                    <th data-i18n="capacity">Capacity</th>
+                                    <th data-i18n="label_base_hub">Base Hub</th>
+                                    <th data-i18n="th_loc_heading">Current Location / Heading</th>
+                                    <th data-i18n="hub_status">Status</th>
+                                    <th data-i18n="th_linked_driver">Linked Driver</th>
+                                    <th data-i18n="th_action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vehicles-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Add & Manage Drones Section -->
+                <div class="glass-card section-card" data-layout-id="drivers-drones-add">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
+                        <div>
+                            <h3 class="split-text text-shine-hover" data-i18n="add_drone_title">Add Drone</h3>
+                            <p class="subtitle">Register autonomous aerial platforms</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="btn-primary" data-i18n="btn_smart_assistant" onclick="openSmartAssistant('drone')" style="background:linear-gradient(135deg, #a855f7, var(--accent-1)); padding:10px 18px; font-size:0.85rem;">✨ Smart Assistant</button>
+                            <button class="btn-primary" data-i18n="btn_bulk_drones" onclick="openDroneBulkModal()" style="background:var(--accent-2); padding:10px 18px; font-size:0.85rem;">📤 Bulk Upload</button>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="add-drone-form">
+                        <div class="input-group">
+                            <label data-i18n="label_drone_license">Drone License Number</label>
+                            <input id="drone-license" placeholder="e.g. DRN-12345" required type="text"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_base_hub">Base Warehouse Hub</label>
+                            <div class="glass-select-container" style="padding:0; height:auto;">
+                                <select id="drone-base-hub" required style="width:100%; padding:14px 16px;">
+                                    <option data-i18n="option_select_hub" value="">Select Base Hub</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_capacity">Carrying Capacity (kg)</label>
+                            <input id="drone-capacity" placeholder="e.g. 5" required step="0.1" type="number"/>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="label_radius">Coverage Radius (km)</label>
+                            <input id="drone-radius" placeholder="e.g. 20" required step="1" type="number"/>
+                        </div>
+                        <div class="input-group span-2">
+                            <button class="btn-primary" data-i18n="btn_register_drone" type="submit" style="width:100%;">Register New Drone</button>
+                        </div>
+                    </form>
+
+                    <div style="display:flex; gap:10px; margin: 25px 0 15px 0;">
+                        <input class="polished-glass-input" data-i18n-placeholder="search_drone_placeholder" id="drone-search" oninput="renderDronesTable()" placeholder="Search by license or ID..." type="text"/>
+                        <button class="btn-primary" onclick="renderDronesTable()" style="padding:0 20px;">🔍</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-i18n="th_license_id">License / System ID</th>
+                                    <th data-i18n="label_base_hub">Base Hub</th>
+                                    <th data-i18n="label_capacity">Capacity (kg)</th>
+                                    <th data-i18n="label_radius">Radius (km)</th>
+                                    <th data-i18n="hub_status">Status</th>
+                                    <th data-i18n="th_action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drones-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<div id="alert-container"></div>
+
+<!-- Edit Modal -->
+<div class="glass-card modal-glass" id="edit-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:440px; max-width:94vw; max-height:90vh; overflow-y:auto; padding:32px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h3 style="margin:0; color:var(--text-main);">Edit <span id="edit-type"></span></h3>
+        <button onclick="document.getElementById('edit-modal').style.display='none'" style="background:var(--surface-hover);border:1px solid var(--border);border-radius:50%;color:var(--text-main);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <form id="edit-form" class="form-grid" style="display:flex; flex-direction:column; gap:16px;">
+        <div id="edit-fields" style="display:flex; flex-direction:column; gap:16px;"></div>
+        <div style="display:flex; gap:12px; margin-top:10px;">
+            <button class="btn-primary" style="flex:1;" type="submit">Save Changes</button>
+            <button class="btn-primary" onclick="document.getElementById('edit-modal').style.display='none'" style="flex:1; background:var(--danger);" type="button">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<!-- Bulk Driver Upload Modal -->
+<div class="glass-card modal-glass" id="bulk-driver-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95vw; max-height:90vh; padding:32px; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h2 style="margin:0; font-size:1.6rem; color:var(--accent-1);">Bulk Driver Upload</h2>
+        <button onclick="closeDriverBulkModal()" style="background:var(--surface-hover);border:1px solid var(--border);border-radius:50%;color:var(--text-main);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="background:rgba(0, 229, 255, 0.05); border:1px solid rgba(0, 229, 255, 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
+        <h4 style="margin:0 0 16px 0; color:var(--accent-1); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem; font-weight:800;">📋 Smart Driver Format</h4>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:12px; font-size:0.85rem; color:var(--text-main); font-weight:500;">
+            <div>1. Full Name</div><div>2. Login ID</div><div>3. Password</div>
+            <div>4. License Type</div><div>5. Hub Name/ID</div><div>6. Exp Years</div>
+            <div>7. Accidents</div><div>8. Challans</div><div>9. Contact Number</div>
+        </div>
+        <p style="margin-top:15px; font-size:0.8rem; color:var(--accent-2);">💡 Note: Headers like "Driver Name", "Username", or "Contact" are automatically recognized.</p>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px; margin-bottom:32px;">
+        <div style="padding:24px; border:2px dashed rgba(255,255,255,0.2); border-radius:20px; text-align:center; background:var(--surface);">
+            <input accept=".xlsx, .csv" id="bulk-driver-file" onchange="handleDriverBulkFile(event)" style="display:none;" type="file"/>
+            <button class="glass-btn" onclick="document.getElementById('bulk-driver-file').click()" style="margin:0 auto;">📁 Select Excel/CSV</button>
+        </div>
+        <div style="padding:24px; border:2px dashed rgba(0, 255, 115, 0.2); border-radius:20px; text-align:center; background:var(--surface);">
+            <input class="polished-glass-input" id="driver-sheets-url" placeholder="Paste Google Sheets Link..." style="width:100%; margin-bottom:12px;" type="text"/>
+            <button class="btn-primary" onclick="previewDriverSheets()" style="margin:0 auto; background:var(--success);">🔗 Fetch from Cloud</button>
+        </div>
+    </div>
+    <div id="driver-preview-section" style="display:none;">
+        <h4 style="margin-bottom:12px;">Preview (<span id="driver-bulk-count">0</span>)</h4>
+        <div id="driver-bulk-errors" style="display:none; margin-bottom: 20px; color: var(--danger);"></div>
+        <div class="table-container" style="max-height:300px;">
+            <table><thead><tr><th data-i18n="th_name">Name</th><th data-i18n="th_type">Type</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_contact">Contact</th></tr></thead><tbody id="driver-preview-body"></tbody></table>
+        </div>
+        <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-driver-bulk-btn" onclick="confirmDriverBulk()">Confirm Upload</button></div>
+    </div>
+</div>
+
+<!-- Bulk Vehicle Upload Modal -->
+<div class="glass-card modal-glass" id="bulk-vehicle-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95vw; max-height:90vh; padding:32px; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h2 style="margin:0; font-size:1.6rem; color:var(--accent-1);">Bulk Vehicle Upload</h2>
+        <button onclick="closeVehicleBulkModal()" style="background:var(--surface-hover);border:1px solid var(--border);border-radius:50%;color:var(--text-main);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="background:rgba(0, 229, 255, 0.05); border:1px solid rgba(0, 229, 255, 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
+        <h4 style="margin:0 0 16px 0; color:var(--accent-1); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem; font-weight:800;">📋 Smart Vehicle Format</h4>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:12px; font-size:0.85rem; color:var(--text-main); font-weight:500;">
+            <div>1. Vehicle Type</div><div>2. Hub Name/ID</div><div>3. Plate Number</div>
+            <div>4. Capacity (kg)</div><div>5. Efficiency (km/l)</div>
+        </div>
+        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">Headers like "Category", "Warehouse", and "Registration" are also accepted.</p>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px; margin-bottom:32px;">
+        <div style="padding:24px; border:2px dashed rgba(255,255,255,0.2); border-radius:20px; text-align:center; background:var(--surface);">
+            <input accept=".xlsx, .csv" id="bulk-vehicle-file" onchange="handleVehicleBulkFile(event)" style="display:none;" type="file"/>
+            <button class="glass-btn" onclick="document.getElementById('bulk-vehicle-file').click()" style="margin:0 auto;">📁 Select Excel/CSV</button>
+        </div>
+        <div style="padding:24px; border:2px dashed rgba(0, 255, 115, 0.2); border-radius:20px; text-align:center; background:var(--surface);">
+            <input class="polished-glass-input" id="vehicle-sheets-url" placeholder="Paste Google Sheets Link..." style="width:100%; margin-bottom:12px;" type="text"/>
+            <button class="btn-primary" onclick="previewVehicleSheets()" style="margin:0 auto; background:var(--success);">🔗 Fetch from Cloud</button>
+        </div>
+    </div>
+    <div id="vehicle-preview-section" style="display:none;">
+        <h4 style="margin-bottom:12px;">Preview (<span id="vehicle-bulk-count">0</span>)</h4>
+        <div id="vehicle-bulk-errors" style="display:none; margin-bottom: 20px; color: var(--danger);"></div>
+        <div class="table-container" style="max-height:300px;">
+            <table><thead><tr><th data-i18n="th_type">Type</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_plate">Plate</th><th data-i18n="th_cap">Cap</th></tr></thead><tbody id="vehicle-preview-body"></tbody></table>
+        </div>
+        <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-vehicle-bulk-btn" onclick="confirmVehicleBulk()">Confirm Upload</button></div>
+    </div>
+</div>
+
+<!-- Bulk Drone Upload Modal -->
+<div class="glass-card modal-glass" id="bulk-drone-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:900px; max-width:95vw; max-height:90vh; padding:32px; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+        <h2 style="margin:0; font-size:1.6rem; color:var(--accent-1);">Bulk Drone Upload</h2>
+        <button onclick="closeDroneBulkModal()" style="background:var(--surface-hover);border:1px solid var(--border);border-radius:50%;color:var(--text-main);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="background:rgba(0, 229, 255, 0.05); border:1px solid rgba(0, 229, 255, 0.2); border-radius:16px; padding:24px; margin-bottom:32px;">
+        <h4 style="margin:0 0 16px 0; color:var(--accent-1); text-transform:uppercase; letter-spacing:1px; font-size:0.8rem; font-weight:800;">📋 Smart Drone Format</h4>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:12px; font-size:0.85rem; color:var(--text-main); font-weight:500;">
+            <div>1. License Number</div><div>2. Hub Name/ID</div><div>3. Capacity (kg)</div><div>4. Radius (km)</div>
+        </div>
+        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">Headers like "License", "Warehouse", and "Range" are also accepted.</p>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px; margin-bottom:32px;">
+        <div style="padding:24px; border:2px dashed rgba(255,255,255,0.2); border-radius:20px; text-align:center; background:var(--surface);">
+            <input accept=".xlsx, .csv" id="bulk-drone-file" onchange="handleDroneBulkFile(event)" style="display:none;" type="file"/>
+            <button class="glass-btn" onclick="document.getElementById('bulk-drone-file').click()" style="margin:0 auto;">📁 Select Excel/CSV</button>
+        </div>
+        <div style="padding:24px; border:2px dashed rgba(0, 255, 115, 0.2); border-radius:20px; text-align:center; background:var(--surface);">
+            <input class="polished-glass-input" id="drone-sheets-url" placeholder="Paste Google Sheets Link..." style="width:100%; margin-bottom:12px;" type="text"/>
+            <button class="btn-primary" onclick="previewDroneSheets()" style="margin:0 auto; background:var(--success);">🔗 Fetch from Cloud</button>
+        </div>
+    </div>
+    <div id="drone-preview-section" style="display:none;">
+        <h4 style="margin-bottom:12px;">Preview (<span id="drone-bulk-count">0</span>)</h4>
+        <div id="drone-bulk-errors" style="display:none; margin-bottom: 20px; color: var(--danger);"></div>
+        <div class="table-container" style="max-height:300px;">
+            <table><thead><tr><th data-i18n="th_license">License</th><th data-i18n="th_hub_id">Hub ID</th><th data-i18n="th_cap">Cap</th><th data-i18n="th_radius">Radius</th></tr></thead><tbody id="drone-preview-body"></tbody></table>
+        </div>
+        <div style="margin-top:20px; text-align:right;"><button class="btn-primary" id="confirm-drone-bulk-btn" onclick="confirmDroneBulk()">Confirm Upload</button></div>
+    </div>
+</div>
+
+<!-- Broadcast Modal -->
+<div class="glass-card modal-glass" id="broadcast-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:450px; max-width:94vw; padding:32px;">
+    <h3 style="margin:0 0 10px 0; color:var(--accent-1); display:flex; align-items:center; gap:8px;">📢 Broadcast Message</h3>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">This message will be sent to <b>ALL</b> drivers in your fleet immediately.</p>
+    <textarea class="polished-glass-input" id="broadcast-input" placeholder="Type your announcement here..." style="width:100%; height:120px; resize:none; margin-bottom:20px;"></textarea>
+    <div style="display:flex; gap:12px;">
+        <button class="btn-primary" id="broadcast-confirm-btn" onclick="sendBroadcast()" style="flex:1;">Send 🚀</button>
+        <button class="btn-primary" onclick="closeBroadcastModal()" style="flex:1; background:var(--surface-hover); color:var(--text-main);">Cancel</button>
+    </div>
+</div>
+
+<!-- Smart Bulk Assistant Side Drawer -->
+<div class="notranslate modal-glass" id="smart-assistant-modal" style="display:none; position:fixed; top:0; right:0; height:100vh; width:550px; max-width:100vw; z-index:11000; border-radius: 0 !important; border-left:1px solid var(--border); flex-direction:column; animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);" translate="no">
+    <div style="padding:24px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:1.5rem;">✨</span>
+            <div>
+                <h3 id="smart-assistant-title" style="margin:0; font-size:1.2rem; color:var(--text-main);">Smart Bulk Assistant</h3>
+                <p id="smart-assistant-desc" style="margin:0; font-size:0.75rem; color:var(--text-muted);">Interactive Platform Onboarding</p>
+            </div>
+        </div>
+        <button onclick="closeSmartAssistant()" style="background:var(--surface-hover); border:1px solid var(--border); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:var(--text-main); cursor:pointer;">✕</button>
+    </div>
+    <div id="smart-chat-area" style="flex:1; padding:24px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; scroll-behavior: smooth;">
+        <!-- Messages will appear here -->
+    </div>
+    <div style="padding:24px; background:var(--surface); border-top:1px solid var(--border);">
+        <div id="smart-queue-preview" style="display:none; margin-bottom:16px; padding:16px; background:rgba(0, 255, 115, 0.1); border:1px solid rgba(0, 255, 115, 0.2); border-radius:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <span style="display:block; font-size:0.85rem; font-weight:700; color:var(--success);">Queue Ready</span>
+                    <span style="font-size:0.75rem; color:var(--text-muted);"><span id="smart-queue-count">0</span> <span id="smart-queue-text">Assets</span> pending</span>
+                </div>
+                <button class="btn-primary" onclick="confirmSmartQueue()" style="padding:8px 16px; font-size:0.85rem; background:var(--success);">Confirm &amp; Create</button>
+            </div>
+        </div>
+        <div style="display:flex; gap:12px; align-items:flex-end;">
+            <div style="position:relative; flex:1;">
+                <textarea class="polished-glass-input" autocomplete="off" id="smart-command-input" placeholder="Type your response..." spellcheck="false" style="width:100%; height:55px; min-height:55px; max-height:150px; padding:15px 45px 15px 16px; resize:none; margin:0;"></textarea>
+                <button id="smart-map-trigger" onclick="pickSmartCoordinates()" style="position:absolute; right:12px; top:15px; background:none; border:none; font-size:1.4rem; cursor:pointer; opacity:0.6; transition: opacity 0.2s;" title="Select on Map">📍</button>
+            </div>
+            <button class="btn-primary" id="send-smart-cmd" onclick="processSmartCommand()" style="width:55px; height:55px; padding:0; flex-shrink:0; justify-content:center;">🚀</button>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:16px;">
+            <button class="glass-btn" id="smart-new-btn" onclick="startNewSmartEntry()" style="font-size:0.75rem; padding:8px 14px;">🔄 New Entry</button>
+            <button class="glass-btn" onclick="clearSmartQueue()" style="font-size:0.75rem; padding:8px 14px; border-color:rgba(255, 59, 48, 0.3); color:var(--danger);">🗑️ Clear Queue</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── SYSTEM PLATFORM INJECTS ── -->
+<script src="../js/translator.js?v=2.2"></script>
+<script src="../js/logo.js"></script>
+<script src="../js/voice.js?v=2.2"></script>
+<script src="../js/api.js?v=2.3"></script>
+<script src="../js/custom_layout.js?v=2.2"></script>
+<script src="../js/manager_base.js"></script>
+<script src="../js/manager_drivers.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize layout
+        if(window.logistixLayout) window.logistixLayout.init('manager');
+
+        // Handle Mobile Sidebar visibility state smoothly
+        window.toggleMobileSidebar = function(state) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if(sidebar) {
+                if(state) {
+                    sidebar.classList.add('open');
+                    overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            }
+        };
+
+        // ── PHYSICS BACKGROUND CANVAS DOTS INITIALIZATION ──
+        const canvasBuffer = 400;
+        const halfBuffer = canvasBuffer / 2;
+        const pointer = { x: -1000, y: -1000 };
+
+        window.addEventListener('mousemove', (e) => {
+            pointer.x = e.clientX + halfBuffer;
+            pointer.y = e.clientY + halfBuffer;
+        });
+        window.addEventListener('touchmove', (e) => {
+            pointer.x = e.touches[0].clientX + halfBuffer;
+            pointer.y = e.touches[0].clientY + halfBuffer;
+        }, { passive: true });
+        window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+        window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
+
+        const mCanvas = document.getElementById('interactive-grid');
+        if (mCanvas) {
+            const mCtx = mCanvas.getContext('2d', { alpha: true });
+            let mWidth, mHeight, mDots = [];
+            const mPushRadius = 220, mPushForce = 30, spring = 0.05, friction = 0.8;
+
+            function initGrids() {
+                const dpr = window.devicePixelRatio || 1;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
+                mCtx.scale(dpr, dpr);
+
+                const spacing = window.innerWidth < 768 ? 35 : 30;
+                mDots = [];
+                for (let x = 0; x < mWidth; x += spacing) {
+                    for (let y = 0; y < mHeight; y += spacing) {
+                        mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+                    }
+                }
+            }
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
+            });
+
+            function animateGrids() {
+                mCtx.clearRect(0, 0, mWidth, mHeight);
+                const isLight = document.body.classList.contains('light-mode');
+                mCtx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.3)';
+                const mPushRadiusSq = mPushRadius * mPushRadius;
+
+                for (let i = 0; i < mDots.length; i++) {
+                    let p = mDots[i];
+                    let dx = pointer.x - p.x; let dy = pointer.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < mPushRadiusSq) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mPushRadius - dist) / mPushRadius;
+                        p.vx -= (dx / dist) * force * mPushForce;
+                        p.vy -= (dy / dist) * force * mPushForce;
+                    }
+
+                    p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
+                    p.vx *= friction; p.vy *= friction;
+                    p.x += p.vx; p.y += p.vy;
+                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                }
+                requestAnimationFrame(animateGrids);
+            }
+            initGrids(); animateGrids();
+        }
+    });
+
+    // ── THEME SWITCH SYSTEM ──
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
+        });
+
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
+    }
+
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
+
+    setTheme(localStorage.getItem('theme') || 'dark');
+</script>
+
+</body>
+</html>

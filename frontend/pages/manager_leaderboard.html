@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Leaderboard & Ratings | Logistix</title>
+
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <link rel="manifest" href="../manifest.json">
+
+    <!-- Premium Fonts matching index.html, analytics, and receivers -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- External Stylesheets Link -->
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        :root {
+            /* Dark Mode (Ultra-Deep Navy & Bioluminescent Palette) */
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+
+            /* 3 Distinct Striking Accents */
+            --accent-1: #00e5ff; /* Vivid Neon Cyan */
+            --accent-2: #ff9900; /* Rich Gold/Amber */
+            --accent-3: #00ff73; /* Intense Spring Green */
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(15, 20, 35, 0.45);
+            --surface-hover: rgba(25, 33, 55, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.18);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
+        }
+
+        /* FIX: Language dropdown text clipping */
+        .glass-select-container {
+            height: auto !important;
+            min-height: 44px;
+            align-items: center;
+        }
+        .glass-select-container select {
+            height: 100%;
+            line-height: 1.4;
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        body.light-mode {
+            /* Enhanced Light Mode (Premium Slate & Crisp Tech Accents) */
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+
+            /* 3 Distinct Light Mode Accents */
+            --accent-1: #0ea5e9;
+            --accent-2: #f59e0b;
+            --accent-3: #10b981;
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(255, 255, 255, 0.75);
+            --surface-hover: rgba(255, 255, 255, 0.98);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-highlight: rgba(0, 0, 0, 0.2);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
+        }
+
+        /* ── RESET & BASE ENFORCEMENT ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; overflow-x: hidden !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, h5, h6, .split-text {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+        /* ── HIGH PERFORMANCE BACKDROP GRAPHICS ── */
+        .bg-blobs {
+            position: fixed; inset: 0; z-index: 0;
+            overflow: hidden; pointer-events: none;
+            background: var(--bg-base);
+            transition: background 0.6s ease;
+        }
+        .blob {
+            position: absolute; filter: blur(55px); opacity: 0.6;
+            will-change: transform, border-radius;
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            transform: translateZ(0);
+        }
+        body.light-mode .blob { opacity: 0.55; filter: blur(45px); }
+        .blob-1 { top: -10%; left: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-1); animation: wavePush1 15s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -10%; right: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-2); animation: wavePush2 18s infinite alternate ease-in-out; }
+        .blob-3 { top: 25%; left: 20%; width: max(50vw, 350px); height: max(50vh, 350px); background: var(--accent-3); animation: wavePush3 22s infinite alternate ease-in-out; }
+
+        @keyframes wavePush1 {
+            0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            50%  { transform: translate3d(20vw, 15vh, 0) scale(1.2); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            100% { transform: translate3d(5vw, 30vh, 0) scale(0.95); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; }
+        }
+        @keyframes wavePush2 {
+            0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            50%  { transform: translate3d(-20vw, -15vh, 0) scale(1.25); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+        }
+        @keyframes wavePush3 {
+            0%   { transform: translate3d(0, 0, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+            50%  { transform: translate3d(-15vw, 10vh, 0) scale(1.2); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; }
+            100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+        }
+
+        #interactive-grid { position: fixed; inset: 0; z-index: 1; pointer-events: none; width: 100%; height: 100%; }
+
+        /* ── INTERACTIVE TITLE WAIVER ── */
+        .split-text { display: inline-block; word-wrap: break-word; pointer-events: auto; touch-action: pan-y; }
+        .split-text .char { display: inline-block; transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.15s ease, text-shadow 0.15s ease; white-space: pre; will-change: transform, color; pointer-events: none; }
+        .split-text .char.hovered {
+            transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg);
+            color: var(--accent-1) !important; text-shadow: 0 10px 20px var(--neon-glow);
+            transition: transform 0.03s ease-out, color 0.03s ease-out, text-shadow 0.03s ease-out; z-index: 2; position: relative;
+        }
+        .split-text .char.neighbor { transform: translate3d(0, -4px, 0) scale(1.05); color: var(--accent-2) !important; transition: transform 0.04s ease-out, color 0.04s ease-out; }
+
+        .text-shine-hover { display: inline-block; transition: transform 0.15s ease; cursor: default; }
+        @media (hover: hover) and (pointer: fine) {
+            .text-shine-hover:hover {
+                transform: translateY(-2px);
+                background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3), var(--accent-1));
+                background-size: 300% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                background-clip: text; animation: textShineSweep 2s linear infinite;
+            }
+        }
+        @keyframes textShineSweep { to { background-position: 300% 50%; } }
+
+        /* ── MAIN DASHBOARD CONTAINER LAYOUT ── */
+        .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
+
+        /* ── SIDEBAR STABILITY & VISUALS ── */
+        .sidebar {
+            width: 280px !important; background: rgba(8, 11, 22, 0.7) !important; border-right: 1px solid var(--border) !important;
+            backdrop-filter: blur(30px) !important; -webkit-backdrop-filter: blur(30px) !important;
+            display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0;
+            z-index: 2000 !important; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.75) !important; border-right: 1px solid var(--border) !important; }
+
+        .sidebar-header { padding: 30px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 {
+            font-size: 1.7rem !important; font-weight: 800 !important; margin: 0;
+            background: linear-gradient(135deg, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .sidebar-close-btn { display: none; background: none; border: none; color: var(--text-main); cursor: pointer; transition: transform 0.2s ease; }
+        .sidebar-close-btn:active { transform: scale(0.9); }
+
+        .nav-links-wrapper { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link {
+            display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px;
+            color: var(--text-muted) !important; font-size: 0.95rem; font-weight: 600; text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid transparent;
+        }
+        .nav-link svg { width: 20px; height: 20px; stroke-width: 1.8; stroke: currentColor; fill: none; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-link:hover { color: var(--text-main) !important; background: var(--surface-hover); border-color: var(--border-highlight); transform: translateX(4px); }
+        .nav-link:hover svg { transform: scale(1.1); }
+        .nav-link.active {
+            color: var(--text-main) !important; background: var(--surface); border-color: var(--border-highlight);
+            border-left: 3px solid var(--accent-1) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        body.light-mode .nav-link.active { box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+
+        .sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
+        .sidebar-footer .nav-link { border: 1px solid rgba(255, 59, 48, 0.15); background: rgba(255, 59, 48, 0.05); color: #ff3b30 !important; }
+        .sidebar-footer .nav-link:hover { background: rgba(255, 59, 48, 0.15); border-color: rgba(255, 59, 48, 0.3); }
+
+        /* ── MAIN LAYOUT AND OFFSET ── */
+        .main-content {
+            flex: 1; margin-left: 280px; padding: 40px; width: auto; max-width: calc(100vw - 280px);
+            box-sizing: border-box; overflow-x: hidden !important; transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* ── GLASS BAR (HEADER) ── */
+        .top-bar {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px 30px; display: flex;
+            align-items: center; justify-content: space-between; gap: 24px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            margin-bottom: 40px; box-shadow: var(--glow-shadow);
+        }
+
+        .mobile-menu-btn, .mobile-theme-toggle, .mobile-logo-container { display: none; }
+        .top-bar-mobile-header { display: flex; align-items: center; flex: 1; justify-content: space-between; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; }
+        .top-bar-left h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; margin: 0; }
+        .title-separator { opacity: 0.3; }
+        .manager-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; align-items: center; gap: 14px; }
+
+        /* Buttons & Controls */
+        .glass-btn {
+            background: var(--surface); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px;
+            border-radius: 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px);
+        }
+        .glass-btn:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+        .glass-btn:active { transform: scale(0.96); }
+
+        .glass-select-container { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 0 16px; border-radius: 14px; height: 44px; backdrop-filter: blur(10px); transition: all 0.3s ease; }
+        .glass-select-container:hover { border-color: var(--border-highlight); background: var(--surface-hover); }
+        .glass-select-container select { background: transparent; border: none; color: var(--text-main); font-weight: 700; font-size: 0.85rem; cursor: pointer; outline: none; padding-right: 12px; height: 100%; }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); flex-shrink: 0; }
+        .theme-switch:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+        .theme-switch:active { transform: scale(0.9); }
+
+        /* ── DISTINCT BUTTON COLOURS ── */
+        .btn-action-details {
+            background: linear-gradient(135deg, #ff9900, #ff5e00) !important;
+            color: #010208 !important; font-weight: 800 !important; border: none !important;
+            border-radius: 12px !important; padding: 10px 18px !important;
+            box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3) !important; transition: all 0.25s ease !important;
+            cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-action-details:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 18px rgba(255, 153, 0, 0.5) !important; filter: brightness(1.12) !important; }
+        .btn-action-details:active { transform: translateY(0) scale(0.97) !important; }
+
+        body.light-mode .btn-action-details { color: #ffffff !important; background: linear-gradient(135deg, #f59e0b, #d97706) !important; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25) !important; }
+
+        /* ── GLASS CARD COMPACTING ── */
+        .glass-card {
+            background: var(--surface) !important; border: 1px solid var(--border) !important;
+            border-radius: 28px !important; padding: 30px;
+            backdrop-filter: blur(24px) !important; -webkit-backdrop-filter: blur(24px) !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease;
+            position: relative; overflow: hidden;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .glass-card.hover-enabled:hover { transform: translateY(-4px); border-color: var(--border-highlight) !important; box-shadow: 0 20px 50px -10px var(--glow-shadow) !important; }
+        }
+
+        .subtitle { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 24px; font-weight: 500; }
+
+        .premium-input {
+            width: 100%; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 16px; color: var(--text-main);
+            font-family: inherit; font-size: 0.95rem; outline: none; transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        body.light-mode .premium-input { background: rgba(255, 255, 255, 0.5); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        .premium-input:focus { border-color: var(--accent-1); background: rgba(0, 0, 0, 0.4); box-shadow: 0 0 0 4px var(--neon-glow), inset 0 2px 4px rgba(0,0,0,0.2); }
+        body.light-mode .premium-input:focus { background: rgba(255, 255, 255, 0.9); }
+
+        /* ── METRICS GRID ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .kpi-card { display: flex; flex-direction: column; gap: 8px; justify-content: space-between; }
+        .kpi-label { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); transition: color 0.3s; }
+        .glass-card:hover .kpi-label { color: var(--text-main); }
+        .kpi-value { font-size: 2.2rem; font-weight: 800; line-height: 1.1; margin-top:4px; }
+
+        /* ── LEADERBOARD SPECIFICS & TABS ── */
+        .shipment-tabs { display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .shipment-tabs button {
+            background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text-muted);
+            font-weight: 700; font-size: 0.85rem; padding: 10px 20px; border-radius: 12px;
+            cursor: pointer; transition: all 0.3s ease; white-space: nowrap; backdrop-filter: blur(10px);
+        }
+        body.light-mode .shipment-tabs button { background: rgba(255,255,255,0.4); }
+        .shipment-tabs button:hover { border-color: var(--border-highlight); color: var(--text-main); background: var(--surface-hover); }
+        .shipment-tabs button.active-tab { background: var(--surface-hover); color: var(--accent-1); border-color: var(--accent-1); box-shadow: 0 4px 15px var(--neon-glow); }
+
+        .rank-medal { font-size: 1.2rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; }
+        .rank-1 { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+        .rank-2 { background: linear-gradient(135deg, #e0e0e0, #9e9e9e); color: #000; box-shadow: 0 0 15px rgba(224, 224, 224, 0.5); }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32, #8b4513); color: #fff; box-shadow: 0 0 15px rgba(205, 127, 50, 0.5); }
+
+        /* ── TABLE STYLING (Ultra-Premium Feel matching Receivers) ── */
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 16px; border: 1px solid var(--border); background: rgba(0,0,0,0.1); margin-bottom: 20px; }
+        body.light-mode .table-responsive { background: rgba(255,255,255,0.3); }
+
+        .premium-table { width: 100%; min-width: 900px; border-collapse: collapse; text-align: left; white-space: nowrap; margin: 0; }
+        .premium-table th { padding: 18px 24px; background: rgba(255, 255, 255, 0.03); color: var(--text-muted); font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); font-family: 'Space Grotesk', sans-serif; }
+        .premium-table td { padding: 18px 24px; border-bottom: 1px solid var(--border); color: var(--text-main); font-weight: 600; font-size: 0.95rem; transition: background 0.3s; }
+        .premium-table tbody tr { transition: background 0.3s ease; }
+        .premium-table tbody tr:hover { background: var(--surface-hover); }
+        .premium-table tbody tr:last-child td { border-bottom: none; }
+        body.light-mode .premium-table th { background: rgba(0, 0, 0, 0.02); }
+
+        /* ── MODALS (ULTRA-PREMIUM OVERRIDE) ── */
+        .modal-glass {
+            background: var(--surface) !important; border: 1px solid var(--border-highlight) !important;
+            border-radius: 28px !important; box-shadow: 0 40px 80px -20px var(--glow-shadow), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+            backdrop-filter: blur(40px) !important; -webkit-backdrop-filter: blur(40px) !important;
+            padding: 32px !important; color: var(--text-main) !important;
+            animation: popModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popModal {
+            from { transform: translate(-50%, -50%) scale(0.95) translateY(20px); opacity: 0; }
+            to { transform: translate(-50%, -50%) scale(1) translateY(0); opacity: 1; }
+        }
+
+        .close-modal-btn {
+            background: rgba(255,255,255,0.1); border: none; color: var(--text-main);
+            width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.3s ease; font-size: 1.2rem;
+        }
+        .close-modal-btn:hover { background: rgba(239, 68, 68, 0.15); color: var(--danger); transform: rotate(90deg); }
+
+        /* ── RESPONSIVE OVERRIDES ── */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%) !important; }
+            .sidebar.open { transform: translateX(0) !important; }
+            .sidebar-close-btn { display: flex !important; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1999; transition: opacity 0.4s ease; }
+            .sidebar-overlay.active { display: block; }
+
+            .main-content { margin-left: 0 !important; padding: 24px 16px !important; max-width: 100vw !important; width: 100% !important; }
+
+            .top-bar { padding: 16px 20px; flex-direction: column; align-items: stretch; border-radius: 20px; gap: 16px; }
+            .top-bar-mobile-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .top-bar-left { justify-content: flex-start; width: calc(100% - 50px); }
+            .top-bar h1 { font-size: 1.2rem; }
+
+            .mobile-menu-btn { display: flex !important; background: none; border: none; color: var(--text-main); cursor: pointer; margin-right: 12px; transition: transform 0.2s ease; }
+            .mobile-menu-btn:active { transform: scale(0.9); }
+            .mobile-theme-toggle { display: flex !important; }
+            .mobile-logo-container { display: flex !important; margin-right: 10px; align-items: center; justify-content: center; }
+            .desktop-theme-toggle { display: none !important; }
+
+            .top-bar-controls { width: 100% !important; display: flex !important; flex-flow: row wrap !important; gap: 10px !important; justify-content: flex-start !important; }
+            .glass-select-container { flex: 1 1 auto !important; min-width: 120px !important; }
+            .automated-group { flex: 2 1 auto !important; display: flex !important; min-width: 180px !important; justify-content: space-between !important; }
+            .automated-group .voice-btn { flex: 1 !important; justify-content: center !important; }
+        }
+
+        @media (max-width: 768px) {
+            .glass-card { padding: 20px 16px !important; border-radius: 20px !important; }
+            .modal-glass { width: 95vw !important; padding: 24px !important; }
+            .stats-grid { grid-template-columns: 1fr !important; }
+            .premium-table th, .premium-table td { padding: 14px 16px; font-size: 0.85rem; }
+        }
+
+        /* Edit Mode Outline */
+        .layout-editable-active .glass-card { border: 2px dashed var(--accent-2) !important; cursor: move; }
+    </style>
+</head>
+<body>
+
+<!-- ── ANIMATED HIGH PERF BLOB BACKDROP ── -->
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+
+<!-- ── INTERACTIVE CANVAS GRID ── -->
+<canvas id="interactive-grid"></canvas>
+
+<div class="dashboard-layout">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><span>Logistix</span></h2>
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                <span data-i18n="nav_analytics">Executive Analytics</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hubs" href="manager_warehouses.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-3"></path><path d="M9 9v2"></path><path d="M9 13v2"></path></svg>
+                <span data-i18n="nav_hubs">Infrastructure (Hubs)</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-shipments" href="manager_shipments.html" id="btn-nav-shipments">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span data-i18n="nav_shipments">Shipments</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-receivers" href="manager_receivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span data-i18n="nav_receivers">Receivers</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-drivers" href="manager_drivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                <span data-i18n="nav_fleet">Drivers & Fleet</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-weather" href="manager_weather.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                <span data-i18n="nav_weather">Weather Fleet Map</span>
+            </a>
+            <a class="nav-link active" data-layout-id="nav-leaderboard" href="manager_leaderboard.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                <span data-i18n="nav_leaderboard">Leaderboards</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                <span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-verifications" href="manager_verifications.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+                <span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-safety" href="manager_safety.html" id="btn-nav-safety">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span data-i18n="nav_safety">Safety Center</span><span class="badge" id="safety-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-oracle" href="manager_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                <span data-i18n="nav_oracle">Strategy Oracle</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                <span data-i18n="nav_fuel">Bharat-Fuel Oracle</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-paisa" href="manager_payments.html" id="nav-link-paisa-fast">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                <span data-i18n="nav_paisa">Payments</span><span class="badge" id="paisa-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-strategy" href="manager_strategy.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                <span data-i18n="nav_strategy">Operational Strategy</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-resilience" href="manager_resilience.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span data-i18n="nav_resilience">Network Resilience</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-settings" href="manager_system.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span data-i18n="nav_settings">System Settings</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hub-leaves" href="manager_hub_leaves.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span data-i18n="nav_hub_leaves">Hub Leaves</span>
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <a class="nav-link" href="#" onclick="logout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span data-i18n="sign_out">Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="main-content" data-layout-container="main-sections">
+
+        <!-- ── TOP BAR ── -->
+        <header class="top-bar">
+            <div class="top-bar-mobile-header">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                    <div class="mobile-logo-container">
+                        <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
+                            <defs>
+                                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient>
+                            </defs>
+                            <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
+                        </svg>
+                    </div>
+                    <h1>
+                        <span class="split-text" data-i18n="dashboard">Dashboard</span>
+                        <span class="title-separator">/</span>
+                        <span id="manager-name" class="manager-name-hl text-shine-hover">---</span>
+                    </h1>
+                </div>
+
+                <div class="theme-switch mobile-theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+
+            <div class="top-bar-controls">
+                <button class="glass-btn" data-i18n="modify_dashboard" id="modify-dash-btn" onclick="window.logistixLayout.toggleEditMode()">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Modify Dashboard
+                </button>
+
+                <!-- Language Selector -->
+                <div class="glass-select-container">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    <select onchange="setLanguage(this.value)" aria-label="Language">
+                        <option value="en">English (EN)</option>
+                        <option value="bn">বাংলা (BN)</option>
+                        <option value="hi">हिंदी (HI)</option>
+                        <option value="te">తెలుగు (TE)</option>
+                        <option value="mr">मराठी (MR)</option>
+                        <option value="ta">தமிழ் (TA)</option>
+                        <option value="gu">ગુજરાતી (GU)</option>
+                        <option value="kn">ಕನ್ನಡ (KN)</option>
+                        <option value="or">ଓଡ଼ିଆ (OR)</option>
+                        <option value="ml">മലയാളം (ML)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                        <option value="as">অসমীয়া (AS)</option>
+                        <option value="mai">मैथिली (MAI)</option>
+                        <option value="sat">संताली (SAT)</option>
+                        <option value="ks">کٲشُر (KS)</option>
+                        <option value="ur">اردو (UR)</option>
+                        <option value="ne">नेपाली (NE)</option>
+                        <option value="sa">संस्कृतम् (SA)</option>
+                        <option value="sd">سنڌी (SD)</option>
+                        <option value="gom">कोंकणी (GOM)</option>
+                        <option value="doi">डोगरी (DOI)</option>
+                        <option value="mni">মৈতৈলোন (MNI)</option>
+                    </select>
+                </div>
+
+                <!-- Voice Control -->
+                <div class="automated-group" style="display: flex; gap: 8px;">
+                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" id="voice-trigger" onclick="window.logistixVoice.toggle()">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        Automated Control
+                    </button>
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice.showInstructions()" title="Voice Help">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </button>
+                </div>
+
+                <!-- Desktop Theme Toggle -->
+                <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark Mode">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── LEADERBOARD CONTENT ── -->
+        <section class="section-content" data-layout-id="section-leaderboard" id="leaderboard">
+            <div data-layout-container="leaderboard-content">
+
+                <!-- Metrics Row -->
+                <div class="stats-grid" data-layout-id="leaderboard-metrics">
+                    <div class="glass-card kpi-card hover-enabled" style="border-top: 4px solid var(--accent-1);">
+                        <p class="kpi-label text-shine-hover" data-i18n="active_drivers_lbl">Total Active Drivers</p>
+                        <h2 class="kpi-value" id="total-drivers" style="color:var(--accent-1);">0</h2>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Across all regional hubs</div>
+                    </div>
+                    <div class="glass-card kpi-card hover-enabled" style="border-top: 4px solid var(--accent-2);">
+                        <p class="kpi-label text-shine-hover" data-i18n="top_performing_hub">Top Performing Hub</p>
+                        <h2 class="kpi-value" id="top-hub" style="color:var(--accent-2);">--</h2>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Highest combined safety/delivery rating</div>
+                    </div>
+                    <div class="glass-card kpi-card hover-enabled" style="border-top: 4px solid var(--accent-3);">
+                        <p class="kpi-label text-shine-hover" data-i18n="rewards_issued_lbl">Total Rewards Issued</p>
+                        <h2 class="kpi-value" id="total-rewards" style="color:var(--accent-3);">0</h2>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Points distributed globally</div>
+                    </div>
+                </div>
+
+                <!-- Main Leaderboard -->
+                <div class="glass-card section-card hover-enabled" data-layout-id="leaderboard-main">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; flex-wrap:wrap; gap:20px;">
+                        <div style="flex:1;">
+                            <h2 class="split-text" data-i18n="leaderboard_title" style="margin:0; font-size:1.8rem; color:var(--primary); font-weight:800; letter-spacing:-0.02em;">Global Driver Rankings</h2>
+                            <p class="subtitle" data-i18n="leaderboard_subtitle" style="margin-top:8px;">Recognizing operational excellence and safety adherence.</p>
+
+                            <div class="shipment-tabs" style="margin-top:20px; margin-bottom:0;">
+                                <button class="active-tab" id="tab-all-time" onclick="setLeaderboardCategory('all')">All-Time Stars</button>
+                                <button id="tab-month" onclick="setLeaderboardCategory('month')">This Month</button>
+                                <button id="tab-safety" onclick="setLeaderboardCategory('safety')">Safety Champions</button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <input class="premium-input" data-i18n-placeholder="search_leaderboard_ph" id="leaderboard-search" oninput="applyLeaderboardFilters()" placeholder="Search Name or ID..." style="width:240px;" type="text"/>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="premium-table">
+                            <thead>
+                                <tr>
+                                    <th data-i18n="th_rank">Rank</th>
+                                    <th data-i18n="th_driver">Driver</th>
+                                    <th data-i18n="label_base_hub">Hub</th>
+                                    <th data-i18n="th_deliveries">Deliveries</th>
+                                    <th data-i18n="th_rating">Rating</th>
+                                    <th data-i18n="th_safety_score">Safety Score</th>
+                                    <th data-i18n="reward_points">Points</th>
+                                    <th data-i18n="th_action">Profile</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-table-body">
+                                <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-muted);">Calculating rankings...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<div id="alert-container"></div>
+
+<!-- ── ALL MODALS RESTYLED WITH ULTRA-PREMIUM CLASSES ── -->
+
+<!-- Driver Profile Deep-Dive Modal -->
+<div class="modal-glass" id="driver-profile-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:11000; width:700px; max-width:95vw; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:16px;">
+        <h3 class="split-text" style="margin:0; font-size:1.6rem; color:var(--primary); display:flex; align-items:center; gap:10px;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span id="dp-name">Driver Profile</span>
+        </h3>
+        <button class="close-modal-btn" onclick="document.getElementById('driver-profile-modal').style.display='none'" style="position:relative; top:0; right:0;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    </div>
+
+    <!-- Core Identifiers -->
+    <div style="display:flex; gap:20px; margin-bottom:24px; flex-wrap:wrap;">
+        <div style="flex:1; background:rgba(0,0,0,0.2); padding:16px; border-radius:16px; border:1px solid var(--border);">
+            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; margin-bottom:4px;">System ID</div>
+            <div id="dp-id" style="font-family:monospace; color:var(--accent-1); font-weight:800; font-size:1.1rem;">--</div>
+        </div>
+        <div style="flex:1; background:rgba(0,0,0,0.2); padding:16px; border-radius:16px; border:1px solid var(--border);">
+            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; margin-bottom:4px;">Base Hub</div>
+            <div id="dp-hub" style="color:var(--text-main); font-weight:800; font-size:1.1rem;">--</div>
+        </div>
+        <div style="flex:1; background:linear-gradient(135deg, rgba(255, 153, 0, 0.1), rgba(255, 153, 0, 0.02)); padding:16px; border-radius:16px; border:1px solid rgba(255, 153, 0, 0.3);">
+            <div style="font-size:0.8rem; color:var(--accent-2); text-transform:uppercase; letter-spacing:0.05em; font-weight:700; margin-bottom:4px;">Global Rank</div>
+            <div id="dp-rank" style="color:var(--accent-2); font-weight:800; font-size:1.6rem; line-height:1;">--</div>
+        </div>
+    </div>
+
+    <!-- Operational Metrics -->
+    <h4 style="margin:0 0 16px 0; font-size:1.1rem; color:var(--text-main);">Operational Metrics</h4>
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:24px;">
+        <div style="background:var(--surface); padding:16px; border-radius:16px; border:1px solid var(--border); text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Total Deliveries</div>
+            <div id="dp-deliveries" style="font-size:1.6rem; font-weight:800; color:var(--text-main);">0</div>
+        </div>
+        <div style="background:var(--surface); padding:16px; border-radius:16px; border:1px solid var(--border); text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Avg Rating</div>
+            <div id="dp-rating" style="font-size:1.6rem; font-weight:800; color:var(--accent-2);">5.0 ⭐</div>
+        </div>
+        <div style="background:var(--surface); padding:16px; border-radius:16px; border:1px solid var(--border); text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:8px;">Reward Points</div>
+            <div id="dp-points" style="font-size:1.6rem; font-weight:800; color:var(--success);">0</div>
+        </div>
+    </div>
+
+    <!-- Last Known Vitals / Health Telemetry -->
+    <div style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.3); padding:20px; border-radius:16px;">
+        <h4 style="margin:0 0 16px 0; font-size:1.1rem; color:var(--danger); display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"></path></svg>
+            Health Telemetry (Live Sync)
+        </h4>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; text-align:center;">
+            <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:12px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:800; margin-bottom:4px;">HEART RATE</div>
+                <div id="dp-heart" style="font-weight:800; font-size:1.2rem; color:var(--text-main);">--</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:12px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:800; margin-bottom:4px;">SPO2</div>
+                <div id="dp-o2" style="font-weight:800; font-size:1.2rem; color:var(--text-main);">--</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:12px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:800; margin-bottom:4px;">TEMP (°F)</div>
+                <div id="dp-temp" style="font-weight:800; font-size:1.2rem; color:var(--text-main);">--</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="../js/translator.js?v=2.2"></script>
+<script src="../js/logo.js"></script>
+<script src="../js/voice.js?v=2.2"></script>
+<script src="../js/api.js?v=2.3"></script>
+<script src="../js/custom_layout.js?v=2.2"></script>
+<script src="../js/manager_base.js"></script>
+<script src="../js/manager_leaderboard.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize dashboard layout
+        if(window.logistixLayout) window.logistixLayout.init('manager');
+
+        // Handle Mobile Sidebar visibility state smoothly
+        window.toggleMobileSidebar = function(state) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if(sidebar) {
+                if(state) {
+                    sidebar.classList.add('open');
+                    if(overlay) overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    if(overlay) overlay.classList.remove('active');
+                }
+            }
+        };
+
+        // ── SPLIT TEXT WAVE EFFECT (Mobile Optimized) ──
+        function splitTextNodes(element) {
+            if (element.classList.contains('is-split')) return;
+            const processNode = (node) => {
+                if (node.nodeType === 3) {
+                    const text = node.nodeValue;
+                    if (!text.trim() && !text.includes(' ')) return;
+                    const fragment = document.createDocumentFragment();
+                    const words = text.split(/(\s+)/);
+                    words.forEach(word => {
+                        if (/^\s+$/.test(word)) {
+                            const spaceSpan = document.createElement('span');
+                            spaceSpan.className = 'char space';
+                            spaceSpan.innerHTML = '&nbsp;';
+                            fragment.appendChild(spaceSpan); return;
+                        }
+                        if (word === '') return;
+                        const wordSpan = document.createElement('span');
+                        wordSpan.style.display = 'inline-block';
+                        wordSpan.style.whiteSpace = 'nowrap';
+                        Array.from(word).forEach(char => {
+                            const charSpan = document.createElement('span');
+                            charSpan.className = 'char';
+                            charSpan.textContent = char;
+                            wordSpan.appendChild(charSpan);
+                        });
+                        fragment.appendChild(wordSpan);
+                    });
+                    node.parentNode.replaceChild(fragment, node);
+                } else if (node.nodeType === 1) {
+                    if (node.classList.contains('char') || node.tagName === 'BR') return;
+                    Array.from(node.childNodes).forEach(processNode);
+                }
+            };
+            Array.from(element.childNodes).forEach(processNode);
+            element.classList.add('is-split');
+        }
+
+        function attachWavePhysics(container) {
+            const chars = Array.from(container.querySelectorAll('.char'));
+            if (chars.length === 0) return;
+            let charBoxes = [];
+            let activeIndex = -1;
+
+            const updateBoxes = () => {
+                charBoxes = chars.map(c => {
+                    const rect = c.getBoundingClientRect();
+                    return { left: rect.left - 5, right: rect.right + 5, top: rect.top - 15, bottom: rect.bottom + 15 };
+                });
+            };
+
+            const clearClasses = () => {
+                if (activeIndex > -1) {
+                    chars[activeIndex].classList.remove('hovered');
+                    if (chars[activeIndex - 1]) chars[activeIndex - 1].classList.remove('neighbor');
+                    if (chars[activeIndex + 1]) chars[activeIndex + 1].classList.remove('neighbor');
+                    activeIndex = -1;
+                }
+            };
+
+            const setActive = (index) => {
+                if (activeIndex === index) return;
+                clearClasses();
+                activeIndex = index;
+                if (index > -1) {
+                    chars[index].classList.add('hovered');
+                    if (chars[index - 1]) chars[index - 1].classList.add('neighbor');
+                    if (chars[index + 1]) chars[index + 1].classList.add('neighbor');
+                }
+            };
+
+            const handleMove = (clientX, clientY) => {
+                for (let i = 0; i < charBoxes.length; i++) {
+                    const b = charBoxes[i];
+                    if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
+                        setActive(i); return;
+                    }
+                }
+                clearClasses();
+            };
+
+            container.addEventListener('mouseenter', updateBoxes, { passive: true });
+            container.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY), { passive: true });
+            container.addEventListener('mouseleave', clearClasses, { passive: true });
+            container.addEventListener('touchstart', (e) => { updateBoxes(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+            container.addEventListener('touchmove', (e) => { handleMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+            container.addEventListener('touchend', clearClasses, { passive: true });
+            container.addEventListener('touchcancel', clearClasses, { passive: true });
+        }
+
+        document.querySelectorAll('.split-text').forEach(el => {
+            splitTextNodes(el);
+            attachWavePhysics(el);
+        });
+
+        // ── PHYSICS BACKGROUND CANVAS DOTS INITIALIZATION ──
+        const canvasBuffer = 400;
+        const halfBuffer = canvasBuffer / 2;
+        const pointer = { x: -1000, y: -1000 };
+
+        window.addEventListener('mousemove', (e) => {
+            pointer.x = e.clientX + halfBuffer;
+            pointer.y = e.clientY + halfBuffer;
+        });
+        window.addEventListener('touchmove', (e) => {
+            pointer.x = e.touches[0].clientX + halfBuffer;
+            pointer.y = e.touches[0].clientY + halfBuffer;
+        }, { passive: true });
+        window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+        window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
+
+        const mCanvas = document.getElementById('interactive-grid');
+        if (mCanvas) {
+            const mCtx = mCanvas.getContext('2d', { alpha: true });
+            let mWidth, mHeight, mDots = [];
+            const mPushRadius = 220, mPushForce = 30, spring = 0.05, friction = 0.8;
+
+            function initGrids() {
+                const dpr = window.devicePixelRatio || 1;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
+                mCtx.scale(dpr, dpr);
+
+                const spacing = window.innerWidth < 768 ? 35 : 30;
+                mDots = [];
+                for (let x = 0; x < mWidth; x += spacing) {
+                    for (let y = 0; y < mHeight; y += spacing) {
+                        mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+                    }
+                }
+            }
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
+            });
+
+            function animateGrids() {
+                mCtx.clearRect(0, 0, mWidth, mHeight);
+                const isLight = document.body.classList.contains('light-mode');
+                mCtx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.3)';
+                const mPushRadiusSq = mPushRadius * mPushRadius;
+
+                for (let i = 0; i < mDots.length; i++) {
+                    let p = mDots[i];
+                    let dx = pointer.x - p.x; let dy = pointer.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < mPushRadiusSq) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mPushRadius - dist) / mPushRadius;
+                        p.vx -= (dx / dist) * force * mPushForce;
+                        p.vy -= (dy / dist) * force * mPushForce;
+                    }
+
+                    p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
+                    p.vx *= friction; p.vy *= friction;
+                    p.x += p.vx; p.y += p.vy;
+                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                }
+                requestAnimationFrame(animateGrids);
+            }
+            initGrids(); animateGrids();
+        }
+    });
+
+    // ── THEME SWITCH SYSTEM ──
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
+        });
+
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
+    }
+
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
+
+    // Initial state
+    setTheme(localStorage.getItem('theme') || 'dark');
+</script>
+
+<!-- Custom Alert System -->
+<script>
+window.showToast = function(msg, type='info') {
+    const container = document.getElementById('alert-container') || document.body;
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.bottom = '30px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+    toast.style.opacity = '0';
+    toast.style.padding = '12px 24px';
+    toast.style.borderRadius = '12px';
+    toast.style.color = '#fff';
+    toast.style.fontWeight = 'bold';
+    toast.style.zIndex = '99999';
+    toast.style.transition = 'all 0.3s ease';
+    toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+
+    if (type === 'error') {
+        toast.style.background = 'linear-gradient(135deg, #ff3b30, #ff2d55)';
+    } else if (type === 'success') {
+        toast.style.background = 'linear-gradient(135deg, #00ff73, #00bfff)';
+        toast.style.color = '#000';
+    } else {
+        toast.style.background = 'linear-gradient(135deg, #00e5ff, #0086ff)';
+        toast.style.color = '#000';
+    }
+
+    toast.textContent = msg;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        toast.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+};
+window.showNotification = window.showToast;
+</script>
+
+<script src="../js/premium_theme.js"></script>
+</body>
+</html>

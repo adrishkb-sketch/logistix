@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Driver History | Logistix Premium</title>
+
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- Chart JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        :root {
+            /* Dark Mode */
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.65);
+
+            /* Accents */
+            --accent-1: #00e5ff; /* Cyan */
+            --accent-2: #ff9900; /* Amber */
+            --accent-3: #00ff73; /* Green */
+            --accent-4: #b142ff; /* Purple */
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(15, 20, 35, 0.6);
+            --surface-hover: rgba(25, 33, 55, 0.85);
+            --border: rgba(255, 255, 255, 0.12);
+            --border-highlight: rgba(255, 255, 255, 0.25);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
+        }
+
+        body.light-mode {
+            /* High-Contrast Light Mode */
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.7);
+
+            /* Deepened accents for legibility */
+            --accent-1: #0284c7;
+            --accent-2: #d97706;
+            --accent-3: #059669;
+            --accent-4: #7e22ce;
+            --warning: #ea580c;
+            --danger: #dc2626;
+
+            --surface: rgba(255, 255, 255, 0.85);
+            --surface-hover: rgba(255, 255, 255, 1);
+            --border: rgba(15, 23, 42, 0.12);
+            --border-highlight: rgba(15, 23, 42, 0.25);
+            --glow-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            --neon-glow: rgba(2, 132, 199, 0.2);
+
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+        }
+
+        /* ── RESET & BASE ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s ease, color 0.5s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, h5, h6, .kpi-value-text {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-highlight); border-radius: 10px; }
+
+        /* ── HIGH PERFORMANCE BACKDROP BLOBS ── */
+        .bg-blobs {
+            position: fixed; inset: 0; z-index: 0;
+            overflow: hidden; pointer-events: none;
+            background: var(--bg-base);
+            transition: background 0.6s ease;
+        }
+        .blob {
+            position: absolute; filter: blur(70px); opacity: 0.6;
+            will-change: transform, border-radius;
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            animation: floatBlob 22s infinite alternate ease-in-out;
+        }
+        body.light-mode .blob { opacity: 0.35; filter: blur(55px); }
+
+        .blob-1 { top: -15%; left: -10%; width: 70vw; height: 70vh; background: var(--accent-1); animation-delay: 0s; }
+        .blob-2 { bottom: -15%; right: -10%; width: 60vw; height: 60vh; background: var(--accent-4); animation-delay: -7s; }
+        .blob-3 { top: 35%; left: 20%; width: 65vw; height: 65vh; background: var(--accent-3); animation-delay: -12s; }
+
+        @keyframes floatBlob {
+            0%   { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+            50%  { transform: translate3d(10vw, 15vh, 0) scale(1.15) rotate(15deg); }
+            100% { transform: translate3d(-10vw, 20vh, 0) scale(0.95) rotate(-10deg); }
+        }
+
+        /* ── INTERACTIVE CANVAS GRID ── */
+        #interactive-grid { position: fixed; inset: 0; z-index: 1; pointer-events: none; width: 100%; height: 100%; }
+
+        /* ── MOBILE FIRST LAYOUT ── */
+        .driver-layout {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 24px 16px 100px 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        /* ── GLASS COMPONENTS ── */
+        .glass-card {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 28px !important;
+            padding: 24px;
+            backdrop-filter: blur(30px) !important;
+            -webkit-backdrop-filter: blur(30px) !important;
+            box-shadow: var(--glow-shadow) !important;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.light-mode .glass-card {
+            background: rgba(255, 255, 255, 0.75) !important;
+            border: 1px solid rgba(255, 255, 255, 1) !important;
+            box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.1) !important;
+        }
+
+        .glass-btn {
+            background: var(--surface); color: var(--text-main);
+            border: 1px solid var(--border); padding: 14px 24px;
+            border-radius: 16px; font-weight: 700; font-size: 0.9rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: all 0.3s ease; backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        body.light-mode .glass-btn {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+        }
+        .glass-btn:active { transform: scale(0.96); }
+        .glass-btn:hover { border-color: var(--border-highlight); }
+        .glass-btn svg { stroke-width: 2.2; }
+
+        /* ── TOP BAR (MOBILE OPTIMIZED) ── */
+        .top-bar {
+            display: flex; flex-direction: column; gap: 20px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 28px; padding: 20px 24px;
+            backdrop-filter: blur(30px); box-shadow: var(--glow-shadow);
+        }
+        body.light-mode .top-bar {
+            background: rgba(255,255,255,0.85); border-color: #fff;
+            box-shadow: 0 10px 40px -5px rgba(15, 23, 42, 0.08);
+        }
+        .top-bar-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .top-bar h1 { font-size: 1.5rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .driver-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; flex-wrap: wrap; gap: 12px; width: 100%; justify-content: flex-start; }
+
+        .icon-btn {
+            width: 44px; height: 44px; border-radius: 14px;
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--text-main); display: flex; align-items: center;
+            justify-content: center; cursor: pointer; transition: all 0.3s ease;
+        }
+        body.light-mode .icon-btn { background: #fff; }
+
+        /* ── SCROLLABLE TABS ── */
+        .tabs-container {
+            display: flex; background: var(--surface); border: 1px solid var(--border);
+            padding: 8px; border-radius: 24px; gap: 8px; overflow-x: auto;
+            -webkit-overflow-scrolling: touch; backdrop-filter: blur(20px); scrollbar-width: none;
+        }
+        body.light-mode .tabs-container { background: #fff; border-color: #fff; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .tabs-container::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            flex: 0 0 auto; padding: 14px 20px; border-radius: 18px; border: none;
+            background: transparent; color: var(--text-muted); font-weight: 700;
+            cursor: pointer; transition: all 0.3s ease; font-size: 0.95rem;
+            display: flex; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .tab-btn.active { background: var(--accent-1); color: #000; box-shadow: 0 6px 20px var(--neon-glow); }
+        body.light-mode .tab-btn.active { color: #fff; }
+        .tab-btn svg { stroke-width: 2.2; }
+
+        /* ── STATS GRID ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .kpi-card {
+            padding: 24px 16px; display: flex; flex-direction: column;
+            align-items: center; text-align: center; gap: 10px;
+        }
+        .kpi-label { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+        .kpi-value-text { font-size: 2rem; font-weight: 800; line-height: 1.1; }
+
+        /* ── HISTORY LIST SPECIFICS ── */
+        .history-controls {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        .filter-select {
+            background: var(--surface); color: var(--text-main);
+            border: 1px solid var(--border); padding: 10px 16px;
+            border-radius: 12px; font-weight: 700; font-size: 0.85rem;
+            outline: none; cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 12px top 50%; background-size: 10px auto;
+            padding-right: 30px;
+        }
+        body.light-mode .filter-select { background-color: #fff; color: #000; background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23000000%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");}
+
+        .history-card {
+            display: flex; flex-direction: column; gap: 16px;
+            padding: 20px; margin-bottom: 16px;
+            border-left: 4px solid var(--accent-3);
+        }
+        .history-card.cancelled { border-left-color: var(--danger); opacity: 0.8; }
+
+        .history-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 4px;}
+        .history-date { font-weight: 800; font-size: 1.1rem; color: var(--text-main); }
+        .history-time { font-size: 0.85rem; color: var(--text-muted); font-weight: 500;}
+        .history-price { font-weight: 800; font-size: 1.2rem; color: var(--success); }
+
+        .route-visualizer { display: flex; flex-direction: column; gap: 12px; position: relative; padding-left: 24px; margin: 8px 0; }
+        .route-visualizer::before {
+            content: ''; position: absolute; left: 7px; top: 10px; bottom: 10px;
+            width: 2px; background: dashed 2px var(--border-highlight);
+        }
+        .route-point { display: flex; flex-direction: column; position: relative; }
+        .route-point::before {
+            content: ''; position: absolute; left: -24px; top: 4px; width: 10px; height: 10px;
+            border-radius: 50%; background: var(--bg-base); border: 2px solid var(--accent-1); z-index: 2;
+        }
+        .route-point.end::before { border-color: var(--accent-4); border-radius: 4px;}
+        .route-point-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;}
+        .route-point-value { font-size: 0.95rem; font-weight: 600; color: var(--text-main); }
+
+        .history-footer { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+        .stat-badge {
+            display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+            border-radius: 8px; background: rgba(255,255,255,0.05);
+            font-size: 0.8rem; font-weight: 700; color: var(--text-muted);
+        }
+        body.light-mode .stat-badge { background: rgba(15, 23, 42, 0.05); }
+
+        .status-pill {
+            padding: 6px 12px; border-radius: 20px; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .status-completed { background: rgba(0, 255, 115, 0.15); color: var(--success); }
+        .status-cancelled { background: rgba(255, 59, 48, 0.15); color: var(--danger); }
+        body.light-mode .status-completed { background: rgba(5, 150, 105, 0.1); }
+        body.light-mode .status-cancelled { background: rgba(220, 38, 38, 0.1); }
+
+        /* SVG Helpers */
+        .icon-sm { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+        .icon-md { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+        .icon-lg { width: 48px; height: 48px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
+
+        /* Specific Card Accents */
+        .border-top-primary { border-top: 4px solid var(--primary) !important; }
+        .border-top-success { border-top: 4px solid var(--success) !important; }
+        .border-top-accent { border-top: 4px solid var(--accent) !important; }
+
+        @media (min-width: 650px) {
+            .top-bar-controls { flex-wrap: nowrap; justify-content: flex-end; width: auto; }
+            .top-bar-header { width: auto; }
+            .top-bar { flex-direction: row; justify-content: space-between; align-items: center; }
+            .history-header { align-items: center; }
+            .history-price { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── ANIMATED BLOB BACKDROP ── -->
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+
+<!-- ── INTERACTIVE CANVAS GRID ── -->
+<canvas id="interactive-grid"></canvas>
+
+<div class="driver-layout">
+
+    <!-- ── TOP BAR HEADER ── -->
+    <header class="top-bar">
+        <div class="top-bar-header">
+            <h1>
+                <span>Driver App</span>
+                <span style="opacity:0.3; margin: 0 6px;">/</span>
+                <span id="driver-name" class="driver-name-hl">History</span>
+            </h1>
+        </div>
+        <div class="top-bar-controls">
+            <button class="icon-btn notranslate" id="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                <svg class="icon-md" id="theme-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+            <button class="glass-btn" style="background:rgba(220, 38, 38, 0.1); border-color:rgba(220, 38, 38, 0.2); color:var(--danger); padding:0 18px;">
+                <svg class="icon-md" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- ── SCROLLABLE TABS ── -->
+    <div class="tabs-container" data-layout-container="driver-tabs">
+        <button class="tab-btn" data-layout-id="tab-tasks" id="btn-tab-dash" onclick="window.location.href='driver_tasks.html'">
+            <svg class="icon-md" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span data-i18n="tab_tasks">Tasks</span>
+        </button>
+        <button class="tab-btn" data-layout-id="tab-live" id="btn-tab-active" onclick="switchDriverTab('active')">
+            <svg class="icon-md" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+            <span data-i18n="tab_live_route">Live Route</span>
+        </button>
+        <button class="tab-btn" data-layout-id="tab-chat" id="btn-tab-chat" onclick="switchDriverTab('chat')">
+            <svg class="icon-md" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            <span data-i18n="tab_chat">Chat</span>
+        </button>
+        <button class="tab-btn active" data-layout-id="tab-history" id="btn-tab-completed" onclick="switchDriverTab('completed')">
+            <svg class="icon-md" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+            <span data-i18n="tab_history">History</span>
+        </button>
+        <button class="tab-btn" data-layout-id="tab-wallet" id="btn-tab-wallet" onclick="switchDriverTab('wallet')">
+            <svg class="icon-md" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            <span data-i18n="tab_wallet">Wallet</span>
+        </button>
+        <button class="tab-btn" data-layout-id="tab-account" id="btn-tab-profile" onclick="switchDriverTab('profile')">
+            <svg class="icon-md" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span data-i18n="tab_account">Account</span>
+        </button>
+    </div>
+
+    <!-- ── MAIN CONTENT: HISTORY ── -->
+    <div id="history-content">
+
+        <!-- Trip History List -->
+        <div>
+            <h4 style="margin: 0 0 16px 8px; font-size: 1.2rem; color: var(--text-muted);">Recent Trips</h4>
+            <div id="trip-history-list">
+                <p style="text-align: center; padding: 20px; color: var(--text-muted);">Loading trips...</p>
+            </div>
+        </div>
+
+    </div> <!-- /history-content -->
+
+</div> <!-- /driver-layout -->
+
+<!-- Restoring original scripts for app functionality (SPA, translating, layouts) -->
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="../js/translator.js?v=2.2"></script>
+<script src="../js/logo.js"></script>
+<script src="../js/voice.js?v=2.2"></script>
+<script src="../js/api.js?v=2.3"></script>
+<script src="../js/custom_layout.js?v=2.2"></script>
+<script src="../js/driver.js?v=2.2"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        if (typeof window.logistixLayout !== 'undefined') {
+            window.logistixLayout.init('driver');
+        }
+        if (typeof switchDriverTab === 'function') {
+            switchDriverTab('completed');
+        }
+
+        // ── PHYSICS BACKGROUND CANVAS DOTS INITIALIZATION ──
+        const canvasBuffer = 400;
+        const halfBuffer = canvasBuffer / 2;
+        const pointer = { x: -1000, y: -1000 };
+
+        window.addEventListener('mousemove', (e) => {
+            pointer.x = e.clientX + halfBuffer;
+            pointer.y = e.clientY + halfBuffer;
+        });
+        window.addEventListener('touchmove', (e) => {
+            pointer.x = e.touches[0].clientX + halfBuffer;
+            pointer.y = e.touches[0].clientY + halfBuffer;
+        }, { passive: true });
+        window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+        window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
+
+        const mCanvas = document.getElementById('interactive-grid');
+        if (mCanvas) {
+            const mCtx = mCanvas.getContext('2d', { alpha: true });
+            let mWidth, mHeight, mDots = [];
+            const mPushRadius = 220, mPushForce = 30, spring = 0.05, friction = 0.8;
+
+            function initGrids() {
+                const dpr = window.devicePixelRatio || 1;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
+                mCtx.scale(dpr, dpr);
+
+                const spacing = window.innerWidth < 768 ? 35 : 30;
+                mDots = [];
+                for (let x = 0; x < mWidth; x += spacing) {
+                    for (let y = 0; y < mHeight; y += spacing) {
+                        mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+                    }
+                }
+            }
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
+            });
+
+            function animateGrids() {
+                mCtx.clearRect(0, 0, mWidth, mHeight);
+                const isLight = document.body.classList.contains('light-mode');
+                mCtx.fillStyle = isLight ? 'rgba(15, 23, 42, 0.15)' : 'rgba(255, 255, 255, 0.2)';
+                const mPushRadiusSq = mPushRadius * mPushRadius;
+
+                for (let i = 0; i < mDots.length; i++) {
+                    let p = mDots[i];
+                    let dx = pointer.x - p.x; let dy = pointer.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < mPushRadiusSq) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mPushRadius - dist) / mPushRadius;
+                        p.vx -= (dx / dist) * force * mPushForce;
+                        p.vy -= (dy / dist) * force * mPushForce;
+                    }
+
+                    p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
+                    p.vx *= friction; p.vy *= friction;
+                    p.x += p.vx; p.y += p.vy;
+                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                }
+                requestAnimationFrame(animateGrids);
+            }
+            initGrids(); animateGrids();
+        }
+
+        // ── THEME TOGGLE LOGIC ──
+        const themeIcon = document.getElementById('theme-icon');
+        const moonSVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+        const sunSVG = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+
+        function setTheme(mode) {
+            const isLight = mode === 'light';
+            if (isLight) {
+                document.body.classList.add('light-mode');
+                themeIcon.innerHTML = sunSVG;
+            } else {
+                document.body.classList.remove('light-mode');
+                themeIcon.innerHTML = moonSVG;
+            }
+            localStorage.setItem('theme', mode);
+        }
+
+        window.toggleTheme = () => {
+            const isLight = document.body.classList.contains('light-mode');
+            setTheme(isLight ? 'dark' : 'light');
+        };
+
+        // Initialize theme based on preference or local storage
+        setTheme(localStorage.getItem('theme') || 'dark');
+
+        // Load trips dynamically
+        loadCompletedTrips();
+    });
+
+    async function loadCompletedTrips() {
+        const dId = localStorage.getItem('driver_id');
+        const listEl = document.getElementById('trip-history-list');
+        if (!listEl) return;
+        
+        try {
+            const shipments = await apiCall(`/driver/${dId}/shipments`);
+            const completed = shipments.filter(s => s.status === 'delivered' || s.status === 'finalized');
+            
+            if (completed.length === 0) {
+                listEl.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-muted);">No completed trips found.</p>`;
+                return;
+            }
+            
+            listEl.innerHTML = completed.map(s => {
+                const d = new Date(s.actual_delivery || s.expected_delivery || new Date());
+                const dateStr = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                
+                const pickupAddr = s.pickup?.address || s.pickup?.name || 'Hub/Origin';
+                const dropAddr = s.drop?.address || s.drop?.name || 'Destination';
+                
+                let ratingHtml = '';
+                if (s.parent_customer_rating) {
+                    ratingHtml = `
+                        <div class="stat-badge" style="color: #fbbf24; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                            ⭐ ${s.parent_customer_rating.toFixed(1)}
+                        </div>
+                    `;
+                }
+                
+                let reviewHtml = '';
+                if (s.parent_customer_review) {
+                    reviewHtml = `
+                        <div style="margin-top: 12px; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; color: var(--text-muted); font-style: italic; text-align: left;">
+                            &ldquo;${s.parent_customer_review}&rdquo;
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="glass-card history-card" style="margin-bottom: 16px;">
+                        <div class="history-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                            <div style="text-align: left;">
+                                <div class="history-date" style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">${dateStr}</div>
+                                <div class="history-time" style="font-size: 0.8rem; color: var(--text-muted);">Completed at ${timeStr}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="status-pill status-completed" style="background: rgba(0, 255, 115, 0.1); color: var(--success); border: 1px solid rgba(0, 255, 115, 0.3); font-size: 0.75rem; font-weight: 800; padding: 4px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                    COMPLETED
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: var(--accent-1); text-align: left;">${s.description || 'Shipment'}</div>
+
+                        <div class="route-visualizer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; text-align: left;">
+                            <div class="route-point">
+                                <span class="route-point-label" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-2); text-transform: uppercase; display: block; margin-bottom: 2px;">Pickup</span>
+                                <span class="route-point-value" style="font-size: 0.85rem; color: var(--text-main);">${pickupAddr}</span>
+                            </div>
+                            <div class="route-point end">
+                                <span class="route-point-label" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-3); text-transform: uppercase; display: block; margin-bottom: 2px;">Dropoff</span>
+                                <span class="route-point-value" style="font-size: 0.85rem; color: var(--text-main);">${dropAddr}</span>
+                            </div>
+                        </div>
+
+                        <div class="history-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div class="stat-badge" style="font-size: 0.8rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px;">
+                                🆔 #${s.id.substring(0, 8)}
+                            </div>
+                            ${ratingHtml}
+                        </div>
+                        ${reviewHtml}
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            console.error("Failed to load completed trips", err);
+            listEl.innerHTML = `<p style="text-align: center; padding: 20px; color: var(--danger);">Failed to load trip history.</p>`;
+        }
+    }
+
+</body>
+</html>

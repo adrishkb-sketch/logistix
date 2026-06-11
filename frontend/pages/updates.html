@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Updates History | Logistix</title>
+
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ──────────────────────── */
+        :root {
+            /* Dark Mode (Ultra-Deep Navy & Bioluminescent Palette) */
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+
+            /* 3 Distinct Striking Accents (Aquatic/Tech) */
+            --accent-1: #00e5ff; /* Vivid Neon Cyan */
+            --accent-2: #ffaa00; /* Vibrant Gold/Amber */
+            --accent-3: #00e676; /* Vivid Spring Green */
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(15, 20, 35, 0.4);
+            --surface-hover: rgba(25, 33, 55, 0.7);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-highlight: rgba(255, 255, 255, 0.15);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.8);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+            --grid-color: rgba(255, 255, 255, 0.02);
+        }
+
+        body.light-mode {
+            /* Enhanced Light Mode (Premium Slate & Crisp Tech Accents) */
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+
+            /* 3 Distinct Light Mode Accents */
+            --accent-1: #0ea5e9; /* Sky Blue */
+            --accent-2: #f59e0b; /* Amber/Orange */
+            --accent-3: #10b981; /* Emerald */
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(255, 255, 255, 0.65);
+            --surface-hover: rgba(255, 255, 255, 0.95);
+            --border: rgba(0, 0, 0, 0.06);
+            --border-highlight: rgba(0, 0, 0, 0.18);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
+            --grid-color: rgba(0, 0, 0, 0.03);
+        }
+
+        /* ── RESET & BASE ────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* Unified Background to completely eliminate edge flashes during overscroll */
+        html {
+            scroll-behavior: smooth;
+            background-color: var(--bg-base);
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg-base);
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s ease;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+        ::selection { background: var(--accent-1); color: #fff; }
+
+        /* ── HIGH PERFORMANCE WAVE BACKGROUND MAGIC ──────────── */
+        .bg-blobs {
+            position: fixed;
+            inset: -100px; /* Extreme oversize to ensure edge bleed never shows */
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+            background: transparent;
+        }
+
+        .blob {
+            position: absolute;
+            filter: blur(55px);
+            opacity: 0.7;
+            will-change: transform, border-radius;
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            transform: translateZ(0);
+        }
+
+        body.light-mode .blob {
+            opacity: 0.65;
+            filter: blur(45px);
+        }
+
+        .blob-1 { top: -20%; left: -10%; width: max(65vw, 450px); height: max(65vh, 450px); background: var(--accent-1); animation: wavePush1 14s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -20%; right: -10%; width: max(65vw, 450px); height: max(65vh, 450px); background: var(--accent-2); animation: wavePush2 17s infinite alternate ease-in-out; }
+        .blob-3 { top: 15%; left: 15%; width: max(60vw, 400px); height: max(60vh, 400px); background: var(--accent-3); animation: wavePush3 21s infinite alternate ease-in-out; }
+
+        @keyframes wavePush1 {
+            0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            50%  { transform: translate3d(40vw, 30vh, 0) scale(1.3); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            100% { transform: translate3d(10vw, 60vh, 0) scale(0.9); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; }
+        }
+        @keyframes wavePush2 {
+            0%   { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            50%  { transform: translate3d(-40vw, -30vh, 0) scale(1.4); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+            100% { transform: translate3d(-10vw, -60vh, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+        }
+        @keyframes wavePush3 {
+            0%   { transform: translate3d(0, 0, 0) scale(0.9); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; }
+            50%  { transform: translate3d(-30vw, 20vh, 0) scale(1.35); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; }
+            100% { transform: translate3d(30vw, -15vh, 0) scale(1.1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+        }
+
+        /* Interactive Canvas Grid Background */
+        canvas#interactive-grid {
+            position: fixed;
+            z-index: 1;
+            pointer-events: none;
+            /* Dimensions dynamically bound via JS to massively overshoot viewport */
+        }
+
+        /* ── FLOATING CONTROLS (HEADER) ──────────────────────── */
+        .fixed-control-bar {
+            position: fixed;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 4%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10002;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .fixed-control-bar > * { pointer-events: auto; }
+
+        .controls-left, .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.3s ease;
+        }
+
+        .glass-control {
+            padding: 10px 18px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-main);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            outline: none;
+            text-decoration: none;
+        }
+        .glass-control:hover {
+            border-color: var(--border-highlight);
+            background: var(--surface-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--neon-glow);
+        }
+        .glass-control:active { transform: scale(0.95); }
+
+        .glass-control select {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            padding-right: 15px;
+        }
+        .glass-control select option { background: var(--bg-base); color: var(--text-main); }
+
+        /* Premium Circular Icon Buttons */
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            padding: 0 !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50% !important;
+            flex-shrink: 0;
+        }
+        .icon-btn svg { margin: 0 !important; }
+
+        body.scrolled .fixed-control-bar { top: 10px; }
+        body.scrolled .controls-left,
+        body.scrolled .controls-right { transform: scale(0.95); opacity: 0.98; }
+
+        /* ── MAIN CONTENT & TIMELINE ─────────────────────────── */
+        .main-wrapper {
+            position: relative;
+            z-index: 2; /* Sit over the background */
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 140px 20px 80px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 70px;
+            perspective: 1000px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            font-weight: 500;
+            max-width: 600px;
+            margin: 16px auto 0;
+            line-height: 1.6;
+        }
+
+        /* Ultra-Optimized Letter Wave Effect */
+        .split-text {
+            display: inline-block;
+            word-wrap: break-word;
+            pointer-events: auto;
+            touch-action: pan-y;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+            position: relative;
+            z-index: 5;
+        }
+        .split-text .char {
+            display: inline-block;
+            transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.15s ease, text-shadow 0.15s ease;
+            white-space: pre;
+            will-change: transform, color;
+            pointer-events: none;
+        }
+
+        .split-text .char.hovered {
+            transform: translate3d(0, -8px, 0) scale(1.15) rotate(-3deg);
+            color: var(--accent-1);
+            text-shadow: 0 10px 20px var(--neon-glow);
+            transition: transform 0.03s ease-out, color 0.03s ease-out, text-shadow 0.03s ease-out;
+            z-index: 2;
+            position: relative;
+        }
+        .split-text .char.neighbor {
+            transform: translate3d(0, -4px, 0) scale(1.05);
+            color: var(--accent-2);
+            transition: transform 0.04s ease-out, color 0.04s ease-out;
+        }
+
+        /* Timeline Layout */
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 10px; /* Center of the dot */
+            top: 20px;
+            bottom: 20px;
+            width: 2px;
+            background: linear-gradient(to bottom, transparent, var(--border-highlight) 10%, var(--border-highlight) 90%, transparent);
+            border-radius: 2px;
+        }
+
+        /* Glass Card Update Entries */
+        .update-entry {
+            position: relative;
+            margin-bottom: 40px;
+            padding: 32px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+        body.light-mode .update-entry {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        }
+
+        .update-entry:hover {
+            border-color: var(--border-highlight);
+            transform: translateX(6px);
+            box-shadow: 0 20px 50px -10px var(--glow-shadow);
+        }
+
+        /* Glowing Timeline Dot */
+        .update-entry::before {
+            content: "";
+            position: absolute;
+            left: -37px; /* Align to the 10px timeline line */
+            top: 40px;
+            width: 16px;
+            height: 16px;
+            background: var(--bg-base);
+            border: 3px solid var(--accent-1);
+            border-radius: 50%;
+            z-index: 2;
+            box-shadow: 0 0 15px var(--neon-glow);
+            transition: all 0.3s ease;
+        }
+        .update-entry:hover::before {
+            background: var(--accent-1);
+            transform: scale(1.2);
+            box-shadow: 0 0 25px var(--neon-glow);
+        }
+
+        /* Entry Typography */
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .entry-date {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--accent-2);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .entry-version {
+            font-size: 0.8rem;
+            background: rgba(0, 229, 255, 0.1);
+            color: var(--accent-1);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+        body.light-mode .entry-version {
+            background: rgba(14, 165, 233, 0.1);
+            border-color: rgba(14, 165, 233, 0.2);
+        }
+
+        .entry-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+
+        .entry-content {
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-size: 1rem;
+        }
+
+        .entry-content h3 {
+            color: var(--text-main);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+        .entry-content h3:first-child { margin-top: 0; }
+
+        .entry-content p {
+            margin-bottom: 16px;
+        }
+
+        .entry-content ul {
+            padding-left: 24px;
+            margin-bottom: 24px;
+        }
+
+        .entry-content li {
+            margin-bottom: 10px;
+        }
+
+        .entry-content strong {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        /* Glass Tags */
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 24px;
+        }
+        .feature-tag {
+            display: inline-flex;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            transition: 0.2s ease;
+        }
+        body.light-mode .feature-tag { background: rgba(0,0,0,0.03); }
+        .update-entry:hover .feature-tag {
+            border-color: rgba(255,255,255,0.15);
+        }
+        body.light-mode .update-entry:hover .feature-tag { border-color: rgba(0,0,0,0.1); }
+
+        /* ── ELEGANT MOBILE RESPONSIVENESS (SINGLE LINE FIX) ───────────────────────────── */
+        @media (max-width: 768px) {
+            .fixed-control-bar {
+                position: absolute;
+                top: 15px;
+                left: 0;
+                right: 0;
+                width: 100%;
+                padding: 0 15px;
+                flex-direction: row; /* SINGLE LINE */
+                justify-content: space-between;
+                align-items: center;
+                pointer-events: auto;
+
+                background: transparent;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                border-bottom: none;
+                z-index: 10002;
+            }
+            body.light-mode .fixed-control-bar {
+                background: transparent;
+            }
+            body.scrolled .fixed-control-bar {
+                transform: none;
+                opacity: 1;
+            }
+            body.scrolled .controls-left,
+            body.scrolled .controls-right {
+                transform: none;
+            }
+
+            .controls-left, .controls-right { gap: 8px; justify-content: flex-start; }
+
+            .glass-control { padding: 6px 10px; font-size: 0.75rem; border-radius: 99px; }
+            .glass-control select { font-size: 0.75rem; }
+
+            .icon-btn { width: 38px; height: 38px; padding: 0 !important; }
+
+            /* Theme toggle becomes icon-only on mobile to save space */
+            #theme-toggle { padding: 0; width: 38px; height: 38px; border-radius: 50%; justify-content: center; }
+            #theme-toggle .theme-text { display: none; }
+            #theme-toggle svg { margin: 0 !important; }
+
+            /* Push main content down (reduced since header is one line) */
+            .main-wrapper { padding-top: 100px; padding-left: 15px; padding-right: 15px; }
+
+            .timeline { padding-left: 24px; }
+            .timeline::before { left: 8px; }
+            .update-entry { padding: 24px 20px; border-radius: 20px; margin-bottom: 30px; }
+            .update-entry::before { left: -21px; width: 12px; height: 12px; border-width: 2px; top: 32px; }
+
+            .entry-title { font-size: 1.3rem; }
+            .entry-date, .entry-version { font-size: 0.75rem; }
+        }
+    </style>
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+</head>
+<body>
+
+    <!-- ── ANIMATED HIGH PERF WAVES ── -->
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- ── MAIN BACKGROUND PHYSICS DOT GRID ── -->
+    <canvas id="interactive-grid"></canvas>
+
+    <!-- ── ABSOLUTE CONTROLS / MOBILE HEADER ── -->
+    <div class="fixed-control-bar">
+        <div class="controls-left">
+            <!-- Brilliant SVG Back Icon -->
+            <a href="../index.html" class="glass-control icon-btn" title="Back to Home">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <!-- Custom SVG Logo -->
+            <div style="display: flex; align-items: center;">
+                <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
+                    <defs>
+                        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#7B9EFE" />
+                            <stop offset="100%" stop-color="#5575F4" />
+                        </linearGradient>
+                    </defs>
+                    <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/>
+                    <rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/>
+                    <path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/>
+                    <rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/>
+                    <polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/>
+                    <rect x="37" y="38" width="8" height="24" fill="#678BFF"/>
+                    <rect x="29" y="46" width="24" height="8" fill="#678BFF"/>
+                    <circle cx="34" cy="72" r="11" fill="#FFFFFF"/>
+                    <circle cx="34" cy="72" r="7" fill="#1C2438"/>
+                    <circle cx="68" cy="72" r="11" fill="#FFFFFF"/>
+                    <circle cx="68" cy="72" r="7" fill="#1C2438"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="controls-right">
+            <div class="glass-control" id="lang-selector">
+                <svg style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <select onchange="setLanguage(this.value)" aria-label="Language">
+                    <option value="en">English (EN)</option>
+                    <option value="bn">বাংলা (BN)</option>
+                    <option value="hi">हिंदी (HI)</option>
+                    <option value="te">తెలుగు (TE)</option>
+                    <option value="mr">मराठी (MR)</option>
+                    <option value="ta">தமிழ் (TA)</option>
+                    <option value="gu">ગુજરાતી (GU)</option>
+                    <option value="kn">ಕನ್ನಡ (KN)</option>
+                    <option value="or">ଓଡ଼ିଆ (OR)</option>
+                    <option value="ml">മലയാളം (ML)</option>
+                    <option value="pa">ਪੰਜਾਬੀ (PA)</option>
+                    <option value="as">অসমীয়া (AS)</option>
+                    <option value="mai">मैथिली (MAI)</option>
+                    <option value="sat">संताली (SAT)</option>
+                    <option value="ks">کٲشُر (KS)</option>
+                    <option value="ur">اردو (UR)</option>
+                    <option value="ne">नेपाली (NE)</option>
+                    <option value="sa">संस्कृतम् (SA)</option>
+                    <option value="sd">سنڌي (SD)</option>
+                    <option value="gom">कोंकणी (GOM)</option>
+                    <option value="doi">डोगरी (DOI)</option>
+                    <option value="mni">মৈতৈলোন (MNI)</option>
+                </select>
+            </div>
+
+            <button id="theme-toggle" class="glass-control">
+                <svg class="theme-icon" style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                <span class="theme-text">Dark</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ── MAIN CONTENT ── -->
+    <div class="main-wrapper">
+        <header>
+            <h1 class="split-text" data-i18n="updates_title">Updates History</h1>
+            <p class="subtitle" data-i18n="updates_subtitle">Tracking the evolution of Logistix platform features and system improvements.</p>
+        </header>
+
+        <div class="timeline">
+            <!-- Latest Entry: v1.1.3 -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date" data-i18n="update_v113_date">April 30, 2026 | 03:00 PM</div>
+                    <div class="entry-version" data-i18n="update_v113_ver">v1.1.3 (Security & Onboarding)</div>
+                </div>
+                <h2 class="entry-title" data-i18n="update_v113_title">Security Hardening & Enhanced Onboarding Experience</h2>
+                <div class="entry-content">
+                    <h3 data-i18n="update_actual_updates">1) The Actual Updates</h3>
+                    <p data-i18n="update_v113_desc">This update focuses on platform security and streamlining the user onboarding experience:</p>
+                    <ul>
+                        <li data-i18n="update_v113_b1"><strong>Secure Account Deletion:</strong> Implemented a multi-step verification process for account deletion, including manager password verification and a 6-digit OTP confirmation.</li>
+                        <li data-i18n="update_v113_b2"><strong>OTP Flow Optimization:</strong> Resolved systemic "Please wait" hanging issues in OTP requests across the entire platform.</li>
+                        <li data-i18n="update_v113_b3"><strong>Role-Based Notifications:</strong> Introduced purpose-driven email templates for registration, account deletion, and tracking to eliminate ambiguity.</li>
+                        <li data-i18n="update_v113_b4"><strong>Guided Welcome Experience:</strong> New companies now receive a detailed welcome email containing their credentials and a roadmap of platform capabilities.</li>
+                    </ul>
+
+                    <h3 data-i18n="update_impact_benefits">2) Impact & User Benefits</h3>
+                    <p data-i18n="update_v113_impact_desc">We have eliminated confusion to ensure a smoothly operational experience:</p>
+                    <ul>
+                        <li data-i18n="update_v113_i1"><strong>Enhanced Trust:</strong> Multi-layered verification for sensitive actions ensures your company data remains permanently safe.</li>
+                        <li data-i18n="update_v113_i2"><strong>Operational Clarity:</strong> Clear, purpose-specific communications guide users through every step of their journey.</li>
+                        <li data-i18n="update_v113_i3"><strong>Seamless Transitions:</strong> From registration to deletion, UI states now provide real-time feedback with localized status messages.</li>
+                    </ul>
+
+                    <div class="feature-tags">
+                        <span class="feature-tag" data-i18n="tag_security">Security Hardening</span>
+                        <span class="feature-tag" data-i18n="tag_automation">Onboarding Automation</span>
+                        <span class="feature-tag" data-i18n="tag_ux">UX Refinement</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Previous Entry: v1.1.2 -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date" data-i18n="update_v112_date">April 30, 2026 | 10:15 AM</div>
+                    <div class="entry-version" data-i18n="update_v112_ver">v1.1.2 (Linguistic Parity & Global Access)</div>
+                </div>
+                <h2 class="entry-title" data-i18n="update_v112_title">Comprehensive Multi-Language Support & Universal Accessibility</h2>
+                <div class="entry-content">
+                    <h3 data-i18n="update_actual_updates">1) The Actual Updates</h3>
+                    <p data-i18n="update_v112_desc">We have achieved full linguistic parity across the entire Logistix platform. Managers, drivers, and customers can now interact with the portal in their native regional languages.</p>
+                    <ul>
+                        <li data-i18n="update_v112_b1"><strong>15+ Regional Languages:</strong> Added full support for Hindi, Bengali, Gujarati, Telugu, Tamil, Marathi, Kannada, Malayalam, Odia, Punjabi, Assamese, Maithili, Santali, and Kashmiri.</li>
+                        <li data-i18n="update_v112_b2"><strong>End-to-End Localization:</strong> Every dashboard, table header, button, and system notification has been localized to eliminate English placeholders.</li>
+                        <li data-i18n="update_v112_b3"><strong>Dynamic Registry Sync:</strong> Introduced a centralized translation engine that ensures real-time UI updates when switching languages without page reloads.</li>
+                        <li data-i18n="update_v112_b4"><strong>Localized Help & Voice:</strong> Hands-free voice commands and help guides are now available in all supported regional dialects for safer driver operations.</li>
+                    </ul>
+
+                    <h3 data-i18n="update_impact_benefits">2) Impact & User Benefits</h3>
+                    <p data-i18n="update_v112_impact_desc">This update breaks down linguistic barriers, making professional logistics management accessible to everyone:</p>
+                    <ul>
+                        <li data-i18n="update_v112_i1"><strong>Universal Access:</strong> Users from all regions of India can now access the portal more freely and confidently in their mother tongue.</li>
+                        <li data-i18n="update_v112_i2"><strong>Operational Inclusion:</strong> Drivers who were previously restricted by English-only interfaces can now navigate, report incidents, and manage their wallets independently.</li>
+                        <li data-i18n="update_v112_i3"><strong>Reduced Friction:</strong> Localized financial headers and smart contract terms ensure transparency and trust in multi-party transactions.</li>
+                        <li data-i18n="update_v112_i4"><strong>Global Standards, Local Feel:</strong> Combines world-class logistics technology with a deeply rooted regional experience for every user.</li>
+                    </ul>
+
+                    <div class="feature-tags">
+                        <span class="feature-tag" data-i18n="tag_localization">Localization</span>
+                        <span class="feature-tag" data-i18n="tag_accessibility">Universal Access</span>
+                        <span class="feature-tag" data-i18n="tag_multi_lingual">Multi-Lingual</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Previous Entry: v1.1.1 -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date" data-i18n="update_v111_date">April 29, 2026 | 09:00 PM</div>
+                    <div class="entry-version" data-i18n="update_v111_ver">v1.1.1 (Interactive Smart Onboarding & Bulk Resilience)</div>
+                </div>
+                <h2 class="entry-title" data-i18n="update_v111_title">Unified Smart Assistant Triggers & Bulk Data Hardening</h2>
+                <div class="entry-content">
+                    <h3 data-i18n="update_actual_updates">1) The Actual Updates</h3>
+                    <p data-i18n="update_v111_desc">We have introduced deep AI integration across the entire manager management suite:</p>
+                    <ul>
+                        <li data-i18n="update_v111_b1"><strong>Universal Smart Assistant Buttons:</strong> Integrated dedicated "Smart Assistant" triggers directly into the Driver, Vehicle, and Shipment registration sections. Clicking these buttons instantly opens our intelligent chatbot.</li>
+                        <li data-i18n="update_v111_b2"><strong>Guided Conversational Flow:</strong> The chatbot now leads you through a step-by-step interactive dialogue to collect information, resolving common data entry friction and ensuring all required fields are captured.</li>
+                        <li data-i18n="update_v111_b3"><strong>Redefined Bulk Upload Infrastructure:</strong> Extensively audited and optimized the Bulk Upload features for Shipments, Drivers, and Vehicles. The ingestion engine has been redefined to handle larger datasets with perfect accuracy and zero runtime errors.</li>
+                        <li data-i18n="update_v111_b4"><strong>Safety Intelligence Capture:</strong> The interactive flow now seamlessly incorporates safety-critical driver metrics such as experience years, past accident history, and traffic violations.</li>
+                    </ul>
+
+                    <h3 data-i18n="update_impact_benefits">2) Impact & User Benefits</h3>
+                    <p data-i18n="update_v111_impact_desc">This version focuses on making the platform more accessible and precision-oriented:</p>
+                    <ul>
+                        <li data-i18n="update_v111_i1"><strong>Enhanced Interactivity:</strong> Moving away from static forms makes the platform significantly more user-friendly, simpler, and engaging for operational staff.</li>
+                        <li data-i18n="update_v111_i2"><strong>Precision & Accuracy:</strong> Guided flows eliminate guesswork. Interactive dropdowns and automated formatting ensure that every entry—from license types to number plates—is 100% accurate.</li>
+                        <li data-i18n="update_v111_i3"><strong>Accelerated Operations:</strong> Integrated map pickers for location data and strictly enforced dropdowns for categories enable much faster data entry without compromising quality.</li>
+                        <li data-i18n="update_v111_i4"><strong>Verified Bulk Reliability:</strong> The redefined bulk tools ensure that scaling your fleet or shipping volume is now a smooth, error-free experience.</li>
+                    </ul>
+
+                    <div class="feature-tags">
+                        <span class="feature-tag" data-i18n="tag_chatbot">Interactive Chatbot</span>
+                        <span class="feature-tag" data-i18n="tag_triggers">Smart Triggers</span>
+                        <span class="feature-tag" data-i18n="tag_bulk">Bulk Upload Hardening</span>
+                        <span class="feature-tag" data-i18n="tag_precision">Precision UX</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Second Log Entry -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date" data-i18n="update_v101_date">April 29, 2026 | 02:45 PM</div>
+                    <div class="entry-version" data-i18n="update_v101_ver">v1.0.1 (Fleet Transparency & Control)</div>
+                </div>
+                <h2 class="entry-title" data-i18n="update_v101_title">Advanced Fleet Oversight & Granular Data Control</h2>
+                <div class="entry-content">
+                    <h3 data-i18n="update_actual_updates">1) The Actual Updates</h3>
+                    <p data-i18n="update_v101_desc">We have significantly enhanced the fleet management module to provide deeper operational insights and smoother data management:</p>
+                    <ul>
+                        <li data-i18n="update_v101_b1"><strong>Enhanced Driver Registry:</strong> The drivers table now includes dedicated columns for <strong>License Type</strong> and <strong>Past Accidents</strong>, allowing for immediate safety assessment at a glance.</li>
+                        <li data-i18n="update_v101_b2"><strong>Refined Data Display:</strong> Removed redundant fields like vehicle passwords to keep the interface focused. Passwords for drivers remain visible via a secure <strong>Show/Hide (👁️)</strong> toggle.</li>
+                        <li data-i18n="update_v101_b3"><strong>Intelligent Input Controls:</strong> Upgraded the Edit Modules for both drivers and vehicles. License and Vehicle types are now selectable via <strong>Dropdown Menus</strong> (Bike, Scooty, Van, Truck, etc.) to prevent manual entry errors and ensure data consistency.</li>
+                        <li data-i18n="update_v101_b4"><strong>Consolidated Communication:</strong> Simplified driver registration by merging duplicate phone sections into a single, standardized "Contact Number" field.</li>
+                        <li data-i18n="update_v101_b5"><strong>Comprehensive CRUD Oversight:</strong> Managers now have full authority to edit every system field for fleet assets, including credentials, hub assignments, and operational metrics.</li>
+                    </ul>
+
+                    <h3 data-i18n="update_impact_benefits">2) Impact & User Benefits</h3>
+                    <p data-i18n="update_v101_impact_desc">These refinements translate to measurable improvements for our core user base:</p>
+                    <ul>
+                        <li data-i18n="update_v101_i1"><strong>For Fleet Managers:</strong> Faster decision-making with enriched data tables. The addition of accident history and license types directly on the dashboard enables quicker driver dispatching and risk assessment.</li>
+                        <li data-i18n="update_v101_i2"><strong>For Data Administrators:</strong> Drastic reduction in data entry errors. Dropdown selections for vehicle types ensure that fleet categorization remains uniform across the entire platform.</li>
+                        <li data-i18n="update_v101_i3"><strong>For Support Teams:</strong> Improved troubleshooting efficiency. Direct access to driver credentials with secure toggling means login issues can be resolved in seconds without deep database queries.</li>
+                    </ul>
+
+                    <div class="feature-tags">
+                        <span class="feature-tag" data-i18n="tag_safety">Safety Transparency</span>
+                        <span class="feature-tag" data-i18n="tag_consistency">Data Consistency</span>
+                        <span class="feature-tag" data-i18n="tag_ux">UX Refinement</span>
+                        <span class="feature-tag" data-i18n="tag_governance">Fleet Governance</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- First Log Entry -->
+            <div class="update-entry">
+                <div class="entry-header">
+                    <div class="entry-date" data-i18n="update_v100_date">April 29, 2026 | 09:00 AM</div>
+                    <div class="entry-version" data-i18n="update_v100_ver">v1.0.0 (Initial Launch)</div>
+                </div>
+                <h2 class="entry-title" data-i18n="update_v100_title">Complete Platform Overview & Features</h2>
+                <div class="entry-content">
+                    <p data-i18n="update_v100_desc">Welcome to the first version of Logistix. After extensive development, we are proud to present a fully digital, cashless, and AI-optimized logistics infrastructure. Here are the core features currently live:</p>
+
+                    <ul>
+                        <li data-i18n="update_v100_b1"><strong>AI-Powered Warehouse Management:</strong> Strategic hub deployment with intelligent suggestion algorithms, water-body detection, and terrain verification to ensure optimal infrastructure placement.</li>
+                        <li data-i18n="update_v100_b2"><strong>Real-Time Fleet Intelligence:</strong> A high-performance Digital Twin environment featuring live tracking with traffic simulation, driver fatigue monitoring, and instant breakdown alerts.</li>
+                        <li data-i18n="update_v100_b3"><strong>Advanced Shipment Lifecycle:</strong> End-to-end management with bulk upload capabilities, multi-leg shipment splitting (Manual & Auto), and OTP-based secure delivery verification.</li>
+                        <li data-i18n="update_v100_b4"><strong>Fintech Engine (Paisa-Fast):</strong> A digital escrow and payment system allowing drivers to request emergency funds (Fuel, Food, Tolls) with automated manager approval workflows and real-time ledger tracking.</li>
+                        <li data-i18n="update_v100_b5"><strong>Predictive Analytics:</strong> Cascading impact predictor that simulates downstream delays and recommends proactive rerouting strategies based on active transit deviations.</li>
+                        <li data-i18n="update_v100_b6"><strong>Safety & Wellness Center:</strong> 24/7 monitoring of driver vitals via wearable integration, stress index tracking, and automated "Zen Mode" triggers for high-fatigue patterns.</li>
+                        <li data-i18n="update_v100_b7"><strong>Simulation Sandbox:</strong> Test disaster scenarios (cyclones, floods, heatwaves, riots) on a map to see real-time impact on your supply chain and receive AI mitigation strategies.</li>
+                        <li data-i18n="update_v100_b8"><strong>Multi-Language Support:</strong> Full platform localization in English, Hindi, and Bengali to empower a diverse workforce with native language interfaces.</li>
+                        <li data-i18n="update_v100_b9"><strong>Strategy Oracle:</strong> Business growth forecasting tool to simulate revenue, profit, and ROI based on expansion parameters like warehouse automation and green fleet ratios.</li>
+                        <li data-i18n="update_v100_b10"><strong>Voice Command Interface:</strong> Hands-free control for drivers, allowing them to report incidents, check tasks, and navigate using simple voice instructions.</li>
+                        <li data-i18n="update_v100_b11"><strong>Blockchain-Verified Ledger:</strong> Secure transaction history for all payments and reward points, ensuring transparency and trust across the network.</li>
+                        <li data-i18n="update_v100_b12"><strong>Dynamic Routing & Traffic:</strong> Real-time route optimization using OSRM with simulated traffic overlays to provide the most efficient paths.</li>
+                    </ul>
+
+                    <div class="feature-tags">
+                        <span class="feature-tag" data-i18n="tag_aiml">AI / ML</span>
+                        <span class="feature-tag" data-i18n="tag_fintech">Fintech</span>
+                        <span class="feature-tag" data-i18n="tag_tracking">Real-time Tracking</span>
+                        <span class="feature-tag" data-i18n="tag_infra">Logistics Infrastructure</span>
+                        <span class="feature-tag" data-i18n="tag_safety_first">Safety First</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/translator.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+
+            // ── OVERSCHEDULING BUFFER FOR BULLETPROOF MOBILE CANVAS RESIZING ──
+            const canvasBuffer = 400; // Oversized to absorb URL bar toggles
+            const halfBuffer = canvasBuffer / 2;
+            const pointer = { x: -1000, y: -1000 };
+
+            window.addEventListener('mousemove', (e) => {
+                pointer.x = e.clientX + halfBuffer;
+                pointer.y = e.clientY + halfBuffer;
+            });
+            window.addEventListener('touchmove', (e) => {
+                pointer.x = e.touches[0].clientX + halfBuffer;
+                pointer.y = e.touches[0].clientY + halfBuffer;
+            }, { passive: true });
+            window.addEventListener('mouseout', () => { pointer.x = -1000; pointer.y = -1000; });
+            window.addEventListener('touchend', () => { pointer.x = -1000; pointer.y = -1000; });
+
+            /* ── HIGH-PERFORMANCE PHYSICS DOT GRID ── */
+            const mCanvas = document.getElementById('interactive-grid');
+            const mCtx = mCanvas.getContext('2d', { alpha: true });
+            let mWidth, mHeight, mDots = [];
+            const mPushRadius = 220, mPushForce = 30, spring = 0.05, friction = 0.8;
+
+            function initGrids() {
+                const dpr = window.devicePixelRatio || 1;
+                mWidth = window.innerWidth + canvasBuffer;
+                mHeight = window.innerHeight + canvasBuffer;
+
+                mCanvas.style.width = mWidth + 'px';
+                mCanvas.style.height = mHeight + 'px';
+                mCanvas.style.left = `-${halfBuffer}px`;
+                mCanvas.style.top = `-${halfBuffer}px`;
+
+                mCanvas.width = mWidth * dpr;
+                mCanvas.height = mHeight * dpr;
+                mCtx.scale(dpr, dpr);
+
+                const spacing = window.innerWidth < 768 ? 35 : 30;
+                mDots = [];
+                for (let x = 0; x < mWidth; x += spacing) {
+                    for (let y = 0; y < mHeight; y += spacing) {
+                        mDots.push({ x, y, bx: x, by: y, vx: 0, vy: 0 });
+                    }
+                }
+            }
+
+            // CRITICAL FIX: Only rebuild if viewport exceeds our massive buffer
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                if (window.innerWidth + 100 > mWidth || window.innerHeight + 100 > mHeight) {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(initGrids, 200);
+                }
+            });
+
+            function animateGrids() {
+                mCtx.clearRect(0, 0, mWidth, mHeight);
+                const isLight = document.body.classList.contains('light-mode');
+                mCtx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.35)';
+                const mPushRadiusSq = mPushRadius * mPushRadius;
+
+                for (let i = 0; i < mDots.length; i++) {
+                    let p = mDots[i];
+                    let dx = pointer.x - p.x; let dy = pointer.y - p.y;
+                    let distSq = dx * dx + dy * dy;
+
+                    if (distSq < mPushRadiusSq) {
+                        let dist = Math.sqrt(distSq);
+                        let force = (mPushRadius - dist) / mPushRadius;
+                        p.vx -= (dx / dist) * force * mPushForce;
+                        p.vy -= (dy / dist) * force * mPushForce;
+                    }
+
+                    p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
+                    p.vx *= friction; p.vy *= friction;
+                    p.x += p.vx; p.y += p.vy;
+                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                }
+                requestAnimationFrame(animateGrids);
+            }
+            initGrids(); animateGrids();
+
+            // ── ADVANCED LETTER WAVE LOGIC (Ultra-Optimized In-Memory Map) ──
+            function splitTextNodes(element) {
+                if (element.classList.contains('is-split')) return;
+                const processNode = (node) => {
+                    if (node.nodeType === 3) {
+                        const text = node.nodeValue;
+                        if (!text.trim() && !text.includes(' ')) return;
+                        const fragment = document.createDocumentFragment();
+                        const words = text.split(/(\s+)/);
+                        words.forEach(word => {
+                            if (/^\s+$/.test(word)) {
+                                const spaceSpan = document.createElement('span');
+                                spaceSpan.className = 'char space';
+                                spaceSpan.innerHTML = '&nbsp;';
+                                fragment.appendChild(spaceSpan);
+                                return;
+                            }
+                            if (word === '') return;
+                            const wordSpan = document.createElement('span');
+                            wordSpan.style.display = 'inline-block';
+                            wordSpan.style.whiteSpace = 'nowrap';
+                            Array.from(word).forEach(char => {
+                                const charSpan = document.createElement('span');
+                                charSpan.className = 'char';
+                                charSpan.textContent = char;
+                                wordSpan.appendChild(charSpan);
+                            });
+                            fragment.appendChild(wordSpan);
+                        });
+                        node.parentNode.replaceChild(fragment, node);
+                    } else if (node.nodeType === 1) {
+                        if (node.classList.contains('char') || node.tagName === 'BR') return;
+                        Array.from(node.childNodes).forEach(processNode);
+                    }
+                };
+                Array.from(element.childNodes).forEach(processNode);
+                element.classList.add('is-split');
+            }
+
+            function attachWavePhysics(container) {
+                const chars = Array.from(container.querySelectorAll('.char'));
+                if (chars.length === 0) return;
+                let charBoxes = [];
+                let activeIndex = -1;
+
+                const updateBoxes = () => {
+                    charBoxes = chars.map(c => {
+                        const rect = c.getBoundingClientRect();
+                        return { left: rect.left - 2, right: rect.right + 2, top: rect.top - 10, bottom: rect.bottom + 10 };
+                    });
+                };
+
+                const clearClasses = () => {
+                    if (activeIndex > -1) {
+                        chars[activeIndex].classList.remove('hovered');
+                        if (chars[activeIndex - 1]) chars[activeIndex - 1].classList.remove('neighbor');
+                        if (chars[activeIndex + 1]) chars[activeIndex + 1].classList.remove('neighbor');
+                        activeIndex = -1;
+                    }
+                };
+
+                const setActive = (index) => {
+                    if (activeIndex === index) return;
+                    clearClasses();
+                    activeIndex = index;
+                    if (index > -1) {
+                        chars[index].classList.add('hovered');
+                        if (chars[index - 1]) chars[index - 1].classList.add('neighbor');
+                        if (chars[index + 1]) chars[index + 1].classList.add('neighbor');
+                    }
+                };
+
+                const handleMove = (clientX, clientY) => {
+                    for (let i = 0; i < charBoxes.length; i++) {
+                        const b = charBoxes[i];
+                        if (clientX >= b.left && clientX <= b.right && clientY >= b.top && clientY <= b.bottom) {
+                            setActive(i); return;
+                        }
+                    }
+                    clearClasses();
+                };
+
+                container.addEventListener('mouseenter', updateBoxes, { passive: true });
+                container.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY), { passive: true });
+                container.addEventListener('mouseleave', clearClasses, { passive: true });
+                container.addEventListener('touchstart', (e) => { updateBoxes(); handleMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+                container.addEventListener('touchmove', (e) => { handleMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+                container.addEventListener('touchend', clearClasses, { passive: true });
+                container.addEventListener('touchcancel', clearClasses, { passive: true });
+            }
+
+            document.querySelectorAll('.split-text').forEach(el => {
+                splitTextNodes(el);
+                attachWavePhysics(el);
+            });
+
+            // Navbar scroll effect
+            window.addEventListener('scroll', () => {
+                document.body.classList.toggle('scrolled', window.scrollY > 40);
+            }, { passive: true });
+
+            // Theme & Language Logic
+            const btn = document.getElementById('theme-toggle');
+            const lightIcon = '<svg class="theme-icon" style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>';
+            const darkIcon = '<svg class="theme-icon" style="width:16px; height:16px; margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+            if(localStorage.getItem('theme') === 'light'){
+                document.body.classList.add('light-mode');
+                document.documentElement.classList.add('light-mode');
+                btn.innerHTML = lightIcon + '<span class="theme-text">Light</span>';
+            } else {
+                btn.innerHTML = darkIcon + '<span class="theme-text">Dark</span>';
+            }
+
+            btn.addEventListener('click', () => {
+                document.body.classList.toggle('light-mode');
+                document.documentElement.classList.toggle('light-mode');
+                const isLight = document.body.classList.contains('light-mode');
+                localStorage.setItem('theme', isLight ? 'light' : 'dark');
+                btn.innerHTML = isLight ? lightIcon + '<span class="theme-text">Light</span>' : darkIcon + '<span class="theme-text">Dark</span>';
+            });
+
+            const currentLang = localStorage.getItem('app_lang') || 'en';
+            document.querySelector('select').value = currentLang;
+            if(typeof updatePageTranslations === 'function') updatePageTranslations();
+        });
+    </script>
+    <script src="../js/premium_theme.js"></script>
+</body>
+</html>

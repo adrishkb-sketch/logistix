@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>Weather Fleet Map | Logistix</title>
+
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+    <!-- Leaflet & Draw CSS -->
+    <link crossorigin="" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" rel="stylesheet"/>
+
+    <!-- External Base Styles -->
+    <link href="../css/premium_theme.css" rel="stylesheet"/>
+    <link href="../css/style.css" rel="stylesheet"/>
+
+    <style>
+        /* ── ULTRA-PREMIUM THEME VARIABLES ── */
+        :root {
+            /* Dark Mode (Ultra-Deep Navy & Bioluminescent Palette) */
+            --bg-base: #010208;
+            --text-main: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+
+            /* 3 Distinct Striking Accents */
+            --accent-1: #00e5ff; /* Vivid Neon Cyan */
+            --accent-2: #ff9900; /* Rich Gold/Amber */
+            --accent-3: #00ff73; /* Intense Spring Green */
+
+            /* Surfaces & Glassmorphism */
+            --surface: rgba(15, 20, 35, 0.45);
+            --surface-hover: rgba(25, 33, 55, 0.75);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(255, 255, 255, 0.18);
+            --glow-shadow: 0 15px 45px -10px rgba(0, 0, 0, 0.9);
+            --neon-glow: rgba(0, 229, 255, 0.25);
+
+            --primary: var(--accent-1);
+            --accent: var(--accent-2);
+            --success: var(--accent-3);
+            --warning: #ff9900;
+            --danger: #ff3b30;
+        }
+
+        body.light-mode {
+            --bg-base: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: rgba(15, 23, 42, 0.65);
+            --accent-1: #0ea5e9;
+            --accent-2: #f59e0b;
+            --accent-3: #10b981;
+            --surface: rgba(255, 255, 255, 0.75);
+            --surface-hover: rgba(255, 255, 255, 0.98);
+            --border: rgba(0, 0, 0, 0.08);
+            --border-highlight: rgba(0, 0, 0, 0.2);
+            --glow-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.15);
+            --neon-glow: rgba(14, 165, 233, 0.25);
+        }
+
+        /* ── RESET & BASE ENFORCEMENT ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; overflow-x: hidden !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base) !important;
+            color: var(--text-main) !important;
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            margin: 0;
+            min-height: 100vh;
+            transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6, .kpi-value {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.03em !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 10px; border: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-1); }
+
+        /* ── BACKGROUND ANIMATIONS ── */
+        .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: var(--bg-base); transition: background 0.6s ease; }
+        .blob { position: absolute; filter: blur(55px); opacity: 0.6; will-change: transform, border-radius; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; transform: translateZ(0); }
+        body.light-mode .blob { opacity: 0.55; filter: blur(45px); }
+        .blob-1 { top: -10%; left: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-1); animation: wavePush1 15s infinite alternate ease-in-out; }
+        .blob-2 { bottom: -10%; right: -5%; width: max(55vw, 400px); height: max(55vh, 400px); background: var(--accent-2); animation: wavePush2 18s infinite alternate ease-in-out; }
+        .blob-3 { top: 25%; left: 20%; width: max(50vw, 350px); height: max(50vh, 350px); background: var(--accent-3); animation: wavePush3 22s infinite alternate ease-in-out; }
+
+        @keyframes wavePush1 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 50% { transform: translate3d(20vw, 15vh, 0) scale(1.2); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 100% { transform: translate3d(5vw, 30vh, 0) scale(0.95); border-radius: 50% 50% 60% 40% / 40% 60% 50% 50%; } }
+        @keyframes wavePush2 { 0% { transform: translate3d(0, 0, 0) scale(1); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } 50% { transform: translate3d(-20vw, -15vh, 0) scale(1.25); border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; } 100% { transform: translate3d(-5vw, -30vh, 0) scale(0.98); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } }
+        @keyframes wavePush3 { 0% { transform: translate3d(0, 0, 0) scale(0.95); border-radius: 70% 30% 50% 50% / 30% 70% 40% 60%; } 50% { transform: translate3d(-15vw, 10vh, 0) scale(1.2); border-radius: 30% 70% 70% 30% / 50% 30% 60% 40%; } 100% { transform: translate3d(15vw, -10vh, 0) scale(1.05); border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; } }
+
+        /* Stable Text Effects */
+        .text-shine-hover { transition: color 0.3s ease, text-shadow 0.3s ease; }
+        @media (hover: hover) and (pointer: fine) {
+            .text-shine-hover:hover { color: var(--accent-1) !important; text-shadow: 0 0 12px var(--neon-glow); }
+        }
+
+        /* ── LAYOUT & SIDEBAR ── */
+        .dashboard-layout { display: flex; position: relative; z-index: 2; min-height: 100vh; }
+        .sidebar { width: 280px !important; background: rgba(8, 11, 22, 0.7) !important; border-right: 1px solid var(--border) !important; backdrop-filter: blur(30px) !important; -webkit-backdrop-filter: blur(30px) !important; display: flex; flex-direction: column; height: 100vh; position: fixed; top: 0; left: 0; z-index: 2000 !important; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        body.light-mode .sidebar { background: rgba(255, 255, 255, 0.75) !important; border-right: 1px solid var(--border) !important; }
+        .sidebar-header { padding: 30px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .sidebar-header h2 { font-size: 1.7rem !important; font-weight: 800 !important; margin: 0; background: linear-gradient(135deg, var(--text-main), var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .sidebar-close-btn { display: none; background: none; border: none; color: var(--text-main); cursor: pointer; transition: transform 0.2s ease; }
+        .nav-links-wrapper { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; }
+        .nav-link { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 12px; color: var(--text-muted) !important; font-size: 0.95rem; font-weight: 600; text-decoration: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid transparent; }
+        .nav-link svg { width: 20px; height: 20px; stroke-width: 1.8; stroke: currentColor; fill: none; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-link:hover { color: var(--text-main) !important; background: var(--surface-hover); border-color: var(--border-highlight); transform: translateX(4px); }
+        .nav-link:hover svg { transform: scale(1.1); }
+        .nav-link.active { color: var(--text-main) !important; background: var(--surface); border-color: var(--border-highlight); border-left: 3px solid var(--accent-1) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.05); }
+        body.light-mode .nav-link.active { box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
+
+        .main-content { flex: 1; margin-left: 280px; padding: 40px; width: auto; max-width: calc(100vw - 280px); box-sizing: border-box; overflow-x: hidden !important; transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* ── TOP BAR ── */
+        .top-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 18px 30px; display: flex; align-items: center; justify-content: space-between; gap: 24px; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); margin-bottom: 40px; box-shadow: var(--glow-shadow); }
+        .mobile-menu-btn, .mobile-theme-toggle, .mobile-logo-container { display: none; }
+        .top-bar-mobile-header { display: flex; align-items: center; flex: 1; justify-content: space-between; }
+        .top-bar-left { display: flex; align-items: center; gap: 16px; }
+        .top-bar-left h1 { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; margin: 0; }
+        .title-separator { opacity: 0.3; }
+        .manager-name-hl { color: var(--accent-1); }
+        .top-bar-controls { display: flex; align-items: center; gap: 14px; }
+
+        /* ── BUTTONS & SELECTS ── */
+        .glass-btn { background: var(--surface); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px; border-radius: 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); }
+        .glass-btn:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); color: var(--text-main); }
+        .glass-btn:active { transform: scale(0.96); }
+
+        .glass-select-container { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 0 16px; border-radius: 14px; height: 44px; backdrop-filter: blur(10px); transition: all 0.3s ease; }
+        .glass-select-container:hover { border-color: var(--border-highlight); background: var(--surface-hover); }
+        .glass-select-container select { background: transparent; border: none; color: var(--text-main); font-weight: 700; font-size: 0.85rem; cursor: pointer; outline: none; padding-right: 12px; height: 100%; line-height: 1.4; }
+        .glass-select-container select option { background: var(--bg-base); color: var(--text-main); }
+
+        .theme-switch { width: 44px; height: 44px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); }
+        .theme-switch:hover { border-color: var(--border-highlight); background: var(--surface-hover); transform: translateY(-2px); box-shadow: 0 6px 20px var(--neon-glow); }
+
+        /* ── GLASS CARD (Stable Animation) ── */
+        .glass-card {
+            background: var(--surface) !important;
+            border: 1px solid var(--border) !important;
+            border-radius: 28px !important;
+            padding: 30px;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .glass-card:hover {
+                transform: translateY(-4px);
+                border-color: var(--border-highlight) !important;
+                box-shadow: 0 20px 45px -10px var(--glow-shadow) !important;
+            }
+        }
+
+        /* ── KPI GRID ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .kpi-card { display: flex; flex-direction: column; gap: 8px; justify-content: space-between; }
+        .kpi-label { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); transition: color 0.3s; }
+        .glass-card:hover .kpi-label { color: var(--text-main); }
+        .kpi-value { font-size: 2.2rem; font-weight: 800; line-height: 1.1; }
+
+        /* ── WEATHER SPECIFIC UI ── */
+        .weather-hero { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+        .weather-hero h2 { margin: 0; font-size: 1.6rem; font-weight: 800; }
+        .weather-hero .hero-subtitle { font-size: 0.95rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+        .live-badge { display: flex; align-items: center; gap: 6px; background: rgba(0, 255, 115, 0.12); border: 1px solid rgba(0, 255, 115, 0.25); border-radius: 30px; padding: 6px 14px; font-size: 0.75rem; font-weight: 700; color: var(--success); letter-spacing: 0.08em; text-transform: uppercase; }
+        .live-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: pulse-dot 1.4s infinite; }
+        @keyframes pulse-dot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(1.4); } }
+
+        #refresh-spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--accent-1); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Map Toolbar */
+        .map-toolbar { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; backdrop-filter: blur(16px); }
+        .toolbar-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+        .toolbar-group label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+        .toolbar-group select { padding: 10px 14px; font-size: 0.85rem; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text-main); font-weight: 600; min-width: 160px; outline: none; }
+        .toolbar-group select:focus { border-color: var(--accent-1); }
+        .toolbar-sep { width: 1px; height: 48px; background: var(--border); margin: 0 8px; align-self: flex-end; }
+
+        .tool-btn { padding: 10px 16px; border-radius: 12px; border: none; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s cubic-bezier(0.4,0,0.2,1); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; backdrop-filter: blur(10px); }
+        .tool-btn-primary { background: linear-gradient(135deg, var(--accent-1), #0077ff); color: #000; box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2); }
+        .tool-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 229, 255, 0.4); }
+        .tool-btn-primary.drawing { background: linear-gradient(135deg, var(--warning), var(--danger)); box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3); color: #fff; animation: draw-pulse 1s infinite; }
+        @keyframes draw-pulse { 0%,100% { box-shadow: 0 4px 15px rgba(255, 153, 0, 0.3); } 50% { box-shadow: 0 4px 25px rgba(255, 153, 0, 0.6); } }
+
+        .tool-btn-danger { background: rgba(255, 59, 48, 0.15); border: 1px solid rgba(255, 59, 48, 0.3); color: var(--danger); }
+        .tool-btn-danger:hover { background: var(--danger); color: #fff; }
+
+        .tool-btn-ghost { background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); }
+        .tool-btn-ghost:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-1); }
+        .tool-btn-ghost.active { background: rgba(0, 229, 255, 0.15); border-color: var(--accent-1); color: var(--accent-1); }
+
+        body.light-mode .tool-btn-primary { color: #fff; }
+        body.light-mode .tool-btn-ghost { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: var(--text-main); }
+        body.light-mode .tool-btn-ghost.active { background: rgba(14, 165, 233, 0.15); color: var(--accent-1); }
+
+        /* Map Container */
+        .map-outer { position: relative; border-radius: 24px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--glow-shadow); background: var(--bg-base); }
+        #map { height: 600px; width: 100%; z-index: 1; }
+
+        /* Floating Panels */
+        .float-panel { position: absolute; z-index: 1000; background: var(--surface); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: 18px; padding: 18px 20px; border: 1px solid var(--border-highlight); box-shadow: 0 15px 45px rgba(0,0,0,0.4); max-width: calc(100% - 40px); }
+        #sim-panel { top: 20px; left: 20px; width: 300px; }
+        #results-panel { top: 20px; right: 20px; width: 320px; display: none; }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; cursor: grab; user-select: none; }
+        .panel-title { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; gap: 8px; color: var(--warning); }
+        .panel-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; line-height: 1; padding: 2px; transition: color 0.2s; }
+        .panel-close:hover { color: var(--danger); }
+
+        /* Map Legend */
+        .map-legend { display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap; padding: 12px 20px; background: rgba(0,0,0,0.4); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.06); font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.8); }
+        body.light-mode .map-legend { background: rgba(255,255,255,0.85); border-top: 1px solid rgba(0,0,0,0.08); color: rgba(0,0,0,0.7); }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 8px currentColor; }
+
+        /* Tables */
+        .table-responsive { width: 100%; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+        .sim-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; white-space: nowrap; }
+        .sim-table th { font-size: 0.75rem; color: var(--text-muted); padding: 12px 8px; font-weight: 800; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); text-align: left; text-transform: uppercase; }
+        .sim-table td { padding: 12px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; transition: background 0.2s; }
+        .sim-table tbody tr { transition: transform 0.2s, background 0.2s; }
+        .sim-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+        body.light-mode .sim-table tbody tr:hover { background: rgba(0, 0, 0, 0.03); }
+        .sim-table tr:last-child td { border-bottom: none; }
+        .empty-msg { font-size: 0.85rem; color: var(--text-muted); background: rgba(255,255,255,0.03); border: 1px dashed var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+
+        /* Affected List in panel */
+        .affected-item { font-size: 0.8rem; padding: 12px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--warning); border-radius: 8px; margin-bottom: 10px; transition: transform 0.2s; }
+        .affected-item:hover { transform: translateX(2px); background: rgba(255,255,255,0.05); }
+        body.light-mode .affected-item { background: rgba(0,0,0,0.03); }
+        .affected-item .a-title { font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
+        .affected-item .a-sub { color: var(--text-muted); font-size: 0.75rem; }
+        .affected-item .a-action { color: var(--success); font-weight: 800; font-size: 0.75rem; margin-top: 6px; }
+        .affected-item .a-btns { display: flex; gap: 8px; margin-top: 10px; }
+        .affected-item .a-btns button { padding: 6px 12px; font-size: 0.75rem; border-radius: 8px; cursor: pointer; font-weight: 700; border: none; transition: 0.2s; }
+        .a-btn-ai { background: var(--accent-1); color: #000; box-shadow: 0 4px 10px rgba(0, 229, 255, 0.2); }
+        .a-btn-ai:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(0, 229, 255, 0.4); }
+        .a-btn-manual { background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid var(--border) !important; }
+        .a-btn-manual:hover { background: rgba(255,255,255,0.15); border-color: var(--text-muted) !important; }
+        body.light-mode .a-btn-manual { background: rgba(0,0,0,0.05); }
+
+        /* Grids */
+        .analytics-deep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 30px; }
+        .responsive-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; margin-bottom: 30px; }
+        .section-card h3 { font-size: 1.25rem; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+        .section-card .subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; font-weight: 500; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 1024px) {
+            .sidebar { transform: translateX(-100%) !important; }
+            .sidebar.open { transform: translateX(0) !important; }
+            .sidebar-close-btn { display: flex !important; }
+            .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1999; transition: opacity 0.4s ease; }
+            .sidebar-overlay.active { display: block; }
+            .main-content { margin-left: 0 !important; padding: 24px 16px !important; max-width: 100vw !important; width: 100% !important; }
+            .top-bar { padding: 16px 20px; flex-direction: column; align-items: stretch; border-radius: 20px; gap: 16px; }
+            .top-bar-mobile-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .top-bar-left { justify-content: flex-start; width: calc(100% - 50px); }
+            .top-bar h1 { font-size: 1.2rem; }
+            .mobile-menu-btn { display: flex !important; background: none; border: none; color: var(--text-main); cursor: pointer; margin-right: 12px; transition: transform 0.2s ease; }
+            .mobile-menu-btn:active { transform: scale(0.9); }
+            .mobile-theme-toggle { display: flex !important; }
+            .mobile-logo-container { display: flex !important; margin-right: 10px; align-items: center; justify-content: center; }
+            .desktop-theme-toggle { display: none !important; }
+            .top-bar-controls { width: 100% !important; display: flex !important; flex-flow: row wrap !important; gap: 10px !important; justify-content: flex-start !important; }
+            .glass-select-container { flex: 1 1 auto !important; min-width: 120px !important; }
+            .automated-group { flex: 2 1 auto !important; display: flex !important; min-width: 180px !important; justify-content: space-between !important; }
+            .automated-group .voice-btn { flex: 1 !important; justify-content: center !important; }
+        }
+        @media (max-width: 768px) {
+            .stats-grid, .responsive-grid-2, .analytics-deep-grid { grid-template-columns: 1fr !important; gap: 16px !important; width: 100% !important; }
+            .glass-card { padding: 20px 16px !important; border-radius: 20px !important; }
+            .map-toolbar { padding: 16px !important; flex-direction: column; align-items: stretch; }
+            .toolbar-sep { display: none; }
+            .map-outer .float-panel { position: static !important; width: 100% !important; max-width: 100%; margin-bottom: 16px; border-radius: 16px; box-shadow: none; border-color: var(--border); }
+            #map { height: 450px; }
+        }
+
+        /* Animations */
+        @keyframes anim-cyclone { from { stroke-dashoffset: 0; opacity: 0.8; } to { stroke-dashoffset: 50; opacity: 0.5; } }
+        @keyframes anim-rain { 0%,100% { opacity:0.6; } 50% { opacity:0.9; } }
+        @keyframes anim-flood { 0%,100% { opacity:0.5; } 50% { opacity:0.8; } }
+        .anim-cyclone path, .anim-cyclone circle { animation: anim-cyclone 3s linear infinite; }
+        .anim-rain path, .anim-rain circle { animation: anim-rain 2s ease-in-out infinite; }
+        .anim-flood path, .anim-flood circle { animation: anim-flood 2.5s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+
+<!-- ── BACKGROUND BLOBS ── -->
+<div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+</div>
+
+<div class="dashboard-layout">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2><span>Logistix</span></h2>
+            <button class="sidebar-close-btn" onclick="toggleMobileSidebar(false)">
+                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <div class="nav-links-wrapper" data-layout-container="sidebar-nav">
+            <a class="nav-link" data-layout-id="nav-analytics" href="manager_analytics.html" id="btn-nav-analytics">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                <span data-i18n="nav_analytics">Executive Analytics</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hubs" href="manager_warehouses.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-3"></path><path d="M9 9v2"></path><path d="M9 13v2"></path></svg>
+                <span data-i18n="nav_hubs">Infrastructure (Hubs)</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-shipments" href="manager_shipments.html" id="btn-nav-shipments">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <span data-i18n="nav_shipments">Shipments</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-receivers" href="manager_receivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <span data-i18n="nav_receivers">Receivers</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-drivers" href="manager_drivers.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                <span data-i18n="nav_fleet">Drivers & Fleet</span>
+            </a>
+            <a class="nav-link active" data-layout-id="nav-weather" href="manager_weather.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                <span data-i18n="nav_weather">Weather Fleet Map</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-leaderboard" href="manager_leaderboard.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                <span data-i18n="nav_leaderboard">Leaderboards</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-messages" href="manager_messages.html" id="nav-link-messages">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                <span data-i18n="nav_messages">Messages</span><span class="badge" id="msg-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-verifications" href="manager_verifications.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+                <span data-i18n="nav_verifications">Verifications</span><span class="badge" id="verif-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-safety" href="manager_safety.html" id="btn-nav-safety">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span data-i18n="nav_safety">Safety Center</span><span class="badge" id="safety-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-oracle" href="manager_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                <span data-i18n="nav_oracle">Strategy Oracle</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-fuel" href="manager_fuel_oracle.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                <span data-i18n="nav_fuel">Bharat-Fuel Oracle</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-paisa" href="manager_payments.html" id="nav-link-paisa-fast">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                <span data-i18n="nav_paisa">Payments</span><span class="badge" id="paisa-badge"></span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-strategy" href="manager_strategy.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                <span data-i18n="nav_strategy">Operational Strategy</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-resilience" href="manager_resilience.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span data-i18n="nav_resilience">Network Resilience</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-settings" href="manager_system.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span data-i18n="nav_settings">System Settings</span>
+            </a>
+            <a class="nav-link" data-layout-id="nav-hub-leaves" href="manager_hub_leaves.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span data-i18n="nav_hub_leaves">Hub Leaves</span>
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <a class="nav-link" href="#" onclick="logout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                <span data-i18n="sign_out">Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ── MAIN PANEL ── -->
+    <main class="main-content">
+
+        <!-- ── HEADER (TOP BAR) ── -->
+        <header class="top-bar">
+            <div class="top-bar-mobile-header">
+                <div class="top-bar-left">
+                    <button class="mobile-menu-btn" onclick="toggleMobileSidebar(true)">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                    <div class="mobile-logo-container">
+                        <svg viewBox="0 0 100 100" width="32" height="32" style="border-radius: 8px;">
+                            <defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7B9EFE"/><stop offset="100%" stop-color="#5575F4"/></linearGradient></defs>
+                            <rect width="100" height="100" rx="28" fill="url(#bgGrad)"/><rect x="18" y="28" width="46" height="44" rx="6" fill="#FFFFFF"/><path d="M 60 40 L 74 40 Q 82 40 82 48 L 82 66 Q 82 72 74 72 L 60 72 Z" fill="#FFFFFF"/><rect x="70" y="44" width="8" height="10" rx="2" fill="#E6F2FF"/><polygon points="82,54 88,56 88,62 82,64" fill="#FCE354"/><rect x="37" y="38" width="8" height="24" fill="#678BFF"/><rect x="29" y="46" width="24" height="8" fill="#678BFF"/><circle cx="34" cy="72" r="11" fill="#FFFFFF"/><circle cx="34" cy="72" r="7" fill="#1C2438"/><circle cx="68" cy="72" r="11" fill="#FFFFFF"/><circle cx="68" cy="72" r="7" fill="#1C2438"/>
+                        </svg>
+                    </div>
+                    <h1>
+                        <span class="text-shine-hover" data-i18n="dashboard">Dashboard</span>
+                        <span class="title-separator">/</span>
+                        <span class="manager-name-hl text-shine-hover">Weather Fleet Map</span>
+                    </h1>
+                </div>
+
+                <div class="theme-switch mobile-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+
+            <div class="top-bar-controls">
+                <button class="glass-btn" data-i18n="modify_dashboard" onclick="window.logistixLayout && window.logistixLayout.toggleEditMode()">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Modify Dashboard
+                </button>
+
+                <div class="glass-select-container">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    <select onchange="window.setLanguage && setLanguage(this.value)" aria-label="Language">
+                        <option value="en">English (EN)</option>
+                        <option value="hi">हिंदी (HI)</option>
+                    </select>
+                </div>
+
+                <div class="automated-group" style="display: flex; gap: 8px;">
+                    <button class="glass-btn voice-btn" data-i18n="btn_voice_control" onclick="window.logistixVoice && window.logistixVoice.toggle()">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        Automated Control
+                    </button>
+                    <button class="theme-switch help-btn" onclick="window.logistixVoice && window.logistixVoice.showInstructions()" title="Voice Help">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </button>
+                </div>
+
+                <div class="theme-switch desktop-theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── WEATHER FLEET MAP SECTION ── -->
+        <div class="glass-card section-card">
+
+            <!-- Hero Header -->
+            <div class="weather-hero">
+                <div>
+                    <h2 class="text-shine-hover">🌐 Digital Twin: Live Fleet Intel</h2>
+                    <p class="hero-subtitle">Real-time weather overlay · Simulation sandbox · Fleet tracker</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <div class="live-badge"><span class="dot"></span> Live Data</div>
+                    <div id="refresh-spinner"></div>
+                    <button class="tool-btn tool-btn-ghost" onclick="refreshWeather()" title="Force refresh">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="glass-card kpi-card" style="border-top: 4px solid var(--accent-1); padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <p class="kpi-label text-shine-hover">Active Fleet</p>
+                        <span style="font-size:1.5rem;">🚛</span>
+                    </div>
+                    <div class="kpi-value" id="stat-fleet" style="color:var(--accent-1);">—</div>
+                </div>
+                <div class="glass-card kpi-card" style="border-top: 4px solid var(--warning); padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <p class="kpi-label text-shine-hover">Affected Shipments</p>
+                        <span style="font-size:1.5rem;">⚠️</span>
+                    </div>
+                    <div class="kpi-value" id="stat-affected" style="color:var(--warning);">—</div>
+                </div>
+                <div class="glass-card kpi-card" style="border-top: 4px solid var(--accent-3); padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <p class="kpi-label text-shine-hover">Adverse Weather</p>
+                        <span style="font-size:1.5rem;">⛈️</span>
+                    </div>
+                    <div class="kpi-value" id="stat-cells" style="color:var(--accent-3);">—</div>
+                </div>
+                <div class="glass-card kpi-card" style="border-top: 4px solid var(--accent-2); padding: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <p class="kpi-label text-shine-hover">Active Sims</p>
+                        <span style="font-size:1.5rem;">🧪</span>
+                    </div>
+                    <div class="kpi-value" id="stat-sims" style="color:var(--accent-2);">—</div>
+                </div>
+            </div>
+
+            <!-- Map Controls -->
+            <div class="map-toolbar">
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <label style="color:var(--warning);">🧪 Simulation Sandbox</label>
+                    <div class="toolbar-group">
+                        <select id="disaster-type">
+                            <option value="cyclone">🌀 Cyclone / Hurricane</option>
+                            <option value="flood">🌊 Heavy Flooding</option>
+                            <option value="heatwave">🔥 Extreme Heatwave</option>
+                            <option value="earthquake">🫨 Earthquake Zone</option>
+                            <option value="riot">🚫 Civil Unrest / Riot</option>
+                            <option value="hail">🌨️ Severe Hailstorm</option>
+                            <option value="blockage">🚧 Road Blockage</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; align-self:flex-end;">
+                    <button class="tool-btn tool-btn-primary" id="draw-btn" onclick="toggleDrawMode()">✏️ Draw on Map</button>
+                    <button class="tool-btn tool-btn-danger" onclick="clearDisasters()">🗑️ Clear All</button>
+                </div>
+
+                <div class="toolbar-sep"></div>
+
+                <div class="toolbar-group">
+                    <label>Map Layer</label>
+                    <select id="map-layer" onchange="changeMapLayer()">
+                        <option value="standard">🗺️ Standard</option>
+                        <option value="terrain">🏔️ Terrain</option>
+                        <option value="satellite">🛰️ Satellite</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-sep"></div>
+
+                <div style="display:flex; flex-direction:column; gap:8px; align-self:flex-end;">
+                    <label>Overlays</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="tool-btn tool-btn-ghost active" id="toggle-radar" onclick="toggleRadarOverlay(this)" title="Live radar">📡 Radar</button>
+                        <button class="tool-btn tool-btn-ghost active" id="toggle-cloud" onclick="toggleCloudOverlay(this)" title="Cloud cover">☁️ Clouds</button>
+                        <button class="tool-btn tool-btn-ghost active" id="toggle-wind" onclick="toggleWindOverlay(this)" title="Wind">💨 Wind</button>
+                        <button class="tool-btn tool-btn-ghost" id="toggle-heatmap" onclick="toggleHeatmapOverlay(this)" title="Live Fleet Heatmap">🔥 Heatmap</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── MAP CONTAINER ── -->
+            <div class="map-outer">
+                <div id="map"></div>
+
+                <!-- Floating Panels -->
+                <div class="float-panel" id="sim-panel">
+                    <div class="panel-header" id="sim-panel-handle">
+                        <div class="panel-title">📡 Active Simulations <span style="opacity:0.4; font-size:0.65rem;">⠿</span></div>
+                        <button class="panel-close" style="visibility:hidden;">×</button>
+                    </div>
+                    <div class="empty-msg" id="sims-empty-msg">No active sandboxes. Draw on the map to start testing.</div>
+                    <div class="table-responsive">
+                        <table class="sim-table" id="sims-table" style="display:none;">
+                            <thead><tr><th>Disaster</th><th>Shape</th><th style="text-align:right;">Control</th></tr></thead>
+                            <tbody id="sims-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="float-panel" id="results-panel">
+                    <div class="panel-header" id="results-panel-handle">
+                        <div class="panel-title">⚡ AI Results <span style="opacity:0.4; font-size:0.65rem;">⠿</span></div>
+                        <button class="panel-close" onclick="closeResultsPanel()">×</button>
+                    </div>
+                    <div style="margin-bottom:12px; font-size:0.85rem;">
+                        <strong style="color:var(--text-main);">Affected:</strong>
+                        <span id="res-affected-count" style="color:var(--warning); font-weight:800; font-size:1.1rem; margin-left:6px;">0</span>
+                    </div>
+                    <div style="background:rgba(0, 255, 115, 0.08); border-radius:12px; padding:12px; margin-bottom:12px; border-left:3px solid var(--success); font-size:0.8rem;">
+                        <div style="color:var(--success); font-weight:800; margin-bottom:4px;">💡 Recommendation</div>
+                        <div id="res-recommendation" style="color:var(--text-muted); line-height:1.4;">—</div>
+                    </div>
+                    <div id="res-affected-list" style="max-height:220px; overflow-y:auto; padding-right:4px;"></div>
+                    <button class="tool-btn tool-btn-primary" onclick="applySimulationFixes()" style="width:100%; justify-content:center; margin-top:12px;">⚡ Execute All AI Actions</button>
+                    <div style="border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px;">
+                        <button class="tool-btn tool-btn-ghost" onclick="togglePastActions()" style="width:100%; justify-content:center; font-size:0.8rem; height: 32px; padding: 0;">
+                            🕒 Past Actions (<span id="past-actions-count">0</span>)
+                        </button>
+                        <div id="past-actions-list" style="display:none; max-height:180px; overflow-y:auto; margin-top:10px; padding-right:4px;"></div>
+                    </div>
+                </div>
+
+                <!-- Map Legend -->
+                <div class="map-legend">
+                    <div class="legend-item"><div class="legend-dot" style="background:#0ea5e9;"></div>Rain / Drizzle</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--danger);"></div>Storm / Critical</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#e2e8f0;"></div>Snow</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#94a3b8;"></div>Fog</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--warning);"></div>Simulation Zone</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:var(--accent-1); box-shadow: 0 0 10px var(--accent-1);"></div>Fleet Vehicle</div>
+                </div>
+            </div>
+
+            <!-- ── CHARTS GRID ── -->
+            <div class="analytics-deep-grid" style="margin-top: 32px;">
+                <div class="glass-card section-card" style="padding: 24px;">
+                    <h3 class="text-shine-hover">📊 Risk Vector Profile</h3>
+                    <div style="position:relative; height:240px; display:flex; justify-content:center; align-items:center; width:100%;">
+                        <canvas id="riskRadarChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card section-card" style="padding: 24px;">
+                    <h3 class="text-shine-hover">📍 Top High-Risk Hubs</h3>
+                    <div style="position:relative; height:240px; display:flex; justify-content:center; align-items:center; width:100%;">
+                        <canvas id="highRiskHubsChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card section-card" style="padding: 24px;">
+                    <h3 class="text-shine-hover">🛡️ Fleet Exposure Index</h3>
+                    <div style="position:relative; height:240px; display:flex; justify-content:center; align-items:center; width:100%;">
+                        <canvas id="fleetExposureChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card section-card" style="padding: 24px;">
+                    <h3 class="text-shine-hover">📈 Regional Trends</h3>
+                    <div style="position:relative; height:240px; display:flex; justify-content:center; align-items:center; width:100%;">
+                        <canvas id="weatherTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── DATA FEED & TABLE GRID ── -->
+            <div class="responsive-grid-2">
+
+                <!-- Regional Hazards Alerts Feed -->
+                <div class="glass-card section-card" style="display:flex; flex-direction:column; justify-content:space-between; border-top:4px solid var(--danger);">
+                    <div>
+                        <h3 class="text-shine-hover" style="color:var(--danger);">🚨 Regional Warnings & Feed</h3>
+                        <div id="weather-advisory-list" style="max-height:300px; overflow-y:auto; padding-right:8px; margin-bottom:16px;">
+                            <div style="background:rgba(0, 255, 115, 0.08); border-left:3px solid var(--success); padding:12px; border-radius:8px; font-size:0.85rem;">
+                                <strong style="color:var(--success);">✅ All Systems Normal</strong>: No severe weather alerts active.
+                            </div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); text-align:right; border-top:1px solid var(--border); padding-top:12px;">Sources: IMD · Open-Meteo AQI</div>
+                </div>
+
+                <!-- Live Weather Parameters Table -->
+                <div class="glass-card section-card" style="border-top:4px solid var(--accent-1);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+                        <h3 class="text-shine-hover" style="margin:0;">📋 Live Weather Parameters</h3>
+                        <input id="weather-search" oninput="filterWeatherTable()" placeholder="🔍 Search Hub / Location..." style="padding:10px 16px; font-size:0.85rem; border-radius:12px; border:1px solid var(--border); background:rgba(255,255,255,0.05); color:var(--text-main); width:240px; outline:none;" type="text"/>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="sim-table">
+                            <thead>
+                                <tr>
+                                    <th>Location</th>
+                                    <th>Temp (°C)</th>
+                                    <th>Wind Speed</th>
+                                    <th>Precipitation</th>
+                                    <th>AQI (US)</th>
+                                    <th>Visibility</th>
+                                    <th>Pressure</th>
+                                    <th>UV Index</th>
+                                    <th>Risk Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="weather-table-body">
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; font-size:0.8rem; color:var(--text-muted); font-weight:600;">
+                        <span id="table-page-info">Showing page 1 of 1</span>
+                        <div style="display:flex; gap:8px;">
+                            <button class="tool-btn tool-btn-ghost" onclick="prevTablePage()" style="padding:6px 12px; font-size:0.75rem;">Prev</button>
+                            <button class="tool-btn tool-btn-ghost" onclick="nextTablePage()" style="padding:6px 12px; font-size:0.75rem;">Next</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<div id="alert-container"></div>
+
+<!-- ── SCRIPTS ── -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="../js/translator.js?v=2.3"></script>
+<script src="../js/logo.js"></script>
+<script src="../js/voice.js?v=2.3"></script>
+<script src="../js/api.js?v=2.3"></script>
+
+<script>
+    // ── ANIMATION & LAYOUT INIT ──
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // Setup Mobile Sidebar
+        window.toggleMobileSidebar = function(state) {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if(sidebar) {
+                if(state) {
+                    sidebar.classList.add('open');
+                    overlay.classList.add('active');
+                } else {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            }
+        };
+
+        // Initialize Map Flow
+        initWeatherMap();
+    });
+
+    // ── THEME SWITCH SYSTEM ──
+    function setTheme(mode) {
+        const svgIcon = mode === 'light'
+            ? '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+            : '<svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+
+        if (mode === 'light') {
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+        }
+
+        document.querySelectorAll('.mobile-theme-toggle, .desktop-theme-toggle').forEach(el => {
+            el.innerHTML = svgIcon;
+        });
+
+        localStorage.setItem('theme', mode);
+        window.dispatchEvent(new CustomEvent('themeChanged', { detail: { mode } }));
+
+        if (window._weatherMap) {
+            updateMapTheme(window._weatherMap);
+            if (window._soiPatchLayers && window._soiPatchLayers.length) {
+                window._soiPatchLayers.forEach(l => { try { window._weatherMap.removeLayer(l); } catch(e){} });
+                window._soiPatchLayers = [];
+            }
+            applySOIMaskPatches(window._weatherMap);
+
+            // Re-render chart colors
+            if (window.riskRadarChartObj) {
+                window.riskRadarChartObj.options.scales.r.grid.color = mode === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
+                window.riskRadarChartObj.options.scales.r.angleLines.color = mode === 'light' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
+                window.riskRadarChartObj.options.scales.r.pointLabels.color = mode === 'light' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
+                window.riskRadarChartObj.update();
+            }
+        }
+    }
+
+    window.toggleTheme = function() {
+        const isLight = document.body.classList.contains('light-mode');
+        setTheme(isLight ? 'dark' : 'light');
+    };
+    setTheme(localStorage.getItem('theme') || 'dark');
+
+    // ── AUTH ──
+    if (!localStorage.getItem('manager_id')) window.location.href = '../index.html';
+    function logout() { localStorage.clear(); window.location.href = '../index.html'; }
+
+    // ── GLOBALS & MAP LOGIC ──
+    let map = null, baseLayers = {}, radarLayer = null, cloudLayer = null, windLayer = null, heatLayer = null;
+    let drawControl = null, drawnItems = null, currentDrawHandler = null;
+    let weatherMarkers = [], warehouseMarkers = [];
+    let isDrawing = false, simulationPanelClosedByUser = false, refreshInterval = null;
+    window._soiPatchLayers = [];
+
+    function initWeatherMap() {
+        if (map) return;
+        map = L.map('map', { zoomControl: true, attributionControl: true }).setView([20.5937, 78.9629], 5);
+        window._weatherMap = map;
+
+        applyOfficialBorders(map);
+        buildBaseLayers();
+
+        const theme = localStorage.getItem('theme') || 'dark';
+        (theme === 'dark' ? baseLayers.standard_dark : baseLayers.standard_light).addTo(map);
+
+        loadRadarLayer();
+        loadCloudLayer();
+        loadWindLayer();
+
+        drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: {
+                polygon: false, rectangle: false, marker: false, circlemarker: false,
+                circle: { shapeOptions: { color: '#ff9900', fillColor: '#ff9900', fillOpacity: 0.2, weight: 2 } },
+                polyline: { shapeOptions: { color: '#ff3b30', weight: 4, opacity: 0.8 } }
+            }
+        });
+        map.addControl(drawControl);
+
+        map.on(L.Draw.Event.CREATED, function(e) {
+            drawnItems.addLayer(e.layer);
+            handleCustomDisaster(e.layerType, e.layer);
+            setDrawMode(false);
+        });
+        map.on(L.Draw.Event.DRAWSTOP, function() { setDrawMode(false); });
+
+        makeDraggable(document.getElementById('sim-panel'), document.getElementById('sim-panel-handle'));
+        makeDraggable(document.getElementById('results-panel'), document.getElementById('results-panel-handle'));
+
+        setTimeout(() => { if (map) map.invalidateSize(true); }, 200);
+
+        initCharts();
+        loadWeatherFleetData();
+        refreshInterval = setInterval(loadWeatherFleetData, 15000);
+    }
+
+    function buildBaseLayers() {
+        baseLayers = {
+            standard_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
+            standard_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
+            terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 })
+        };
+    }
+
+    function updateMapTheme(mapInstance) {
+        if (!mapInstance || !baseLayers) return;
+        const theme = localStorage.getItem('theme') || 'dark';
+        const currentLayer = document.getElementById('map-layer').value;
+        if (currentLayer !== 'standard') return;
+
+        mapInstance.eachLayer(layer => { if (layer instanceof L.TileLayer && !layer.options.isOverlay) mapInstance.removeLayer(layer); });
+        const newBase = theme === 'dark' ? baseLayers.standard_dark : baseLayers.standard_light;
+        newBase.addTo(mapInstance);
+    }
+
+    function changeMapLayer() {
+        if (!map) return;
+        const layerType = document.getElementById('map-layer').value;
+        map.eachLayer(layer => { if (layer instanceof L.TileLayer && !layer.options.isOverlay) map.removeLayer(layer); });
+        const theme = localStorage.getItem('theme') || 'dark';
+        let target = layerType === 'terrain' ? baseLayers.terrain : layerType === 'satellite' ? baseLayers.satellite : (theme === 'dark' ? baseLayers.standard_dark : baseLayers.standard_light);
+        if (target) target.addTo(map);
+    }
+
+    function loadRadarLayer() {
+        fetch('https://api.rainviewer.com/public/weather-maps.json').then(r => r.json()).then(data => {
+            const past = data.radar?.past;
+            if (past && past.length > 0) {
+                const latest = past[past.length - 1].time;
+                radarLayer = L.tileLayer(`https://tilecache.rainviewer.com/v2/radar/${latest}/256/{z}/{x}/{y}/4/1_1.png`, { opacity: 0.65, zIndex: 10, isOverlay: true });
+                if (document.getElementById('toggle-radar').classList.contains('active')) radarLayer.addTo(map);
+            }
+        }).catch(e => console.log('Radar not loaded:', e));
+    }
+
+    function loadCloudLayer() {
+        cloudLayer = L.tileLayer('https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 9, isOverlay: true });
+        if (document.getElementById('toggle-cloud').classList.contains('active')) cloudLayer.addTo(map);
+    }
+
+    function loadWindLayer() {
+        windLayer = L.tileLayer('https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 8, isOverlay: true });
+        if (document.getElementById('toggle-wind').classList.contains('active')) windLayer.addTo(map);
+    }
+
+    function toggleRadarOverlay(btn) { btn.classList.toggle('active'); if (radarLayer) btn.classList.contains('active') ? radarLayer.addTo(map) : map.removeLayer(radarLayer); }
+    function toggleCloudOverlay(btn) { btn.classList.toggle('active'); if (cloudLayer) btn.classList.contains('active') ? cloudLayer.addTo(map) : map.removeLayer(cloudLayer); }
+    function toggleWindOverlay(btn) { btn.classList.toggle('active'); if (windLayer) btn.classList.contains('active') ? windLayer.addTo(map) : map.removeLayer(windLayer); }
+    function toggleHeatmapOverlay(btn) { btn.classList.toggle('active'); if (heatLayer) btn.classList.contains('active') ? heatLayer.addTo(map) : map.removeLayer(heatLayer); }
+
+    function updateHeatmap(fleetData) {
+        if (!fleetData || !L.heatLayer) return;
+        const points = fleetData.map(v => [(v.fatigue || 0) / 100 + 0.5, v.lat, v.lng]);
+        if (heatLayer) heatLayer.setLatLngs(points);
+        else heatLayer = L.heatLayer(points, { radius: 25, blur: 15, maxZoom: 10, gradient: { 0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: 'red' } });
+        if (document.getElementById('toggle-heatmap')?.classList.contains('active')) heatLayer.addTo(map);
+        else if (map && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+    }
+
+    // ── INDIA SOI MASKING ──
+    function applyOfficialBorders(mapInstance) {
+        if (!mapInstance.getPane('soiMaskPane')) { const mp = mapInstance.createPane('soiMaskPane'); mp.style.zIndex = 350; }
+        if (!mapInstance.getPane('soiBorderPane')) { const bp = mapInstance.createPane('soiBorderPane'); bp.style.zIndex = 360; }
+        const borderStyle = { color: '#00e5ff', weight: 2.5, fillOpacity: 0, opacity: 0.95, lineJoin: 'round', lineCap: 'round', pane: 'soiBorderPane' };
+        applySOIMaskPatches(mapInstance);
+        fetch('../data/india-composite-simplified.geojson').then(r => r.ok ? r.json() : Promise.reject('no local')).then(data => {
+            if (window._soiBorderLayer) try { mapInstance.removeLayer(window._soiBorderLayer); } catch(e){}
+            window._soiBorderLayer = L.geoJSON(data, { style: borderStyle }).addTo(mapInstance);
+            mapInstance.fitBounds(window._soiBorderLayer.getBounds(), { padding: [15, 15] });
+        }).catch(() => {
+            const fallbackBorder = { color: '#00e5ff', weight: 2.5, fillOpacity: 0, opacity: 0.95, lineJoin: 'round', lineCap: 'round', pane: 'soiBorderPane' };
+            const northernClaimLine = [[33.70, 73.50], [34.00, 71.90], [34.55, 72.35], [34.70, 73.00], [35.00, 74.00], [35.20, 75.00], [35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.85, 76.60], [37.10, 75.80], [37.06, 74.57], [36.60, 74.55], [36.20, 78.00], [36.00, 79.00], [35.60, 79.80], [35.10, 80.00], [34.80, 79.50], [34.20, 78.50], [34.00, 77.80]];
+            window._soiPatchLayers.push(L.polyline(northernClaimLine, fallbackBorder).addTo(mapInstance));
+        });
+    }
+
+    function applySOIMaskPatches(mapInstance) {
+        const theme = localStorage.getItem('theme') || 'dark';
+        const fillColor = theme === 'dark' ? '#24222e' : '#d4dae8';
+        const patchStyle = { fillColor, fillOpacity: 1, stroke: false, lineJoin: 'round', pane: 'soiMaskPane' };
+        const pok = [[37.06, 74.57], [37.10, 75.80], [36.85, 76.60], [36.15, 77.00], [35.80, 76.40], [35.50, 76.10], [35.20, 75.00], [35.00, 74.00], [34.70, 73.00], [34.55, 72.35], [34.00, 71.90], [33.70, 73.50], [33.50, 74.20], [33.75, 74.50], [34.00, 74.80], [34.30, 74.95], [34.55, 74.65], [34.80, 74.35], [35.10, 74.55], [35.40, 75.00], [35.90, 75.50], [36.40, 75.00], [36.60, 74.55], [37.06, 74.57]];
+        const azadKashmir = [[33.70, 73.50], [33.90, 73.90], [34.10, 74.30], [34.35, 74.65], [34.55, 74.65], [34.30, 74.95], [34.00, 74.80], [33.75, 74.50], [33.50, 74.20], [33.70, 73.50]];
+        const aksaiChin = [[35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.20, 78.00], [36.00, 79.00], [35.60, 79.80], [35.10, 80.00], [34.80, 79.50], [34.50, 79.00], [34.20, 78.50], [34.00, 77.80], [34.30, 77.00], [34.70, 76.50], [35.10, 76.20], [35.50, 76.10]];
+        const shaksgam = [[36.85, 76.60], [37.06, 74.57], [36.60, 74.55], [36.40, 75.00], [35.90, 75.50], [35.40, 75.00], [35.10, 74.55], [35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.85, 76.60]];
+        [pok, azadKashmir, aksaiChin, shaksgam].forEach(c => window._soiPatchLayers.push(L.polygon(c, patchStyle).addTo(mapInstance)));
+    }
+
+    // ── DRAWING LOGIC ──
+    function setDrawMode(active) {
+        isDrawing = active;
+        const btn = document.getElementById('draw-btn');
+        if (active) { btn.classList.add('drawing'); btn.innerHTML = '⏹️ Cancel Draw'; }
+        else { btn.classList.remove('drawing'); btn.innerHTML = '✏️ Draw on Map'; if (currentDrawHandler) { try { currentDrawHandler.disable(); } catch(e) {} currentDrawHandler = null; } }
+    }
+
+    function toggleDrawMode() {
+        if (!map || !drawControl) return showToast('Map not ready.', 'error');
+        if (isDrawing) return setDrawMode(false);
+        const type = document.getElementById('disaster-type').value;
+        const circleTypes = ['cyclone', 'flood', 'heatwave', 'earthquake', 'riot', 'hail', 'storm', 'snow', 'fog', 'rain'];
+        if (currentDrawHandler) { try { currentDrawHandler.disable(); } catch(e) {} }
+        const drawOpts = drawControl.options?.draw || {};
+        currentDrawHandler = circleTypes.includes(type) ? new L.Draw.Circle(map, drawOpts.circle || {}) : new L.Draw.Polyline(map, drawOpts.polyline || {});
+        currentDrawHandler.enable();
+        setDrawMode(true);
+    }
+
+    async function handleCustomDisaster(shapeType, layer) {
+        const type = document.getElementById('disaster-type').value;
+        let payload = { company_id: localStorage.getItem('manager_id'), type, shapeType };
+        if (shapeType === 'circle') { payload.lat = layer.getLatLng().lat; payload.lng = layer.getLatLng().lng; payload.radius = layer.getRadius() / 1000; }
+        else if (shapeType === 'polyline') { payload.coordinates = layer.getLatLngs().map(ll => ({ lat: ll.lat, lng: ll.lng })); }
+
+        try {
+            await apiCall('/simulation/disaster/custom', 'POST', payload);
+            simulationPanelClosedByUser = false;
+            showToast(`${type.toUpperCase()} zone created!`, 'success');
+            if (drawnItems && layer) drawnItems.removeLayer(layer);
+            loadWeatherFleetData();
+        } catch(err) {
+            if (drawnItems && layer) drawnItems.removeLayer(layer);
+            showToast('Failed to create zone.', 'error');
+        }
+    }
+
+    async function clearDisasters() {
+        if (!confirm('Clear all zones?')) return;
+        try {
+            await apiCall('/simulation/disaster/clear', 'POST', { company_id: localStorage.getItem('manager_id') });
+            drawnItems.clearLayers();
+            document.getElementById('results-panel').style.display = 'none';
+            showToast('Simulation zones cleared.', 'success');
+            loadWeatherFleetData();
+        } catch(err) { showToast('Failed to clear.', 'error'); }
+    }
+
+    async function stopSimulation(simId) {
+        try { await apiCall(`/simulation/disaster/${simId}?company_id=${localStorage.getItem('manager_id')}`, 'DELETE'); showToast('Stopped.', 'success'); loadWeatherFleetData(); }
+        catch(err) { showToast('Failed to stop.', 'error'); }
+    }
+
+    function closeResultsPanel() { document.getElementById('results-panel').style.display = 'none'; simulationPanelClosedByUser = true; }
+
+    async function executeAIAction(shipmentId, alertId) {
+        if (!alertId || alertId === "null" || alertId === "none") return showToast(`AI diversion active for ${shipmentId.substring(0,8)}.`, 'info');
+        try { await apiCall(`/manager/alerts/${alertId}/resolve`, 'POST'); showToast(`Contingency verified.`, 'success'); loadWeatherFleetData(); }
+        catch(err) { showToast('Failed to resolve.', 'error'); }
+    }
+
+    window.togglePastActions = function() {
+        const list = document.getElementById('past-actions-list');
+        if (list.style.display === 'none') {
+            list.style.display = 'block';
+            loadPastActions();
+        } else {
+            list.style.display = 'none';
+        }
+    };
+
+    async function loadPastActions() {
+        try {
+            const past = await apiCall('/tracking/alerts/past?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+            const countEl = document.getElementById('past-actions-count');
+            if (countEl) countEl.innerText = past.length;
+            
+            const list = document.getElementById('past-actions-list');
+            if (list) {
+                if (past.length === 0) {
+                    list.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:10px;">No past AI actions taken.</div>`;
+                } else {
+                    list.innerHTML = past.map(a => `
+                        <div style="font-size:0.75rem; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:3px solid var(--success); border-radius:6px; margin-bottom:6px; border-top: 1px solid rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.02);">
+                            <div style="font-weight:bold; color:var(--text-main); display:flex; justify-content:space-between;">
+                                <span>Shipment: ${a.shipment_id ? a.shipment_id.substring(0,8) : 'N/A'}</span>
+                                <span style="color:var(--text-muted); font-size:0.65rem;">${new Date(a.resolved_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <div style="margin-top:4px; color:var(--text-muted); line-height:1.3;">${a.description || 'Action verified.'}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+        } catch(e) {
+            console.error("Failed to load past actions", e);
+        }
+    }
+
+    async function applySimulationFixes() {
+        showToast('Executing AI contingency protocols…', 'info');
+        let count = 0;
+        for (const item of document.querySelectorAll('.affected-item')) {
+            const alertId = item.getAttribute('data-alert-id');
+            if (alertId && alertId !== "null" && alertId !== "none") {
+                try { await apiCall(`/manager/alerts/${alertId}/resolve`, 'POST'); count++; } catch(e) {}
+            }
+        }
+        showToast(count > 0 ? `Verified reroutes for ${count} shipments.` : 'No pending alerts.', count > 0 ? 'success' : 'info');
+        loadWeatherFleetData();
+    }
+
+    async function manualDivert(shipmentId) {
+        try {
+            const warehouses = await apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+            if (!warehouses || warehouses.length === 0) return showToast('No warehouses found.', 'error');
+            let promptText = "Choose a safe warehouse:\n";
+            warehouses.forEach((wh, idx) => { promptText += `${idx + 1}. ${wh.name} (${wh.address || ''})\n`; });
+            const sel = parseInt(prompt(promptText + "\nEnter number:"), 10) - 1;
+            if (isNaN(sel) || sel < 0 || sel >= warehouses.length) return showToast('Invalid selection.', 'error');
+            const wh = warehouses[sel];
+            if (!prompt('Enter reason:')) return;
+
+            await apiCall(`/shipments/${shipmentId}`, 'PUT', { drop: { lat: wh.lat, lng: wh.lng, address: wh.name }, drop_warehouse_id: wh.id, stage: `Manually Diverted: ${wh.name}`, status: "assigned" });
+            showToast(`Diverted to ${wh.name}`, 'success');
+
+            for (const item of document.querySelectorAll('.affected-item')) {
+                if (item.getAttribute('data-shipment-id') === shipmentId) {
+                    const aId = item.getAttribute('data-alert-id');
+                    if (aId && aId !== "null" && aId !== "none") await apiCall(`/manager/alerts/${aId}/resolve`, 'POST');
+                }
+            }
+            loadWeatherFleetData();
+        } catch(err) { showToast('Failed to manual divert.', 'error'); }
+    }
+
+    // ── CHARTS ──
+    let riskRadarChartObj = null, highRiskHubsChartObj = null, fleetExposureChartObj = null, weatherTrendsChartObj = null;
+    let weatherTableData = [], weatherSearchQuery = "", currentTablePage = 1, itemsPerTablePage = 8;
+
+    function initCharts() {
+        const txtColor = document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
+        const gridColor = document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.08)';
+
+        // Radar
+        riskRadarChartObj = new Chart(document.getElementById('riskRadarChart').getContext('2d'), {
+            type: 'radar',
+            data: { labels: ['Temp', 'Wind', 'Rain', 'AQI', 'Heat Stress'], datasets: [{ label: 'Risk Profile', data: [0,0,0,0,0], backgroundColor: 'rgba(0, 229, 255, 0.2)', borderColor: '#00e5ff', pointBackgroundColor: '#00e5ff', borderWidth: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { r: { grid: { color: gridColor }, angleLines: { color: gridColor }, pointLabels: { color: txtColor, font: { family: 'Space Grotesk', size: 11 } }, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+        });
+
+        // Horizontal Bar
+        highRiskHubsChartObj = new Chart(document.getElementById('highRiskHubsChart').getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Risk Score', data: [], backgroundColor: 'rgba(255, 59, 48, 0.75)', borderColor: '#ff3b30', borderWidth: 1.5, borderRadius: 6 }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: gridColor }, ticks: { color: txtColor } }, y: { grid: { display: false }, ticks: { color: txtColor, font: { family: 'Space Grotesk' } } } }, plugins: { legend: { display: false } } }
+        });
+
+        // Doughnut
+        fleetExposureChartObj = new Chart(document.getElementById('fleetExposureChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['Safe', 'Caution', 'Critical'], datasets: [{ data: [0, 0, 0], backgroundColor: ['#00ff73', '#ff9900', '#ff3b30'], borderWidth: 0, hoverOffset: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: txtColor, font: { family: 'Space Grotesk', size: 12 } } } }, cutout: '70%' }
+        });
+
+        // Line
+        weatherTrendsChartObj = new Chart(document.getElementById('weatherTrendsChart').getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Temp (°C)', data: [], borderColor: '#ff9900', backgroundColor: 'transparent', yAxisID: 'yTemp', tension: 0.3 }, { label: 'AQI', data: [], borderColor: '#00e5ff', backgroundColor: 'transparent', yAxisID: 'yAQI', tension: 0.3 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: txtColor, font: { family: 'Space Grotesk', size: 10 } } }, yTemp: { position: 'left', grid: { color: gridColor }, ticks: { color: txtColor } }, yAQI: { position: 'right', grid: { display: false }, ticks: { color: txtColor } } }, plugins: { legend: { labels: { color: txtColor, font: { family: 'Space Grotesk' } } } } }
+        });
+
+        // Map Click
+        if (map) {
+            map.on('click', async function(e) {
+                const { lat, lng } = e.latlng;
+                const popup = L.popup().setLatLng(e.latlng).setContent('<div style="font-family:Space Grotesk,sans-serif;font-size:0.85rem;padding:6px;">⏳ Fetching intel…</div>').openOn(map);
+                try {
+                    const res = await apiCall(`/tracking/weather-at?lat=${lat}&lng=${lng}&company_id=${localStorage.getItem('manager_id')}`);
+                    const w = res.weather, ships = res.shipments;
+                    let shipsHtml = ships.length > 0 ? `<div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:10px;padding-top:8px;max-height:120px;overflow-y:auto;"><b style="color:var(--accent-2);font-size:0.8rem;">📦 Nearby Ships (${ships.length})</b>` + ships.map(s => `<div style="font-size:0.75rem;margin-top:4px;"><b>${s.description}</b> (${s.distance_to_click_km}km)<br>Driver: ${s.driver_name} · ${s.status}</div>`).join('') + '</div>' : `<div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:10px;padding-top:8px;font-size:0.75rem;color:var(--text-muted);">No active shipments within 50km.</div>`;
+                    popup.setContent(`<div style="min-width:220px; font-family:Space Grotesk,sans-serif; line-height:1.6; color:var(--text-main);"><b style="font-size:1.1rem;color:var(--accent-1);">📍 ${lat.toFixed(3)}, ${lng.toFixed(3)}</b><br><small><b>${w.icon} ${w.condition}</b> (Risk: <b>${w.risk_score}/100</b>)</small><br><small>🌡️ Temp: <b>${w.temp}°C</b></small><br><small>💨 Wind: <b>${w.wind_speed} km/h</b></small><br><small>😷 AQI: <b>${w.us_aqi}</b></small>${shipsHtml}</div>`);
+                } catch(err) { popup.setContent('<div style="color:var(--danger);font-family:Space Grotesk,sans-serif;font-size:0.85rem;">❌ Failed to fetch intel.</div>'); }
+            });
+        }
+    }
+
+    // ── TABLE LOGIC ──
+    function renderWeatherTable() {
+        const tbody = document.getElementById('weather-table-body');
+        if (!tbody) return;
+        const filtered = weatherTableData.filter(t => t.name.toLowerCase().includes(weatherSearchQuery.toLowerCase()));
+        const totalPages = Math.ceil(filtered.length / itemsPerTablePage) || 1;
+        if (currentTablePage > totalPages) currentTablePage = totalPages;
+        const start = (currentTablePage - 1) * itemsPerTablePage;
+
+        tbody.innerHTML = filtered.slice(start, start + itemsPerTablePage).map(t => {
+            const aqiColor = t.us_aqi > 150 ? 'var(--danger)' : t.us_aqi > 100 ? 'var(--warning)' : 'var(--success)';
+            const riskColor = t.risk_score > 40 ? 'var(--danger)' : t.risk_score > 15 ? 'var(--warning)' : 'var(--success)';
+            return `<tr>
+                <td style="font-weight:700; color:var(--text-main);">${t.name}</td>
+                <td>${t.temp != null ? t.temp.toFixed(1) : '—'}</td>
+                <td>${t.wind_speed != null ? t.wind_speed.toFixed(1) + ' km/h' : '—'}</td>
+                <td>${t.precipitation != null ? t.precipitation.toFixed(1) + ' mm' : '—'}</td>
+                <td><span style="color: ${aqiColor}; font-weight:800;">${t.us_aqi || '—'}</span></td>
+                <td>${t.visibility != null ? t.visibility.toFixed(0) + ' m' : '—'}</td>
+                <td>${t.surface_pressure != null ? t.surface_pressure.toFixed(0) + ' hPa' : '—'}</td>
+                <td>${t.uv_index != null ? t.uv_index.toFixed(1) : '—'}</td>
+                <td style="font-weight:800; color:${riskColor}">${t.risk_score}/100</td>
+            </tr>`;
+        }).join('');
+        document.getElementById('table-page-info').innerText = `Showing page ${currentTablePage} of ${totalPages} (${filtered.length} locations)`;
+    }
+
+    function filterWeatherTable() { weatherSearchQuery = document.getElementById('weather-search').value; currentTablePage = 1; renderWeatherTable(); }
+    function prevTablePage() { if (currentTablePage > 1) { currentTablePage--; renderWeatherTable(); } }
+    function nextTablePage() { if (currentTablePage < Math.ceil(weatherTableData.filter(t => t.name.toLowerCase().includes(weatherSearchQuery.toLowerCase())).length / itemsPerTablePage)) { currentTablePage++; renderWeatherTable(); } }
+
+    function renderDynamicAdvisories(tel) {
+        const advList = document.getElementById('weather-advisory-list');
+        const advisories = tel.filter(t => t.risk_score > 40 || t.us_aqi > 150).map(t => {
+            if (t.risk_score > 40) return { severity: 'critical', title: `${t.name}: Severe Weather`, text: `${t.temp >= 45 ? `Heatwave (${t.temp}°C)` : t.precipitation >= 15 ? `Flooding (${t.precipitation}mm)` : t.wind_speed >= 60 ? `Cyclone (${t.wind_speed} km/h)` : `High Risk`}. Handoffs halted, auto-diverts active.` };
+            return { severity: 'warning', title: `${t.name}: Poor AQI`, text: `AQI ${t.us_aqi}. Filters advised.` };
+        });
+
+        advList.innerHTML = advisories.length === 0
+            ? `<div style="background:rgba(0, 255, 115, 0.08); border-left:3px solid var(--success); padding:12px; border-radius:8px; font-size:0.85rem;"><strong style="color:var(--success);">✅ All Systems Normal</strong>: No severe weather alerts active.</div>`
+            : advisories.map(a => `<div style="background:${a.severity==='critical'?'rgba(255, 59, 48, 0.08)':'rgba(255, 153, 0, 0.08)'}; border-left:3px solid ${a.severity==='critical'?'var(--danger)':'var(--warning)'}; padding:12px; border-radius:8px; margin-bottom:10px; font-size:0.85rem;"><strong style="color:${a.severity==='critical'?'var(--danger)':'var(--warning)'};">${a.title}</strong>: ${a.text}</div>`).join('');
+    }
+
+    // ── MAIN DATA LOADER ──
+    async function loadWeatherFleetData() {
+        const spinner = document.getElementById('refresh-spinner');
+        if (spinner) spinner.style.display = 'block';
+
+        try {
+            const data = await apiCall('/tracking/fleet/weather?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+            weatherMarkers.forEach(m => { try { map.removeLayer(m); } catch(e) {} }); weatherMarkers = [];
+            warehouseMarkers.forEach(m => { try { map.removeLayer(m); } catch(e) {} }); warehouseMarkers = [];
+
+            try {
+                const warehouses = await apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+                warehouses.forEach(wh => {
+                    const icon = L.divIcon({ html: `<div style="background:rgba(0, 255, 115, 0.15); border:2px solid var(--success); box-shadow:0 0 12px rgba(0, 255, 115, 0.5); border-radius:8px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:14px;">🏢</div>`, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+                    const m = L.marker([wh.lat, wh.lng], { icon, zIndexOffset: 150 }).addTo(map).bindPopup(`<div style="min-width:180px; font-family:Space Grotesk,sans-serif; line-height:1.6; color:var(--text-main);"><b style="color:var(--success); font-size:1.1rem;">🏭 ${wh.name}</b><br><small style="color:var(--text-muted);">📍 ${wh.address||'N/A'}</small></div>`);
+                    warehouseMarkers.push(m);
+                });
+            } catch(e) {}
+
+            document.getElementById('stat-fleet').innerText = data.fleet.length;
+            document.getElementById('stat-affected').innerText = data.affected_count;
+            document.getElementById('stat-cells').innerText = data.cells.filter(c => !c.is_simulation).length;
+            document.getElementById('stat-sims').innerText = data.cells.filter(c => c.is_simulation).length;
+
+            const activeSims = data.cells.filter(c => c.is_simulation);
+            const simsTable = document.getElementById('sims-table'), simsBody = document.getElementById('sims-body'), emptyMsg = document.getElementById('sims-empty-msg');
+            if (activeSims.length > 0) { simsTable.style.display = 'table'; emptyMsg.style.display = 'none'; simsBody.innerHTML = activeSims.map(c => `<tr><td style="font-weight:800; color:var(--text-main);">${c.type.toUpperCase()}</td><td style="color:var(--text-muted);">${c.shapeType || 'circle'}</td><td style="text-align:right;"><button class="tool-btn tool-btn-danger" style="padding:6px 12px; font-size:0.75rem;" onclick="stopSimulation('${c.id}')">STOP</button></td></tr>`).join(''); }
+            else { simsTable.style.display = 'none'; emptyMsg.style.display = 'block'; }
+
+            data.cells.forEach(cell => {
+                let animClass = cell.type.toLowerCase() === 'cyclone' ? 'anim-cyclone' : cell.type.toLowerCase() === 'flood' ? 'anim-flood' : 'anim-rain';
+                if (cell.shapeType === 'polyline') {
+                    weatherMarkers.push(L.polyline(cell.coordinates, { color: cell.color || '#ff9900', weight: 6, opacity: 0.85, className: animClass }).addTo(map).bindPopup(`<b>${cell.icon||'🌡️'} ${cell.type}</b><br>${cell.is_simulation?'⚗️ Simulation':'🛰️ Live'}`));
+                } else {
+                    const bc = cell.is_simulation ? '#ff9900' : (cell.color || '#00e5ff');
+                    weatherMarkers.push(L.circle([cell.lat, cell.lng], { radius: (cell.radius||80)*1000, color: bc, fillColor: bc, fillOpacity: cell.is_simulation?0.18:0.12, weight: cell.is_simulation?2:1.5, dashArray: cell.is_simulation?'8,4':null, className: animClass }).addTo(map).bindPopup(`<div style="min-width:180px; font-family:Space Grotesk,sans-serif;"><b style="font-size:1.1rem;">${cell.icon||'🌩️'} ${cell.condition||cell.type}</b></div>`));
+                    weatherMarkers.push(L.marker([cell.lat, cell.lng], { icon: L.divIcon({ className: '', html: `<div style="font-size:24px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));">${cell.icon||'🌦️'}</div>`, iconSize: [28,28], iconAnchor: [14,14] }), zIndexOffset: 100 }).addTo(map));
+                }
+            });
+
+            data.fleet.forEach(v => {
+                const icon = L.divIcon({ html: `<div style="background: linear-gradient(135deg, var(--accent-1), #6366f1); width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 0 12px var(--accent-1); position:relative;"><div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%); font-size:12px;">${v.weather?.icon||'☀️'}</div></div>`, className: '', iconSize: [16,16], iconAnchor: [8,8] });
+                weatherMarkers.push(L.marker([v.lat, v.lng], { icon, zIndexOffset: 200 }).addTo(map).bindPopup(`<div style="min-width:150px; font-family:Space Grotesk,sans-serif;"><b style="color:var(--accent-1);">🚛 ${v.driver}</b><br><small>${v.weather?.icon||'☀️'} ${v.weather?.condition||'Clear'}</small></div>`));
+            });
+            updateHeatmap(data.fleet);
+
+            const resultsPanel = document.getElementById('results-panel');
+            let pastCount = 0;
+            try {
+                const past = await apiCall('/tracking/alerts/past?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
+                pastCount = past.length;
+                const countEl = document.getElementById('past-actions-count');
+                if (countEl) countEl.innerText = pastCount;
+                const listEl = document.getElementById('past-actions-list');
+                if (listEl) {
+                    if (pastCount === 0) {
+                        listEl.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:10px;">No past AI actions taken.</div>`;
+                    } else {
+                        listEl.innerHTML = past.map(a => `
+                            <div style="font-size:0.75rem; padding:8px 10px; background:rgba(255,255,255,0.02); border-left:3px solid var(--success); border-radius:6px; margin-bottom:6px; border-top: 1px solid rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.02);">
+                                <div style="font-weight:bold; color:var(--text-main); display:flex; justify-content:space-between;">
+                                    <span>Shipment: ${a.shipment_id ? a.shipment_id.substring(0,8) : 'N/A'}</span>
+                                    <span style="color:var(--text-muted); font-size:0.65rem;">${new Date(a.resolved_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                                </div>
+                                <div style="margin-top:4px; color:var(--text-muted); line-height:1.3;">${a.description || 'Action verified.'}</div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch(err) {
+                console.error("Failed to load past actions count", err);
+            }
+
+            if (data.affected_count > 0 || pastCount > 0) {
+                document.getElementById('res-affected-count').innerText = data.affected_count;
+                document.getElementById('res-recommendation').innerText = data.recommendation || '—';
+                document.getElementById('res-affected-list').innerHTML = (data.affected_list || []).map(s => {
+                    const aiHandled = ['diverted:', 'halted:', 'returned:'].some(k => (s.stage||'').toLowerCase().includes(k));
+                    const badge = aiHandled ? `<div style="margin-top:8px; display:inline-block; background:rgba(0, 255, 115, 0.15); border:1px solid var(--success); border-radius:12px; padding:6px 12px; font-size:0.75rem; color:var(--success); font-weight:800;">✅ AI Handled: ${s.stage}</div>` : '';
+                    return `<div class="affected-item" data-alert-id="${s.alert_id}" data-shipment-id="${s.id}"><div class="a-title">${s.description}</div><div class="a-sub">Driver: ${s.driver_name}</div><div class="a-action">💡 ${s.ai_action}</div>${badge}${!aiHandled ? `<div class="a-btns"><button class="a-btn-ai" onclick="executeAIAction('${s.id}', '${s.alert_id}')">Verify</button><button class="a-btn-manual" onclick="manualDivert('${s.id}')">Manual</button></div>` : ''}</div>`;
+                }).join('');
+                
+                const execBtn = resultsPanel.querySelector('.tool-btn-primary');
+                if (execBtn) {
+                    execBtn.style.display = data.affected_count > 0 ? 'inline-flex' : 'none';
+                }
+                
+                if (!simulationPanelClosedByUser) resultsPanel.style.display = 'block';
+            } else {
+                resultsPanel.style.display = 'none';
+            }
+
+            const tel = data.telemetry || [];
+            if (tel.length > 0 && riskRadarChartObj) {
+                let rVals = [0,0,0,0,0];
+                tel.forEach(t => { rVals[0]+=Math.min(100, Math.max(0, (t.temp||25)/45*100)); rVals[1]+=Math.min(100, Math.max(0, (t.wind_speed||10)/60*100)); rVals[2]+=Math.min(100, Math.max(0, (t.precipitation||0)/15*100)); rVals[3]+=Math.min(100, Math.max(0, (t.us_aqi||50)/300*100)); rVals[4]+=Math.min(100, Math.max(0, ((t.temp||25) > 27 ? ((t.temp||25) + ((t.humidity||50)/100 * ((t.temp||25)-25))) : (t.temp||25)) / 45 * 100)); });
+                riskRadarChartObj.data.datasets[0].data = rVals.map(v => Math.round(v/tel.length));
+                riskRadarChartObj.update();
+            }
+
+            const top5 = [...tel].sort((a,b)=>(b.risk_score||0)-(a.risk_score||0)).slice(0,5);
+            if (highRiskHubsChartObj) { highRiskHubsChartObj.data.labels = top5.map(t=>t.name); highRiskHubsChartObj.data.datasets[0].data = top5.map(t=>t.risk_score); highRiskHubsChartObj.update(); }
+
+            let safe=0, caut=0, crit=0;
+            data.fleet.forEach(v => { const m=v.weather?.multiplier||1.0; if(m>=1.5) crit++; else if(m>1.0) caut++; else safe++; });
+            if (fleetExposureChartObj) { fleetExposureChartObj.data.datasets[0].data = [safe, caut, crit]; fleetExposureChartObj.update(); }
+
+            const keyCities = ['Mumbai', 'Delhi', 'Kolkata', 'Bengaluru', 'Chennai'];
+            const cityData = keyCities.map(c => tel.find(t => t.name === c) || { name: c, temp: 25, us_aqi: 50 });
+            if (weatherTrendsChartObj) { weatherTrendsChartObj.data.labels = keyCities; weatherTrendsChartObj.data.datasets[0].data = cityData.map(c => c.temp); weatherTrendsChartObj.data.datasets[1].data = cityData.map(c => c.us_aqi); weatherTrendsChartObj.update(); }
+
+            weatherTableData = tel; renderWeatherTable(); renderDynamicAdvisories(tel);
+        } catch(e) {} finally { if (spinner) spinner.style.display = 'none'; }
+    }
+
+    function refreshWeather() { loadWeatherFleetData(); showToast('Refreshing live weather data…', 'info'); }
+
+    // ── UTILITIES ──
+    function makeDraggable(el, handle) {
+        if (!el) return;
+        let p1=0, p2=0, p3=0, p4=0;
+        (handle || el).onmousedown = function(e) {
+            e.preventDefault(); p3 = e.clientX; p4 = e.clientY;
+            document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+            document.onmousemove = function(e) {
+                p1 = p3 - e.clientX; p2 = p4 - e.clientY; p3 = e.clientX; p4 = e.clientY;
+                el.style.top = (el.offsetTop - p2) + 'px'; el.style.left = (el.offsetLeft - p1) + 'px'; el.style.right = 'auto'; el.style.bottom = 'auto';
+            };
+        };
+    }
+
+    function showToast(msg, type='info') {
+        let c = document.getElementById('toast-container');
+        if (!c) { c = document.createElement('div'); c.id = 'toast-container'; c.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;'; document.body.appendChild(c); }
+        const t = document.createElement('div');
+        const bg = type==='error' ? 'var(--danger)' : type==='success' ? 'var(--success)' : 'var(--accent-1)';
+        t.style.cssText = `background:${bg};color:#000;padding:12px 24px;border-radius:14px;font-size:0.9rem;font-weight:800;box-shadow:var(--glow-shadow);display:flex;align-items:center;gap:10px;animation:toastIn 0.3s ease forwards;pointer-events:auto; font-family:'Space Grotesk', sans-serif;`;
+        t.innerHTML = `<span>${type==='error'?'🚨':type==='success'?'✅':'⏳'}</span><span>${msg}</span>`;
+        if (!document.getElementById('toast-keyframes')) { const s = document.createElement('style'); s.id='toast-keyframes'; s.textContent='@keyframes toastIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}'; document.head.appendChild(s); }
+        c.appendChild(t); setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(()=>t.remove(), 300); }, 3500);
+    }
+    window.showToast = showToast;
+    window.showNotification = showToast;
+</script>
+</body>
+</html>
