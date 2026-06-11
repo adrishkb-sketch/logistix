@@ -101,7 +101,7 @@ function showNotification(message, type = 'info') {
     toast.style.borderRadius = '30px';
     toast.style.background = type === 'success' ? '#48bb78' : (type === 'error' ? '#e53e3e' : '#3182ce');
     toast.style.color = 'white';
-    toast.style.zIndex = '100000';
+    toast.style.zIndex = '9999999';
     toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
     toast.style.fontWeight = 'bold';
     toast.style.fontSize = '0.9rem';
@@ -656,20 +656,35 @@ function initBlockingOverlays() {
         document.body.appendChild(div);
 
         document.getElementById('geo-retry-btn').addEventListener('click', () => {
+            const btn = document.getElementById('geo-retry-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Checking...';
+            btn.style.opacity = '0.7';
+            btn.disabled = true;
+
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
+                        btn.innerHTML = originalText;
+                        btn.style.opacity = '1';
+                        btn.disabled = false;
                         // Success — hide overlay and start watch
                         document.getElementById('geolocation-block-overlay').style.display = 'none';
                         showNotification('✅ Location access granted! GPS tracking active.', 'success');
                         watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
                     },
                     (err) => {
+                        btn.innerHTML = originalText;
+                        btn.style.opacity = '1';
+                        btn.disabled = false;
                         showNotification('❌ Location access still denied. Please check browser settings.', 'error');
                     },
                     {enableHighAccuracy: true, timeout: 10000}
                 );
             } else {
+                btn.innerHTML = originalText;
+                btn.style.opacity = '1';
+                btn.disabled = false;
                 showNotification('Geolocation is not supported by this browser.', 'error');
             }
         });
