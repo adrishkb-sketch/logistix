@@ -1577,7 +1577,7 @@ document.addEventListener("DOMContentLoaded", () => {
         fCanvas.height = fHeight * dpr;
         fCtx.scale(dpr, dpr);
 
-        const spacing = window.innerWidth < 768 ? 16 : 24;
+        const spacing = window.innerWidth < 768 ? 35 : 30;
 
         mDots = [];
         for (let x = 0; x < mWidth; x += spacing) {
@@ -1656,7 +1656,7 @@ document.addEventListener("DOMContentLoaded", () => {
             p.vy *= friction;
             p.x += p.vx;
             p.y += p.vy;
-            mCtx.beginPath();\n                mCtx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);\n                mCtx.fill();
+            mCtx.fillRect(p.x, p.y, 2.5, 2.5);
         }
 
         // --- 2. Footer Text Grid Animation (Tight Hollow Push + Colors) ---
