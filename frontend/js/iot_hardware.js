@@ -302,7 +302,7 @@ void loop() {
             const hex = () => Math.floor(Math.random() * 256).toString(16).toUpperCase().padStart(2, '0');
             return {
                 scan_rate: Math.floor(Math.random() * 300) + 10,
-                uid: \`\${hex()}:\${hex()}:\${hex()}:\${hex()}\`
+                uid: `${hex()}:${hex()}:${hex()}:${hex()}`
             };
         }
     },
@@ -469,10 +469,10 @@ function renderPayloadEditor() {
         row.style.alignItems = 'center';
         row.style.marginBottom = '8px';
         
-        row.innerHTML = \`
-            <label style="flex:1; font-family:monospace; font-size:0.85rem; color:var(--text-main);">"\${key}":</label>
-            <input type="text" onchange="updatePayloadValue('\${key}', this.value)" value="\${val}" style="flex:2; padding:6px; border-radius:4px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-family:monospace; outline:none;">
-        \`;
+        row.innerHTML = `
+            <label style="flex:1; font-family:monospace; font-size:0.85rem; color:var(--text-main);">"${key}":</label>
+            <input type="text" onchange="updatePayloadValue('${key}', this.value)" value="${val}" style="flex:2; padding:6px; border-radius:4px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-family:monospace; outline:none;">
+        `;
         editorContainer.appendChild(row);
     });
 }
