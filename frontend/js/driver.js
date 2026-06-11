@@ -118,6 +118,24 @@ if (!dId || dId === "null" || dId === "undefined") {
 const nameEl = document.getElementById('driver-name');
 if (nameEl) nameEl.innerText = localStorage.getItem('driver_name') || getTranslation('driver');
 
+// Check for Native App Mode (PWA)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('app_mode') === '1') {
+    // Hide standard web navigation elements
+    const topBar = document.querySelector('.top-bar');
+    const tabs = document.querySelector('[data-layout-container="driver-tabs"]');
+    if (topBar) topBar.style.display = 'none';
+    if (tabs) tabs.style.display = 'none';
+
+    // Override logout to just message the parent iframe instead of clearing everything
+    window.logout = function() {
+        if(confirm("Logout from Driver App?")) {
+            localStorage.removeItem('driver_id');
+            window.parent.location.reload();
+        }
+    };
+}
+
 let isSimulationMode = false;
 
 function attachSimulationDrag(m) {
@@ -302,7 +320,13 @@ function switchDriverTab(tab) {
     const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const expectedPage = tabToPage[tab];
     if (expectedPage && expectedPage !== currentFilename && (currentFilename.startsWith('driver_') || currentFilename === 'driver' || currentFilename === 'driver.html')) {
-        window.location.href = expectedPage + '.html';
+        if (urlParams.get('app_mode') === '1' && window.parent && window.parent.navigate) {
+            // Let the parent shell handle it so the bottom nav updates
+            const targetEl = Array.from(window.parent.document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(expectedPage));
+            window.parent.navigate(expectedPage + '.html', targetEl);
+            return;
+        }
+        window.location.href = expectedPage + '.html' + (urlParams.get('app_mode') === '1' ? '?app_mode=1' : '');
         return;
     }
 
