@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Logistix Driver App</title>
 
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="driver_manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -111,7 +111,6 @@
             <h1 style="margin-bottom: 8px;">Install Driver App</h1>
             <p style="color:var(--text-muted); margin-bottom:24px; font-size:0.9rem;">Get the best native experience by installing the dedicated Driver App to your device.</p>
             <button onclick="triggerInstall()" style="margin-bottom:12px;">Install Web App (PWA)</button>
-            <button onclick="downloadAPK()" style="margin-bottom:12px; background:rgba(255,255,255,0.1); color:#fff;">Download APK</button>
             <button onclick="cancelInstall()" style="background:transparent; color:var(--text-muted); border:1px solid var(--border);">Cancel</button>
         </div>
     </div>
@@ -156,18 +155,6 @@
                 alert("To install, use your browser's 'Add to Home Screen' option.");
                 window.location.href = 'index.html';
             }
-        }
-
-        function downloadAPK() {
-            const a = document.createElement('a');
-            a.href = 'public/LogistixDriver.apk';
-            a.download = 'LogistixDriver.apk';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
         }
 
         function cancelInstall() {

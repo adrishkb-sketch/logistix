@@ -1,0 +1,22 @@
+{
+  "name": "Logistix Driver App",
+  "short_name": "Driver App",
+  "description": "Dedicated mobile application for Logistix Drivers.",
+  "start_url": "driver_app.html?force=1",
+  "display": "standalone",
+  "background_color": "#010208",
+  "theme_color": "#00e5ff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
