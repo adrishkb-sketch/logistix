@@ -1494,19 +1494,20 @@ class AutomatedControl {
         const registryKeys = Object.keys(this.registry);
         
         let html = `
-            <div id="voice-help-modal" class="glass-card" style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:10001; width:90%; max-width:500px; box-sizing:border-box; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.5); border:1px solid var(--primary); background:var(--card); color:var(--text);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                    <h2 style="margin:0; font-weight:800; color:var(--text);">${getTranslation('voice_help_title')}</h2>
-                    <button onclick="window.logistixVoice.closeInstructions()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer; opacity:0.6;">✕</button>
-                </div>
+            <div id="voice-help-modal" class="modal-overlay" style="display:flex; position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); z-index:10001; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+                <div class="glass-card" style="width:100%; max-width:500px; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.5); border:1px solid var(--primary); background:var(--card); color:var(--text); box-sizing:border-box; border-radius:15px; position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                        <h2 style="margin:0; font-weight:800; color:var(--text);">${getTranslation('voice_help_title')}</h2>
+                        <button onclick="window.logistixVoice.closeInstructions()" style="background:none; border:none; color:var(--text); font-size:1.5rem; cursor:pointer; opacity:0.6;">✕</button>
+                    </div>
                 
                 <div style="display:flex; gap:10px; margin-bottom:20px;">
                     <button onclick="window.logistixVoice.playVoiceInstructions()" class="btn-primary" style="flex:1; background:var(--accent);">🔊 ${getTranslation('voice_listen_btn')}</button>
                     <button onclick="window.logistixVoice.stopInstructions()" class="btn-primary" style="flex:1; background:var(--danger); border:1px solid rgba(255,255,255,0.1);">${getTranslation('voice_stop_instr_btn')}</button>
                 </div>
 
-                <div style="max-height:300px; overflow-y:auto;">
-                    <table data-smart-search-added="true" style="width:100%; border-collapse:collapse; text-align:left; word-break:break-word;">
+                <div style="max-height:50vh; overflow-y:auto; padding-right:5px;">
+                    <table class="sim-table" data-smart-search-added="true" style="width:100%; border-collapse:collapse; text-align:left; word-break:break-word;">
                         <thead>
                             <tr style="border-bottom:1px solid var(--border);">
                                 <th style="padding:10px; width:45%;">${getTranslation('voice_command_header')}</th>
@@ -1542,7 +1543,7 @@ class AutomatedControl {
             }
         }
 
-        html += `</tbody></table></div></div>`;
+        html += `</tbody></table></div></div></div>`;
         const existing = document.getElementById('voice-help-modal');
         if (existing) existing.remove();
         document.body.insertAdjacentHTML('beforeend', html);
