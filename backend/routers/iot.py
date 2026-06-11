@@ -50,33 +50,37 @@ def handle_iot_event(event: IoTEvent):
         heart_rate = event.data.get("heart_rate", 55)
         eye_closure = event.data.get("eye_closure_rate", 80) # percentage
         
-        if not is_mock:
-            drivers = drivers_db.get_all()
-            target = next((d for d in drivers if d.get("status") == "assigned" or d.get("assigned_vehicle_id")), None)
-            
-            if target:
-                target_id = event.target_id or target["id"]
-                d = drivers_db.get_by_id(target_id)
-                if d:
-                    d["safety_rating"] = max(1.0, float(d.get("safety_rating", 5.0)) - 1.5)
-                    d["fatigue_score"] = min(100.0, float(d.get("fatigue_score", 0.0)) + 60.0)
-                    if "health_metrics" not in d or not d["health_metrics"]:
-                        d["health_metrics"] = {}
-                    d["health_metrics"]["heart_rate"] = heart_rate
-                    drivers_db.update(d["id"], d)
-                    
-                    # Also log on their active shipment if any
-                    active_ship = next((s for s in shipments_db.get_all() if s.get("assigned_driver_id") == d["id"]), None)
-                    if active_ship:
-                        log_msg = ShipmentEvent(
-                            status="safety_halt", 
-                            message=f"👁️ BIOMETRIC ALERT: Driver fatigue detected (HR: {heart_rate}bpm, Eye Closure: {eye_closure}%).", 
-                            reason="biometric_sensor"
-                        )
-                        active_ship["logs"] = active_ship.get("logs", []) + [log_msg.model_dump()]
-                        shipments_db.update(active_ship["id"], active_ship)
+        if heart_rate < 55 or eye_closure > 80:
+            if not is_mock:
+                drivers = drivers_db.get_all()
+                target = next((d for d in drivers if d.get("status") == "assigned" or d.get("assigned_vehicle_id")), None)
                 
-        response_log.append(f"AI Action: Triggered voice alert in Driver App. Forced 15-min rest stop added to itinerary.")
+                if target:
+                    target_id = event.target_id or target["id"]
+                    d = drivers_db.get_by_id(target_id)
+                    if d:
+                        d["safety_rating"] = max(1.0, float(d.get("safety_rating", 5.0)) - 1.5)
+                        d["fatigue_score"] = min(100.0, float(d.get("fatigue_score", 0.0)) + 60.0)
+                        if "health_metrics" not in d or not d["health_metrics"]:
+                            d["health_metrics"] = {}
+                        d["health_metrics"]["heart_rate"] = heart_rate
+                        drivers_db.update(d["id"], d)
+                        
+                        # Also log on their active shipment if any
+                        active_ship = next((s for s in shipments_db.get_all() if s.get("assigned_driver_id") == d["id"]), None)
+                        if active_ship:
+                            log_msg = ShipmentEvent(
+                                status="safety_halt", 
+                                message=f"👁️ BIOMETRIC ALERT: Driver fatigue detected (HR: {heart_rate}bpm, Eye Closure: {eye_closure}%).", 
+                                reason="biometric_sensor"
+                            )
+                            active_ship["logs"] = active_ship.get("logs", []) + [log_msg.model_dump()]
+                            shipments_db.update(active_ship["id"], active_ship)
+                    
+            response_log.append(f"AI Action: Triggered voice alert in Driver App. Forced 15-min rest stop added to itinerary.")
+        else:
+            response_log.append(f"AI Action: Biometric readings normal. Driver is alert.")
+            
         response_log.insert(0, f"IoT Data Received: [HR: {heart_rate}bpm, Eyes: {eye_closure}%]")
 
     # 3. Smart Weighbridge
@@ -106,26 +110,30 @@ def handle_iot_event(event: IoTEvent):
 
     # 6. Shock/Drop Accelerometer
     elif event.device_type == "shock":
-        g_force = event.data.get("g_force", 6.5)
+        g_force = float(event.data.get("g_force", 6.5))
         axis = event.data.get("axis", "Z")
         
-        if not is_mock:
-            shipments = shipments_db.get_all()
-            target = next((s for s in shipments if s.get("status") in ["in_transit", "assigned"]), None)
+        if g_force > 5.0:
+            if not is_mock:
+                shipments = shipments_db.get_all()
+                target = next((s for s in shipments if s.get("status") in ["in_transit", "assigned"]), None)
+                
+                if target:
+                    target_id = event.target_id or target["id"]
+                    s = shipments_db.get_by_id(target_id)
+                    if s:
+                        log_msg = ShipmentEvent(
+                            status="damage_warning", 
+                            message=f"💥 IMPACT DETECTED: {g_force}G shock registered on {axis}-axis.", 
+                            reason="hardware_sensor"
+                        )
+                        s["logs"] = s.get("logs", []) + [log_msg.model_dump()]
+                        shipments_db.update(s["id"], s)
             
-            if target:
-                target_id = event.target_id or target["id"]
-                s = shipments_db.get_by_id(target_id)
-                if s:
-                    log_msg = ShipmentEvent(
-                        status="damage_warning", 
-                        message=f"💥 IMPACT DETECTED: {g_force}G shock registered on {axis}-axis.", 
-                        reason="hardware_sensor"
-                    )
-                    s["logs"] = s.get("logs", []) + [log_msg.model_dump()]
-                    shipments_db.update(s["id"], s)
-        
-        response_log.append(f"AI Action: Package flagged for QA inspection upon arrival. Automated replacement pre-authorized.")
+            response_log.append(f"AI Action: Package flagged for QA inspection upon arrival. Automated replacement pre-authorized.")
+        else:
+            response_log.append(f"AI Action: Package handling within safe limits.")
+            
         response_log.insert(0, f"IoT Data Received: [Impact: {g_force}G, Axis: {axis}]")
 
     else:
