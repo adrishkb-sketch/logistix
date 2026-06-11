@@ -50,9 +50,26 @@ async function init() {
     if (document.getElementById('payments-tab')) {
         loadHubFinance();
     }
-    if (document.getElementById('gate-tab') && typeof window.switchTab === 'function') {
-        window.switchTab('gate');
+    
+    // Dynamically open the correct tab based on the current page filename
+    const pageToTab = {
+        'warehouse_manager_dash.html': 'dash',
+        'warehouse_manager_verifications.html': 'verifications',
+        'warehouse_manager_fleet.html': 'fleet',
+        'warehouse_manager_gate.html': 'gate',
+        'warehouse_manager_audit.html': 'audit',
+        'warehouse_manager_leaderboard.html': 'leaderboard',
+        'warehouse_manager_settings.html': 'settings',
+        'warehouse_manager_shipments.html': 'shipments',
+        'warehouse_manager_payments.html': 'payments',
+        'warehouse_manager_drones.html': 'drones'
+    };
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0];
+    const activeTab = pageToTab[currentFilename];
+    if (activeTab && typeof window.switchTab === 'function') {
+        window.switchTab(activeTab);
     }
+
     if (document.getElementById('settings-tab') && typeof loadLeaveHistory === 'function') {
         loadLeaveHistory();
     }
@@ -1078,7 +1095,7 @@ function switchTab(tab) {
         'payments': 'warehouse_manager_payments.html',
         'drones': 'warehouse_manager_drones.html'
     };
-    const currentFilename = window.location.pathname.split('/').pop();
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0];
     const expectedPage = tabToPage[tab];
     if (expectedPage && expectedPage !== currentFilename) {
         window.location.href = expectedPage;
@@ -1475,6 +1492,8 @@ window.switchTab = function(tab) {
     originalSwitchTab(tab);
     if (tab === 'gate') {
         loadGateQueue();
+    } else if (tab === 'audit' && typeof refreshAuditData === 'function') {
+        refreshAuditData();
     }
 };
 window.loadGateQueue = loadGateQueue;

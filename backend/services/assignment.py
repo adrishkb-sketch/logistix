@@ -719,8 +719,33 @@ def reoptimize_driver_route(driver_id: str):
     start_lng = vehicle.get("last_known_location", {}).get("lng") if vehicle else active_tasks[0]["pickup"]["lng"]
 
     # Simple Optimization: Group by Shipment
-    # 1. Sort shipments by the distance from current location to their PICKUP
-    active_tasks.sort(key=lambda s: haversine(start_lat, start_lng, s["pickup"]["lat"], s["pickup"]["lng"]))
+    # 1. Try OSRM Trip API for optimal Traveling Salesperson routing
+    try:
+        import requests
+        # Create a list of all coordinates starting with current location
+        coords = [f"{start_lng},{start_lat}"]
+        for s in active_tasks:
+            coords.append(f"{s['pickup']['lng']},{s['pickup']['lat']}")
+        
+        coords_str = ";".join(coords)
+        url = f"http://router.project-osrm.org/trip/v1/driving/{coords_str}?source=first"
+        response = requests.get(url, timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            waypoints = data.get("waypoints", [])
+            order_map = {}
+            for pos, wp in enumerate(waypoints):
+                order_map[wp["waypoint_index"]] = pos
+                
+            # Copy active tasks to preserve original indices for lookup
+            orig_tasks = list(active_tasks)
+            active_tasks.sort(key=lambda item: order_map.get(orig_tasks.index(item) + 1, 999))
+            print("Successfully optimized route using OSRM AI Engine")
+        else:
+            raise Exception("OSRM API returned non-200")
+    except Exception as e:
+        print(f"OSRM Routing Fallback (using Haversine): {e}")
+        active_tasks.sort(key=lambda s: haversine(start_lat, start_lng, s["pickup"]["lat"], s["pickup"]["lng"]))
     
     # 2. Update deadlines sequentially
     curr_lat, curr_lng = start_lat, start_lng

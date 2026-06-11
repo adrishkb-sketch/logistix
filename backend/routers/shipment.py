@@ -784,6 +784,17 @@ def update_shipment(shipment_id: str, data: dict):
                     if challans > 0: feedback = f"Journey completed but {challans} challans recorded. Drive safely."
                     if overall < 80: feedback = "Delivery completed. Needs improvement in punctuality and safety."
                     
+                    try:
+                        from backend.services.gemini_service import call_gemini
+                        ai_sentiment = call_gemini(
+                            prompt=f"Perform sentiment analysis on this feedback: '{feedback}'.",
+                            system_instruction="You are an AI sentiment analyzer. Respond with only a summary of the sentiment.",
+                            api_key=None
+                        )
+                    except Exception as e:
+                        print(f"Sentiment Analysis Error: {e}")
+                        ai_sentiment = "Sentiment: Neutral"
+                    
                     review = JourneyReview(
                         shipment_id=shipment_id,
                         driver_id=driver_id,
@@ -791,7 +802,8 @@ def update_shipment(shipment_id: str, data: dict):
                         safety_score=round(s_score, 1),
                         challan_penalty=challans * 5.0,
                         total_score=round(overall, 1),
-                        feedback_message=feedback
+                        feedback_message=feedback,
+                        ai_sentiment=ai_sentiment
                     )
                     reviews_db.insert(review.model_dump())
             

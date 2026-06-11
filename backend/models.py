@@ -297,6 +297,7 @@ class JourneyReview(BaseModel):
     challan_penalty: float
     total_score: float
     feedback_message: str
+    ai_sentiment: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
 
 class WarehouseLeaveRequest(BaseModel):
