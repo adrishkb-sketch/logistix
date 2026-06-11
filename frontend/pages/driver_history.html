@@ -433,7 +433,7 @@
                 mCanvas.height = mHeight * dpr;
                 mCtx.scale(dpr, dpr);
 
-                const spacing = window.innerWidth < 768 ? 35 : 30;
+                const spacing = window.innerWidth < 768 ? 16 : 24;
                 mDots = [];
                 for (let x = 0; x < mWidth; x += spacing) {
                     for (let y = 0; y < mHeight; y += spacing) {
@@ -471,7 +471,7 @@
                     p.vx += (p.bx - p.x) * spring; p.vy += (p.by - p.y) * spring;
                     p.vx *= friction; p.vy *= friction;
                     p.x += p.vx; p.y += p.vy;
-                    mCtx.fillRect(p.x, p.y, 2.5, 2.5);
+                    mCtx.beginPath();\n                mCtx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);\n                mCtx.fill();
                 }
                 requestAnimationFrame(animateGrids);
             }
