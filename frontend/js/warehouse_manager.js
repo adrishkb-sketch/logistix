@@ -1402,6 +1402,8 @@ if (document.readyState === 'loading') {
 async function loadGateQueue() {
     try {
         const shipments = await apiCall('/shipments?company_id=' + companyId);
+        globalShipments = shipments || [];
+        if (typeof renderDockScheduling === 'function') renderDockScheduling();
         const whId = localStorage.getItem('warehouse_id');
         
         // Find shipments destined for this warehouse that are in transit or assigned
@@ -2031,7 +2033,7 @@ window.renderDockScheduling = async function() {
         // Find if any shipment arriving/here is assigned to this dock
         const assignedShipment = globalShipments.find(s => 
             s.dock_assigned === dockId && 
-            (s.current_warehouse_id === currentWarehouseId || s.drop_warehouse_id === currentWarehouseId) &&
+            (s.current_warehouse_id == currentWarehouseId || s.drop_warehouse_id == currentWarehouseId) &&
             ["assigned", "in_transit", "at_warehouse"].includes(s.status)
         );
         
@@ -2045,7 +2047,7 @@ window.renderDockScheduling = async function() {
         // Add a dropdown to assign a shipment
         // Only shipments inbound or at warehouse that don't have a dock
         const pendingShipments = globalShipments.filter(s => 
-            (s.current_warehouse_id === currentWarehouseId || s.drop_warehouse_id === currentWarehouseId) &&
+            (s.current_warehouse_id == currentWarehouseId || s.drop_warehouse_id == currentWarehouseId) &&
             ["assigned", "in_transit", "at_warehouse"].includes(s.status)
         );
 
