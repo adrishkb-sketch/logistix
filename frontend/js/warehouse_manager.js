@@ -50,6 +50,12 @@ async function init() {
     if (document.getElementById('payments-tab')) {
         loadHubFinance();
     }
+    if (document.getElementById('gate-tab') && typeof loadGateQueue === 'function') {
+        loadGateQueue();
+    }
+    if (document.getElementById('settings-tab') && typeof loadLeaveHistory === 'function') {
+        loadLeaveHistory();
+    }
     if (typeof initAIGating === 'function') {
         await initAIGating();
     }
@@ -1447,11 +1453,11 @@ async function gateCheckIn(shipmentId) {
     try {
         const payload = {
             status: "delivered", // For warehouse handoffs, the leg is 'delivered'
-            logs: [{
+            log_entry: {
                 status: "delivered",
                 message: "🏢 VEHICLE ARRIVED: Gate check-in completed at destination hub.",
                 timestamp: new Date().toISOString()
-            }]
+            }
         };
         await apiCall(`/shipments/${shipmentId}`, 'PUT', payload);
         alert("✅ Gate check-in successful!");
@@ -1463,12 +1469,14 @@ async function gateCheckIn(shipmentId) {
 
 // Hook into tab switching
 const originalSwitchTab = switchTab;
-switchTab = function(tab) {
+window.switchTab = function(tab) {
     originalSwitchTab(tab);
     if (tab === 'gate') {
         loadGateQueue();
     }
 };
+window.loadGateQueue = loadGateQueue;
+window.gateCheckIn = gateCheckIn;
 
 // --- Profile Modal & Checkup Approval Integration ---
 function injectProfileModal() {
