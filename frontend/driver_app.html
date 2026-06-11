@@ -105,9 +105,74 @@
         </div>
     </div>
 
+    <div id="install-gateway" style="display:none; position:absolute; inset:0; z-index:9999; background:var(--bg-base); flex-direction:column; align-items:center; justify-content:center; padding:24px;">
+        <div class="auth-card">
+            <svg style="width:64px; height:64px; color:var(--primary); margin-bottom:16px; display:inline-block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line><path d="M12 8v4"></path><polyline points="10 10 12 12 14 10"></polyline></svg>
+            <h1 style="margin-bottom: 8px;">Install Driver App</h1>
+            <p style="color:var(--text-muted); margin-bottom:24px; font-size:0.9rem;">Get the best native experience by installing the dedicated Driver App to your device.</p>
+            <button onclick="triggerInstall()" style="margin-bottom:12px;">Install Web App (PWA)</button>
+            <button onclick="downloadAPK()" style="margin-bottom:12px; background:rgba(255,255,255,0.1); color:#fff;">Download APK</button>
+            <button onclick="cancelInstall()" style="background:transparent; color:var(--text-muted); border:1px solid var(--border);">Cancel</button>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:8000/api' : 'https://api.logistix.com/api';
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        // Auto-login & Install Check
+        window.onload = () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            const forceApp = new URLSearchParams(window.location.search).get('force') === '1';
+            
+            if (!isStandalone && !forceApp) {
+                // Not installed, show the installation gateway
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('install-gateway').style.display = 'flex';
+            } else {
+                // Already installed or forced, show app
+                if (localStorage.getItem('driver_id')) {
+                    startApp();
+                } else {
+                    document.getElementById('auth-screen').style.display = 'flex';
+                }
+            }
+        };
+
+        function triggerInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                    window.location.href = 'index.html';
+                });
+            } else {
+                alert("To install, use your browser's 'Add to Home Screen' option.");
+                window.location.href = 'index.html';
+            }
+        }
+
+        function downloadAPK() {
+            const a = document.createElement('a');
+            a.href = 'public/LogistixDriver.apk';
+            a.download = 'LogistixDriver.apk';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
+        }
+
+        function cancelInstall() {
+            window.location.href = 'index.html';
+        }
 
         async function loginDriver() {
             const did = document.getElementById('driver-id').value;
@@ -141,6 +206,7 @@
 
         function startApp() {
             document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('install-gateway').style.display = 'none';
             document.getElementById('bottom-nav').style.display = 'flex';
             
             // Start Background Location tracking immediately
@@ -165,13 +231,6 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             if (el) el.classList.add('active');
         }
-
-        // Auto-login check
-        window.onload = () => {
-            if (localStorage.getItem('driver_id')) {
-                startApp();
-            }
-        };
     </script>
 </body>
 </html>
