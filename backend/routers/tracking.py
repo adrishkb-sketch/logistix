@@ -745,11 +745,25 @@ def get_fleet_weather(company_id: str):
                     intersects = True
 
             if intersects:
+                cell_type  = str(cell.get("type", "")).lower()
+                cell_severity = str(cell.get("severity", "")).lower()
+                is_simulation = cell.get("is_simulation", False)
+
+                # Only trigger alerts if it is an actual disaster/calamity event
+                is_actual_calamity = False
+                if any(c in cell_type for c in ["cyclone", "flood", "earthquake", "riot"]):
+                    is_actual_calamity = True
+                elif cell_severity == "critical" or is_simulation:
+                    if any(c in cell_type for c in ["storm", "hail", "heatwave"]):
+                        is_actual_calamity = True
+
+                if not is_actual_calamity:
+                    continue
+
                 affected_count += 1
                 driver  = drivers_db.get_by_id(s.get("assigned_driver_id", ""))
                 vehicle = vehicles_db.get_by_id(s.get("assigned_vehicle_id", ""))
 
-                cell_type  = str(cell.get("type", "")).lower()
                 ai_action  = "Reroute"
                 if cell_type in ("cyclone", "flood", "storm"):
                     ai_action = "Emergency Halt & Seek Shelter"

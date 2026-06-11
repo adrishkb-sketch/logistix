@@ -1035,7 +1035,7 @@
             }
         }
         showToast(count > 0 ? `Verified reroutes for ${count} shipments.` : 'No pending alerts.', count > 0 ? 'success' : 'info');
-        closeResultsPanel(); loadWeatherFleetData();
+        loadWeatherFleetData();
     }
 
     async function manualDivert(shipmentId) {
@@ -1210,7 +1210,7 @@
                 const countEl = document.getElementById('past-actions-count');
                 if (countEl) countEl.innerText = pastCount;
                 const listEl = document.getElementById('past-actions-list');
-                if (listEl && listEl.style.display === 'block') {
+                if (listEl) {
                     if (pastCount === 0) {
                         listEl.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:10px;">No past AI actions taken.</div>`;
                     } else {
