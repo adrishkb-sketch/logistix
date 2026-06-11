@@ -290,9 +290,7 @@ if (lastMsgCount === -1) {
 setInterval(async () => {
     const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
     // If we have page specific refreshes
-    if (typeof window.loadShipments === 'function') {
-        window.loadShipments();
-    }
+    // Note: window.loadShipments is not refreshed automatically to keep the shipments table static.
     window.checkSimulationStatus();
     
     // Background message check for notifications
