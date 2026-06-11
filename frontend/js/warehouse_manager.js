@@ -53,18 +53,18 @@ async function init() {
     
     // Dynamically open the correct tab based on the current page filename
     const pageToTab = {
-        'warehouse_manager_dash.html': 'dash',
-        'warehouse_manager_verifications.html': 'verifications',
-        'warehouse_manager_fleet.html': 'fleet',
-        'warehouse_manager_gate.html': 'gate',
-        'warehouse_manager_audit.html': 'audit',
-        'warehouse_manager_leaderboard.html': 'leaderboard',
-        'warehouse_manager_settings.html': 'settings',
-        'warehouse_manager_shipments.html': 'shipments',
-        'warehouse_manager_payments.html': 'payments',
-        'warehouse_manager_drones.html': 'drones'
+        'warehouse_manager_dash': 'dash',
+        'warehouse_manager_verifications': 'verifications',
+        'warehouse_manager_fleet': 'fleet',
+        'warehouse_manager_gate': 'gate',
+        'warehouse_manager_audit': 'audit',
+        'warehouse_manager_leaderboard': 'leaderboard',
+        'warehouse_manager_settings': 'settings',
+        'warehouse_manager_shipments': 'shipments',
+        'warehouse_manager_payments': 'payments',
+        'warehouse_manager_drones': 'drones'
     };
-    const currentFilename = window.location.pathname.split('/').pop().split('?')[0];
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const activeTab = pageToTab[currentFilename];
     if (activeTab && typeof window.switchTab === 'function') {
         window.switchTab(activeTab);
@@ -1084,21 +1084,21 @@ function initTheme() {
 
 function switchTab(tab) {
     const tabToPage = {
-        'dash': 'warehouse_manager_dash.html',
-        'verifications': 'warehouse_manager_verifications.html',
-        'fleet': 'warehouse_manager_fleet.html',
-        'gate': 'warehouse_manager_gate.html',
-        'audit': 'warehouse_manager_audit.html',
-        'leaderboard': 'warehouse_manager_leaderboard.html',
-        'settings': 'warehouse_manager_settings.html',
-        'shipments': 'warehouse_manager_shipments.html',
-        'payments': 'warehouse_manager_payments.html',
-        'drones': 'warehouse_manager_drones.html'
+        'dash': 'warehouse_manager_dash',
+        'verifications': 'warehouse_manager_verifications',
+        'fleet': 'warehouse_manager_fleet',
+        'gate': 'warehouse_manager_gate',
+        'audit': 'warehouse_manager_audit',
+        'leaderboard': 'warehouse_manager_leaderboard',
+        'settings': 'warehouse_manager_settings',
+        'shipments': 'warehouse_manager_shipments',
+        'payments': 'warehouse_manager_payments',
+        'drones': 'warehouse_manager_drones'
     };
-    const currentFilename = window.location.pathname.split('/').pop().split('?')[0];
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const expectedPage = tabToPage[tab];
     if (expectedPage && expectedPage !== currentFilename) {
-        window.location.href = expectedPage;
+        window.location.href = expectedPage + '.html';
         return;
     }
 
