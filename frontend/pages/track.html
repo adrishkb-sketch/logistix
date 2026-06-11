@@ -464,7 +464,7 @@
 
                     <div id="track-map" data-layout-id="track-map-container"></div>
 
-                    <div class="info-grid" data-layout-container="track-info-grid" data-layout-id="track-info-grid">
+                    <div class="info-grid" id="track-info-grid" data-layout-container="track-info-grid" data-layout-id="track-info-grid">
                         <div class="info-item" data-layout-id="info-pickup">
                             <small data-i18n="expected_pickup">Expected Pickup</small>
                             <strong id="det-pickup" style="display:flex; align-items:center; gap:8px;"><i class="ph ph-calendar-blank text-muted"></i> ---</strong>
@@ -505,7 +505,7 @@
                     </div>
 
                     <!-- Timeline -->
-                    <div data-layout-id="track-timeline-container" style="margin-top: 40px;">
+                    <div id="track-timeline-section" data-layout-id="track-timeline-container" style="margin-top: 40px;">
                         <h3 class="split-text" style="margin-bottom:24px; display:flex; align-items:center; gap:8px;">
                             <i class="ph ph-path" style="color: var(--accent-1);"></i>
                             <span data-i18n="journey_timeline">Journey Timeline</span>
@@ -519,12 +519,16 @@
                     <div id="rating-box" style="display:none; margin-top:40px; text-align:center; padding:40px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); box-shadow: inset 0 0 20px rgba(0,0,0,0.1);" data-layout-id="track-rating">
                         <h2 style="margin-bottom:8px;" data-i18n="rating_title">Rate your delivery</h2>
                         <p class="text-muted" style="margin-bottom:32px;" data-i18n="rating_desc">Help us improve by rating your experience.</p>
-                        <div style="display:flex; justify-content:center; gap:16px; margin-bottom:32px;">
+                        <div style="display:flex; justify-content:center; gap:16px; margin-bottom:24px;">
                             <button class="rating-star" data-value="1" onclick="setRating(1)">⭐</button>
                             <button class="rating-star" data-value="2" onclick="setRating(2)">⭐</button>
                             <button class="rating-star" data-value="3" onclick="setRating(3)">⭐</button>
                             <button class="rating-star" data-value="4" onclick="setRating(4)">⭐</button>
                             <button class="rating-star" data-value="5" onclick="setRating(5)">⭐</button>
+                        </div>
+                        <div class="input-group" style="text-align: left; margin-bottom: 24px;">
+                            <label for="rating-comment">Customer Review / Feedback</label>
+                            <textarea id="rating-comment" placeholder="Write a review of the shipment and driver..." style="width: 100%; min-height: 100px; padding: 16px; border-radius: 12px; background: var(--bg-base); border: 1px solid var(--border); color: var(--text-main); font-family: inherit; font-size: 0.95rem; outline: none; transition: 0.3s; resize: vertical;"></textarea>
                         </div>
                         <input type="hidden" id="selected-rating" value="0">
                         <button class="btn-primary" id="submit-rating-btn" style="background:var(--success); width:100%; box-shadow:0 4px 15px rgba(0, 255, 115, 0.3); color:#000;" onclick="submitRating()">

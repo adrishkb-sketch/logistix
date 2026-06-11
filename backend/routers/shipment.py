@@ -188,10 +188,12 @@ async def bulk_confirm(shipments: List[ShipmentCreate]):
 
 class ShipmentRating(BaseModel):
     rating: float # 1-5
+    review: Optional[str] = None
 
 @router.post("/{shipment_id}/rate")
 def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
     rating = rating_data.rating
+    review = rating_data.review
     shipment = shipments_db.get_by_id(shipment_id)
     if not shipment:
         # Fallback to prefix matching
@@ -259,13 +261,19 @@ def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
     
     shipments_db.update(shipment["id"], {
         "customer_rating": rating,
+        "customer_review": review,
         "points_breakdown": breakdown
     })
     
     # Append log to parent shipment
+    log_msg = f"Receiver rated the delivery: {rating}⭐."
+    if review:
+        log_msg += f" Review: {review}."
+    log_msg += f" Propagated to {len(driver_ids)} drivers."
+
     log = ShipmentEvent(
         status="delivered",
-        message=f"Receiver rated the delivery: {rating}⭐. Propagated to {len(driver_ids)} drivers.",
+        message=log_msg,
         location=shipment.get("drop")
     )
     history = shipment.get("logs", []) or []
@@ -283,6 +291,7 @@ def rate_shipment(shipment_id: str, rating_data: ShipmentRating):
         
         shipments_db.update(leg["id"], {
             "customer_rating": rating,
+            "customer_review": review,
             "points_breakdown": leg_breakdown,
             "logs": leg_history
         })
@@ -2449,21 +2458,6 @@ def pay_shipment(shipment_id: str):
     from backend.services.turso_db import TursoCompaniesDB
     comp_kv = TursoCompaniesDB()
     comp = comp_kv.get_by_id(shipment.get("company_id"))
-    if comp:
-        comp_kv.update(comp["id"], {"total_profit": comp.get("total_profit", 0) + amount})
-        
-        # Log to ledger
-        from backend.database import JSONDatabase
-        ledger_db = JSONDatabase("ledger")
-        ledger_db.insert({
-            "id": str(uuid.uuid4()),
-            "company_id": comp["id"],
-            "type": "REVENUE",
-            "amount": amount,
-            "shipment_id": shipment["id"],
-            "desc": f"Customer Payment for Shipment #{shipment['id'][:8]}",
-            "timestamp": datetime.utcnow().isoformat() + "Z"
-        })
     
     # Also update all legs
     all_ships = shipments_db.get_all()
@@ -2478,6 +2472,105 @@ def pay_shipment(shipment_id: str):
             "logs": leg.get("logs", []) + [leg_log]
         })
         
+    # Get associated warehouse
+    warehouse_id = shipment.get("pickup_warehouse_id") or shipment.get("drop_warehouse_id")
+    if not warehouse_id:
+        for leg in legs:
+            warehouse_id = leg.get("pickup_warehouse_id") or leg.get("drop_warehouse_id")
+            if warehouse_id:
+                break
+                
+    ledger_db = JSONDatabase("ledger")
+    
+    if comp:
+        comp_kv.update(comp["id"], {"total_profit": comp.get("total_profit", 0) + amount})
+        
+        # Log main payment to ledger
+        ledger_db.insert({
+            "id": str(uuid.uuid4()),
+            "company_id": comp["id"],
+            "type": "REVENUE",
+            "amount": amount,
+            "shipment_id": shipment["id"],
+            "desc": f"Customer Payment for Shipment #{shipment['id'][:8]}",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "warehouse_id": warehouse_id or ""
+        })
+
+    # Credit Hub Profit Share (10%) and Drone Restoration Fund (5%) to warehouse
+    if warehouse_id:
+        hub_share = round(amount * 0.10, 2)
+        drone_fund = round(amount * 0.05, 2)
+        wh = warehouses_db.get_by_id(warehouse_id)
+        if wh:
+            new_wb = round(wh.get("wallet_balance", 0.0) + hub_share + drone_fund, 2)
+            new_te = round(wh.get("total_earnings", 0.0) + hub_share + drone_fund, 2)
+            warehouses_db.update(wh["id"], {
+                "wallet_balance": new_wb,
+                "total_earnings": new_te
+            })
+            
+            # Log Hub Profit Share to ledger
+            ledger_db.insert({
+                "id": str(uuid.uuid4()),
+                "company_id": shipment.get("company_id"),
+                "warehouse_id": wh["id"],
+                "type": "REVENUE",
+                "amount": hub_share,
+                "shipment_id": shipment["id"],
+                "desc": f"Hub Profit Share (10%) for Shipment #{shipment['id'][:8]}",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
+            
+            # Log Drone Restoration Fund to ledger
+            ledger_db.insert({
+                "id": str(uuid.uuid4()),
+                "company_id": shipment.get("company_id"),
+                "warehouse_id": wh["id"],
+                "type": "REVENUE",
+                "amount": drone_fund,
+                "shipment_id": shipment["id"],
+                "desc": f"Drone Restoration Fund (5%) for Shipment #{shipment['id'][:8]}",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
+
+    # Credit assigned drivers
+    drivers_db = JSONDatabase("drivers")
+    driver_payments = []
+    
+    p_driver_id = shipment.get("assigned_driver_id")
+    p_wage = shipment.get("finance", {}).get("driver_wage", 0.0)
+    if p_driver_id and p_driver_id != "DRONE-SYSTEM" and p_wage > 0:
+        driver_payments.append((p_driver_id, p_wage, shipment["id"]))
+        
+    for leg in legs:
+        leg_driver_id = leg.get("assigned_driver_id")
+        leg_wage = leg.get("finance", {}).get("driver_wage", 0.0)
+        if leg_driver_id and leg_driver_id != "DRONE-SYSTEM" and leg_wage > 0:
+            driver_payments.append((leg_driver_id, leg_wage, leg["id"]))
+            
+    for d_id, wage, s_id in driver_payments:
+        d = drivers_db.get_by_id(d_id)
+        if d:
+            new_bal = round(d.get("wallet_balance", 0.0) + wage, 2)
+            new_total = round(d.get("total_earnings", 0.0) + wage, 2)
+            drivers_db.update(d_id, {
+                "wallet_balance": new_bal,
+                "total_earnings": new_total
+            })
+            
+            # Log EXPENSE to ledger
+            ledger_db.insert({
+                "id": str(uuid.uuid4()),
+                "company_id": shipment.get("company_id"),
+                "warehouse_id": warehouse_id or d.get("warehouse_id") or "",
+                "type": "EXPENSE",
+                "amount": wage,
+                "shipment_id": s_id,
+                "desc": f"Driver Wage payout to Driver #{d_id[:8]} for Shipment #{s_id[:8]}",
+                "timestamp": datetime.utcnow().isoformat() + "Z"
+            })
+
     return {"message": "Payment successful"}
 
 @router.post("/{shipment_id}/rate-legacy")

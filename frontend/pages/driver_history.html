@@ -366,209 +366,12 @@
     <!-- ── MAIN CONTENT: HISTORY ── -->
     <div id="history-content">
 
-        <!-- Stats Grid (All Time or Selected Filter) -->
-        <div class="stats-grid">
-            <div class="glass-card kpi-card border-top-success">
-                <p class="kpi-label">Total Earnings</p>
-                <div class="kpi-value-text" style="color:var(--success);">$4,250</div>
-            </div>
-            <div class="glass-card kpi-card border-top-primary">
-                <p class="kpi-label">Trips Completed</p>
-                <div class="kpi-value-text" style="color:var(--primary);">142</div>
-            </div>
-            <div class="glass-card kpi-card border-top-accent">
-                <p class="kpi-label">Distance Driven</p>
-                <div class="kpi-value-text" style="color:var(--accent);">8.4k <span style="font-size:1rem;">mi</span></div>
-            </div>
-        </div>
-
-        <!-- Earnings Chart -->
-        <div class="glass-card" style="margin-bottom:28px;">
-            <div class="history-controls">
-                <h4 style="margin:0; font-size:1.2rem; display:flex; align-items:center; gap:10px;">
-                    <svg class="icon-md" style="color:var(--accent-4);" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-                    Earnings History
-                </h4>
-                <select class="filter-select">
-                    <option value="month">This Month</option>
-                    <option value="quarter">Past 3 Months</option>
-                    <option value="year">This Year</option>
-                </select>
-            </div>
-            <div style="position: relative; height: 220px; width: 100%;">
-                <canvas id="earningsChart"></canvas>
-            </div>
-        </div>
-
         <!-- Trip History List -->
         <div>
             <h4 style="margin: 0 0 16px 8px; font-size: 1.2rem; color: var(--text-muted);">Recent Trips</h4>
-
-            <!-- Card 1: Completed -->
-            <div class="glass-card history-card">
-                <div class="history-header">
-                    <div>
-                        <div class="history-date">Today</div>
-                        <div class="history-time">Completed at 14:30</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="history-price">$185.50</div>
-                        <div class="status-pill status-completed mt-2">
-                            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                            COMPLETED
-                        </div>
-                    </div>
-                </div>
-
-                <div class="route-visualizer">
-                    <div class="route-point">
-                        <span class="route-point-label">Pickup</span>
-                        <span class="route-point-value">Logistix Hub North, Seattle</span>
-                    </div>
-                    <div class="route-point end">
-                        <span class="route-point-label">Dropoff</span>
-                        <span class="route-point-value">Tech Park Alpha, Portland</span>
-                    </div>
-                </div>
-
-                <div class="history-footer">
-                    <div class="stat-badge">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        3h 15m
-                    </div>
-                    <div class="stat-badge">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon></svg>
-                        174 mi
-                    </div>
-                    <div class="stat-badge" style="color: #fbbf24;">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        5.0
-                    </div>
-                </div>
+            <div id="trip-history-list">
+                <p style="text-align: center; padding: 20px; color: var(--text-muted);">Loading trips...</p>
             </div>
-
-            <!-- Card 2: Completed -->
-            <div class="glass-card history-card">
-                <div class="history-header">
-                    <div>
-                        <div class="history-date">Yesterday</div>
-                        <div class="history-time">Completed at 18:45</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="history-price">$95.00</div>
-                        <div class="status-pill status-completed mt-2">
-                            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                            COMPLETED
-                        </div>
-                    </div>
-                </div>
-
-                <div class="route-visualizer">
-                    <div class="route-point">
-                        <span class="route-point-label">Pickup</span>
-                        <span class="route-point-value">Downtown Warehouse 4</span>
-                    </div>
-                    <div class="route-point end">
-                        <span class="route-point-label">Dropoff</span>
-                        <span class="route-point-value">Retail Center, Bellevue</span>
-                    </div>
-                </div>
-
-                <div class="history-footer">
-                    <div class="stat-badge">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        1h 20m
-                    </div>
-                    <div class="stat-badge">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon></svg>
-                        42 mi
-                    </div>
-                    <div class="stat-badge" style="color: #fbbf24;">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        4.8
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 3: Cancelled -->
-            <div class="glass-card history-card cancelled">
-                <div class="history-header">
-                    <div>
-                        <div class="history-date">Oct 24, 2026</div>
-                        <div class="history-time">Issue Reported at 09:15</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="history-price" style="color:var(--text-muted); text-decoration: line-through;">$120.00</div>
-                        <div class="status-pill status-cancelled mt-2">
-                            <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                            CANCELLED
-                        </div>
-                    </div>
-                </div>
-
-                <div class="route-visualizer">
-                    <div class="route-point">
-                        <span class="route-point-label">Pickup</span>
-                        <span class="route-point-value">Port Terminal B</span>
-                    </div>
-                    <div class="route-point end">
-                        <span class="route-point-label">Dropoff</span>
-                        <span class="route-point-value">Distribution Center East</span>
-                    </div>
-                </div>
-
-                <div class="history-footer">
-                    <div class="stat-badge" style="color: var(--danger);">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                        Vehicle Breakdown
-                    </div>
-                </div>
-            </div>
-
-            <!-- Card 4: Completed -->
-            <div class="glass-card history-card">
-                <div class="history-header">
-                    <div>
-                        <div class="history-date">Oct 22, 2026</div>
-                        <div class="history-time">Completed at 11:10</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div class="history-price">$210.75</div>
-                        <div class="status-pill status-completed mt-2">
-                            <svg class="icon-sm" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                            COMPLETED
-                        </div>
-                    </div>
-                </div>
-
-                <div class="route-visualizer">
-                    <div class="route-point">
-                        <span class="route-point-label">Pickup</span>
-                        <span class="route-point-value">Logistix Hub South</span>
-                    </div>
-                    <div class="route-point end">
-                        <span class="route-point-label">Dropoff</span>
-                        <span class="route-point-value">Mega Mart Central Storage</span>
-                    </div>
-                </div>
-
-                <div class="history-footer">
-                    <div class="stat-badge">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        4h 05m
-                    </div>
-                    <div class="stat-badge">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon></svg>
-                        215 mi
-                    </div>
-                    <div class="stat-badge" style="color: #fbbf24;">
-                        <svg class="icon-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        5.0
-                    </div>
-                </div>
-            </div>
-
-            <button class="glass-btn" style="width: 100%; margin-top: 10px;">Load More History</button>
         </div>
 
     </div> <!-- /history-content -->
@@ -675,75 +478,7 @@
             initGrids(); animateGrids();
         }
 
-        // ── CHART.JS INITIALIZATION ──
-        const ctx = document.getElementById('earningsChart').getContext('2d');
-
-        // Create a beautiful purple-to-transparent gradient for the chart
-        const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-        gradient.addColorStop(0, 'rgba(177, 66, 255, 0.6)'); // --accent-4
-        gradient.addColorStop(1, 'rgba(177, 66, 255, 0.0)');
-
-        const earningsChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4'],
-                datasets: [{
-                    label: 'Earnings ($)',
-                    data: [850, 1120, 940, 1340],
-                    borderColor: '#b142ff', // --accent-4
-                    backgroundColor: gradient,
-                    borderWidth: 3,
-                    pointBackgroundColor: '#010208',
-                    pointBorderColor: '#b142ff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
-                    fill: true,
-                    tension: 0.4 // Smooth curves
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 20, 35, 0.9)',
-                        titleFont: { family: 'Plus Jakarta Sans', size: 13 },
-                        bodyFont: { family: 'Space Grotesk', size: 14, weight: 'bold' },
-                        padding: 12,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return '$' + context.parsed.y;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.5)',
-                            font: { family: 'Plus Jakarta Sans' },
-                            callback: function(value) { return '$' + value; }
-                        }
-                    },
-                    x: {
-                        grid: { display: false, drawBorder: false },
-                        ticks: { color: 'rgba(255, 255, 255, 0.5)', font: { family: 'Plus Jakarta Sans' } }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index',
-                },
-            }
-        });
-
-        // ── THEME TOGGLE LOGIC & CHART UPDATE ──
+        // ── THEME TOGGLE LOGIC ──
         const themeIcon = document.getElementById('theme-icon');
         const moonSVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
         const sunSVG = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
@@ -757,23 +492,6 @@
                 document.body.classList.remove('light-mode');
                 themeIcon.innerHTML = moonSVG;
             }
-
-            // Update Chart Colors based on theme
-            const textColor = isLight ? 'rgba(15, 23, 42, 0.6)' : 'rgba(255, 255, 255, 0.5)';
-            const gridColor = isLight ? 'rgba(15, 23, 42, 0.05)' : 'rgba(255, 255, 255, 0.05)';
-            const pointBg = isLight ? '#f1f5f9' : '#010208';
-            const tooltipBg = isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 20, 35, 0.9)';
-            const tooltipText = isLight ? '#0f172a' : '#ffffff';
-
-            earningsChart.options.scales.x.ticks.color = textColor;
-            earningsChart.options.scales.y.ticks.color = textColor;
-            earningsChart.options.scales.y.grid.color = gridColor;
-            earningsChart.data.datasets[0].pointBackgroundColor = pointBg;
-            earningsChart.options.plugins.tooltip.backgroundColor = tooltipBg;
-            earningsChart.options.plugins.tooltip.titleColor = tooltipText;
-            earningsChart.options.plugins.tooltip.bodyColor = tooltipText;
-            earningsChart.update();
-
             localStorage.setItem('theme', mode);
         }
 
@@ -784,8 +502,93 @@
 
         // Initialize theme based on preference or local storage
         setTheme(localStorage.getItem('theme') || 'dark');
+
+        // Load trips dynamically
+        loadCompletedTrips();
     });
-</script>
+
+    async function loadCompletedTrips() {
+        const dId = localStorage.getItem('driver_id');
+        const listEl = document.getElementById('trip-history-list');
+        if (!listEl) return;
+        
+        try {
+            const shipments = await apiCall(`/driver/${dId}/shipments`);
+            const completed = shipments.filter(s => s.status === 'delivered' || s.status === 'finalized');
+            
+            if (completed.length === 0) {
+                listEl.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-muted);">No completed trips found.</p>`;
+                return;
+            }
+            
+            listEl.innerHTML = completed.map(s => {
+                const d = new Date(s.actual_delivery || s.expected_delivery || new Date());
+                const dateStr = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                
+                const pickupAddr = s.pickup?.address || s.pickup?.name || 'Hub/Origin';
+                const dropAddr = s.drop?.address || s.drop?.name || 'Destination';
+                
+                let ratingHtml = '';
+                if (s.parent_customer_rating) {
+                    ratingHtml = `
+                        <div class="stat-badge" style="color: #fbbf24; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                            ⭐ ${s.parent_customer_rating.toFixed(1)}
+                        </div>
+                    `;
+                }
+                
+                let reviewHtml = '';
+                if (s.parent_customer_review) {
+                    reviewHtml = `
+                        <div style="margin-top: 12px; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.85rem; color: var(--text-muted); font-style: italic; text-align: left;">
+                            &ldquo;${s.parent_customer_review}&rdquo;
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="glass-card history-card" style="margin-bottom: 16px;">
+                        <div class="history-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                            <div style="text-align: left;">
+                                <div class="history-date" style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);">${dateStr}</div>
+                                <div class="history-time" style="font-size: 0.8rem; color: var(--text-muted);">Completed at ${timeStr}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="status-pill status-completed" style="background: rgba(0, 255, 115, 0.1); color: var(--success); border: 1px solid rgba(0, 255, 115, 0.3); font-size: 0.75rem; font-weight: 800; padding: 4px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                                    COMPLETED
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: var(--accent-1); text-align: left;">${s.description || 'Shipment'}</div>
+
+                        <div class="route-visualizer" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; text-align: left;">
+                            <div class="route-point">
+                                <span class="route-point-label" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-2); text-transform: uppercase; display: block; margin-bottom: 2px;">Pickup</span>
+                                <span class="route-point-value" style="font-size: 0.85rem; color: var(--text-main);">${pickupAddr}</span>
+                            </div>
+                            <div class="route-point end">
+                                <span class="route-point-label" style="font-size: 0.75rem; font-weight: 700; color: var(--accent-3); text-transform: uppercase; display: block; margin-bottom: 2px;">Dropoff</span>
+                                <span class="route-point-value" style="font-size: 0.85rem; color: var(--text-main);">${dropAddr}</span>
+                            </div>
+                        </div>
+
+                        <div class="history-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <div class="stat-badge" style="font-size: 0.8rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px;">
+                                🆔 #${s.id.substring(0, 8)}
+                            </div>
+                            ${ratingHtml}
+                        </div>
+                        ${reviewHtml}
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            console.error("Failed to load completed trips", err);
+            listEl.innerHTML = `<p style="text-align: center; padding: 20px; color: var(--danger);">Failed to load trip history.</p>`;
+        }
+    }
 
 </body>
 </html>

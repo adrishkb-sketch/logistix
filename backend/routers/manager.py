@@ -2103,6 +2103,7 @@ def get_fintech_stats(company_id: str, x_logistix_context: Optional[str] = Heade
 @router.get("/warehouses/{warehouse_id}/finance")
 def get_warehouse_finance(warehouse_id: str):
     from datetime import datetime, timedelta
+    from backend.database import JSONDatabase
     all_txs = ledger_db.get_all()
     hub_txs = [t for t in all_txs if t and t.get("warehouse_id") == warehouse_id]
     
@@ -2112,9 +2113,15 @@ def get_warehouse_finance(warehouse_id: str):
     
     recent = sorted(hub_txs, key=lambda x: x.get("timestamp", ""), reverse=True)[:10]
     
+    wh = JSONDatabase("warehouses").get_by_id(warehouse_id)
+    wallet_balance = wh.get("wallet_balance", 0.0) if wh else 0.0
+    total_earnings = wh.get("total_earnings", 0.0) if wh else 0.0
+    
     return {
         "hub_profit_share": round(hub_profit, 2),
         "drone_restoration_fund": round(drone_fund, 2),
+        "wallet_balance": round(wallet_balance, 2),
+        "total_earnings": round(total_earnings, 2),
         "recent_transactions": recent
     }
 

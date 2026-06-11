@@ -1,5 +1,25 @@
 // Drone Hub & Airspace Tracking Logic for Warehouse Managers
 
+window.switchTab = function(tab) {
+    const tabToPage = {
+        'dash': 'warehouse_manager_dash.html',
+        'verifications': 'warehouse_manager_verifications.html',
+        'fleet': 'warehouse_manager_fleet.html',
+        'gate': 'warehouse_manager_gate.html',
+        'audit': 'warehouse_manager_audit.html',
+        'leaderboard': 'warehouse_manager_leaderboard.html',
+        'settings': 'warehouse_manager_settings.html',
+        'shipments': 'warehouse_manager_shipments.html',
+        'payments': 'warehouse_manager_payments.html',
+        'drones': 'warehouse_manager_drones.html'
+    };
+    const currentFilename = window.location.pathname.split('/').pop();
+    const expectedPage = tabToPage[tab];
+    if (expectedPage && expectedPage !== currentFilename) {
+        window.location.href = expectedPage;
+    }
+};
+
 let map = null;
 let warehouseMarker = null;
 let activeDroneMarkers = {};
@@ -135,7 +155,7 @@ function renderDrones() {
 
 async function loadPendingShipments() {
     try {
-        const shipments = await apiCall(`/manager/shipments?company_id=${companyId}`);
+        const shipments = await apiCall(`/shipments?company_id=${companyId}`);
         // Filter final leg deliveries (destined for local drop coordinates or weight < 20kg, status in pending/assigned)
         globalShipments = shipments.filter(s => {
             return s.pickup_warehouse_id === whId && (s.status === 'pending' || s.status === 'assigned');

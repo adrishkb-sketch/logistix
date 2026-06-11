@@ -7,6 +7,9 @@ if (!whId || !companyId) {
     window.location.href = '../index.html';
 }
 
+const currentWarehouseId = whId;
+let globalShipments = [];
+
 const managerNameEl = document.getElementById('wh-manager-name');
 if (managerNameEl) {
     managerNameEl.innerText = localStorage.getItem('manager_name') || 'Manager';
@@ -81,19 +84,21 @@ async function loadWarehouseData() {
     }
 }
 
-async function loadDriversAndVehicles() {
+async function loadGlobalData() {
     try {
-        const [drivers, vehicles, drones, warehouses] = await Promise.all([
+        const [drivers, vehicles, drones, warehouses, shipments] = await Promise.all([
             apiCall(`/manager/drivers?company_id=${companyId}`),
             apiCall(`/manager/vehicles?company_id=${companyId}`),
             apiCall(`/manager/drones?company_id=${companyId}`),
-            apiCall(`/manager/warehouses?company_id=${companyId}`)
+            apiCall(`/manager/warehouses?company_id=${companyId}`),
+            apiCall(`/shipments?company_id=${companyId}`)
         ]);
 
         globalDrivers = drivers || [];
         globalVehicles = vehicles || [];
         globalDrones = drones || [];
         globalWarehouses = warehouses || [];
+        globalShipments = shipments || [];
 
         renderVerifications();
         renderVerifiedVehicles();
@@ -102,10 +107,15 @@ async function loadDriversAndVehicles() {
         renderDriversTable();
         renderVehiclesTable();
         renderDronesTable();
+        if (typeof renderHubShipments === 'function') renderHubShipments();
         updateStats();
     } catch(e) {
-        console.error("Failed to load data", e);
+        console.error("Failed to load global data", e);
     }
+}
+
+async function loadDriversAndVehicles() {
+    await loadGlobalData();
 }
 
 function updateStats() {
@@ -1057,19 +1067,22 @@ function switchTab(tab) {
         'gate': 'warehouse_manager_gate.html',
         'audit': 'warehouse_manager_audit.html',
         'leaderboard': 'warehouse_manager_leaderboard.html',
-        'settings': 'warehouse_manager_settings.html'
+        'settings': 'warehouse_manager_settings.html',
+        'shipments': 'warehouse_manager_shipments.html',
+        'payments': 'warehouse_manager_payments.html',
+        'drones': 'warehouse_manager_drones.html'
     };
     const currentFilename = window.location.pathname.split('/').pop();
     const expectedPage = tabToPage[tab];
-    if (expectedPage && expectedPage !== currentFilename && (currentFilename.startsWith('warehouse_manager_') || currentFilename === 'warehouse_manager.html')) {
+    if (expectedPage && expectedPage !== currentFilename) {
         window.location.href = expectedPage;
         return;
     }
 
     document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-    document.querySelectorAll('.nav-link-v3').forEach(l => l.classList.remove('active'));
+    document.querySelectorAll('.nav-link-v3, .nav-link').forEach(l => l.classList.remove('active'));
     
-    const target = document.getElementById(`${tab}-tab`);
+    const target = document.getElementById(`${tab}-tab`) || document.getElementById(tab);
     if (target) target.style.display = 'block';
     
     const nav = document.getElementById(`nav-${tab}`);
@@ -1078,7 +1091,11 @@ function switchTab(tab) {
     if (tab === 'dash') {
         setTimeout(() => { if (hubPerformanceChart) hubPerformanceChart.resize(); }, 10);
     }
+    if (tab === 'leaderboard' && typeof loadLeaderboard === 'function') loadLeaderboard();
+    if (tab === 'settings' && typeof loadLeaveHistory === 'function') loadLeaveHistory();
+    if (tab === 'gate' && typeof loadGateQueue === 'function') loadGateQueue();
 }
+window.switchTab = switchTab;
 
 function changeLanguage(lang) {
     localStorage.setItem('app_lang', lang);
@@ -1306,27 +1323,7 @@ window.loadLeaderboard = async function() {
     }
 };
 
-window.switchTab = function(tab) {
-    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-    document.querySelectorAll('.nav-link-v3').forEach(l => l.classList.remove('active'));
-    
-    // Try both tab-specific ID and generic ID
-    let target = document.getElementById(tab + '-tab');
-    if (!target) target = document.getElementById(tab);
-
-    if (target) {
-        target.style.display = 'block';
-    } else {
-        console.error("Tab section not found:", tab);
-    }
-    
-    const nav = document.getElementById('nav-' + tab);
-    if (nav) nav.classList.add('active');
-    
-    if (tab === 'leaderboard') loadLeaderboard();
-    if (tab === 'settings') loadLeaveHistory();
-
-};
+window.switchTab = switchTab;
 
 
 window.submitLeaveRequest = async function() {
@@ -1398,7 +1395,7 @@ if (document.readyState === 'loading') {
 
 async function loadGateQueue() {
     try {
-        const shipments = await apiCall('/manager/shipments?company_id=' + companyId);
+        const shipments = await apiCall('/shipments?company_id=' + companyId);
         const whId = localStorage.getItem('warehouse_id');
         
         // Find shipments destined for this warehouse that are in transit or assigned
@@ -1456,7 +1453,7 @@ async function gateCheckIn(shipmentId) {
                 timestamp: new Date().toISOString()
             }]
         };
-        await apiCall(`/manager/shipments/${shipmentId}`, 'PUT', payload);
+        await apiCall(`/shipments/${shipmentId}`, 'PUT', payload);
         alert("✅ Gate check-in successful!");
         loadGateQueue();
     } catch (e) {

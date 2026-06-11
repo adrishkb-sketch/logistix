@@ -24,7 +24,7 @@ async function apiCall(endpoint, method = "GET", body = null, isSilent = false) 
     // Sanitize to prevent "null" or "undefined" strings in headers/params
     if (context === "null" || context === "undefined") context = "";
     
-    if ((!context || context === "") && !endpoint.includes('/auth/')) {
+    if ((!context || context === "") && !endpoint.includes('/auth/') && !endpoint.includes('/tracking/')) {
         console.warn("API Call attempted without security context:", endpoint);
         // If we are on a dashboard and lose context, redirect to login
         if (window.location.pathname.includes('/pages/')) {

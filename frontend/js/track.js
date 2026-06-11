@@ -101,10 +101,12 @@ function showPanel(panelId) {
     const chatToggle = document.getElementById('ai-chat-toggle');
     const chatWindow = document.getElementById('ai-chat-window');
     if (panelId === 'detail') {
-        if (window.shipmentAiConfigured) {
+        const isPaid = window.currentShipmentPaid;
+        if (window.shipmentAiConfigured && isPaid) {
             if (chatToggle) chatToggle.style.display = 'flex';
         } else {
             if (chatToggle) chatToggle.style.display = 'none';
+            if (chatWindow) chatWindow.style.display = 'none';
         }
     } else {
         if (chatToggle) chatToggle.style.display = 'none';
@@ -423,8 +425,26 @@ async function viewOrder(id) {
             </div>`;
         }).join('');
 
+        window.currentShipmentPaid = (s.payment_status === 'paid');
+        const isPaid = s.payment_status === 'paid';
+        
+        const mapContainer = document.getElementById('track-map');
+        const infoGridEl = document.getElementById('track-info-grid');
+        const timelineContainer = document.getElementById('track-timeline-section');
+        
+        if (mapContainer) mapContainer.style.display = isPaid ? 'block' : 'none';
+        if (infoGridEl) infoGridEl.style.display = isPaid ? 'grid' : 'none';
+        if (timelineContainer) timelineContainer.style.display = isPaid ? 'block' : 'none';
+
+        const factorsEl = document.getElementById('dynamic-eta-factors');
+        if (factorsEl) factorsEl.style.display = isPaid ? 'block' : 'none';
+        const legsEl = document.getElementById('track-legs-container');
+        if (legsEl) legsEl.style.display = isPaid ? 'block' : 'none';
+
         showPanel('detail');
-        initMap(s, dynamicEta, trackingData.vehicle_type, trackingData.legs || []);
+        if (isPaid) {
+            initMap(s, dynamicEta, trackingData.vehicle_type, trackingData.legs || []);
+        }
     } catch (e) {
         console.error(e);
         alert(getTranslation('failed_load_details'));
@@ -646,12 +666,15 @@ async function submitRating() {
     const val = parseInt(document.getElementById('selected-rating').value);
     if (val === 0) return alert(getTranslation('alert_select_rating'));
     
+    const commentEl = document.getElementById('rating-comment');
+    const comment = commentEl ? commentEl.value.trim() : '';
+    
     const btn = document.getElementById('submit-rating-btn');
     btn.disabled = true;
     btn.innerText = getTranslation('submitting_btn');
     
     try {
-        await apiCall(`/shipments/${currentShipmentId}/rate`, 'POST', { rating: val });
+        await apiCall(`/shipments/${currentShipmentId}/rate`, 'POST', { rating: val, review: comment });
         alert(getTranslation('thank_you_feedback'));
         document.getElementById('rating-box').style.display = 'none';
     } catch (e) {

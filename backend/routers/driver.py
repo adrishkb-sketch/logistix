@@ -71,6 +71,17 @@ def get_driver_shipments(driver_id: str, x_logistix_context: Optional[str] = Hea
         shipment_funds = [f for f in all_funds if f and f.get("shipment_id") == s["id"]]
         s["has_refuel_req"] = any(f.get("type") == "refuel" for f in shipment_funds)
         s["has_toll_req"] = any(f.get("type") == "toll" for f in shipment_funds)
+        
+        # Attach parent rating & review if it's a leg or own rating/review
+        rating = s.get("customer_rating")
+        review = s.get("customer_review")
+        if not rating and s.get("is_leg") and s.get("parent_id"):
+            parent = next((item for item in all_ships if item and item.get("id") == s["parent_id"]), None)
+            if parent:
+                rating = parent.get("customer_rating")
+                review = parent.get("customer_review")
+        s["parent_customer_rating"] = rating
+        s["parent_customer_review"] = review
                 
     if db_changed:
         shipments_db.write(all_ships)

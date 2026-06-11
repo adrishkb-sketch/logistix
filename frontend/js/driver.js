@@ -567,6 +567,7 @@ function initBlockingOverlays() {
                 <p id="vitals-warning-text" style="color:var(--text-muted); margin-bottom:24px; font-size:0.95rem; line-height:1.5;"></p>
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     <button class="btn-primary" id="vitals-sync-btn-overlay" style="background:var(--accent); color:#000; font-weight:800; border:none; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">⌚ Sync Smartwatch Vitals</button>
+                    <button class="btn-primary" id="vitals-manual-btn-overlay" style="background:var(--primary); color:#000; font-weight:800; border:none; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">📝 Enter Vitals Manually</button>
                     <button class="btn-primary" id="vitals-close-btn-overlay" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:white; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">Close</button>
                 </div>
             </div>
@@ -583,6 +584,10 @@ function initBlockingOverlays() {
             } else {
                 toggleWatchSync();
             }
+        });
+        document.getElementById('vitals-manual-btn-overlay').addEventListener('click', () => {
+            document.getElementById('vitals-warning-overlay').style.display = 'none';
+            openHealthModal();
         });
         document.getElementById('vitals-close-btn-overlay').addEventListener('click', () => {
             document.getElementById('vitals-warning-overlay').style.display = 'none';
@@ -943,6 +948,16 @@ function replaceDutyAndWatchButtons(me, activeShipments) {
                 });
                 
                 medCard.appendChild(relocatedWatchBtn);
+
+                const manualVitalsBtn = document.createElement('button');
+                manualVitalsBtn.id = 'manual-vitals-btn';
+                manualVitalsBtn.className = 'btn-primary';
+                manualVitalsBtn.style.cssText = 'width:100%; margin-top:8px; background:rgba(255,255,255,0.05); border:1px solid var(--primary); font-weight:800; border-radius:14px; padding:12px; box-sizing:border-box;';
+                manualVitalsBtn.innerHTML = '📝 ENTER VITALS MANUALLY';
+                manualVitalsBtn.addEventListener('click', function() {
+                    openHealthModal();
+                });
+                medCard.appendChild(manualVitalsBtn);
             }
         }
     }

@@ -6,6 +6,26 @@ if (!whId || !companyId) {
     window.location.href = '../index.html';
 }
 
+window.switchTab = function(tab) {
+    const tabToPage = {
+        'dash': 'warehouse_manager_dash.html',
+        'verifications': 'warehouse_manager_verifications.html',
+        'fleet': 'warehouse_manager_fleet.html',
+        'gate': 'warehouse_manager_gate.html',
+        'audit': 'warehouse_manager_audit.html',
+        'leaderboard': 'warehouse_manager_leaderboard.html',
+        'settings': 'warehouse_manager_settings.html',
+        'shipments': 'warehouse_manager_shipments.html',
+        'payments': 'warehouse_manager_payments.html',
+        'drones': 'warehouse_manager_drones.html'
+    };
+    const currentFilename = window.location.pathname.split('/').pop();
+    const expectedPage = tabToPage[tab];
+    if (expectedPage && expectedPage !== currentFilename) {
+        window.location.href = expectedPage;
+    }
+};
+
 // Global data stores
 let globalDrivers = [];
 let globalVehicles = [];
