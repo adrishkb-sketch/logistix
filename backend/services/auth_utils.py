@@ -64,8 +64,8 @@ def verify_context(context_id: str, x_logistix_context: Optional[str] = Header(N
         if ctx.get("role") == "manager" or ctx.get("bypass_auth"):
             return True # In simulation, we trust the bypass/manager role
             
-        # If it's a driver, the context_id (driver_id) must match
-        if ctx.get("driver_id") == context_id:
+        # If it's a driver or warehouse manager, allow if the context matches their specific ID or their company_id
+        if ctx.get("driver_id") == context_id or ctx.get("warehouse_id") == context_id or ctx.get("company_id") == context_id:
             return True
             
         raise HTTPException(status_code=403, detail="Context ID mismatch in JSON context")
