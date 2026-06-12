@@ -13,10 +13,11 @@ let smartStepIndex = -1;
 let smartType = 'shipment';
 let currentLookedUpReceiverId = null;
 
-const ICON_PICKER = L.divIcon({
-    html: `<div style="background:var(--accent); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px var(--accent); font-size:12px; color:black;">📍</div>`,
-    className: 'custom-marker', iconSize: [24, 24], iconAnchor: [12, 12]
-});
+const ICON_PICKER = {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="white" stroke-width="2"/></svg>'),
+    scaledSize: new google.maps.Size(24, 24),
+    anchor: new google.maps.Point(12, 12)
+};
 
 // === LOGISTIX ENVIRONMENTAL & AI SCORING ENGINE ===
 function haversineDistance(lat1, lng1, lat2, lng2) {

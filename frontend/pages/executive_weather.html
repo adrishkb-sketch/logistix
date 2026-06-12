@@ -12,7 +12,8 @@
     <!-- Premium Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
-    <!-- Google Maps API uses dynamically injected CSS -->
+    <!-- Leaflet & Draw CSS -->
+    <!-- Leaflet CSS removed -->
 
     <!-- External Base Styles -->
     <link href="../css/premium_theme.css" rel="stylesheet"/>
@@ -704,6 +705,8 @@
 <!-- ── SCRIPTS ── -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDVPnuQKHJxNnw3kstRBfIynZbafz2llpo&libraries=drawing,visualization,places,geometry"></script>
+
+
 <script src="../js/translator.js?v=2.3"></script>
 <script src="../js/logo.js"></script>
 <script src="../js/voice.js?v=2.3"></script>
@@ -780,19 +783,11 @@
     function logout() { localStorage.clear(); window.location.href = '../index.html'; }
 
     // ── GLOBALS & MAP LOGIC ──
-    let map = null, heatmap = null, drawingManager = null, currentDrawHandler = null;
-    let weatherMarkers = [], warehouseMarkers = [], drawnItems = [];
+    let map = null, baseLayers = {}, radarLayer = null, cloudLayer = null, windLayer = null, heatLayer = null;
+    let drawControl = null, drawnItems = null, currentDrawHandler = null;
+    let weatherMarkers = [], warehouseMarkers = [];
     let isDrawing = false, simulationPanelClosedByUser = false, refreshInterval = null;
-    let darkMapStyle = [
-        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-        { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-        { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] },
-        { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] }
-    ];
-    let lightMapStyle = []; // Default Google style
+    window._soiPatchLayers = [];
 
     function initWeatherMap() {
         if (map) return;
@@ -823,14 +818,6 @@
             setDrawMode(false);
         });
 
-        // Setup panels
-        makeDraggable(document.getElementById('sim-panel'), document.getElementById('sim-panel-handle'));
-        makeDraggable(document.getElementById('results-panel'), document.getElementById('results-panel-handle'));
-
-        initCharts();
-        loadWeatherFleetData();
-        refreshInterval = setInterval(loadWeatherFleetData, 15000);
-        
         // India boundary
         map.data.loadGeoJson('../data/india-composite-simplified.geojson');
         map.data.setStyle({
@@ -838,6 +825,41 @@
             strokeWeight: 2.5,
             strokeColor: '#00e5ff'
         });
+
+        drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: {
+                polygon: false, rectangle: false, marker: false, circlemarker: false,
+                circle: { shapeOptions: { color: '#ff9900', fillColor: '#ff9900', fillOpacity: 0.2, weight: 2 } },
+                polyline: { shapeOptions: { color: '#ff3b30', weight: 4, opacity: 0.8 } }
+            }
+        });
+        map.addControl(drawControl);
+
+        map.on(L.Draw.Event.CREATED, function(e) {
+            drawnItems.addLayer(e.layer);
+            handleCustomDisaster(e.layerType, e.layer);
+            setDrawMode(false);
+        });
+        map.on(L.Draw.Event.DRAWSTOP, function() { setDrawMode(false); });
+
+        makeDraggable(document.getElementById('sim-panel'), document.getElementById('sim-panel-handle'));
+        makeDraggable(document.getElementById('results-panel'), document.getElementById('results-panel-handle'));
+
+        setTimeout(() => { if (map) map.invalidateSize(true); }, 200);
+
+        initCharts();
+        loadWeatherFleetData();
+        refreshInterval = setInterval(loadWeatherFleetData, 15000);
+    }
+
+    function buildBaseLayers() {
+        baseLayers = {
+            standard_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
+            standard_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
+            terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 })
+        };
     }
 
     function updateMapTheme(mapInstance) {
@@ -854,37 +876,60 @@
         else map.setMapTypeId('roadmap');
     }
 
-    // Google Weather & Air Quality APIs can be integrated via REST. We will simulate the visual layers via data points or simple custom styling if needed.
     function loadRadarLayer() {
-        // With Google Maps, you usually use a tile overlay. For simplicity, we skip RainViewer if replacing entirely with Google.
+        fetch('https://api.rainviewer.com/public/weather-maps.json').then(r => r.json()).then(data => {
+            const past = data.radar?.past;
+            if (past && past.length > 0) {
+                const latest = past[past.length - 1].time;
+                radarLayer = L.tileLayer(`https://tilecache.rainviewer.com/v2/radar/${latest}/256/{z}/{x}/{y}/4/1_1.png`, { opacity: 0.65, zIndex: 10, isOverlay: true });
+                if (document.getElementById('toggle-radar').classList.contains('active')) radarLayer.addTo(map);
+            }
+        }).catch(e => console.log('Radar not loaded:', e));
     }
-    function loadCloudLayer() {}
-    function loadWindLayer() {}
+
+    function loadCloudLayer() {
+        cloudLayer = L.tileLayer('https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 9, isOverlay: true });
+        if (document.getElementById('toggle-cloud').classList.contains('active')) cloudLayer.addTo(map);
+    }
+
+    function loadWindLayer() {
+        windLayer = L.tileLayer('https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 8, isOverlay: true });
+        if (document.getElementById('toggle-wind').classList.contains('active')) windLayer.addTo(map);
+    }
+
+    function toggleRadarOverlay(btn) { btn.classList.toggle('active'); if (radarLayer) btn.classList.contains('active') ? radarLayer.addTo(map) : map.removeLayer(radarLayer); }
+    function toggleCloudOverlay(btn) { btn.classList.toggle('active'); if (cloudLayer) btn.classList.contains('active') ? cloudLayer.addTo(map) : map.removeLayer(cloudLayer); }
+    function toggleWindOverlay(btn) { btn.classList.toggle('active'); if (windLayer) btn.classList.contains('active') ? windLayer.addTo(map) : map.removeLayer(windLayer); }
+    function toggleHeatmapOverlay(btn) { btn.classList.toggle('active'); if (heatLayer) btn.classList.contains('active') ? heatLayer.addTo(map) : map.removeLayer(heatLayer); }
 
     function updateHeatmap(fleetData) {
-        if (!fleetData) return;
-        const points = fleetData.map(v => {
-            return {
-                location: new google.maps.LatLng(v.lat, v.lng),
-                weight: (v.fatigue || 0) / 100 + 0.5
-            };
-        });
-        
-        if (heatmap) {
-            heatmap.setData(points);
-        } else {
-            heatmap = new google.maps.visualization.HeatmapLayer({
-                data: points,
-                radius: 25,
-                gradient: ['rgba(0,0,255,0)', 'blue', 'cyan', 'lime', 'yellow', 'red']
-            });
-        }
+        if (!fleetData || !L.heatLayer) return;
+        const points = fleetData.map(v => [(v.fatigue || 0) / 100 + 0.5, v.lat, v.lng]);
+        if (heatLayer) heatLayer.setLatLngs(points);
+        else heatLayer = L.heatLayer(points, { radius: 25, blur: 15, maxZoom: 10, gradient: { 0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: 'red' } });
+        if (document.getElementById('toggle-heatmap')?.classList.contains('active')) heatLayer.addTo(map);
+        else if (map && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+    }
 
-        if (document.getElementById('toggle-heatmap')?.classList.contains('active')) {
-            heatmap.setMap(map);
-        } else {
-            heatmap.setMap(null);
-        }
+    // ── INDIA SOI MASKING ──
+    function applyOfficialBorders(mapInstance) {
+        if (!mapInstance.getPane('soiMaskPane')) { const mp = mapInstance.createPane('soiMaskPane'); mp.style.zIndex = 350; }
+        if (!mapInstance.getPane('soiBorderPane')) { const bp = mapInstance.createPane('soiBorderPane'); bp.style.zIndex = 360; }
+        const borderStyle = { color: '#00e5ff', weight: 2.5, fillOpacity: 0, opacity: 0.95, lineJoin: 'round', lineCap: 'round', pane: 'soiBorderPane' };
+        applySOIMaskPatches(mapInstance);
+        fetch('../data/india-composite-simplified.geojson').then(r => r.ok ? r.json() : Promise.reject('no local')).then(data => {
+            if (window._soiBorderLayer) try { mapInstance.removeLayer(window._soiBorderLayer); } catch(e){}
+            window._soiBorderLayer = L.geoJSON(data, { style: borderStyle }).addTo(mapInstance);
+            mapInstance.fitBounds(window._soiBorderLayer.getBounds(), { padding: [15, 15] });
+        }).catch(() => {
+            const fallbackBorder = { color: '#00e5ff', weight: 2.5, fillOpacity: 0, opacity: 0.95, lineJoin: 'round', lineCap: 'round', pane: 'soiBorderPane' };
+            const northernClaimLine = [[33.70, 73.50], [34.00, 71.90], [34.55, 72.35], [34.70, 73.00], [35.00, 74.00], [35.20, 75.00], [35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.85, 76.60], [37.10, 75.80], [37.06, 74.57], [36.60, 74.55], [36.20, 78.00], [36.00, 79.00], [35.60, 79.80], [35.10, 80.00], [34.80, 79.50], [34.20, 78.50], [34.00, 77.80]];
+            window._soiPatchLayers.push(L.polyline(northernClaimLine, fallbackBorder).addTo(mapInstance));
+        });
+    }
+
+    function applySOIMaskPatches(mapInstance) {
+        // Handled by google maps boundary styling naturally
     }
 
     // ── DRAWING LOGIC ──
@@ -988,7 +1033,9 @@
                     `).join('');
                 }
             }
-        } catch(e) { console.error("Failed to load past actions", e); }
+        } catch(e) {
+            console.error("Failed to load past actions", e);
+        }
     }
 
     async function applySimulationFixes() {
@@ -1031,7 +1078,6 @@
     // ── CHARTS ──
     let riskRadarChartObj = null, highRiskHubsChartObj = null, fleetExposureChartObj = null, weatherTrendsChartObj = null;
     let weatherTableData = [], weatherSearchQuery = "", currentTablePage = 1, itemsPerTablePage = 8;
-    let clickInfoWindow = null;
 
     function initCharts() {
         const txtColor = document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
@@ -1065,22 +1111,17 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false }, ticks: { color: txtColor, font: { family: 'Space Grotesk', size: 10 } } }, yTemp: { position: 'left', grid: { color: gridColor }, ticks: { color: txtColor } }, yAQI: { position: 'right', grid: { display: false }, ticks: { color: txtColor } } }, plugins: { legend: { labels: { color: txtColor, font: { family: 'Space Grotesk' } } } } }
         });
 
-        // Map Click for Google Maps
+        // Map Click
         if (map) {
-            clickInfoWindow = new google.maps.InfoWindow();
-            map.addListener('click', async function(e) {
-                const lat = e.latLng.lat();
-                const lng = e.latLng.lng();
-                clickInfoWindow.setContent('<div style="font-family:Space Grotesk,sans-serif;font-size:0.85rem;padding:6px;color:#000;">⏳ Fetching intel…</div>');
-                clickInfoWindow.setPosition(e.latLng);
-                clickInfoWindow.open(map);
-                
+            map.on('click', async function(e) {
+                const { lat, lng } = e.latlng;
+                const info = new google.maps.InfoWindow({ position: {lat: e.latLng.lat(), lng: e.latLng.lng()}, content: '<div style="font-family:Space Grotesk,sans-serif;font-size:0.85rem;padding:6px;color:black;">⏳ Fetching intel…</div>' }); info.open(map);
                 try {
                     const res = await apiCall(`/tracking/weather-at?lat=${lat}&lng=${lng}&company_id=${localStorage.getItem('manager_id')}`);
                     const w = res.weather, ships = res.shipments;
-                    let shipsHtml = ships.length > 0 ? `<div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:10px;padding-top:8px;max-height:120px;overflow-y:auto;"><b style="color:#f59e0b;font-size:0.8rem;">📦 Nearby Ships (${ships.length})</b>` + ships.map(s => `<div style="font-size:0.75rem;margin-top:4px;"><b>${s.description}</b> (${s.distance_to_click_km}km)<br>Driver: ${s.driver_name} · ${s.status}</div>`).join('') + '</div>' : `<div style="border-top:1px solid rgba(0,0,0,0.1);margin-top:10px;padding-top:8px;font-size:0.75rem;color:#64748b;">No active shipments within 50km.</div>`;
-                    clickInfoWindow.setContent(`<div style="min-width:220px; font-family:Space Grotesk,sans-serif; line-height:1.6; color:#0f172a;"><b style="font-size:1.1rem;color:#0ea5e9;">📍 ${lat.toFixed(3)}, ${lng.toFixed(3)}</b><br><small><b>${w.icon} ${w.condition}</b> (Risk: <b>${w.risk_score}/100</b>)</small><br><small>🌡️ Temp: <b>${w.temp}°C</b></small><br><small>💨 Wind: <b>${w.wind_speed} km/h</b></small><br><small>😷 AQI: <b>${w.us_aqi}</b></small>${shipsHtml}</div>`);
-                } catch(err) { clickInfoWindow.setContent('<div style="color:var(--danger);font-family:Space Grotesk,sans-serif;font-size:0.85rem;">❌ Failed to fetch intel.</div>'); }
+                    let shipsHtml = ships.length > 0 ? `<div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:10px;padding-top:8px;max-height:120px;overflow-y:auto;"><b style="color:var(--accent-2);font-size:0.8rem;">📦 Nearby Ships (${ships.length})</b>` + ships.map(s => `<div style="font-size:0.75rem;margin-top:4px;"><b>${s.description}</b> (${s.distance_to_click_km}km)<br>Driver: ${s.driver_name} · ${s.status}</div>`).join('') + '</div>' : `<div style="border-top:1px solid rgba(255,255,255,0.1);margin-top:10px;padding-top:8px;font-size:0.75rem;color:var(--text-muted);">No active shipments within 50km.</div>`;
+                    popup.setContent(`<div style="min-width:220px; font-family:Space Grotesk,sans-serif; line-height:1.6; color:var(--text-main);"><b style="font-size:1.1rem;color:var(--accent-1);">📍 ${lat.toFixed(3)}, ${lng.toFixed(3)}</b><br><small><b>${w.icon} ${w.condition}</b> (Risk: <b>${w.risk_score}/100</b>)</small><br><small>🌡️ Temp: <b>${w.temp}°C</b></small><br><small>💨 Wind: <b>${w.wind_speed} km/h</b></small><br><small>😷 AQI: <b>${w.us_aqi}</b></small>${shipsHtml}</div>`);
+                } catch(err) { popup.setContent('<div style="color:var(--danger);font-family:Space Grotesk,sans-serif;font-size:0.85rem;">❌ Failed to fetch intel.</div>'); }
             });
         }
     }
@@ -1135,22 +1176,18 @@
 
         try {
             const data = await apiCall('/tracking/fleet/weather?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
-            weatherMarkers.forEach(m => m.setMap(null)); weatherMarkers = [];
-            warehouseMarkers.forEach(m => m.setMap(null)); warehouseMarkers = [];
+            weatherMarkers.forEach(m => { try { map.removeLayer(m); } catch(e) {} }); weatherMarkers = [];
+            warehouseMarkers.forEach(m => { try { map.removeLayer(m); } catch(e) {} }); warehouseMarkers = [];
 
             try {
                 const warehouses = await apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
                 warehouses.forEach(wh => {
-                    const el = document.createElement('div');
-                    el.innerHTML = `<div style="background:rgba(0, 255, 115, 0.15); border:2px solid var(--success); box-shadow:0 0 12px rgba(0, 255, 115, 0.5); border-radius:8px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:14px;">🏢</div>`;
-                    
                     const m = new google.maps.Marker({
                         position: {lat: wh.lat, lng: wh.lng},
                         map: map,
                         title: wh.name,
                         icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="12" fill="rgba(0, 255, 115, 0.15)" stroke="#00ff73" stroke-width="2"/></svg>'), scaledSize: new google.maps.Size(28,28) }
                     });
-                    
                     const info = new google.maps.InfoWindow({ content: `<div style="min-width:180px; font-family:Space Grotesk,sans-serif; line-height:1.6; color:#0f172a;"><b style="color:#10b981; font-size:1.1rem;">🏭 ${wh.name}</b><br><small style="color:#64748b;">📍 ${wh.address||'N/A'}</small></div>` });
                     m.addListener('click', () => info.open(map, m));
                     warehouseMarkers.push(m);
@@ -1168,6 +1205,7 @@
             else { simsTable.style.display = 'none'; emptyMsg.style.display = 'block'; }
 
             data.cells.forEach(cell => {
+                let animClass = cell.type.toLowerCase() === 'cyclone' ? 'anim-cyclone' : cell.type.toLowerCase() === 'flood' ? 'anim-flood' : 'anim-rain';
                 if (cell.shapeType === 'polyline') {
                     const poly = new google.maps.Polyline({
                         path: cell.coordinates,
@@ -1180,23 +1218,16 @@
                         strokeColor: bc, strokeOpacity: cell.is_simulation?0.8:0.4, strokeWeight: cell.is_simulation?2:1.5, fillColor: bc, fillOpacity: cell.is_simulation?0.18:0.12, map: map, center: {lat: cell.lat, lng: cell.lng}, radius: (cell.radius||80)*1000
                     });
                     weatherMarkers.push(circ);
-                    
-                    const m = new google.maps.Marker({
-                        position: {lat: cell.lat, lng: cell.lng}, map: map, title: cell.type,
-                        icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><text x="15" y="20" font-size="20" text-anchor="middle">${cell.icon||'🌦️'}</text></svg>`), scaledSize: new google.maps.Size(30,30) }
-                    });
-                    const info = new google.maps.InfoWindow({ content: `<div style="min-width:180px; font-family:Space Grotesk,sans-serif; color:#000;"><b style="font-size:1.1rem;">${cell.icon||'🌩️'} ${cell.condition||cell.type}</b></div>` });
-                    m.addListener('click', () => info.open(map, m));
-                    weatherMarkers.push(m);
                 }
             });
 
             data.fleet.forEach(v => {
                 const m = new google.maps.Marker({
-                    position: {lat: v.lat, lng: v.lng}, map: map, title: v.driver,
-                    icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#00e5ff" stroke="white" stroke-width="2"/></svg>`), scaledSize: new google.maps.Size(20,20) }
+                    position: {lat: v.lat, lng: v.lng},
+                    map: map,
+                    icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><g transform="rotate(${v.bearing||0} 15 15)"><text x="15" y="20" font-size="20" text-anchor="middle">🚛</text></g></svg>`), scaledSize: new google.maps.Size(30,30) }
                 });
-                const info = new google.maps.InfoWindow({ content: `<div style="min-width:150px; font-family:Space Grotesk,sans-serif; color:#000;"><b style="color:#0ea5e9;">🚛 ${v.driver}</b><br><small>${v.weather?.icon||'☀️'} ${v.weather?.condition||'Clear'}</small></div>` });
+                const info = new google.maps.InfoWindow({ content: `<div style="color:black;min-width:150px; font-family:Space Grotesk,sans-serif;"><b style="color:#6366f1;">🚛 ${v.driver}</b><br><small>${v.weather?.icon||'☀️'} ${v.weather?.condition||'Clear'}</small></div>` });
                 m.addListener('click', () => info.open(map, m));
                 weatherMarkers.push(m);
             });
@@ -1273,7 +1304,7 @@
 
     function refreshWeather() { loadWeatherFleetData(); showToast('Refreshing live weather data…', 'info'); }
 
-    // ── UTILITIES ──    // ── UTILITIES ──
+    // ── UTILITIES ──
     function makeDraggable(el, handle) {
         if (!el) return;
         let p1=0, p2=0, p3=0, p4=0;
