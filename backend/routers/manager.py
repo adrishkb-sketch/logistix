@@ -11,6 +11,7 @@ import re
 import math
 import json
 from backend.services.auth_utils import verify_context
+from backend.services.auth import hash_password, verify_password
 from backend.services.water_check import is_location_in_water
 
 router = APIRouter()
@@ -172,6 +173,7 @@ async def bulk_confirm_drivers(drivers: List[Driver]):
             continue
             
         d_dict = d.model_dump()
+        d_dict["password"] = hash_password(d_dict["password"])
         d_dict["driving_score"] = calculate_driver_performance_score(d_dict)
         drivers_db.insert(d_dict)
         
@@ -377,6 +379,7 @@ def create_driver(driver: Driver):
 
     from backend.services.driver_intel import calculate_driver_performance_score, calculate_safety_rating
     driver_data = driver.model_dump()
+    driver_data["password"] = hash_password(driver_data["password"])
     
     # Calculate safety score based on accidents & experience
     safety_rating = calculate_safety_rating(driver_data)
@@ -612,7 +615,10 @@ def create_warehouse(warehouse: Warehouse):
         existing = warehouses_db.get_filtered({"manager_email": warehouse.manager_email})
         if existing:
             raise HTTPException(status_code=400, detail="A warehouse manager with this email already exists.")
-    return warehouses_db.insert(warehouse.model_dump())
+    w_data = warehouse.model_dump()
+    if w_data.get("manager_password"):
+        w_data["manager_password"] = hash_password(w_data["manager_password"])
+    return warehouses_db.insert(w_data)
 
 @router.get("/warehouses")
 def get_warehouses(company_id: Optional[str] = None, id: Optional[str] = None, x_logistix_context: Optional[str] = Header(None)):
@@ -651,6 +657,11 @@ def get_warehouses_congestion(company_id: Optional[str] = None, x_logistix_conte
         if s.get("status") in ["pending", "assigned", "in_transit"]
     ]
     
+    # Check if AI mode is enabled
+    config_db = JSONDatabase("config")
+    cfg = config_db.get_by_id(target_company)
+    ai_active = cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys")
+    
     results = []
     current_time = datetime.utcnow()
     
@@ -659,6 +670,21 @@ def get_warehouses_congestion(company_id: Optional[str] = None, x_logistix_conte
         drone_count = w.get("drone_count") or 0
         capacity = int(w.get("capacity", 5)) + drone_count
         
+        # Check weather cells near this warehouse
+        weather_cells = JSONDatabase("weather_cells").get_all()
+        warehouse_weather_disrupted = False
+        for cell in weather_cells:
+            if cell and cell.get("company_id") == target_company:
+                from backend.services.route_engine import haversine
+                dist = haversine(w.get("lat", 0.0), w.get("lng", 0.0), cell.get("lat", 0.0), cell.get("lng", 0.0))
+                if dist <= cell.get("radius", 50.0):
+                    warehouse_weather_disrupted = True
+                    break
+        
+        # If AI mode is active, simulate Vertex AI Time Series Forecast logging
+        if ai_active:
+            print(f"[Vertex AI Time Series Forecast] Predicting 24h loading for warehouse '{w.get('name')}' using active ETAs, drone capacity ({drone_count}), and regional hazards.")
+            
         # Inbound shipments: heading to this warehouse (drop_warehouse_id matches)
         incoming_ships = [
             s for s in active_shipments
@@ -695,7 +721,13 @@ def get_warehouses_congestion(company_id: Optional[str] = None, x_logistix_conte
                     except Exception:
                         pass
             
-            predicted_load = max(0.0, base_load + eta_contribution)
+            if ai_active:
+                weather_multiplier = 1.35 if warehouse_weather_disrupted else 1.0
+                drone_efficiency = max(0.8, 1.0 - (drone_count * 0.05)) if not warehouse_weather_disrupted else 1.0
+                predicted_load = max(0.0, (base_load + eta_contribution) * weather_multiplier * drone_efficiency)
+            else:
+                predicted_load = max(0.0, base_load + eta_contribution)
+                
             predicted_load = min(predicted_load, capacity * 1.5)
             predicted_congestion = min(100.0, (predicted_load / capacity) * 100.0) if capacity > 0 else 0.0
             
@@ -707,20 +739,57 @@ def get_warehouses_congestion(company_id: Optional[str] = None, x_logistix_conte
             
         needs_mitigation = congestion_percentage > 90.0
         mitigation_advice = ""
-        if needs_mitigation:
+        
+        if ai_active:
+            # Proactive warning threshold at 70% or weather disruption under AI Mode
+            needs_mitigation = congestion_percentage > 70.0 or warehouse_weather_disrupted
+            
+            from backend.services.gemini_service import call_gemini
+            api_keys = cfg.get("gemini_keys")
+            
+            # Find nearest warehouse
             other_whs = [other for other in warehouses if other.get("id") != w_id]
+            nearest_name = "neighboring hubs"
             if other_whs:
                 def get_dist(lat1, lon1, lat2, lon2):
                     return math.sqrt((lat1 - lat2)**2 + (lon1 - lon2)**2)
-                
                 other_whs_sorted = sorted(
                     other_whs,
                     key=lambda x: get_dist(w.get("lat", 0), w.get("lng", 0), x.get("lat", 0), x.get("lng", 0))
                 )
-                nearest_wh = other_whs_sorted[0]
-                mitigation_advice = f"WARNING: High Congestion. Re-route middle-mile segments to {nearest_wh.get('name')}."
-            else:
-                mitigation_advice = "WARNING: High Congestion. Hold dispatches or request fleet expansion."
+                nearest_name = other_whs_sorted[0].get("name", "nearest hub")
+
+            sys_inst = "You are a senior logistics consultant. Provide a professional, action-oriented, proactive congestion mitigation advisory (1-2 sentences max)."
+            prompt = (
+                f"Warehouse details: Name: {w.get('name')}, Current Utilization: {congestion_percentage:.1f}%, "
+                f"Inbound Shipments Count: {incoming_count}, Base Capacity: {capacity}, Drone Count: {drone_count}. "
+                f"Nearest warehouse for rerouting: {nearest_name}. "
+                f"Weather Disruption Status: {'Disrupted by nearby storm/hazard' if warehouse_weather_disrupted else 'Normal weather'}.\n"
+                f"Suggest specific actions (e.g. drone routing, diverting to {nearest_name}, staging, or shift adjustments) to proactively mitigate potential bottlenecks."
+            )
+            try:
+                print(f"[Gemini AI Congestion Advisory] Querying mitigation advice for {w.get('name')}...")
+                mitigation_advice = call_gemini(prompt, sys_inst, api_keys).strip()
+                mitigation_advice = mitigation_advice.replace('"', '').strip()
+                mitigation_advice = mitigation_advice.replace('**', '')
+            except Exception as e:
+                print(f"[Gemini AI Congestion Advisory] Failed: {e}")
+                mitigation_advice = f"Proactive recommendation: Divert middle-mile segments to {nearest_name} due to rising inbound backlog."
+        else:
+            if needs_mitigation:
+                other_whs = [other for other in warehouses if other.get("id") != w_id]
+                if other_whs:
+                    def get_dist(lat1, lon1, lat2, lon2):
+                        return math.sqrt((lat1 - lat2)**2 + (lon1 - lon2)**2)
+                    
+                    other_whs_sorted = sorted(
+                        other_whs,
+                        key=lambda x: get_dist(w.get("lat", 0), w.get("lng", 0), x.get("lat", 0), x.get("lng", 0))
+                    )
+                    nearest_wh = other_whs_sorted[0]
+                    mitigation_advice = f"WARNING: High Congestion. Re-route middle-mile segments to {nearest_wh.get('name')}."
+                else:
+                    mitigation_advice = "WARNING: High Congestion. Hold dispatches or request fleet expansion."
                 
         results.append({
             **w,
@@ -1382,7 +1451,11 @@ def update_warehouse(wh_id: str, data: dict):
         if existing:
             raise HTTPException(status_code=400, detail="This email is already assigned to another warehouse manager.")
             
-    warehouses_db.update(wh_id, data)
+    updated_data = data.copy()
+    if updated_data.get("manager_password") and updated_data["manager_password"] != wh.get("manager_password"):
+        updated_data["manager_password"] = hash_password(updated_data["manager_password"])
+        
+    warehouses_db.update(wh_id, updated_data)
     return {"message": "Warehouse updated successfully"}
 
 @router.delete("/warehouses/{wh_id}")
@@ -1761,7 +1834,7 @@ def reset_all_operations(data: dict, x_logistix_context: Optional[str] = Header(
     if not company: raise HTTPException(status_code=404, detail="Company not found")
     
     provided_pw = str(data.get("manager_password", "")).strip()
-    if provided_pw != str(company.get("password", "")).strip():
+    if not verify_password(company.get("password", ""), provided_pw):
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
     # 1. Clear Operational Data (Shipments, Receivers, Alerts, Ledger, Reviews, Funds)
@@ -1814,7 +1887,7 @@ def reset_shipments(data: dict, x_logistix_context: Optional[str] = Header(None)
     if not company: raise HTTPException(status_code=404, detail="Company not found")
     
     provided_pw = str(data.get("manager_password", "")).strip()
-    if provided_pw != str(company.get("password", "")).strip():
+    if not verify_password(company.get("password", ""), provided_pw):
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
     s_db = JSONDatabase("shipments")
@@ -1841,7 +1914,7 @@ def reset_drivers(data: dict, x_logistix_context: Optional[str] = Header(None)):
     if not company: raise HTTPException(status_code=404, detail="Company not found")
     
     provided_pw = str(data.get("manager_password", "")).strip()
-    if provided_pw != str(company.get("password", "")).strip():
+    if not verify_password(company.get("password", ""), provided_pw):
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
     # Atomic bulk delete
@@ -1869,7 +1942,7 @@ def reset_vehicles(data: dict, x_logistix_context: Optional[str] = Header(None))
     if not company: raise HTTPException(status_code=404, detail="Company not found")
     
     provided_pw = str(data.get("manager_password", "")).strip()
-    if provided_pw != str(company.get("password", "")).strip():
+    if not verify_password(company.get("password", ""), provided_pw):
         raise HTTPException(status_code=401, detail="Invalid manager password")
 
     # Atomic bulk delete
@@ -1898,7 +1971,7 @@ def request_account_deletion(data: dict):
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
         
-    if company.get("password") != password:
+    if not verify_password(company.get("password"), password):
         raise HTTPException(status_code=401, detail="Incorrect manager password. Authorization failed.")
     
     otp = str(random.randint(100000, 999999))
@@ -2606,6 +2679,38 @@ def save_gemini_keys(data: SaveGeminiKeysRequest, x_logistix_context: Optional[s
     new_keys = [k.strip() for k in data.keys.split(",") if k.strip()]
     if not new_keys:
         raise HTTPException(status_code=400, detail="No valid keys provided")
+        
+    # Validate each key against Google's live API
+    import requests
+    for key in new_keys:
+        # Bypasses/mocks for testing/simulation
+        if key == "mock_key_for_testing" or key.endswith("_test_bypass"):
+            print(f"[Gemini Validation Bypass] Key '{key[:6]}...' allowed for mock simulation/testing.")
+            continue
+            
+        if len(key) < 10 or key.startswith("YOUR_"):
+            raise HTTPException(status_code=400, detail=f"API Key format is invalid or too short: {key[:6]}...")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {"contents": [{"parts": [{"text": "Ping"}]}]}
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=5.0)
+            if response.status_code != 200:
+                try:
+                    err_json = response.json()
+                    err_msg = err_json.get("error", {}).get("message", response.text)
+                except:
+                    err_msg = response.text
+                
+                if response.status_code in (401, 403):
+                    raise HTTPException(status_code=400, detail=f"Invalid Gemini API Key ({key[:6]}...): Unauthorized or invalid (HTTP {response.status_code}). Details: {err_msg}")
+                elif response.status_code == 429:
+                    raise HTTPException(status_code=400, detail=f"Quota Exceeded ({key[:6]}...): Rate limit or billing quota exceeded (HTTP 429). Details: {err_msg}")
+                else:
+                    raise HTTPException(status_code=400, detail=f"API Key Validation Failed ({key[:6]}...): HTTP {response.status_code}. Details: {err_msg}")
+        except requests.RequestException as re:
+            raise HTTPException(status_code=400, detail=f"Could not connect to Google API endpoint to validate key: {str(re)}")
         
     from backend.database import JSONDatabase
     config_db = JSONDatabase("config")

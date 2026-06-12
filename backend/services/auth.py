@@ -1,5 +1,6 @@
 import os
 import jwt
+import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional
 
@@ -35,3 +36,23 @@ def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
     except jwt.InvalidTokenError as e:
         print(f"[JWT] Token is invalid: {e}")
         return None
+
+def hash_password(password: str) -> str:
+    """
+    Hashes a password with a fixed salt for verification.
+    """
+    if not password:
+        return ""
+    salt = "logistix_salt_2026_gsc"
+    return hashlib.sha256((password + salt).encode("utf-8")).hexdigest()
+
+def verify_password(stored: str, entered: str) -> bool:
+    """
+    Verifies entered password against stored password.
+    Supports backward compatibility: checks against raw entered password
+    for seed data (plaintext) or the hashed value.
+    """
+    if not stored or not entered:
+        return False
+    return stored == hash_password(entered) or stored == entered
+

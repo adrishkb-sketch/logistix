@@ -1,6 +1,7 @@
 import math
 import os
 import joblib
+from typing import Optional, List, Dict
 from backend.models import Location, Shipment, ShipmentEvent
 from backend.database import JSONDatabase
 import uuid
@@ -8,8 +9,8 @@ from datetime import datetime, timedelta
 
 class VertexAIPredictor:
     """
-    Simulated Vertex AI Predictor wrapping the locally trained scikit-learn model.
-    This demonstrates production readiness and direct alignment with Google Cloud AI platform.
+    Simulated Vertex AI Predictor wrapping the locally trained scikit-learn model,
+    with an active toggle to use REAL Google Cloud AI Platform Endpoints.
     """
     _model = None
 
@@ -30,7 +31,33 @@ class VertexAIPredictor:
         return cls._model
 
     @classmethod
-    def predict(cls, distance_km: float, weather_severity: float, driver_fatigue: float, traffic_congestion: float) -> float:
+    def predict(cls, distance_km: float, weather_severity: float, driver_fatigue: float, traffic_congestion: float, ai_mode: bool = False) -> float:
+        if ai_mode:
+            # If AI mode is enabled, attempt REAL Vertex AI Predict
+            try:
+                from google.cloud import aiplatform
+                # Use application-default credentials. In a real environment, this connects to the live endpoint.
+                # Project, location, and endpoint ID would normally come from ENV.
+                PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "logistix-ai")
+                LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
+                ENDPOINT_ID = os.environ.get("VERTEX_ENDPOINT_ID", "1234567890")
+                
+                aiplatform.init(project=PROJECT_ID, location=LOCATION)
+                endpoint = aiplatform.Endpoint(endpoint_name=f"projects/{PROJECT_ID}/locations/{LOCATION}/endpoints/{ENDPOINT_ID}")
+                
+                instances = [{
+                    "distance_km": distance_km,
+                    "weather_severity": weather_severity,
+                    "driver_fatigue": driver_fatigue,
+                    "traffic_congestion": traffic_congestion
+                }]
+                response = endpoint.predict(instances=instances)
+                if response.predictions:
+                    return float(response.predictions[0][0])
+            except Exception as e:
+                print(f"[VertexAIPredictor] GCP Vertex API failed or not configured (fallback triggered): {e}")
+
+        # Fallback 1: Local Model
         model = cls.load_model()
         if model is not None:
             try:
@@ -45,13 +72,12 @@ class VertexAIPredictor:
                 print(f"[VertexAIPredictor] Error predicting via model: {e}")
 
         
-        # Fallback to math
+        # Fallback 2: Math Heuristic
         base_time = distance_km / 60.0
         w_imp = 1.0 + (weather_severity - 1.0) * 0.25
         f_imp = 1.0 + driver_fatigue * 0.15
         t_imp = 1.0 + (traffic_congestion - 1.0) * 0.4
         return base_time * w_imp * f_imp * t_imp
-
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # Radius of earth in kilometers. Use 3956 for miles
@@ -93,15 +119,45 @@ def calculate_route_type(pickup: Location, drop: Location, company_id: str) -> s
 
     return "warehouse_hop"
 
+def get_osrm_road_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> Optional[float]:
+    """
+    Queries the public OSRM Routing API to get actual driving road distance in kilometers.
+    Returns None if the query fails or no road path is found.
+    """
+    import urllib.request
+    import json
+    from typing import Optional
+    try:
+        url = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=false"
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Logistix-Route-Engine/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=2.0) as response:
+            res = json.loads(response.read().decode())
+            if res.get("code") == "Ok" and res.get("routes"):
+                dist_meters = res["routes"][0].get("distance", 0.0)
+                return dist_meters / 1000.0
+    except Exception as e:
+        print(f"[OSRM Road Network API] Failed to fetch road distance: {e}")
+    return None
+
 def find_nearest_warehouse(lat: float, lng: float, company_id: str) -> dict:
     warehouses_db = JSONDatabase("warehouses")
     all_wh = warehouses_db.get_all()
     company_wh = [w for w in all_wh if w and w.get("company_id") == company_id]
     
-    if not company_wh:
+    # Filter out warehouses in water bodies
+    from backend.services.water_check import is_location_in_water
+    valid_wh = []
+    for w in company_wh:
+        if not is_location_in_water(w.get("lat", 0.0), w.get("lng", 0.0)):
+            valid_wh.append(w)
+            
+    if not valid_wh:
         return None
         
-    nearest = min(company_wh, key=lambda w: haversine(lat, lng, w["lat"], w["lng"]))
+    nearest = min(valid_wh, key=lambda w: haversine(lat, lng, w["lat"], w["lng"]))
     return nearest
 
 def find_nearest_safe_warehouse(lat: float, lng: float, company_id: str, disaster_cells: list) -> dict:
@@ -109,8 +165,15 @@ def find_nearest_safe_warehouse(lat: float, lng: float, company_id: str, disaste
     all_wh = warehouses_db.get_all()
     company_wh = [w for w in all_wh if w and w.get("company_id") == company_id]
     
+    # Filter out warehouses in water bodies
+    from backend.services.water_check import is_location_in_water
+    valid_wh = []
+    for w in company_wh:
+        if not is_location_in_water(w.get("lat", 0.0), w.get("lng", 0.0)):
+            valid_wh.append(w)
+            
     safe_whs = []
-    for wh in company_wh:
+    for wh in valid_wh:
         in_zone = False
         for cell in disaster_cells:
             if not cell:
@@ -250,7 +313,23 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
 
     # ── Find nearest safe warehouse and check distance ───────────────────────
     safe_wh = find_nearest_safe_warehouse(lat, lng, company_id, disaster_cells)
-    safe_wh_dist = haversine(lat, lng, safe_wh["lat"], safe_wh["lng"]) if safe_wh else None
+    
+    # Query OSRM to get real-world road distance if available, otherwise fallback to haversine
+    safe_wh_dist = None
+    if safe_wh:
+        # Check water boundary for the safe warehouse to ensure it's on land
+        from backend.services.water_check import is_location_in_water
+        if is_location_in_water(safe_wh["lat"], safe_wh["lng"]):
+            print(f"[Calamity Rerouting / Water Check] Warehouse {safe_wh.get('name')} is flagged as in a water body. Skipping.")
+            safe_wh = None
+        else:
+            road_dist = get_osrm_road_distance(lat, lng, safe_wh["lat"], safe_wh["lng"])
+            if road_dist is not None:
+                safe_wh_dist = road_dist
+                print(f"[OSRM Road Network Check] Found actual driving distance: {safe_wh_dist:.1f} km (via road network).")
+            else:
+                safe_wh_dist = haversine(lat, lng, safe_wh["lat"], safe_wh["lng"])
+                print(f"[OSRM Fallback] Using haversine distance: {safe_wh_dist:.1f} km.")
 
     if safe_wh_dist and safe_wh_dist > max_divert_km:
         long_distance_divert = True
@@ -274,6 +353,28 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
                 can_delay = False
         except Exception:
             pass
+
+    ai_mode = False
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg and cfg.get("ai_mode"):
+            ai_mode = True
+
+    if ai_mode:
+        from backend.services.gemini_service import gemini_dynamic_router
+        api_key_str = cfg.get("gemini_keys", "") if cfg else ""
+        action_plan = gemini_dynamic_router(shipment, disaster_cells, api_key_str)
+        if action_plan:
+            action = action_plan.get("action")
+            if action == "Proceed":
+                return False
+            elif action == "Halt":
+                can_delay = True
+                within_range = False
+            elif action == "Divert":
+                can_delay = False
+                within_range = True
+                long_distance_divert = True # Bypass distance checks for AI Divert
 
     if can_delay:
         shipment["stage"] = f"Delayed: Waiting out {calamity_type}"
@@ -753,7 +854,7 @@ def predict_weather_impact(lat: float, lng: float) -> dict:
     if seed < 60: return {"condition": "Cloudy", "multiplier": 1.1, "icon": "☁️"}
     return {"condition": "Clear", "multiplier": 1.0, "icon": "☀️"}
 
-def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigue: int, health: int, lat: float = 0, lng: float = 0, wait_time_mins: int = 0) -> dict:
+def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigue: int, health: int, lat: float = 0, lng: float = 0, wait_time_mins: int = 0, company_id: str = None) -> dict:
     """
     AI Model to calculate adjusted ETA.
     """
@@ -826,11 +927,18 @@ def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigu
         
     d_fatigue = float(fatigue) / 100.0
     
+    ai_mode = False
+    if company_id:
+        cfg = JSONDatabase("config").get_by_id(company_id)
+        if cfg and cfg.get("ai_mode"):
+            ai_mode = True
+
     pred_hours = VertexAIPredictor.predict(
         distance_km=distance_km,
         weather_severity=w_severity,
         driver_fatigue=d_fatigue,
-        traffic_congestion=t_congestion
+        traffic_congestion=t_congestion,
+        ai_mode=ai_mode
     )
     
     model_baseline_speed = 60.0
@@ -905,7 +1013,7 @@ def check_shipment_performance(shipment: dict, driver: dict = None, vehicle: dic
     fatigue = driver.get("fatigue_score", 0) if driver else 0
     health = vehicle.get("vehicle_health_score", 100) if vehicle else 100
     
-    eta_info = calculate_dynamic_eta(dist, v_type, weather, fatigue, health, curr_loc["lat"], curr_loc["lng"])
+    eta_info = calculate_dynamic_eta(dist, v_type, weather, fatigue, health, curr_loc["lat"], curr_loc["lng"], company_id=curr_shipment.get("company_id"))
     
     predicted_arrival = now + timedelta(minutes=eta_info["adjusted_mins"])
     diff = (predicted_arrival - expected).total_seconds() / 60.0

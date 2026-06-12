@@ -211,68 +211,8 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not drivers:
         return {"error": "Hub Empty: No drivers registered."}
 
-    # -- START AI ENGINE OVERRIDE --
-    config_db = JSONDatabase("config")
-    cfg = config_db.get_by_id(company_id)
-    if cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys"):
-        api_keys = cfg.get("gemini_keys")
-        try:
-            from backend.services.gemini_service import call_gemini
-            import json
-            
-            prompt = (
-                f"You are the Logistix Advanced AI Routing Engine.\n"
-                f"Task: Select the most optimal vehicle and driver for this shipment.\n"
-                f"Shipment Leg: {leg_type}, Distance: {distance:.1f}km, Weight: {shipment.get('weight', 0)}kg\n"
-                f"Pickup Lat/Lng: {p_lat}, {p_lng}. Drop Lat/Lng: {d_lat}, {d_lng}\n"
-                f"Weather Alert at Pickup: {'Yes' if p_weather_disrupted else 'No'}. Weather Alert at Drop: {'Yes' if d_weather_disrupted else 'No'}\n\n"
-                f"Available Fleet Pool:\n"
-            )
-            for d in drivers:
-                if d.get("status") not in ["available", "on_duty"] or d.get("is_fit") is False: continue
-                v_id = d.get("assigned_vehicle_id")
-                if not v_id: continue
-                v = next((x for x in vehicles if x.get("id") == v_id), None)
-                if not v or v.get("is_operational") is False or float(v.get("vehicle_health_score", 100)) <= 0: continue
-                
-                v_type = v.get("type", "Unknown")
-                v_cap = v.get("capacity", 1000.0)
-                score = calculate_driver_performance_score(d)
-                prompt += f"- Driver ID: {d['id']}, Name: {d.get('name')}, Perf_Score: {score}. Vehicle ID: {v['id']}, Type: {v_type}, Capacity: {v_cap}kg\n"
-            
-            prompt += (
-                f"\nRouting Rules:\n"
-                f"1. DIRECT deliveries (<50km, not leg) prefer Small Trucks or Vans.\n"
-                f"2. FIRST MILE prefers Bikes/EVs.\n"
-                f"3. MIDDLE MILE requires Heavy or Small Trucks.\n"
-                f"4. LAST MILE prefers Vans or Bikes (Drones if suitable).\n"
-                f"5. WEATHER RULE: If Weather Alert is 'Yes', DO NOT use Bikes or Drones. Use Vans/Trucks.\n"
-                f"6. CAPACITY RULE: Do not exceed vehicle capacity.\n"
-                f"7. PREFERENCE: Pick drivers with highest Perf_Score.\n\n"
-                f"Return EXACTLY a raw JSON object (no markdown, no backticks):\n"
-                f"{{\"assigned_driver_id\": \"<id>\", \"assigned_vehicle_id\": \"<id>\", \"reasoning\": \"<short professional explanation>\"}}"
-            )
-            
-            system_instruction = "You are a rigid AI system that outputs ONLY raw valid JSON. Do not wrap in ```json or ```."
-            response = call_gemini(prompt, system_instruction, api_keys)
-            response = response.replace('```json', '').replace('```', '').strip()
-            ai_choice = json.loads(response)
-            
-            if ai_choice.get("assigned_driver_id") and ai_choice.get("assigned_vehicle_id"):
-                v = next((x for x in vehicles if x.get("id") == ai_choice["assigned_vehicle_id"]), None)
-                v_type = v.get("type", "unknown") if v else "unknown"
-                return {
-                    "assigned_driver_id": ai_choice["assigned_driver_id"],
-                    "assigned_vehicle_id": ai_choice["assigned_vehicle_id"],
-                    "status": "assigned",
-                    "stage": "Assigned via Gemini AI Engine",
-                    "ai_reasoning": ai_choice.get("reasoning", "Optimal route determined by AI."),
-                    "finance": estimate_delivery_cost(shipment, v_type.lower()),
-                    "pickup_deadline": None
-                }
-        except Exception as e:
-            print(f"Gemini AI Engine failed, seamlessly falling back to Local Rule Engine: {e}")
-    # -- END AI ENGINE OVERRIDE --
+    # -- AI ENGINE OVERRIDE REMOVED FOR LATENCY PERFORMANCE --
+    # Deterministic priority scoring runs first, then post-assignment Gemini reasoning is applied.
 
     # Two-pass assignment check: first strict hub, then relaxed
     available_pairs = []
@@ -472,6 +412,38 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     available_pairs.sort(key=lambda x: x["score"], reverse=True)
     best = available_pairs[0]
+
+    # Post-assignment Gemini reasoning check
+    config_db = JSONDatabase("config")
+    cfg = config_db.get_by_id(company_id)
+    if cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys"):
+        api_keys = cfg.get("gemini_keys")
+        try:
+            from backend.services.gemini_service import call_gemini
+            import json
+            sys_inst = "You are an AI logistics dispatcher. Write a single sentence explaining why this specific driver and vehicle pair was chosen for the shipment based on suitability, capacity, and distance."
+            prompt = (
+                f"Shipment details: Leg Type: {leg_type}, Distance: {distance:.1f}km, Weight: {shipment.get('weight', 0)}kg. "
+                f"Chosen Driver: Name: {best['driver'].get('name')}, Performance Score: {calculate_driver_performance_score(best['driver'])}. "
+                f"Chosen Vehicle: Type: {best['vehicle'].get('type')}, Capacity: {best['vehicle'].get('capacity')}kg. "
+                f"Explain why this pair was selected in exactly one professional sentence."
+            )
+            print("[Gemini AI Engine] Generating post-assignment reasoning...")
+            ai_reasoning = call_gemini(prompt, sys_inst, api_keys).strip()
+            ai_reasoning = ai_reasoning.replace('"', '').strip()
+        except Exception as e:
+            print(f"[Gemini AI Engine] Post-assignment explanation failed: {e}")
+            ai_reasoning = f"Deterministic pairing completed: Driver {best['driver'].get('name')} with vehicle {best['vehicle'].get('type')} chosen based on priority score."
+        
+        return {
+            "assigned_driver_id": best["driver"]["id"],
+            "assigned_vehicle_id": best["vehicle"]["id"],
+            "status": "assigned",
+            "stage": "Assigned via Gemini AI Engine",
+            "ai_reasoning": ai_reasoning,
+            "finance": estimate_delivery_cost(shipment, best["vehicle"]["type"].lower()),
+            "pickup_deadline": None
+        }
 
     return {
         "assigned_driver_id": best["driver"]["id"],

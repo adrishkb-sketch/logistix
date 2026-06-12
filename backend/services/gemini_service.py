@@ -508,3 +508,18 @@ def call_gemini(prompt: str, system_instruction: Optional[str] = None, api_key: 
     # All keys exhausted
     print(f"[Gemini Fail-Safe Warning] All keys failed. Last error: {last_error or 'Unknown error'}. Activating Fail-Safe Auto-Fallback.")
     return local_heuristic_fallback_engine(prompt, system_instruction)
+
+def gemini_dynamic_router(shipment_data: dict, weather_cells: list, api_key: str = None) -> dict:
+    """
+    Uses Gemini to mathematically evaluate weather proximity and driver safety
+    and returns a structured JSON rerouting strategy.
+    """
+    sys_inst = "You are an AI Routing Engine. Output ONLY valid JSON, no markdown formatting."
+    prompt = f"Evaluate this shipment against weather cells and decide to 'Halt', 'Divert', or 'Proceed'.\\nShipment: {json.dumps(shipment_data)}\\nWeather Cells: {json.dumps(weather_cells)}\\nReturn JSON format: {{\"action\": \"Halt\"|\"Divert\"|\"Proceed\", \"reason\": \"string\", \"new_lat\": float, \"new_lng\": float}}"
+    try:
+        response = call_gemini(prompt, sys_inst, api_key)
+        response = response.replace('```json', '').replace('```', '').strip()
+        return json.loads(response)
+    except Exception as e:
+        print(f"[Gemini Dynamic Router] Error: {e}")
+        return None

@@ -8,16 +8,16 @@ if (!whId || !companyId) {
 
 window.switchTab = function(tab) {
     const tabToPage = {
-        'dash': 'warehouse_manager_dash',
-        'verifications': 'warehouse_manager_verifications',
-        'fleet': 'warehouse_manager_fleet',
-        'gate': 'warehouse_manager_gate',
-        'audit': 'warehouse_manager_audit',
-        'leaderboard': 'warehouse_manager_leaderboard',
-        'settings': 'warehouse_manager_settings',
-        'shipments': 'warehouse_manager_shipments',
-        'payments': 'warehouse_manager_payments',
-        'drones': 'warehouse_manager_drones'
+        'dash': 'hub_manager_dashboard',
+        'verifications': 'hub_manager_verifications',
+        'fleet': 'hub_manager_fleet',
+        'gate': 'hub_manager_gate',
+        'audit': 'hub_manager_audit',
+        'leaderboard': 'hub_manager_leaderboard',
+        'settings': 'hub_manager_settings',
+        'shipments': 'hub_manager_shipments',
+        'payments': 'hub_manager_payments',
+        'drones': 'hub_manager_drones'
     };
     const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const expectedPage = tabToPage[tab];

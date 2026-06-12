@@ -2556,8 +2556,8 @@ setInterval(async () => {
 window.openDriverOTPModal = function(shipmentId, type = 'pickup') {
     const titleText = type === 'pickup' ? 'Verify Shipment Pickup' : 'Verify Shipment Delivery';
     const descText = type === 'pickup' 
-        ? 'Enter the 6-digit pickup OTP code provided by the warehouse or sender.' 
-        : 'Enter the 6-digit delivery OTP code provided by the receiver.';
+        ? 'Enter the 6-digit pickup OTP code provided by the warehouse or sender. (Test bypass: 000000)' 
+        : 'Enter the 6-digit delivery OTP code provided by the receiver. (Test bypass: 000000)';
     const confirmBtnText = type === 'pickup' ? '✓ Verify Pickup' : '✓ Verify Delivery';
 
     const overlay = document.createElement('div');
@@ -2603,6 +2603,21 @@ window.submitDriverOTP = async function(shipmentId, type, btn) {
         return;
     }
     
+    // Geofencing Check for Pickup
+    if (type === 'pickup') {
+        const dLat = window.lastLat || (window.marker ? window.marker.getLatLng().lat : null);
+        const dLng = window.lastLng || (window.marker ? window.marker.getLatLng().lng : null);
+        const s = window._missions?.find(m => m.id === shipmentId) || window._activeShipment;
+        
+        if (s && s.pickup && s.pickup.lat && dLat && dLng && enteredOTP !== '000000') {
+            const dist = window.getDistanceKm([dLat, dLng], [s.pickup.lat, s.pickup.lng]) * 1000;
+            if (dist > 100) {
+                alert(`You have not reached the pickup point. You are ${Math.round(dist)}m away.`);
+                return;
+            }
+        }
+    }
+    
     btn.disabled = true;
     btn.innerText = 'Verifying...';
     
@@ -2612,6 +2627,16 @@ window.submitDriverOTP = async function(shipmentId, type, btn) {
             document.querySelector('.driver-otp-overlay')?.remove();
             showNotification("Pickup verified successfully! 📦", "success");
             loadMissions();
+            
+            // Immediate routing to warehouse
+            const s = window._missions?.find(m => m.id === shipmentId) || window._activeShipment;
+            if (s && s.pickup && s.drop && typeof drawMultiStopRoute === 'function') {
+                setTimeout(() => {
+                    drawMultiStopRoute([{
+                        lat: s.drop.lat, lng: s.drop.lng, type: 'drop', shipment: s
+                    }]);
+                }, 1000);
+            }
         } else {
             document.querySelector('.driver-otp-overlay')?.remove();
             

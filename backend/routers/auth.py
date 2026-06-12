@@ -14,7 +14,7 @@ import os
 from backend.models import CompanyCreate, CompanyLogin, DriverLogin
 from backend.database import JSONDatabase
 from backend.services.turso_db import TursoCompaniesDB
-from backend.services.auth import create_jwt_token
+from backend.services.auth import create_jwt_token, hash_password, verify_password
 
 router = APIRouter()
 
@@ -40,6 +40,7 @@ class OTPVerify(BaseModel):
     company_data: CompanyCreate
 
 class WarehouseManagerLogin(BaseModel):
+    company_id: str
     email: str
     password: str
 
@@ -140,7 +141,7 @@ def verify_signup(data: OTPVerify):
         "id":       str(uuid.uuid4()),
         "name":     company_name,
         "email":    company_email,
-        "password": data.company_data.password,
+        "password": hash_password(data.company_data.password),
     }
 
     companies_db.insert(new_company)
@@ -177,7 +178,7 @@ def company_login(data: CompanyLogin):
     companies = companies_db.get_all()
     for c in companies:
         if (c.get("email", "").strip().lower() == ec and
-                c.get("password") == data.password):
+                verify_password(c.get("password"), data.password)):
             print(f"[AUTH] Manager login OK: {ec}")
             token = create_jwt_token({"company_id": c["id"], "role": "manager", "id": c["id"]})
             return {
@@ -215,7 +216,7 @@ def driver_login(data: DriverLogin):
         (d for d in drivers
          if d and d.get("company_id") == cid
          and d.get("login_id", "").strip() == login_id
-         and d.get("password") == data.password),
+         and verify_password(d.get("password"), data.password)),
         None
     )
     if not driver:
@@ -254,7 +255,7 @@ def warehouse_manager_login(data: WarehouseManagerLogin):
          if w
          and w.get("company_id") == actual_cid
          and w.get("manager_email", "").strip().lower() == ec
-         and w.get("manager_password") == data.password),
+         and verify_password(w.get("manager_password"), data.password)),
         None
     )
     if not wh:

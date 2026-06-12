@@ -1069,7 +1069,7 @@ def track_shipment(shipment_id: str):
                     v_type = vehicle["type"]
     
     dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
-    dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
+    dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health, company_id=s.get("company_id"))
     
     from datetime import datetime, timedelta
     from backend.services.time_utils import snap_eta_to_business_hours
@@ -1168,7 +1168,7 @@ def track_shipment_chat(shipment_id: str, payload: dict):
                     v_type = vehicle["type"]
     
     dist = haversine(shipment["pickup"]["lat"], shipment["pickup"]["lng"], shipment["drop"]["lat"], shipment["drop"]["lng"])
-    dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health)
+    dynamic_eta = calculate_dynamic_eta(dist, v_type, weather, fatigue, health, company_id=s.get("company_id"))
     
     from datetime import datetime, timedelta
     from backend.services.time_utils import snap_eta_to_business_hours

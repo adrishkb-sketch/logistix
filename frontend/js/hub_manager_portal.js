@@ -53,16 +53,16 @@ async function init() {
     
     // Dynamically open the correct tab based on the current page filename
     const pageToTab = {
-        'warehouse_manager_dash': 'dash',
-        'warehouse_manager_verifications': 'verifications',
-        'warehouse_manager_fleet': 'fleet',
-        'warehouse_manager_gate': 'gate',
-        'warehouse_manager_audit': 'audit',
-        'warehouse_manager_leaderboard': 'leaderboard',
-        'warehouse_manager_settings': 'settings',
-        'warehouse_manager_shipments': 'shipments',
-        'warehouse_manager_payments': 'payments',
-        'warehouse_manager_drones': 'drones'
+        'hub_manager_dashboard': 'dash',
+        'hub_manager_verifications': 'verifications',
+        'hub_manager_fleet': 'fleet',
+        'hub_manager_gate': 'gate',
+        'hub_manager_audit': 'audit',
+        'hub_manager_leaderboard': 'leaderboard',
+        'hub_manager_settings': 'settings',
+        'hub_manager_shipments': 'shipments',
+        'hub_manager_payments': 'payments',
+        'hub_manager_drones': 'drones'
     };
     const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const activeTab = pageToTab[currentFilename];
@@ -1084,16 +1084,16 @@ function initTheme() {
 
 function switchTab(tab) {
     const tabToPage = {
-        'dash': 'warehouse_manager_dash',
-        'verifications': 'warehouse_manager_verifications',
-        'fleet': 'warehouse_manager_fleet',
-        'gate': 'warehouse_manager_gate',
-        'audit': 'warehouse_manager_audit',
-        'leaderboard': 'warehouse_manager_leaderboard',
-        'settings': 'warehouse_manager_settings',
-        'shipments': 'warehouse_manager_shipments',
-        'payments': 'warehouse_manager_payments',
-        'drones': 'warehouse_manager_drones'
+        'dash': 'hub_manager_dashboard',
+        'verifications': 'hub_manager_verifications',
+        'fleet': 'hub_manager_fleet',
+        'gate': 'hub_manager_gate',
+        'audit': 'hub_manager_audit',
+        'leaderboard': 'hub_manager_leaderboard',
+        'settings': 'hub_manager_settings',
+        'shipments': 'hub_manager_shipments',
+        'payments': 'hub_manager_payments',
+        'drones': 'hub_manager_drones'
     };
     const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const expectedPage = tabToPage[tab];
