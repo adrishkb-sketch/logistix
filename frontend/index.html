@@ -2086,7 +2086,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                             <input class="pin-box signup-pin" maxlength="1" type="text" inputmode="numeric">
                         </div>
-                        <button type="button" class="premium-submit-btn" onclick="handleActionClick(event, this)">
+                        <button type="submit" class="premium-submit-btn" onclick="handleActionClick(event, this, () => { document.getElementById('signup-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); })">
                             <span data-i18n="btn_verify_register">Verify & Launch Platform</span>
                             <svg class="btn-arrow" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                         </button>
