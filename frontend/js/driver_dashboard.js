@@ -1458,12 +1458,20 @@ async function loadMissions(autoStartNext = false) {
             document.getElementById('fullscreen-btn').style.display = 'block';
             
             if (!map) {
-                map = L.map('route-map').setView([orderedStops[0].lat, orderedStops[0].lng], 13);
-                const theme = localStorage.getItem('theme') || 'dark';
-                const tileUrl = theme === 'dark' 
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-                L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
+                
+    const theme = localStorage.getItem('theme') || 'dark';
+    map = new google.maps.Map(document.getElementById('route-map'), {
+        center: { lat: orderedStops[0].lat, lng: orderedStops[0].lng },
+        zoom: 13,
+        styles: theme === 'dark' ? [
+            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+            { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+        ] : [],
+        disableDefaultUI: true
+    });
+    
                 applyOfficialBorders(map);
                 
                 addMapControlsAndHUD();
