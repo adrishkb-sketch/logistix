@@ -61,8 +61,9 @@ class JSONDatabase:
                 return
 
         # Ensure directory exists
+        # The source JSON files are always in base_dir/data, even on Vercel
         self.data_dir = primary_data_dir
-        self.file_path = os.path.join(self.data_dir, f"{table_name}.json")
+        self.file_path = os.path.join(base_dir, "data", f"{table_name}.json")
         
         # Ensure SQLite table is set up
         self._ensure_table()
@@ -152,14 +153,16 @@ class JSONDatabase:
         return items
 
     def _save_to_sqlite(self, db, items: List[Dict[str, Any]]):
+        if not items:
+            return
         with db.begin():
             # Delete first to replace
             db.execute(text(f"DELETE FROM {self.table_name}"))
-            for item in items:
-                db.execute(
-                    text(f"INSERT INTO {self.table_name} (id, data) VALUES (:id, :data)"),
-                    {"id": str(item.get("id", "")), "data": json.dumps(item, ensure_ascii=False)}
-                )
+            values = [{"id": str(item.get("id", "")), "data": json.dumps(item, ensure_ascii=False)} for item in items]
+            db.execute(
+                text(f"INSERT INTO {self.table_name} (id, data) VALUES (:id, :data)"),
+                values
+            )
 
     def get_all(self) -> List[Dict[str, Any]]:
         if self.use_turso:
