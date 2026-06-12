@@ -1013,7 +1013,7 @@ def check_shipment_performance(shipment: dict, driver: dict = None, vehicle: dic
     fatigue = driver.get("fatigue_score", 0) if driver else 0
     health = vehicle.get("vehicle_health_score", 100) if vehicle else 100
     
-    eta_info = calculate_dynamic_eta(dist, v_type, weather, fatigue, health, curr_loc["lat"], curr_loc["lng"], company_id=curr_shipment.get("company_id"))
+    eta_info = calculate_dynamic_eta(dist, v_type, weather, fatigue, health, curr_loc["lat"], curr_loc["lng"], company_id=shipment.get("company_id"))
     
     predicted_arrival = now + timedelta(minutes=eta_info["adjusted_mins"])
     diff = (predicted_arrival - expected).total_seconds() / 60.0

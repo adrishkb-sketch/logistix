@@ -29,3 +29,11 @@ data/images/
 *.db-wal
 *.db-shm
 
+# Evaluation Reports
+*evaluation_report.md
+
+# Firebase cache
+.firebase/
+
+
+
