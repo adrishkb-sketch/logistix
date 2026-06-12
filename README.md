@@ -108,6 +108,7 @@ flowchart TD
     %% Subgraphs for visual grouping
     subgraph Onboarding ["🏢 Phase 1: Onboarding & Location Audit"]
         Onboard["Regional Manager Onboards & Configures Company ID"]
+        OnboardCredentials["Gmail SMTP: Send onboarding credentials & welcome mail"]
         SetupHubs["Create Hub Depots & Assign storage/drone capacities"]
         IsWaterCheck{"Warehouse Location Verified on Land?"}
         WaterReject["Bypass depot placement if in water (Nominatim reverse OSM fallback / Is-on-Water API)"]
@@ -120,7 +121,7 @@ flowchart TD
         AuditGate["Manual Audit: Both Regional Manager & Hub Manager portals allowed"]
         AuditApproval{"Approved?"}
         MarkActive["Set driver & vehicle as active"]
-        VerifyNoLoop["Unverified status set (Triggers loop)"]
+        VerifyNoLoop["Unverified status set (Triggers re-upload loop)"]
     end
 
     subgraph AIGate ["⚙️ Phase 3: Settings AI Mode Gate"]
@@ -142,15 +143,21 @@ flowchart TD
     subgraph HubOps ["Hub Operations & Drone Dispatch"]
         HubDashboard["Hub Dashboard updates local congestion indices"]
         DockSchedule["Dock Scheduling allocates loading bay slot"]
-        CheckDrone{"Payload <= 10kg, Battery >= 20% & Normal weather?"}
-        DroneLaunch["Dispatch autonomous drone leg"]
+        CheckLastMile{"Is it the Last-Mile Leg?"}
+        CheckDroneViable{"Check Drone Viability: Payload <= 10kg, Battery >= 20% & Normal weather?"}
+        DeployDroneGate{"Warehouse Hub Manager Portal: Choose to deploy drone?"}
+        DroneLaunch["Dispatch autonomous drone air leg"]
         GroundLeg["Queue for standard ground vehicle leg"]
         TaskCard["Driver handset loads task card & VCE voice commands"]
-        PickupOTP["Driver inputs 6-digit Pickup OTP"]
+        SendPickupOTP["WhatsApp Cloud API: Send 6-digit verification OTP to driver handset"]
+        PickupOTP["Driver enters 6-digit Pickup OTP"]
     end
 
     subgraph Transit ["🚚 Phase 6: Leg In-Transit Monitor & Active Safety Loop"]
         InTransit["Leg status set to In-Transit"]
+        GPSSpeedGuard{"GPS Speed Guard check: Telemetry jump > 120 km/h?"}
+        RejectLocation["Reject coordinate jumps (Reject location updates)"]
+        ContinuousVitalsUpdate["Continuous Driver vitals update (Heart Rate, Stress, O2, Eye Closure rate)"]
         
         %% Vitals & Fatigue check
         CheckFatigue{"Fatigue Score > 65%?"}
@@ -186,13 +193,25 @@ flowchart TD
 
     subgraph Delivery ["📦 Phase 7: Arrival & Delivery Settlement"]
         ArriveDrop["Arrive at Destination Drop"]
+        SendDeliveryOTP["Gmail SMTP / WhatsApp: Send delivery validation OTP to receiver"]
         TrackPortal["Receiver tracks live vehicle GPS & dynamic ETA"]
         VerifyDeliveryOTP["Receiver generates & Driver enters Delivery OTP"]
         LedgerPfund["Ledger payouts split & Carbon ESG ratings calculated"]
     end
 
+    subgraph Legend ["🎨 Flowchart Color Legend & Portal Ownership"]
+        style Legend fill:#0a0e14,stroke:#ffffff,stroke-width:1px
+        MNode["Regional Manager Portal Node"]
+        HNode["Warehouse Hub Manager Portal Node"]
+        DNode["Driver Companion PWA Node"]
+        RNode["Receiver Customer Portal Node"]
+        SNode["Core System / Auto-Event Node"]
+        AINode["Google Gemini AI Node"]
+    end
+
     %% Flowchart connections
-    Onboard --> SetupHubs
+    Onboard --> OnboardCredentials
+    OnboardCredentials --> SetupHubs
     SetupHubs --> IsWaterCheck
     IsWaterCheck -- "No (In Water)" --> WaterReject
     WaterReject --> SetupHubs
@@ -219,14 +238,26 @@ flowchart TD
     HeuristicTSP --> HubDashboard
 
     HubDashboard --> DockSchedule
-    DockSchedule --> CheckDrone
-    CheckDrone -- "Yes" --> DroneLaunch
-    CheckDrone -- "No" --> GroundLeg
+    DockSchedule --> CheckLastMile
+    CheckLastMile -- "Yes" --> CheckDroneViable
+    CheckLastMile -- "No" --> GroundLeg
+    CheckDroneViable -- "Yes" --> DeployDroneGate
+    CheckDroneViable -- "No" --> GroundLeg
+    DeployDroneGate -- "Yes" --> DroneLaunch
+    DeployDroneGate -- "No" --> GroundLeg
+    
+    DroneLaunch --> ArriveDrop
     GroundLeg --> TaskCard
-    TaskCard --> PickupOTP
+    TaskCard --> SendPickupOTP
+    SendPickupOTP --> PickupOTP
     PickupOTP --> InTransit
 
-    InTransit --> CheckFatigue
+    InTransit --> GPSSpeedGuard
+    GPSSpeedGuard -- "Yes" --> RejectLocation
+    RejectLocation --> InTransit
+    GPSSpeedGuard -- "No" --> ContinuousVitalsUpdate
+    ContinuousVitalsUpdate --> CheckFatigue
+    
     CheckFatigue -- "Yes" --> FatigueHalt
     FatigueHalt -->|Once rested/vitals clear| InTransit
     CheckFatigue -- "No" --> CheckBreakdown
@@ -262,17 +293,25 @@ flowchart TD
     CheckExpiry -- "No" --> TransitRoute
 
     TransitRoute --> ArriveDrop
-    DroneLaunch --> ArriveDrop
-    ArriveDrop --> TrackPortal
+    ArriveDrop --> SendDeliveryOTP
+    SendDeliveryOTP --> TrackPortal
     TrackPortal --> VerifyDeliveryOTP
     VerifyDeliveryOTP --> LedgerPfund
 
     %% Node styling classes
-    class Onboard,SetupHubs,IsWaterCheck,WaterReject,FleetSetup,SettingsCheck,AISplit,AIAssign,AITSP,AIRescue,GeminiRouter,GeminiProceed,GeminiHalt,GeminiDivert,ComplianceReturn,LedgerPfund manager
-    class VerificationRequest,OCRCheck,AuditGate,AuditApproval,MarkActive,VerifyNoLoop,HubDashboard,DockSchedule,CheckDrone,DroneLaunch,GroundLeg hub
-    class TaskCard,PickupOTP,InTransit,CheckFatigue,FatigueHalt,CheckBreakdown,EmergencyReassign,RescueSettingsCheck,HeuristicRescue,ReAssignFleet,CheckCalamity,CalamitySettingsCheck,HeuristicCalamity,CheckDivert,AIAutoDivert,AIHalt,CheckExpiry,TransitRoute,ArriveDrop driver
-    class TrackPortal,VerifyDeliveryOTP receiver
+    class Onboard,OnboardCredentials,SetupHubs,IsWaterCheck,WaterReject,FleetSetup,SettingsCheck,AISplit,AIAssign,AITSP,AIRescue,GeminiRouter,GeminiProceed,GeminiHalt,GeminiDivert,ComplianceReturn,LedgerPfund manager
+    class VerificationRequest,OCRCheck,AuditGate,AuditApproval,MarkActive,VerifyNoLoop,HubDashboard,DockSchedule,CheckLastMile,CheckDroneViable,DeployDroneGate,DroneLaunch,GroundLeg hub
+    class TaskCard,SendPickupOTP,PickupOTP,InTransit,GPSSpeedGuard,RejectLocation,ContinuousVitalsUpdate,CheckFatigue,FatigueHalt,CheckBreakdown,EmergencyReassign,RescueSettingsCheck,HeuristicRescue,ReAssignFleet,CheckCalamity,CalamitySettingsCheck,HeuristicCalamity,CheckDivert,AIAutoDivert,AIHalt,CheckExpiry,TransitRoute,ArriveDrop driver
+    class SendDeliveryOTP,TrackPortal,VerifyDeliveryOTP receiver
     
+    %% Legend styling classes
+    class MNode manager
+    class HNode hub
+    class DNode driver
+    class RNode receiver
+    class SNode system
+    class AINode ai
+
     %% AI nodes styling
     class AISplit,AIAssign,AITSP,AIRescue,GeminiRouter,GeminiProceed,GeminiHalt,GeminiDivert ai
 ```
