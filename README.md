@@ -93,84 +93,7 @@ The services layer handles complex calculations, background validations, and dow
 
 ## 🗺️ 3. Core Operational Workflow Flowchart
 
-Below is the comprehensive, loop-capable operational state machine for the Logistix network. Section 3.1 displays a visual UTF-8 layout for terminal-friendly reading, and Section 3.2 hosts the neon-glow themed system architecture preview graph.
-
-### 🌌 3.1. Terminal Workflow & State Machine Map
-
-```text
- 🌌 LOGISTIX CORE WORKFLOW BLUEPRINT & STATE MACHINE
- ══════════════════════════════════════════════════════════════════════════════════
- 
-   [1. ONBOARDING & SETUP]
-   🏢 Executive Portal Onboarding ➔ Configures Company ID
-   ├─► Register Depots/Warehouses ➔ Set storage capacities
-   └─► Register Vehicles/Fleet & Onboard Driver Accounts
-               │
-               ▼
-   [2. SAFETY & OCR GATE AUDITS]
-   🏭 Gate Camera captures vehicle plate ➔ Cloud OCR extracts plate & manifest
-   ├─► Fuzzy Match < 65%?  ➔ [MANUAL DISPATCH AUDIT OVERRIDE] ──┐
-   └─► Fuzzy Match >= 65%? ➔ [MARK DRIVER & VEHICLE ACTIVE] ◄──┘
-               │
-               ▼
-   [3. INTELLIGENT DISPATCH & ROUTING (SPLIT)]
-   🏢 Consult Gemini AI Strategy Oracle & Bharat-Fuel Price Index
-   └─► Create Shipment ➔ OSRM calculates real road driving distances
-               │
-               ▼
-       Is route distance >= 50km?
-       ├─► [NO]  ➔ [DIRECT ROUTE LEG] ──┐
-       └─► [YES] ➔ [SPLIT SOLVER] ──────┴─► Auto-decompose journey:
-                                            [First-Mile ➔ Middle-Mile ➔ Last-Mile]
-                                                         │
-                                                         ▼
-                                            [COMBINATORIAL AUTO-ASSIGNMENT]
-                                            Locks closest compatible driver & fleet
-                                                         │
-               ┌─────────────────────────────────────────┴─────────────────────────────────────────┐
-               ▼ (Drone Dispatch)                                                                  ▼ (Ground Dispatch)
-   [4. HUB DEPOSIT & SCHEDULING]                                                     [5. TRANSIT OPERATIONS & COMPLIANCE]
-   🏭 Hub dashboard updates congestion indexes                                        🚚 Driver PWA receives Task Card & VCE commands
-   ├─► Dock Scheduling allocates loading bay slot                                    └─► Driver inputs 6-digit Pickup OTP
-   └─► Verify cargo payload for Drone Leg?                                                       │
-       ├── [YES] (Weight <= 10kg & Battery >= 20%) ➔ [DRONE DISPATCH] ──┐                        ▼
-       └── [NO]  ➔ Route back to Ground Leg ────────────────────────────┼───────────► [LEG IN-TRANSIT LOOP] ◄──────────────┐
-                                                                        │                        │                         │
- ┌──────────────────────────────────────────────────────────────────────┼────────────────────────┼─────────────────────────┤
- │                                                                      │                        │                         │
- ├──► [WEARABLE VITALS CHECK] ──► Fatigue Index > 65%? ──► [YES] ➔ [REST STOP ENFORCED] ─────────┤                         │
- │                                └── [NO] ➔ [OK]                  Alert Manager ➔ Wait to clear │                         │
- │                                                                                               │                         │
- ├──► [FLEET HEALTH CHECK] ─────► Breakdown Event? ──────► [YES] ➔ [EMERGENCY REASSIGNMENT] ─────┤                         │
- │                                └── [NO] ➔ [OK]                  Unassign Driver ➔ Re-run solver                         │
- │                                                                                               │                         │
- ├──► [ENVIRONMENTAL CHECK] ────► Disaster polyline? ────► [YES] ➔ Within Vehicle class Divert?  │                         │
- │                                └── [NO] ➔ [OK]                  ├── [YES] ➔ [AI AUTO-DIVERT] ─┤                         │
- │                                                                 │           Resplit remaining │                         │
- │                                                                 └── [NO]  ➔ [AI EMER HALT] ───┤                         │
- │                                                                                               │                         │
- └──► [COMPLIANCE CHECK] ───────► Predicted ETA > Expire? ──► [YES] ➔ [COMPLIANCE RETURN] ───────┤                         │
-                                  └── [NO] ➔ [OK]                  Reverse pickup/drop targets   │                         │
-                                                                   Re-run Auto-Assignment        │                         │
- ┌───────────────────────────────────────────────────────────────────────────────────────────────┘                         │
- │                                                                                                                         │
- └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-                                                                        │
-                                                                        ▼
-                                                             [6. ARRIVE & DELIVERY]
-                                                             📦 Receiver tracks live GPS & dynamic ETA
-                                                             └─► Receiver generates Delivery OTP
-                                                                         │
-                                                                         ▼
-                                                             [DRIVER VERIFICATION]
-                                                             Driver enters Delivery OTP code
-                                                                         │
-                                                                         ▼
-                                                             [LEDGER & ESG RESOLUTION]
-                                                             Ledger payouts split ➔ Carbon ESG saved
-```
-
-### 📊 3.2. System Architecture Graph
+Below is the comprehensive, loop-capable operational state machine for the Logistix network. It visualizes the complete end-to-end lifecycle of a shipment, including gate check-ins, AI settings validation gates, active transit operations, safety alarms, and delivery settlements.
 
 ```mermaid
 flowchart TD
@@ -180,112 +103,211 @@ flowchart TD
     classDef driver fill:#1a1608,stroke:#ffb703,stroke-width:2px,color:#ffb703;
     classDef receiver fill:#160a24,stroke:#dec9ff,stroke-width:2px,color:#dec9ff;
     classDef system fill:#051630,stroke:#0f3b75,stroke-width:2px,color:#3b82f6;
+    classDef ai fill:#240a34,stroke:#e0aaff,stroke-width:2px,color:#e0aaff;
 
-    %% Nodes
-    Onboard["Manager Onboards & Configures Company ID"]
-    SetupHubs["Create Hub Depots & Assign Capacities"]
-    FleetSetup["Register Fleet & Onboard Drivers"]
-    ConsultOracle["Consult Gemini AI Strategy Oracle & Bharat-Fuel Price Index"]
-    GateOCR["OCR Gate scan of plate & manifest"]
-    VerifyOCR{"Fuzzy OCR Match >= 65%?"}
-    ManualVerify["Manual Dispatch Audit Override"]
-    MarkActive["Set driver & vehicle as active"]
-    CreateShipment["Create Shipment & Query OSRM Road Distance"]
-    CheckDist{"Distance >= 50km?"}
-    DirectRoute["Direct Routing Leg"]
-    SplitEngine["Decompose Route: First / Middle / Last-Mile Legs"]
-    AutoAssign["Auto-Assignment Solver: Matches closest active asset"]
-    HubDashboard["Hub Manager Dashboard updates congestion"]
-    DockSchedule["Dock Scheduling assigns bay slots"]
-    CheckDrone{"Payload <= 10kg & Battery >= 20%?"}
-    DroneLaunch["Dispatch autonomous drone leg"]
-    GroundLeg["Queue for standard ground vehicle leg"]
-    TaskCard["Driver handset loads task card & Voice VCE commands"]
-    PickupOTP["Driver enters 6-digit pickup OTP"]
-    InTransit["Leg status set to In-Transit"]
-    CheckFatigue{"Fatigue Sensor Eye/HR > 65%?"}
-    FatigueHalt["Enforce Haptic Rest stop & Notify Manager"]
-    CheckBreakdown{"Vehicle Breakdown triggered?"}
-    EmergencyReassign["Execute /emergency-reassign: Auto-swap drivers"]
-    DisasterSim{"Resilience Simulator Calamity triggered?"}
-    CheckDivert{"Within vehicle class divert limit?"}
-    AIAutoDivert["AI Auto-Divert: Resplit remaining legs & Reassign drivers"]
-    EmergencyHalt["AI Emergency Halt: seek nearest safe open area"]
-    CheckExpiry{"Predicted ETA > E-Way Bill Expiry?"}
-    ComplianceReturn["Compliance Return: Reverse pickup/drop & re-run assignment"]
-    TransitRoute["Driver follows OSRM navigation map"]
-    ArriveDrop["Arrive at Destination Drop"]
-    TrackPortal["Receiver tracks live vehicle GPS & dynamic ETA"]
-    VerifyDeliveryOTP["Receiver verifies Delivery OTP"]
-    LedgerPfund["Execute ledger payouts, milestone rewards, and Carbon ESG ratings"]
+    %% Subgraphs for visual grouping
+    subgraph Onboarding ["🏢 Phase 1: Onboarding & Location Audit"]
+        Onboard["Regional Manager Onboards & Configures Company ID"]
+        SetupHubs["Create Hub Depots & Assign storage/drone capacities"]
+        IsWaterCheck{"Warehouse Location Verified on Land?"}
+        WaterReject["Bypass depot placement if in water (Nominatim reverse OSM fallback / Is-on-Water API)"]
+        FleetSetup["Register Fleet Vehicles & Driver Accounts"]
+    end
 
-    %% Styles
-    class Onboard,SetupHubs,FleetSetup,ConsultOracle,CreateShipment,CheckDist,DirectRoute,SplitEngine,AutoAssign,LedgerPfund manager;
-    class GateOCR,VerifyOCR,ManualVerify,MarkActive,HubDashboard,DockSchedule,CheckDrone,DroneLaunch,GroundLeg hub;
-    class TaskCard,PickupOTP,InTransit,CheckFatigue,FatigueHalt,CheckBreakdown,EmergencyReassign,CheckDivert,AIAutoDivert,EmergencyHalt,CheckExpiry,ComplianceReturn,TransitRoute,ArriveDrop driver;
-    class TrackPortal,VerifyDeliveryOTP receiver;
-    class DisasterSim system;
+    subgraph Verification ["🔒 Phase 2: Driver Gates & OCR Visual Verification Loop"]
+        VerificationRequest["Driver uploads vehicle plate scan for Verification"]
+        OCRCheck{"Verify OCR Match >= 65%?"}
+        AuditGate["Manual Audit: Both Regional Manager & Hub Manager portals allowed"]
+        AuditApproval{"Approved?"}
+        MarkActive["Set driver & vehicle as active"]
+        VerifyNoLoop["Unverified status set (Triggers loop)"]
+    end
 
-    %% Onboarding & Setup
+    subgraph AIGate ["⚙️ Phase 3: Settings AI Mode Gate"]
+        SettingsCheck{"Is Gemini key present & active in Settings?"}
+    end
+
+    subgraph AIDispatch ["🤖 Phase 4A: Gemini AI-Powered Dispatch & Routing"]
+        AISplit["Gemini AI splits route (first/middle/last-mile) & uses Bharat-Fuel Price index"]
+        AIAssign["Gemini AI auto-assigns closest active compatible assets"]
+        AITSP["Gemini AI TSP multi-stop route stop sequencing"]
+    end
+
+    subgraph HeuristicDispatch ["📐 Phase 4B: Local Heuristics Fallback Dispatch"]
+        HeuristicSplit["Route Splitter (standard 50km threshold rule)"]
+        HeuristicAssign["Deterministic auto-assignment matches proximity & license types"]
+        HeuristicTSP["OSRM Trip API stop sequencing"]
+    end
+
+    subgraph HubOps ["Hub Operations & Drone Dispatch"]
+        HubDashboard["Hub Dashboard updates local congestion indices"]
+        DockSchedule["Dock Scheduling allocates loading bay slot"]
+        CheckDrone{"Payload <= 10kg, Battery >= 20% & Normal weather?"}
+        DroneLaunch["Dispatch autonomous drone leg"]
+        GroundLeg["Queue for standard ground vehicle leg"]
+        TaskCard["Driver handset loads task card & VCE voice commands"]
+        PickupOTP["Driver inputs 6-digit Pickup OTP"]
+    end
+
+    subgraph Transit ["🚚 Phase 6: Leg In-Transit Monitor & Active Safety Loop"]
+        InTransit["Leg status set to In-Transit"]
+        
+        %% Vitals & Fatigue check
+        CheckFatigue{"Fatigue Score > 65%?"}
+        FatigueHalt["Enforce Rest Stop (Zen Mode), place Driver offline & alert manager"]
+        
+        %% Breakdown check
+        CheckBreakdown{"Vehicle Breakdown triggered?"}
+        EmergencyReassign["Emergency Recovery reassignment auto-swaps drivers"]
+        RescueSettingsCheck{"Is Gemini active?"}
+        AIRescue["Gemini selects best rescue vehicle/driver candidate"]
+        HeuristicRescue["Heuristic nearest-vehicle recovery swap (within 100km)"]
+        ReAssignFleet["Reassign fleet & generate fresh verification/pickup code"]
+        
+        %% Calamity check
+        CheckCalamity{"Disaster Cell intersected (cyclone, flood, storm, heatwave, hail, riot)?"}
+        CalamitySettingsCheck{"Is Gemini active?"}
+        GeminiRouter["Call gemini_dynamic_router: evaluate action plan"]
+        GeminiProceed["Gemini Proceed: Continue along route"]
+        GeminiHalt["Gemini Halt: Auto-delay for 24h to wait out calamity"]
+        GeminiDivert["Gemini Divert: Divert & resplit remaining journey"]
+        
+        HeuristicCalamity["Heuristic Calamity check: calculate road distance to safe hub"]
+        CheckDivert{"Within vehicle class divert limit (15km EV, 40km Van, 150km Truck)?"}
+        AIAutoDivert["AI Auto-Divert: Reroute to safe hub & resplit remaining legs"]
+        AIHalt["AI Emergency Halt: halt in nearest safe open area & alert manager"]
+        
+        %% E-way bill compliance check
+        CheckExpiry{"Predicted ETA > E-Way Bill Expiry?"}
+        ComplianceReturn["Compliance Return: reverse pickup/drop (return to sender) & reset assignments"]
+        
+        TransitRoute["Driver follows OSRM navigation map"]
+    end
+
+    subgraph Delivery ["📦 Phase 7: Arrival & Delivery Settlement"]
+        ArriveDrop["Arrive at Destination Drop"]
+        TrackPortal["Receiver tracks live vehicle GPS & dynamic ETA"]
+        VerifyDeliveryOTP["Receiver generates & Driver enters Delivery OTP"]
+        LedgerPfund["Ledger payouts split & Carbon ESG ratings calculated"]
+    end
+
+    %% Flowchart connections
     Onboard --> SetupHubs
-    SetupHubs --> FleetSetup
-    FleetSetup --> GateOCR
-    GateOCR --> VerifyOCR
-    VerifyOCR -- "No" --> ManualVerify
-    ManualVerify --> MarkActive
-    VerifyOCR -- "Yes" --> MarkActive
+    SetupHubs --> IsWaterCheck
+    IsWaterCheck -- "No (In Water)" --> WaterReject
+    WaterReject --> SetupHubs
+    IsWaterCheck -- "Yes" --> FleetSetup
+    FleetSetup --> VerificationRequest
 
-    %% Route Split & Assignment
-    MarkActive --> ConsultOracle
-    ConsultOracle --> CreateShipment
-    CreateShipment --> CheckDist
-    CheckDist -- "No" --> DirectRoute
-    CheckDist -- "Yes" --> SplitEngine
-    DirectRoute --> AutoAssign
-    SplitEngine --> AutoAssign
+    VerificationRequest --> OCRCheck
+    OCRCheck -- "Yes" --> MarkActive
+    OCRCheck -- "No" --> AuditGate
+    AuditGate --> AuditApproval
+    AuditApproval -- "Yes" --> MarkActive
+    AuditApproval -- "No" --> VerifyNoLoop
+    VerifyNoLoop --> VerificationRequest
 
-    %% Hub Operations
-    AutoAssign --> HubDashboard
+    MarkActive --> SettingsCheck
+    SettingsCheck -- "Yes" --> AISplit
+    AISplit --> AIAssign
+    AIAssign --> AITSP
+    AITSP --> HubDashboard
+
+    SettingsCheck -- "No" --> HeuristicSplit
+    HeuristicSplit --> HeuristicAssign
+    HeuristicAssign --> HeuristicTSP
+    HeuristicTSP --> HubDashboard
+
     HubDashboard --> DockSchedule
-    HubDashboard --> CheckDrone
+    DockSchedule --> CheckDrone
     CheckDrone -- "Yes" --> DroneLaunch
     CheckDrone -- "No" --> GroundLeg
-    DroneLaunch --> ArriveDrop
     GroundLeg --> TaskCard
-
-    %% Driver Transit Loop
     TaskCard --> PickupOTP
     PickupOTP --> InTransit
-    InTransit --> CheckFatigue
 
-    %% Active Safety: Fatigue
+    InTransit --> CheckFatigue
     CheckFatigue -- "Yes" --> FatigueHalt
-    FatigueHalt -->|Wait for recovery| InTransit
+    FatigueHalt -->|Once rested/vitals clear| InTransit
     CheckFatigue -- "No" --> CheckBreakdown
 
-    %% Active Safety: Breakdown
     CheckBreakdown -- "Yes" --> EmergencyReassign
-    EmergencyReassign --> AutoAssign
-    CheckBreakdown -- "No" --> DisasterSim
+    EmergencyReassign --> RescueSettingsCheck
+    RescueSettingsCheck -- "Yes" --> AIRescue
+    RescueSettingsCheck -- "No" --> HeuristicRescue
+    AIRescue --> ReAssignFleet
+    HeuristicRescue --> ReAssignFleet
+    ReAssignFleet --> InTransit
+    CheckBreakdown -- "No" --> CheckCalamity
 
-    %% Active Safety: Disaster Simulation
-    DisasterSim -- "Yes" --> CheckDivert
+    CheckCalamity -- "Yes" --> CalamitySettingsCheck
+    CalamitySettingsCheck -- "Yes" --> GeminiRouter
+    GeminiRouter -- "Proceed" --> GeminiProceed
+    GeminiRouter -- "Halt" --> GeminiHalt
+    GeminiRouter -- "Divert" --> GeminiDivert
+    GeminiProceed --> InTransit
+    GeminiHalt --> InTransit
+    GeminiDivert --> InTransit
+
+    CalamitySettingsCheck -- "No" --> HeuristicCalamity
+    HeuristicCalamity --> CheckDivert
     CheckDivert -- "Yes" --> AIAutoDivert
-    AIAutoDivert --> AutoAssign
-    CheckDivert -- "No" --> EmergencyHalt
-    DisasterSim -- "No" --> CheckExpiry
+    CheckDivert -- "No" --> AIHalt
+    AIAutoDivert --> InTransit
+    AIHalt --> InTransit
 
-    %% Active Safety: Expiry
+    CheckCalamity -- "No" --> CheckExpiry
     CheckExpiry -- "Yes" --> ComplianceReturn
-    ComplianceReturn --> AutoAssign
+    ComplianceReturn --> InTransit
     CheckExpiry -- "No" --> TransitRoute
 
-    %% Delivery & Handoff
     TransitRoute --> ArriveDrop
+    DroneLaunch --> ArriveDrop
     ArriveDrop --> TrackPortal
     TrackPortal --> VerifyDeliveryOTP
     VerifyDeliveryOTP --> LedgerPfund
+
+    %% Node styling classes
+    class Onboard,SetupHubs,IsWaterCheck,WaterReject,FleetSetup,SettingsCheck,AISplit,AIAssign,AITSP,AIRescue,GeminiRouter,GeminiProceed,GeminiHalt,GeminiDivert,ComplianceReturn,LedgerPfund manager
+    class VerificationRequest,OCRCheck,AuditGate,AuditApproval,MarkActive,VerifyNoLoop,HubDashboard,DockSchedule,CheckDrone,DroneLaunch,GroundLeg hub
+    class TaskCard,PickupOTP,InTransit,CheckFatigue,FatigueHalt,CheckBreakdown,EmergencyReassign,RescueSettingsCheck,HeuristicRescue,ReAssignFleet,CheckCalamity,CalamitySettingsCheck,HeuristicCalamity,CheckDivert,AIAutoDivert,AIHalt,CheckExpiry,TransitRoute,ArriveDrop driver
+    class TrackPortal,VerifyDeliveryOTP receiver
+    
+    %% AI nodes styling
+    class AISplit,AIAssign,AITSP,AIRescue,GeminiRouter,GeminiProceed,GeminiHalt,GeminiDivert ai
 ```
+
+### 🔮 Google Gemini AI Feature Integrations
+
+Logistix utilizes Google Gemini's generative capabilities across both backend services and regional portals. Below is the full directory of Gemini functions running in the application:
+
+| Feature & API Call | Backend Implementation | Frontend UI Trigger & Page | Description |
+| :--- | :--- | :--- | :--- |
+| **Preemptive AI Disruption Risk** | `/api/manager/analytics/cascade` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L1304) | **Regional Manager Dashboard:** [executive_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_dashboard.html) | Analyzes active delayed shipments, driver fatigue, and weather alerts to predict cascading risks and generate structured markdown mitigation strategies. |
+| **AI Strategy Oracle Chat** | `/api/manager/ai/chat` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L2816) | **Executive Oracle Portal:** [executive_oracle.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_oracle.html) | Interactive AI chat console enabling managers to query logistics data, fleet guidelines, carbon targets, or general instructions. |
+| **AI ESG Sustainability Audit** | `/api/manager/ai/esg-audit` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L2844) | **Executive Strategy Page:** [executive_strategy.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_strategy.html) | Examines clean energy fleet ratios, perishables, and carbon footprint numbers to produce detailed audits matching UN SDGs. |
+| **AI Driver Safety & Fatigue Audit** | `/api/manager/ai/safety-audit` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L2885) | **Executive Safety Portal:** [executive_safety.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_safety.html) | Analyzes driver telemetry profiles, critical wearability fatigue ratings, and road incidents to output safety playbooks. |
+| **Operational Hub Readiness** | `/api/manager/ai/wh-readiness` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L2931) | **Warehouse Details Page:** [executive_warehouses.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_warehouses.html) | Assesses inbound congestion percentages, active drone fleet pads, and vehicle health metrics to yield hub fitness scores. |
+| **Shipment Demand Forecast** | `/api/manager/ai/demand-forecast` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L3011) | **Hub Manager Dashboard:** [hub_manager_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_dashboard.html) | Performs predictive demand volume analysis, factoring in cargo weights, cold-chain assets, and upcoming Indian public holidays. |
+| **Morning Operational Daily Briefing** | `/api/manager/ai/daily-briefing` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L3200) | **Hub Manager Dashboard:** [hub_manager_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_dashboard.html) | Fetches current meteorological conditions and fleet duty rosters to write prioritized daily action items. |
+| **Diagnostic Fleet Audit** | `/api/manager/ai/fleet-audit` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L3340) | **Executive Drivers Page:** [executive_drivers.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_drivers.html) | Analyzes raw driver fatigue logs and vehicle health ratings to provide diagnostic maintenance suggestions. |
+| **Operational Strategy Optimizer** | `/api/manager/ai/strategy-optimizer` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L3388) | **Executive Strategy Page:** [executive_strategy.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_strategy.html) | Scans digital ledger balances and active corporate growth goals to outline profit improvement steps. |
+| **Warehouse Bottleneck Analysis** | `/api/manager/warehouses/{warehouse_id}/bottleneck-alerts` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L3465) | **Hub Manager Portal:** [hub_manager_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_dashboard.html) | Evaluates queue congestion to suggest extra loader allocations or scheduling delays. |
+| **Post-Assignment AI Reasoning** | `auto_assign_shipment` in [assignment.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/assignment.py#L416) | **Executive Shipments Portal:** [executive_shipments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_shipments.html) | Generates a single-sentence context-aware explanation detailing exactly why a specific driver-vehicle pair was assigned to a shipment. |
+| **AI Rescue Vehicle Selection** | `assign_rescue_vehicle` in [assignment.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/assignment.py#L669) | **Simulation & Alerts Pages:** [executive_resilience.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_resilience.html) | Evaluates multiple nearby available rescue vehicles to assign the most optimal recovery driver/vehicle pair. |
+| **AI TSP Route Optimization** | `reoptimize_driver_route` in [assignment.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/assignment.py#L791) | **Driver Task List Page:** [driver_tasks.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_tasks.html) | Solves the Traveling Salesperson Problem (TSP) to sequence multiple pickup/delivery stops in the optimal visiting order. |
+| **AI Calamity Divert Router** | `check_and_reroute_calamities` in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py#L364) | **Resilience/Tracking Map:** [executive_weather.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_weather.html) | Evaluates route weather conditions against disaster cells to output structured routing plans (Proceed, Halt, or Divert). |
+| **AI Telemetry Anomaly Explanation** | `analyze_telemetry` in [alert_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/alert_engine.py#L105) | **Safety Alerts Board:** [executive_safety.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_safety.html) | Generates professional natural language descriptions and immediate suggestions for classified telemetry anomalies. |
+| **Customer Feedback Sentiment Analysis** | `/api/shipments/{shipment_id}/feedback` in [shipment.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/shipment.py#L788) | **Executive Receivers Portal:** [executive_receivers.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_receivers.html) | Performs sentiment analysis of customer feedback, classifying it as Positive, Negative, or Neutral, and logs it in the ledger. |
+
+### ⚙️ Gemini Key Settings & Fail-Safe Fallback Mechanics
+
+Settings are configured in the Executive Portal's **AI API Configuration** settings board ([executive_system.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_system.html#L475)), where the Regional Manager can toggle the system between the **Gemini AI Engine** and the **Local Heuristic Rule Engine** (`ai_mode` = True/False) and append Google Gemini API keys. The keys are automatically rotated in the backend key rotation pool to stay within free-tier rate limits.
+
+If all Gemini API keys in the pool are exhausted, billing limits are reached, or AI Mode is disabled, Logistix implements a **high-fidelity fail-safe fallback mechanism** using local heuristic algorithms:
+* **Calamity Diverting Fallback:** Falls back to hardcoded vehicle-class-aware divert ranges (EV/Bike: 15km, Van: 40km, Heavy Truck: 150km) and calculates road network distances using the local OSRM road distance routing engine. If safe depots are out of range, the driver is instructed to execute an **Emergency Halt** in a safe area.
+* **Route Optimization Fallback:** Route splits default to the 50km split rule (decomposing journeys into first, middle, and last-mile legs) and sequences multi-stop tasks using OSRM's TSP trip solver.
+* **Generative Explanations Fallback:** The backend activates a database-enriched heuristic fallback engine ([gemini_service.py:L12-420](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py#L12-420)) that queries active telemetry pools to build structured, static markdown briefings, safety alerts, and ESG reports directly.
 
 ---
 
