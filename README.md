@@ -455,3 +455,45 @@ Logistix implements a full simulated **IoT Telemetry Gateway** ([iot_gateway.py]
 | **Perishable Cargo Cold-Chain Sensor** | • Cargo Compartment Temp (°C)<br>• Relative Humidity (%)<br>• Carbon Vitality Index | Triggers **Thermal Hazard Warning** on the Hub Dashboard if temperatures exceed the 8°C safety threshold for perishable shipments. | Automatically re-calculates ETA priorities, alerts managers to check coolant buffers, and flags cargo inspectors at the next checkpoint. |
 | **Cabin Accelerometer G-Sensor** | • Impact Shock Force (G-force)<br>• Acceleration Peaks<br>• Deceleration Rates | Triggers **Critical Collision Event** if accelerometer reports shock forces exceeding 8.0 G. | Immediately grounds the vehicle (maintenance status), sends emergency alerts to regional managers, and triggers assignment rescue solvers. |
 | **Mechanical Health Diagnostician** | • Total Mileage (KM)<br>• Kilometers since last service<br>• Brake wear/degradation | Calculates continuous distance jumps, scaling down vehicle health scores dynamically based on road travel. | Hub managers are alerted to schedule preventative maintenance before vehicles are allowed to queue for standard middle-mile dispatches. |
+
+---
+
+## 🎯 8. Alignment with Cause (Hackathon Evaluation Criteria)
+
+Logistix is built in direct alignment with the **Google Build with AI Hackathon** — specifically targeting the **Smart Supply Chains (Resilient Logistics and Dynamic Supply Chain Optimization)** track. Below is the detailed breakdown of how the prototype addresses each of the three core evaluation criteria:
+
+### 🔍 8.1. Problem Definition
+> [!NOTE]
+> **Evaluation Metric:** *Does the project clearly articulate the real-world issue it aims to solve, showing deep understanding and thorough research?*
+
+* **The Real-World Industry Crisis:** Modern global supply chains manage millions of concurrent shipments across highly complex and volatile transportation networks. Historically, these systems operate *reactively*—critical disruptions such as sudden weather anomalies, driver fatigue, vehicle breakdowns, and regulatory failures (like expired E-Way Bills in India) are only identified after delivery timelines have already been compromised. This lag creates a costly cascading bottleneck across downstream warehouses, docks, and customer portals.
+* **Thorough System Modeling & Research:** Logistix is designed around a deep, research-backed understanding of actual ground logistics variables:
+  * **Real-World Road Routing vs. Theoretical Lines:** Standard systems approximate routes using linear Haversine calculations. Logistix integrates the **OSRM API** to query actual road networks, preventing false route planning.
+  * **Geospatial Integrity Audit:** Using the **Is-on-Water API** and **Nominatim OSM API**, the system performs checks to ensure newly registered warehouses or hub coordinate segments are physically located on land, preventing placement errors in bodies of water.
+  * **Regulatory Compliance Boundaries:** The system monitors regulatory E-Way Bill deadlines in real-time, forecasting whether active route progress will exceed the valid period.
+
+### 💡 8.2. Relevance of Solution
+> [!TIP]
+> **Evaluation Metric:** *Is the solution directly tailored to the identified problem? How effectively will it improve the current situation or user experience?*
+
+Logistix shifts the paradigm from reactive firefighting to *preemptive, automated remediation* through a cohesive, multi-persona ecosystem tailored to each supply chain participant (Managers, Hub Supervisors, Drivers, and Customers):
+* **Preemptive AI Disruption Analytics:** Rather than waiting for a delay, the **Gemini AI engine** continuously analyzes multifaceted transit data (real-time storm/flood cell intersections, active telemetry trends, driver vitals, and hub dock congestion). It detects risks early to recommend structured mitigation strategies before localized bottlenecks cascade into broader supply chain delays.
+* **Instant, Calamity-Aware Route Optimization:**
+  * If a vehicle intersects a storm cell, Gemini executes dynamic rerouting (`check_and_reroute_calamities`), determining whether to **Proceed**, **Halt**, or **Divert**.
+  * **Fail-Safe Heuristics:** If the Gemini API key hits rate limits or network issues arise, the system immediately falls back to a local rule-based heuristic router. It utilizes vehicle-class-aware divert ranges (15km EV/Bike, 40km Van, 150km Truck) to calculate safe land-based hub detours using OSRM, guaranteeing continuous uptime.
+* **Dynamic Fleet Rescue Swap:** If a vehicle suffers a mechanical breakdown (cabin accelerometer detects a G-force peak > 8.0 G or driver reports a breakdown via voice), the backend auto-assigns the nearest active compatible driver/vehicle pair, splits the financial ledger payout based on the exact percentage of completed distance, and updates the task cards seamlessly.
+* **Ground-Tailored Driver Experience:** Recognizing the constraints of on-duty driving, the platform includes a hands-free **Voice Command Engine (VCE)** and complete multi-language localization (English, Hindi, Marathi, etc.) to ensure accessibility and safety.
+
+### 📈 8.3. Expected Impact
+> [!IMPORTANT]
+> **Evaluation Metric:** *Does the project have the potential for significant, measurable impact on its target audience or the broader community?*
+
+Logistix has a direct, measurable impact on operational efficiency, worker safety, cargo preservation, and environmental goals:
+* **Zero-Accident Driver Safety (Human Impact):** By streaming real-time biometric telemetry (Heart Rate, Stress Index, SpO2, Eye-Closure Rates), the wearable vitals engine enforces a haptic **Zen Mode / Rest Stop** the moment fatigue scores exceed 65%, taking the driver off-duty and preventing fatigue-induced road accidents.
+* **Drastic Reduction in Cargo Losses & Downtime:** Real-time perishable cold-chain sensor auditing (compartment temperature and humidity checks) prevents cargo spoilage. Automated drone-delivery dispatching handles the last-mile leg autonomously (when payload <= 10kg, battery >= 20%, and weather is clear), bypassing local urban gridlock.
+* **Regulatory Compliance Cost Savings:** By preemptively identifying ETA violations against E-Way Bill deadlines, the system initiates a **Compliance Return** to return parcels back to the sender automatically, preventing high penalty fines and impoundments at state checkpoints.
+* **Measurable ESG & Environmental Footprint (Sustainability Impact):** Logistix computes precise carbon metrics based on vehicle engine classifications (EV/electric vs. diesel/LCV). By calculating carbon offsets achieved through EV routes and autonomous drone deliveries, the project actively contributes to the United Nations Sustainable Development Goals:
+  * **SDG 7 (Affordable and Clean Energy):** Driving EV adoption and smart charging pathing.
+  * **SDG 9 (Industry, Innovation, and Infrastructure):** Building resilient, AI-optimized logistics corridors.
+  * **SDG 11 (Sustainable Cities and Communities):** Reducing heavy vehicle traffic and emissions via drone last-mile links.
+  * **SDG 13 (Climate Action):** Direct carbon accounting and optimization.
