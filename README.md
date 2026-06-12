@@ -108,24 +108,85 @@ The services layer handles complex calculations, background validations, and dow
 
 ---
 
-## 📟 4. Electronics & Simulated IoT Hardware Integration
+## 💻 4. Technical Merit (Hackathon Evaluation Criteria)
 
-Logistix implements a full simulated **IoT Telemetry Gateway** ([iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py)) that feeds real-time multi-sensor readings into the safety engine, transforming raw logistics tracking into a dynamic, life-saving system.
+Logistix is built with high-quality engineering. Here is how our project meets the four core technical merit criteria in simple terms:
 
-| Simulated Hardware Gadget | Telemetry Features | System Trigger & Action | Operational Safeguard Impact |
-| :--- | :--- | :--- | :--- |
-| **Wearable Haptic Vitals Band** | • Heart Rate (BPM)<br>• Stress Index (0-100)<br>• Blood Pressure (BP)<br>• Blood Oxygen Level (SpO2) | Triggers **Enforced Rest Stop** if fatigue score exceeds 65%, heart rate drops <55 / exceeds 110, or oxygen drops <92%. | Places driver offline/off-duty immediately to prevent micro-sleep accidents, notifies managers, and locks routing changes until vitals stabilize. |
-| **Perishable Cargo Cold-Chain Sensor** | • Cargo Compartment Temp (°C)<br>• Relative Humidity (%)<br>• Carbon Vitality Index | Triggers **Thermal Hazard Warning** on the Hub Dashboard if temperatures exceed the 8°C safety threshold for perishable shipments. | Automatically re-calculates ETA priorities, alerts managers to check coolant buffers, and flags cargo inspectors at the next checkpoint. |
-| **Cabin Accelerometer G-Sensor** | • Impact Shock Force (G-force)<br>• Acceleration Peaks<br>• Deceleration Rates | Triggers **Critical Collision Event** if accelerometer reports shock forces exceeding 8.0 G. | Immediately grounds the vehicle (maintenance status), sends emergency alerts to regional managers, and triggers assignment rescue solvers. |
-| **Mechanical Health Diagnostician** | • Total Mileage (KM)<br>• Kilometers since last service<br>• Brake wear/degradation | Calculates continuous distance jumps, scaling down vehicle health scores dynamically based on road travel. | Hub managers are alerted to schedule preventative maintenance before vehicles are allowed to queue for standard middle-mile dispatches. |
+### ⚙️ 4.1. Technical Complexity
+> [!NOTE]
+> **Evaluation Metric:** *Is the technology behind the app challenging and well-written? Is the codebase clean, robust, and reliable?*
+
+* **Advanced Map & Location Services:** The app does not guess routes. It integrates OSRM in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py) to calculate actual road paths. It also checks coordinate records via Nominatim to ensure depot placements are realistic (not in water).
+* **Complex Operational Workflows:** The system handles multi-leg dispatches, driver assignments, automatic breakdown re-routing, and E-Way Bill compliance checking. All these operations are mapped in our combined workflow flowchart (see Section 8).
+* **Simulated IoT Sensor Grid:** We built a real-time data listener in [iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py) that models multi-sensor inputs. This includes accelerometer cabin crashes, cargo temperature thresholds, and driver heart rate monitors.
+
+### 🤖 4.2. AI Integration
+> [!NOTE]
+> **Evaluation Metric:** *How well is AI integrated into the project? Does it use advanced AI models correctly, or could a simpler rule-based approach work instead?*
+
+* **Sophisticated Multi-Model Integration:** We use two advanced Google AI technologies. We use **Vertex AI** to host custom machine learning models for predictive ETA calculations. We use **Google Gemini 1.5** for high-level reasoning, such as auditing driver safety, forecasting shipment demand, and analyzing warehouse bottlenecks.
+* **16 Custom AI Features:** We did not just add a simple chatbot. Logistix calls the Gemini API in 16 different endpoints (listed in Section 8) to solve specific business tasks. This includes generating morning briefings, sentiment classification of feedback, and choosing rescue vehicles.
+* **Seamless Backup System:** If the AI services go offline or run out of free-tier limits, [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) automatically switches to local rule-based formulas, ensuring the app continues to work without disruption.
+
+### ⚡ 4.3. Performance & Scalability
+> [!NOTE]
+> **Evaluation Metric:** *Is the solution optimized to run fast? Can it handle large amounts of data and many active users?*
+
+* **Fast Edge Databases:** Powered by Turso (libSQL) in [turso_db.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/turso_db.py) to sync quickly and keep reading speeds fast, even under heavy load.
+* **Batch Operations:** To prevent database slowdowns, the backend uses batch update operations (`update_many`) in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py) to assign hundreds of drivers and update routes at the exact same time without blocking other queries.
+* **Efficient Coding Practices:** All data models are validated instantly using Pydantic, and background tasks are managed efficiently to prevent server lags.
+
+### 🔒 4.4. Security & Privacy
+> [!NOTE]
+> **Evaluation Metric:** *Are standard security practices followed? Is user data handled securely, keeping privacy and ethics in mind?*
+
+* **Secure Authentication:** All user accounts (managers, drivers, and customers) are protected using industry-standard JWT tokens in [auth.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/auth.py) and password hashing (bcrypt) to keep login credentials safe.
+* **Two-Factor Verification (OTP):** Cargo handoffs are verified using secure 6-digit one-time passwords (OTPs) sent directly to mobile numbers using the Meta WhatsApp API and Gmail.
+* **Data Privacy & Isolated Sandboxes:** Test simulations are run in isolated sandbox environments to prevent mock data from leaking into live shipment records. Company data is protected so managers can only access routes belonging to their own organization ID.
 
 ---
 
-## 🎯 5. Alignment with Cause (Hackathon Evaluation Criteria)
+## 🛠️ 5. Development Tools, UI/UX Design & User Experience
+
+We combined advanced AI coding tools with modern design methods to build a beautiful, fast, and easy-to-use application. 
+
+### 🛠️ 5.1. Development Tools & Design Methods
+* **Backend & Core Coding:** We used [Antigravity](file:///Users/adrish/Desktop/Projects/logistix/README.md) (Google DeepMind's coding assistant) to write the main backend code, databases, OSRM map calculations, and safety rules.
+* **UI/UX Ideation:** We brainstormed ideas, styles, and page layouts using Gemini Canvas and ChatGPT.
+* **Visual Prototyping:** We designed the dashboards, icons, and color schemes in Figma before converting them to web code.
+
+### 🎨 5.2. User Experience (UX) Highlights
+Here is how our application satisfies the core user experience criteria:
+
+#### 🔍 Design & Navigation
+> [!NOTE]
+> **Evaluation Metric:** *Does the app have an easy-to-use and engaging interface that helps users get things done quickly?*
+
+* **Color-Changing Backgrounds:** The landing page [index.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/index.html) and portals support a theme toggle that instantly switches the entire site's colors. The background changes between a dark neon starfield and a clean light mode, adjusting all visual text and elements smoothly.
+* **Interactive Dot Grid Physics:** The main landing page features a background grid made of interactive dots. When users move their mouse or touch the screen, the dots push away and return dynamically, making the app feel alive.
+* **Playable Text at the Bottom:** At the footer of the landing page, the word "Logistix" is rendered using a canvas particle engine. Users can play with the letters by hovering or touching them, causing the dots to swirl, scatter, and reform back into the word.
+
+#### 🏁 User Flow
+> [!NOTE]
+> **Evaluation Metric:** *Is the user journey clear from start to finish with smooth, frictionless interactions?*
+
+* **Smooth Page Transitions:** All dashboard clicks and card transitions have micro-animations and hover effects. Forms feature visual processing feedback (loading indicators) to guide users through actions.
+* **Quick Authentication:** Managers, drivers, and customers have simple portal gates tailored to their exact tasks, eliminating unnecessary setup steps.
+
+#### ♿ Accessibility
+> [!NOTE]
+> **Evaluation Metric:** *Is the application inclusive for people of all abilities?*
+
+* **Multi-Language Translation:** The app features complete regional language translation files (English, Hindi, Marathi, etc.). Users can toggle languages on the fly to understand instructions in their native language.
+* **Driver Voice Commands:** The driver app includes a Voice Command Engine in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) so drivers can control tasks hands-free, ensuring safety on the road.
+
+---
+
+## 🎯 6. Alignment with Cause (Hackathon Evaluation Criteria)
 
 Logistix matches the **Google Build with AI Hackathon** — specifically the **Smart Supply Chains (Resilient Logistics and Dynamic Supply Chain Optimization)** track. Here is how our project meets the three core evaluation criteria in simple terms:
 
-### 🔍 5.1. Problem Definition
+### 🔍 6.1. Problem Definition
 > [!NOTE]
 > **Evaluation Metric:** *Does the project clearly describe the real-world problem it wants to solve, showing a good understanding of it?*
 
@@ -135,7 +196,7 @@ Logistix matches the **Google Build with AI Hackathon** — specifically the **S
   * **Land Validation:** When setting up a new warehouse, the system uses [water_check.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/water_check.py) to make sure the warehouse is on land and not in a lake or ocean.
   * **Permit Tracking:** The system monitors travel permit (E-Way Bill) deadlines to warn if a truck might not arrive before the permit expires.
 
-### 💡 5.2. Relevance of Solution
+### 💡 6.2. Relevance of Solution
 > [!NOTE]
 > **Evaluation Metric:** *Is the solution designed specifically for the problem? How well does it improve the situation or the user experience?*
 
@@ -147,7 +208,7 @@ Logistix stops problems *before* they happen by connecting Managers, Hub Supervi
 * **Quick Vehicle Rescue:** If a vehicle breaks down (detected by cabin sensors or reported by the driver), the system automatically reassigns the remaining cargo tasks to the nearest active driver/vehicle, getting the shipment back on track immediately.
 * **Driver-Friendly App:** Drivers get an easy-to-use app in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) that supports multiple regional languages and has a hands-free Voice Command Engine (VCE) so they can report issues while driving safely.
 
-### 📈 5.3. Expected Impact
+### 📈 6.3. Expected Impact
 > [!NOTE]
 > **Evaluation Metric:** *Does the project have the potential for a large, measurable impact on users or the community?*
 
@@ -159,88 +220,33 @@ Logistix has a direct, positive impact on safety, cargo protection, and the envi
 
 ---
 
-## 👥 6. Stakeholder Portals & Frontend Page Directory
+## ✨ 7. Innovation and Creativity (Hackathon Evaluation Criteria)
 
-Logistix segregates supply chain operations into four specialized portals customized for each participant in the logistics network.
+Logistix introduces creative approaches and smart technologies to solve logistics problems. Here is how our project meets the three innovation criteria in simple terms:
 
-### 🏢 6.1. Executive / Regional Manager
-* **Role Profile:** Direct corporate command center. Regional and executive managers use this portal to oversee fleet analytics, database health, driver safety benchmarks, system configurations, and dynamic resilience controls across the entire network.
-* **Portal Pages & Functions:**
-  * [executive_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_dashboard.html): Main administrative command center detailing overall KPIs, active shipments, carbon footprint counters, and direct fleet status.
-  * [executive_drivers.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_drivers.html): Comprehensive list of all registered drivers, managing their shift hours, driver safety rankings, and base warehouse associations.
-  * [executive_fuel_oracle.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_fuel_oracle.html): Connects to the national fuel index pricing index, optimizing route fuel estimations based on diesel/petrol/gas indices and vehicle class metrics.
-  * [executive_hub_leaves.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_hub_leaves.html): Manages localized employee leaves and driver dispatch constraints across regional hubs.
-  * [executive_leaderboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_leaderboard.html): Displays relative rankings of drivers and hub performance metrics to encourage operational excellence.
-  * [executive_messages.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_messages.html): Communication dashboard enabling broadcasts and targeted message exchanges with warehouse managers and drivers.
-  * [executive_oracle.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_oracle.html): Text-based AI Strategy interface directly communicating with Gemini models to query operational instructions, logistics logs, and ESG trends.
-  * [executive_payments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_payments.html): Logs transaction history and driver performance milestones.
-  * [executive_receivers.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_receivers.html): Catalogues active cargo receivers, coordinate drops, and delivery histories.
-  * [executive_resilience.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_resilience.html): Reroutes fleet streams by simulating catastrophic network blockades (e.g., driver strikes, cyclones, earthquakes, flood zones).
-  * [executive_safety.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_safety.html): Safety command center reporting live telemetry anomalies, G-force alerts, temperature thresholds, and driver fatigue indicators.
-  * [executive_shipments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_shipments.html): Orchestrates shipment registrations, leg decompositions, auto-assignment details, and manual route splitting controls.
-  * [executive_system.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_system.html): System-wide configurations, toggle parameters for AI combinatorial solvers, and credential keys management.
-  * [executive_verifications.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_verifications.html): Verifies business license plate updates and driver identity submissions.
-  * [executive_warehouses.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_warehouses.html): Catalogues registered warehouse networks, capacities, storage boundaries, and active local congestion indicators.
-  * [executive_weather.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_weather.html): Leaflet.js weather fleet map showing live storm cells, flood polylines, and active vehicle coordinates.
+### 🎨 7.1. Originality
+> [!NOTE]
+> **Evaluation Metric:** *How unique is the approach? Does the project offer a fresh perspective or solve a problem in a novel and imaginative way?*
 
----
+* **Active Prevention vs. Waiting for Delays:** Most shipping apps only tell you when a package is late. Logistix is different because it actively predicts issues. It constantly watches weather forecasts, driver fatigue levels, and warehouse congestion to stop delays before they start.
+* **Connecting Humans, AI, and Sensors:** We bring together live vehicle sensors, wearable health bands, smart maps, and generative AI. This combination makes the entire supply chain feel like a single, self-healing system that protects both cargo and drivers.
+* **Automatic Multi-Leg Route Splitting:** Instead of treating a delivery as one long, risky journey, the system splits it into first-mile, middle-mile, and last-mile parts. Each part can be handled by different drivers or autonomous drones, which spreads the risk and makes shipping much more efficient.
 
-### 🏭 6.2. Warehouse Hub Manager
-* **Role Profile:** Local operations supervisor. Hub managers monitor localized docks, verify driver fitness during clock-ins, oversee autonomous drone hubs, and handle cargo verifications.
-* **Portal Pages & Functions:**
-  * [hub_manager_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_dashboard.html): Overview of specific depot parameters (dock occupations, active inbound parcels, drone pads status, and local alert tickers).
-  * [hub_manager_audit.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_audit.html): Verifies physical conditions, fleet assets, maintenance records, and employee shift schedules for the hub.
-  * [hub_manager_drones.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_drones.html): Real-time monitor of short-range drone pads, showing autonomous drone battery percentages, flight telemetry, and cargo loads.
-  * [hub_manager_fleet.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_fleet.html): Catalogs all localized vehicles (trucks, vans, LCVs) and tracks mechanical status/health indicators.
-  * [hub_manager_gate.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_gate.html): Gate management board scheduling arrivals and departures to minimize idle queues at loading docks.
-  * [hub_manager_leaderboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_leaderboard.html): Displays driver performance metrics relative to the local hub.
-  * [hub_manager_payments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_payments.html): Logs local operational expenses.
-  * [hub_manager_settings.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_settings.html): Configures warehouse capacity limits, drone pads, and default geo-locations.
-  * [hub_manager_shipments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_shipments.html): Oversees parcels currently stored in the warehouse or scheduled to arrive.
-  * [hub_manager_verifications.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_verifications.html): Facilitates OCR gate checks, analyzing images of license plates and cargo manifests to log check-ins automatically.
+### 💻 7.2. Creative Use of Technologies
+> [!NOTE]
+> **Evaluation Metric:** *Are developers combining existing tools or platforms creatively, pushing boundaries to deliver a standout product?*
 
----
+* **Smart AI Key Rotation & Fallback:** Free AI tools often have strict usage limits. We built a system in [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) that automatically switches between multiple Gemini API keys. If all keys run out of quota, it immediately falls back to local algorithms, so the app never crashes.
+* **Combining Maps, AI, and Databases:** We combined OSRM maps, Gemini AI, and lightweight Turso edge databases in [turso_db.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/turso_db.py) to run fast computations. This lets us split shipment routes into multiple legs and re-route trucks in real-time.
+* **IoT Sensor Simulation:** We built a simulated sensor gateway in [iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py) that feeds live data—like cabin impact shocks (G-force), perishable cargo temperature, and driver heart rate—directly into the decision-making backend.
 
-### 🚚 6.3. Driver (Driver Companion PWA)
-* **Role Profile:** Fleet operator on the ground. Drivers run a mobile-first portal to handle task updates, report breakdowns, verify cargo pickups, view dynamic routes, check electronic wallets, and communicate hands-free.
-* **Portal Pages & Functions:**
-  * [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html): Main mobile console showing current task cards, overall metrics, and quick safety alert tickers.
-  * [driver_account.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_account.html): Displays driver profile fields, assigned vehicle registration plate, and current health/fitness scores.
-  * [driver_chat.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_chat.html): Real-time chat client supporting hands-free typing and natural voice translations to message managers.
-  * [driver_history.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_history.html): Logs all historical shipments completed by the driver, listing locations and delivery timestamps.
-  * [driver_live.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_live.html): Navigation console showing active route maps, next waypoints, and weather-driven rerouting alerts.
-  * [driver_tasks.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_tasks.html): Task checklist displaying detailed parcel details, pickup validation codes, and signature forms.
-  * [driver_wallet.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_wallet.html): Displays earnings history and trip completion details.
+### 🚀 7.3. Future Potential
+> [!NOTE]
+> **Evaluation Metric:** *Does the idea inspire excitement for future updates? Can it evolve into a meaningful, long-lasting product or service?*
 
----
-
-### 📦 6.4. Receiver (Customer Portal)
-* **Role Profile:** End recipient of the parcel. Receivers check delivery coordinates, verify shipping values, and hand over secure verification OTPs to confirm successful delivery.
-* **Portal Pages & Functions:**
-  * [receiver_portal.html](file:///Users/adrish/Modules/frontend/pages/receiver_portal.html): Main customer portal dashboard where receivers can view active parcel orders, verify shipping lists, and trigger delivery handoffs.
-  * [track.html](file:///Users/adrish/Modules/frontend/pages/track.html): Real-time geospatial delivery tracking interface showcasing live map markers of transit vehicles and computed dynamic ETAs.
-
----
-
-## 🚀 7. Premium System & Architectural Features
-
-Logistix is engineered to meet enterprise-grade criteria for scalability, regional reach, and operational resilience. Below are the key system-level architectural pillars implemented in the project:
-
-### ⚡ 7.1. High-Performance Scalability & Edge Sync
-* **SQLite Edge Databases:** Powered by **Turso & libSQL** client wrappers. The system utilizes distributed edge replicas that sync telemetry coordinates in high-speed WAL (Write-Ahead Logging) configuration.
-* **Transactional Batch Operations:** To optimize database round-trips and prevent locks, core dispatch routines (such as `auto_assign_fleet` and `unlink_idle_fleet` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L1542)) employ batch write updates (`update_many`). This executes thousands of personnel/vehicle state alterations in a single transaction, keeping latency below 15ms.
-
-### 🌐 7.2. Localization & Multi-Language Support
-* **Democratizing Reach:** To ensure ground drivers and local hub loaders across diverse geographies can operate the platform, Logistix supports complete localization across major regional languages (English, Hindi, Marathi, etc.).
-* **Dynamic Translation Engine:** The frontend incorporates an asynchronous translation engine using client-side `data-i18n` bindings. Toggling languages translates all UI elements, labels, placeholder hints, and charts dynamically without causing page reloads or layout shifts.
-
-### 🎙️ 7.3. Hands-Free Voice Command Engine (VCE)
-* **On-the-Road Safety:** Ground drivers can run the built-in **Voice Command Engine (VCE)** inside the Driver PWA Companion App ([driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html)).
-* **Interactive Operations:** Drivers can call commands like `"breakdown"` to log vehicle failures, `"resting"` to mark breaks, `"challan"` to record police citations, or `"verify"` to trigger OCR gate check-ins. VCE records speech-to-text inputs, translates regional idioms, and plays audio feedback instructions back to the driver.
-
-### 🛡️ 7.4. Fail-Safe Auto-Fallback Mechanics
-* **Zero Downtime:** If the Google Gemini API keys hit free-tier rate limits (429), billing limits, or if external networks fail, the system activates its custom **Heuristic Fallback Engine** ([gemini_service.py:L12](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py#L12)).
-* **Local Data Synthesis:** The fallback engine queries SQLite databases directly, performing local calculations (e.g. OSRM/Haversine distance routing, vehicle-class divert limits, and rule-based status classifications) to output structured Markdown summaries, daily briefings, and safety alerts with zero latency overhead.
+* **Growing into a Real Product:** Logistix uses industry-standard APIs (like OSRM for maps, SQLite/Turso for data, and SMTP/WhatsApp for messaging). This means it can easily be connected to actual hardware sensors and corporate databases.
+* **Expanding the Voice Companion:** The driver's Voice Command Engine in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) can be updated to support more local dialects and handle complex commands like voice-based cargo checking or check-in updates.
+* **Smarter AI Predictions:** In the future, the system can learn from past weather patterns and warehouse traffic to predict the best dispatch times, helping logistics companies avoid delays and reduce carbon emissions.
 
 ---
 
@@ -503,104 +509,98 @@ If all Gemini API keys in the pool are exhausted, billing limits are reached, or
 
 ---
 
-## 💻 9. Technical Merit (Hackathon Evaluation Criteria)
+## 👥 9. Stakeholder Portals & Frontend Page Directory
 
-Logistix is built with high-quality engineering. Here is how our project meets the four core technical merit criteria in simple terms:
+Logistix segregates supply chain operations into four specialized portals customized for each participant in the logistics network.
 
-### ⚙️ 9.1. Technical Complexity
-> [!NOTE]
-> **Evaluation Metric:** *Is the technology behind the app challenging and well-written? Is the codebase clean, robust, and reliable?*
-
-* **Advanced Map & Location Services:** The app does not guess routes. It integrates OSRM in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py) to calculate actual road paths. It also checks coordinate records via Nominatim to ensure depot placements are realistic (not in water).
-* **Complex Operational Workflows:** The system handles multi-leg dispatches, driver assignments, automatic breakdown re-routing, and E-Way Bill compliance checking. All these operations are mapped in our combined workflow flowchart (see Section 8).
-* **Simulated IoT Sensor Grid:** We built a real-time data listener in [iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py) that models multi-sensor inputs. This includes accelerometer cabin crashes, cargo temperature thresholds, and driver heart rate monitors.
-
-### 🤖 9.2. AI Integration
-> [!NOTE]
-> **Evaluation Metric:** *How well is AI integrated into the project? Does it use advanced AI models correctly, or could a simpler rule-based approach work instead?*
-
-* **Sophisticated Multi-Model Integration:** We use two advanced Google AI technologies. We use **Vertex AI** to host custom machine learning models for predictive ETA calculations. We use **Google Gemini 1.5** for high-level reasoning, such as auditing driver safety, forecasting shipment demand, and analyzing warehouse bottlenecks.
-* **16 Custom AI Features:** We did not just add a simple chatbot. Logistix calls the Gemini API in 16 different endpoints (listed in Section 8) to solve specific business tasks. This includes generating morning briefings, sentiment classification of feedback, and choosing rescue vehicles.
-* **Seamless Backup System:** If the AI services go offline or run out of free-tier limits, [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) automatically switches to local rule-based formulas, ensuring the app continues to work without disruption.
-
-### ⚡ 9.3. Performance & Scalability
-> [!NOTE]
-> **Evaluation Metric:** *Is the solution optimized to run fast? Can it handle large amounts of data and many active users?*
-
-* **Fast Edge Databases:** Powered by Turso (libSQL) in [turso_db.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/turso_db.py) to sync quickly and keep reading speeds fast, even under heavy load.
-* **Batch Operations:** To prevent database slowdowns, the backend uses batch update operations (`update_many`) in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py) to assign hundreds of drivers and update routes at the exact same time without blocking other queries.
-* **Efficient Coding Practices:** All data models are validated instantly using Pydantic, and background tasks are managed efficiently to prevent server lags.
-
-### 🔒 9.4. Security & Privacy
-> [!NOTE]
-> **Evaluation Metric:** *Are standard security practices followed? Is user data handled securely, keeping privacy and ethics in mind?*
-
-* **Secure Authentication:** All user accounts (managers, drivers, and customers) are protected using industry-standard JWT tokens in [auth.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/auth.py) and password hashing (bcrypt) to keep login credentials safe.
-* **Two-Factor Verification (OTP):** Cargo handoffs are verified using secure 6-digit one-time passwords (OTPs) sent directly to mobile numbers using the Meta WhatsApp API and Gmail.
-* **Data Privacy & Isolated Sandboxes:** Test simulations are run in isolated sandbox environments to prevent mock data from leaking into live shipment records. Company data is protected so managers can only access routes belonging to their own organization ID.
+### 🏢 9.1. Executive / Regional Manager
+* **Role Profile:** Direct corporate command center. Regional and executive managers use this portal to oversee fleet analytics, database health, driver safety benchmarks, system configurations, and dynamic resilience controls across the entire network.
+* **Portal Pages & Functions:**
+  * [executive_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_dashboard.html): Main administrative command center detailing overall KPIs, active shipments, carbon footprint counters, and direct fleet status.
+  * [executive_drivers.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_drivers.html): Comprehensive list of all registered drivers, managing their shift hours, driver safety rankings, and base warehouse associations.
+  * [executive_fuel_oracle.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_fuel_oracle.html): Connects to the national fuel index pricing index, optimizing route fuel estimations based on diesel/petrol/gas indices and vehicle class metrics.
+  * [executive_hub_leaves.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_hub_leaves.html): Manages localized employee leaves and driver dispatch constraints across regional hubs.
+  * [executive_leaderboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_leaderboard.html): Displays relative rankings of drivers and hub performance metrics to encourage operational excellence.
+  * [executive_messages.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_messages.html): Communication dashboard enabling broadcasts and targeted message exchanges with warehouse managers and drivers.
+  * [executive_oracle.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_oracle.html): Text-based AI Strategy interface directly communicating with Gemini models to query operational instructions, logistics logs, and ESG trends.
+  * [executive_payments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_payments.html): Logs transaction history and driver performance milestones.
+  * [executive_receivers.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_receivers.html): Catalogues active cargo receivers, coordinate drops, and delivery histories.
+  * [executive_resilience.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_resilience.html): Reroutes fleet streams by simulating catastrophic network blockades (e.g., driver strikes, cyclones, earthquakes, flood zones).
+  * [executive_safety.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_safety.html): Safety command center reporting live telemetry anomalies, G-force alerts, temperature thresholds, and driver fatigue indicators.
+  * [executive_shipments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_shipments.html): Orchestrates shipment registrations, leg decompositions, auto-assignment details, and manual route splitting controls.
+  * [executive_system.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_system.html): System-wide configurations, toggle parameters for AI combinatorial solvers, and credential keys management.
+  * [executive_verifications.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_verifications.html): Verifies business license plate updates and driver identity submissions.
+  * [executive_warehouses.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_warehouses.html): Catalogues registered warehouse networks, capacities, storage boundaries, and active local congestion indicators.
+  * [executive_weather.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/executive_weather.html): Leaflet.js weather fleet map showing live storm cells, flood polylines, and active vehicle coordinates.
 
 ---
 
-## ✨ 10. Innovation and Creativity (Hackathon Evaluation Criteria)
-
-Logistix introduces creative approaches and smart technologies to solve logistics problems. Here is how our project meets the three innovation criteria in simple terms:
-
-### 🎨 10.1. Originality
-> [!NOTE]
-> **Evaluation Metric:** *How unique is the approach? Does the project offer a fresh perspective or solve a problem in a novel and imaginative way?*
-
-* **Active Prevention vs. Waiting for Delays:** Most shipping apps only tell you when a package is late. Logistix is different because it actively predicts issues. It constantly watches weather forecasts, driver fatigue levels, and warehouse congestion to stop delays before they start.
-* **Connecting Humans, AI, and Sensors:** We bring together live vehicle sensors, wearable health bands, smart maps, and generative AI. This combination makes the entire supply chain feel like a single, self-healing system that protects both cargo and drivers.
-* **Automatic Multi-Leg Route Splitting:** Instead of treating a delivery as one long, risky journey, the system splits it into first-mile, middle-mile, and last-mile parts. Each part can be handled by different drivers or autonomous drones, which spreads the risk and makes shipping much more efficient.
-
-### 💻 10.2. Creative Use of Technologies
-> [!NOTE]
-> **Evaluation Metric:** *Are developers combining existing tools or platforms creatively, pushing boundaries to deliver a standout product?*
-
-* **Smart AI Key Rotation & Fallback:** Free AI tools often have strict usage limits. We built a system in [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) that automatically switches between multiple Gemini API keys. If all keys run out of quota, it immediately falls back to local algorithms, so the app never crashes.
-* **Combining Maps, AI, and Databases:** We combined OSRM maps, Gemini AI, and lightweight Turso edge databases in [turso_db.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/turso_db.py) to run fast computations. This lets us split shipment routes into multiple legs and re-route trucks in real-time.
-* **IoT Sensor Simulation:** We built a simulated sensor gateway in [iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py) that feeds live data—like cabin impact shocks (G-force), perishable cargo temperature, and driver heart rate—directly into the decision-making backend.
-
-### 🚀 10.3. Future Potential
-> [!NOTE]
-> **Evaluation Metric:** *Does the idea inspire excitement for future updates? Can it evolve into a meaningful, long-lasting product or service?*
-
-* **Growing into a Real Product:** Logistix uses industry-standard APIs (like OSRM for maps, SQLite/Turso for data, and SMTP/WhatsApp for messaging). This means it can easily be connected to actual hardware sensors and corporate databases.
-* **Expanding the Voice Companion:** The driver's Voice Command Engine in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) can be updated to support more local dialects and handle complex commands like voice-based cargo checking or check-in updates.
-* **Smarter AI Predictions:** In the future, the system can learn from past weather patterns and warehouse traffic to predict the best dispatch times, helping logistics companies avoid delays and reduce carbon emissions.
+### 🏭 9.2. Warehouse Hub Manager
+* **Role Profile:** Local operations supervisor. Hub managers monitor localized docks, verify driver fitness during clock-ins, oversee autonomous drone hubs, and handle cargo verifications.
+* **Portal Pages & Functions:**
+  * [hub_manager_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_dashboard.html): Overview of specific depot parameters (dock occupations, active inbound parcels, drone pads status, and local alert tickers).
+  * [hub_manager_audit.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_audit.html): Verifies physical conditions, fleet assets, maintenance records, and employee shift schedules for the hub.
+  * [hub_manager_drones.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_drones.html): Real-time monitor of short-range drone pads, showing autonomous drone battery percentages, flight telemetry, and cargo loads.
+  * [hub_manager_fleet.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_fleet.html): Catalogs all localized vehicles (trucks, vans, LCVs) and tracks mechanical status/health indicators.
+  * [hub_manager_gate.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_gate.html): Gate management board scheduling arrivals and departures to minimize idle queues at loading docks.
+  * [hub_manager_leaderboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_leaderboard.html): Displays driver performance metrics relative to the local hub.
+  * [hub_manager_payments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_payments.html): Logs local operational expenses.
+  * [hub_manager_settings.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_settings.html): Configures warehouse capacity limits, drone pads, and default geo-locations.
+  * [hub_manager_shipments.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_shipments.html): Oversees parcels currently stored in the warehouse or scheduled to arrive.
+  * [hub_manager_verifications.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/hub_manager_verifications.html): Facilitates OCR gate checks, analyzing images of license plates and cargo manifests to log check-ins automatically.
 
 ---
 
-## 🛠️ 11. Development Tools, UI/UX Design & User Experience
+### 🚚 9.3. Driver (Driver Companion PWA)
+* **Role Profile:** Fleet operator on the ground. Drivers run a mobile-first portal to handle task updates, report breakdowns, verify cargo pickups, view dynamic routes, check electronic wallets, and communicate hands-free.
+* **Portal Pages & Functions:**
+  * [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html): Main mobile console showing current task cards, overall metrics, and quick safety alert tickers.
+  * [driver_account.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_account.html): Displays driver profile fields, assigned vehicle registration plate, and current health/fitness scores.
+  * [driver_chat.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_chat.html): Real-time chat client supporting hands-free typing and natural voice translations to message managers.
+  * [driver_history.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_history.html): Logs all historical shipments completed by the driver, listing locations and delivery timestamps.
+  * [driver_live.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_live.html): Navigation console showing active route maps, next waypoints, and weather-driven rerouting alerts.
+  * [driver_tasks.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_tasks.html): Task checklist displaying detailed parcel details, pickup validation codes, and signature forms.
+  * [driver_wallet.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_wallet.html): Displays earnings history and trip completion details.
 
-We combined advanced AI coding tools with modern design methods to build a beautiful, fast, and easy-to-use application. 
+---
 
-### 🛠️ 11.1. Development Tools & Design Methods
-* **Backend & Core Coding:** We used [Antigravity](file:///Users/adrish/Desktop/Projects/logistix/README.md) (Google DeepMind's coding assistant) to write the main backend code, databases, OSRM map calculations, and safety rules.
-* **UI/UX Ideation:** We brainstormed ideas, styles, and page layouts using Gemini Canvas and ChatGPT.
-* **Visual Prototyping:** We designed the dashboards, icons, and color schemes in Figma before converting them to web code.
+### 📦 9.4. Receiver (Customer Portal)
+* **Role Profile:** End recipient of the parcel. Receivers check delivery coordinates, verify shipping values, and hand over secure verification OTPs to confirm successful delivery.
+* **Portal Pages & Functions:**
+  * [receiver_portal.html](file:///Users/adrish/Modules/frontend/pages/receiver_portal.html): Main customer portal dashboard where receivers can view active parcel orders, verify shipping lists, and trigger delivery handoffs.
+  * [track.html](file:///Users/adrish/Modules/frontend/pages/track.html): Real-time geospatial delivery tracking interface showcasing live map markers of transit vehicles and computed dynamic ETAs.
 
-### 🎨 11.2. User Experience (UX) Highlights
-Here is how our application satisfies the core user experience criteria:
+---
 
-#### 🔍 Design & Navigation
-> [!NOTE]
-> **Evaluation Metric:** *Does the app have an easy-to-use and engaging interface that helps users get things done quickly?*
+## 🚀 10. Premium System & Architectural Features
 
-* **Color-Changing Backgrounds:** The landing page [index.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/index.html) and portals support a theme toggle that instantly switches the entire site's colors. The background changes between a dark neon starfield and a clean light mode, adjusting all visual text and elements smoothly.
-* **Interactive Dot Grid Physics:** The main landing page features a background grid made of interactive dots. When users move their mouse or touch the screen, the dots push away and return dynamically, making the app feel alive.
-* **Playable Text at the Bottom:** At the footer of the landing page, the word "Logistix" is rendered using a canvas particle engine. Users can play with the letters by hovering or touching them, causing the dots to swirl, scatter, and reform back into the word.
+Logistix is engineered to meet enterprise-grade criteria for scalability, regional reach, and operational resilience. Below are the key system-level architectural pillars implemented in the project:
 
-#### 🏁 User Flow
-> [!NOTE]
-> **Evaluation Metric:** *Is the user journey clear from start to finish with smooth, frictionless interactions?*
+### ⚡ 10.1. High-Performance Scalability & Edge Sync
+* **SQLite Edge Databases:** Powered by **Turso & libSQL** client wrappers. The system utilizes distributed edge replicas that sync telemetry coordinates in high-speed WAL (Write-Ahead Logging) configuration.
+* **Transactional Batch Operations:** To optimize database round-trips and prevent locks, core dispatch routines (such as `auto_assign_fleet` and `unlink_idle_fleet` in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py#L1542)) employ batch write updates (`update_many`). This executes thousands of personnel/vehicle state alterations in a single transaction, keeping latency below 15ms.
 
-* **Smooth Page Transitions:** All dashboard clicks and card transitions have micro-animations and hover effects. Forms feature visual processing feedback (loading indicators) to guide users through actions.
-* **Quick Authentication:** Managers, drivers, and customers have simple portal gates tailored to their exact tasks, eliminating unnecessary setup steps.
+### 🌐 10.2. Localization & Multi-Language Support
+* **Democratizing Reach:** To ensure ground drivers and local hub loaders across diverse geographies can operate the platform, Logistix supports complete localization across major regional languages (English, Hindi, Marathi, etc.).
+* **Dynamic Translation Engine:** The frontend incorporates an asynchronous translation engine using client-side `data-i18n` bindings. Toggling languages translates all UI elements, labels, placeholder hints, and charts dynamically without causing page reloads or layout shifts.
 
-#### ♿ Accessibility
-> [!NOTE]
-> **Evaluation Metric:** *Is the application inclusive for people of all abilities?*
+### 🎙️ 10.3. Hands-Free Voice Command Engine (VCE)
+* **On-the-Road Safety:** Ground drivers can run the built-in **Voice Command Engine (VCE)** inside the Driver PWA Companion App ([driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html)).
+* **Interactive Operations:** Drivers can call commands like `"breakdown"` to log vehicle failures, `"resting"` to mark breaks, `"challan"` to record police citations, or `"verify"` to trigger OCR gate check-ins. VCE records speech-to-text inputs, translates regional idioms, and plays audio feedback instructions back to the driver.
 
-* **Multi-Language Translation:** The app features complete regional language translation files (English, Hindi, Marathi, etc.). Users can toggle languages on the fly to understand instructions in their native language.
-* **Driver Voice Commands:** The driver app includes a Voice Command Engine in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) so drivers can control tasks hands-free, ensuring safety on the road.
+### 🛡️ 10.4. Fail-Safe Auto-Fallback Mechanics
+* **Zero Downtime:** If the Google Gemini API keys hit free-tier rate limits (429), billing limits, or if external networks fail, the system activates its custom **Heuristic Fallback Engine** ([gemini_service.py:L12](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py#L12)).
+* **Local Data Synthesis:** The fallback engine queries SQLite databases directly, performing local calculations (e.g. OSRM/Haversine distance routing, vehicle-class divert limits, and rule-based status classifications) to output structured Markdown summaries, daily briefings, and safety alerts with zero latency overhead.
+
+---
+
+## 📟 11. Electronics & Simulated IoT Hardware Integration
+
+Logistix implements a full simulated **IoT Telemetry Gateway** ([iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py)) that feeds real-time multi-sensor readings into the safety engine, transforming raw logistics tracking into a dynamic, life-saving system.
+
+| Simulated Hardware Gadget | Telemetry Features | System Trigger & Action | Operational Safeguard Impact |
+| :--- | :--- | :--- | :--- |
+| **Wearable Haptic Vitals Band** | • Heart Rate (BPM)<br>• Stress Index (0-100)<br>• Blood Pressure (BP)<br>• Blood Oxygen Level (SpO2) | Triggers **Enforced Rest Stop** if fatigue score exceeds 65%, heart rate drops <55 / exceeds 110, or oxygen drops <92%. | Places driver offline/off-duty immediately to prevent micro-sleep accidents, notifies managers, and locks routing changes until vitals stabilize. |
+| **Perishable Cargo Cold-Chain Sensor** | • Cargo Compartment Temp (°C)<br>• Relative Humidity (%)<br>• Carbon Vitality Index | Triggers **Thermal Hazard Warning** on the Hub Dashboard if temperatures exceed the 8°C safety threshold for perishable shipments. | Automatically re-calculates ETA priorities, alerts managers to check coolant buffers, and flags cargo inspectors at the next checkpoint. |
+| **Cabin Accelerometer G-Sensor** | • Impact Shock Force (G-force)<br>• Acceleration Peaks<br>• Deceleration Rates | Triggers **Critical Collision Event** if accelerometer reports shock forces exceeding 8.0 G. | Immediately grounds the vehicle (maintenance status), sends emergency alerts to regional managers, and triggers assignment rescue solvers. |
+| **Mechanical Health Diagnostician** | • Total Mileage (KM)<br>• Kilometers since last service<br>• Brake wear/degradation | Calculates continuous distance jumps, scaling down vehicle health scores dynamically based on road travel. | Hub managers are alerted to schedule preventative maintenance before vehicles are allowed to queue for standard middle-mile dispatches. |
