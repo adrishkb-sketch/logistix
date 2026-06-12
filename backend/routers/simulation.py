@@ -305,7 +305,67 @@ def run_strategy_oracle(data: dict):
         })
         
     net_profit = total_revenue - total_cost
+    roi_percentage = round((net_profit / (total_cost or 1)) * 100, 1)
+
+    # Dynamic AI recommendation via Gemini if active
+    company_id = data.get("company_id")
+    api_key = None
+    if company_id:
+        from backend.database import JSONDatabase
+        config_db = JSONDatabase("config")
+        cfg = config_db.get_by_id(company_id)
+        if cfg and cfg.get("ai_mode") is True:
+            api_key = cfg.get("gemini_keys")
+
+    prompt = (
+        f"You are the Logistix AI Strategy Advisor. We simulated a business expansion over {months} months with these settings:\n"
+        f"- Warehouse Hub Expansion: +{wh_plus} hubs in {wh_loc} markets.\n"
+        f"- Fleet Size Expansion: +{fleet_plus}%\n"
+        f"- Fleet Electrification (EV) Ratio: {green_val}%\n"
+        f"- Warehouse Automation Level: {auto_val}%\n"
+        f"- Driver Incentive Expansion: {incentive}%\n"
+        f"- Capital Budget: INR {data.get('budget', 0)}\n\n"
+        f"Simulation Output:\n"
+        f"- Projected Profit: INR {net_profit}\n"
+        f"- ETA Success Rate: {new_eta_success:.1f}%\n"
+        f"- CO2 Reduction: {carbon_reduction:.1f}%\n"
+        f"- Expected Return on Investment (ROI): {roi_percentage:.1f}%\n\n"
+        f"Provide a concise, professional, action-oriented 1-2 sentence recommendation for the regional manager based on these results."
+    )
     
+    sys_inst = "You are a senior logistics AI strategist. Write a concise 1-2 sentence recommendation for the company strategy based on simulated metrics. Avoid intro/outro conversational filler."
+
+    fallback_recommendation = ""
+    if net_profit > 1000000 and new_eta_success > 90:
+        fallback_recommendation = (
+            "This strategy plan shows highly viable profitability and efficiency gains. "
+            "Recommended to proceed with allocating capital to EV conversion and warehouse automation to achieve long-term carbon and cost savings."
+        )
+    elif net_profit > 500000:
+        fallback_recommendation = (
+            "Moderate growth expected. Recommended to allocate additional driver incentives to improve ETA success rate "
+            "before scaling warehouse expansion further."
+        )
+    else:
+        fallback_recommendation = (
+            "Capital allocation is projected to yield sub-optimal margins. "
+            "Advised to re-adjust hub expansion parameters or select standard Tier 2 locations to reduce overhead cost."
+        )
+
+    ai_recommendation = None
+    if api_key:
+        try:
+            from backend.services.gemini_service import call_gemini
+            ai_recommendation = call_gemini(prompt, sys_inst, api_key)
+            if ai_recommendation:
+                ai_recommendation = ai_recommendation.strip()
+        except Exception as e:
+            print(f"[Strategy Oracle AI] Call failed: {e}")
+
+    # Fallback to local heuristic advice if call_gemini defaults to fail-safe briefing or fails
+    if not ai_recommendation or "local AI fail-safe router" in ai_recommendation or "Fail-Safe Briefing" in ai_recommendation:
+        ai_recommendation = fallback_recommendation
+
     # Breakdown for UI tooltip
     breakdown = f"Revenue: {int(total_revenue/1000)}k (Trips: {int(avg_trips_per_month*months*demand_mult)}). Cost/Trip: ₹{int(new_cost_per_trip)} (Saved: ₹{int(cost_saving_per_trip)} from optimizations, +₹{rent_premium} rent premium)."
 
@@ -315,10 +375,10 @@ def run_strategy_oracle(data: dict):
             "efficiency_score": new_eta_success,
             "carbon_reduction": carbon_reduction,
             "total_trips": int(avg_trips_per_month * months),
-            "roi_percentage": round((net_profit / (total_cost or 1)) * 100, 1)
+            "roi_percentage": roi_percentage
         },
         "monthly_forecast": monthly_data,
-        "ai_recommendation": "Maintain current operations." if net_profit < 500000 else "EXCELLENT GROWTH PLAN",
+        "ai_recommendation": ai_recommendation,
         "risk_level": "Low" if new_eta_success > 90 else "Medium",
         "breakdown": breakdown
     }

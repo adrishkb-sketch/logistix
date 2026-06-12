@@ -113,6 +113,7 @@ class JSONDatabase:
         try:
             res = db.execute(text(f"SELECT COUNT(*) FROM {self.table_name}")).scalar()
             if res > 0:
+                db.rollback()
                 return  # Table is already seeded/has data
             
             # 2. Attempt to migrate from existing JSON file
@@ -147,6 +148,11 @@ class JSONDatabase:
             if migrated_items:
                 self._save_to_sqlite(db, migrated_items)
                 print(f"[SQLite DB] Migrated/Seeded {len(migrated_items)} records into '{self.table_name}' table.")
+            else:
+                db.rollback()
+        except Exception as e:
+            db.rollback()
+            print(f"[SQLite DB] Migration failed: {e}")
         finally:
             db.close()
 
@@ -183,14 +189,14 @@ class JSONDatabase:
     def _save_to_sqlite(self, db, items: List[Dict[str, Any]]):
         if not items:
             return
-        with db.begin():
-            # Delete first to replace
-            db.execute(text(f"DELETE FROM {self.table_name}"))
-            values = [{"id": str(item.get("id", "")), "data": json.dumps(item, ensure_ascii=False)} for item in items]
-            db.execute(
-                text(f"INSERT INTO {self.table_name} (id, data) VALUES (:id, :data)"),
-                values
-            )
+        # Delete first to replace
+        db.execute(text(f"DELETE FROM {self.table_name}"))
+        values = [{"id": str(item.get("id", "")), "data": json.dumps(item, ensure_ascii=False)} for item in items]
+        db.execute(
+            text(f"INSERT INTO {self.table_name} (id, data) VALUES (:id, :data)"),
+            values
+        )
+        db.commit()
 
     def get_all(self) -> List[Dict[str, Any]]:
         if self.use_turso:
