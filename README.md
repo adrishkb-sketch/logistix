@@ -561,8 +561,8 @@ Logistix is built with high-quality engineering. Here is how our project meets t
 > **Evaluation Metric:** *Is the technology behind the app challenging and well-written? Is the codebase clean, robust, and reliable?*
 
 * **Advanced Map & Location Services:** The app does not guess routes. It integrates OSRM in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py) to calculate actual road paths. It also checks coordinate records via Nominatim to ensure depot placements are realistic (not in water).
-* **Simulated IoT Sensor Grid:** We built a real-time data listener in [iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py) that models multi-sensor inputs. This includes accelerometer cabin crashes, cargo temperature thresholds, and driver heart rate monitors.
 * **Complex Operational Workflows:** The system handles multi-leg dispatches, driver assignments, automatic breakdown re-routing, and E-Way Bill compliance checking. All these operations are mapped in our combined workflow flowchart (see Section 3).
+* **Simulated IoT Sensor Grid:** We built a real-time data listener in [iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py) that models multi-sensor inputs. This includes accelerometer cabin crashes, cargo temperature thresholds, and driver heart rate monitors.
 
 ### 🤖 10.2. AI Integration
 > [!NOTE]
