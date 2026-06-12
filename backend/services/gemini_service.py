@@ -9,7 +9,7 @@ INTEGRATED_GEMINI_KEYS = []
 
 import re
 
-def generate_mock_ai_response(prompt: str, system_instruction: Optional[str] = None) -> str:
+def local_heuristic_fallback_engine(prompt: str, system_instruction: Optional[str] = None) -> str:
     """
     Fail-Safe Response Generator: Dynamically queries database collections
     (drivers, vehicles, shipments, warehouses, ledger) to generate
@@ -436,7 +436,7 @@ def call_gemini(prompt: str, system_instruction: Optional[str] = None, api_key: 
     
     if not keys_list:
         print("[Gemini Fail-Safe] No keys configured. Activating Fail-Safe Auto-Fallback.")
-        return generate_mock_ai_response(prompt, system_instruction)
+        return local_heuristic_fallback_engine(prompt, system_instruction)
     
     # Shuffle so we spread load evenly across keys
     shuffled_keys = keys_list.copy()
@@ -507,4 +507,4 @@ def call_gemini(prompt: str, system_instruction: Optional[str] = None, api_key: 
     
     # All keys exhausted
     print(f"[Gemini Fail-Safe Warning] All keys failed. Last error: {last_error or 'Unknown error'}. Activating Fail-Safe Auto-Fallback.")
-    return generate_mock_ai_response(prompt, system_instruction)
+    return local_heuristic_fallback_engine(prompt, system_instruction)

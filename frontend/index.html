@@ -1525,13 +1525,13 @@ body.light-mode .pin-box:focus { background: rgba(255,255,255,1) !important; }
 document.addEventListener("DOMContentLoaded", () => {
     // Auto-login Redirects
     if (localStorage.getItem('driver_token')) {
-        window.location.href = 'pages/driver.html';
+        window.location.href = 'pages/driver_dashboard.html';
         return;
     } else if (localStorage.getItem('wh_manager_token')) {
-        window.location.href = 'pages/warehouse_manager.html';
+        window.location.href = 'pages/hub_manager_portal.html';
         return;
     } else if (localStorage.getItem('manager_token')) {
-        window.location.href = 'pages/manager.html';
+        window.location.href = 'pages/executive_dashboard.html';
         return;
     }
 
@@ -1983,7 +1983,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                             <polyline points="9 22 9 12 15 12 15 22"></polyline>
                         </svg>
-                        <input class="premium-input" id="wh-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
+
                     </div>
                     <div class="input-group">
                         <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

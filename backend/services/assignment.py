@@ -647,7 +647,7 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
     warehouses = warehouses_db.get_all()
     warehouses.sort(key=lambda w: haversine(location["lat"], location["lng"], w["lat"], w["lng"]))
 
-    rescue_pair = None
+    all_valid_pairs = []
     for wh in warehouses:
         potential_drivers = [d for d in drivers_db.get_all() if d and d.get("company_id") == company_id and d.get("id") != driver_id and d.get("status") in ("available", "on_duty") and d.get("assigned_vehicle_id")]
         for d in potential_drivers:
@@ -686,10 +686,38 @@ def assign_rescue_vehicle(driver_id: str, vehicle_id: str, location: Dict[str, A
                     v_cap = 1000.0
 
             if matches and v_cap >= total_weight:
-                rescue_pair = (d, v)
-                break
-        if rescue_pair:
-            break
+                all_valid_pairs.append((d, v, wh))
+
+    rescue_pair = None
+    if all_valid_pairs:
+        # Try AI Mode
+        try:
+            config_db = JSONDatabase("config")
+            cfg = config_db.get_by_id(company_id) if company_id else None
+            if cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys"):
+                from backend.services.gemini_service import call_gemini
+                import json
+                
+                prompt = "You are a Logistics Rescue AI. A vehicle broke down. Pick the best rescue vehicle from the candidates. Return strictly valid JSON like {\"driver_id\": \"<id>\"}.\n"
+                prompt += f"Breakdown location: {location}\nTotal Cargo Weight: {total_weight}kg\nCandidates:\n"
+                for i, (d, v, wh) in enumerate(all_valid_pairs):
+                    dist = haversine(location["lat"], location["lng"], wh["lat"], wh["lng"])
+                    prompt += f"- Driver {d['id']} (Name: {d.get('name')}), Vehicle {v['id']} (Type: {v.get('type')}, Capacity: {v_cap}kg), Distance: {dist:.1f}km\n"
+                
+                response = call_gemini(prompt, "Output strictly valid JSON with key driver_id.", cfg.get("gemini_keys"))
+                response = response.replace('```json', '').replace('```', '').strip()
+                data = json.loads(response)
+                best_driver_id = data.get("driver_id")
+                
+                rescue_pair = next(((d, v) for d, v, wh in all_valid_pairs if d["id"] == best_driver_id), None)
+                if rescue_pair:
+                    print(f"Rescue vehicle {rescue_pair[1]['id']} assigned via Gemini AI Engine")
+        except Exception as e:
+            print(f"AI Rescue Failed: {e}. Falling back to heuristic.")
+        
+        if not rescue_pair:
+            # Fallback to nearest
+            rescue_pair = (all_valid_pairs[0][0], all_valid_pairs[0][1])
 
     if rescue_pair:
         new_d, new_v = rescue_pair

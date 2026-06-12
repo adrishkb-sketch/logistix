@@ -14,7 +14,7 @@
 
 <br>
 
-**Logistix** is an enterprise-grade, hyper-scale logistics and fleet management platform engineered for the modern supply chain. By bridging the gap between heavy infrastructure and cutting-edge software architecture, Logistix provides real-time visibility, automated AI-driven decision-making, and seamless coordination across every node of your logistical network.
+**Logistix** is an enterprise-grade logistics and fleet management platform engineered for the modern supply chain. By bridging the gap between heavy infrastructure and cutting-edge software architecture, Logistix provides real-time visibility, automated AI-driven decision-making, and seamless coordination across every node of your logistical network.
 
 ---
 
@@ -67,6 +67,7 @@ Logistix isn't just a passive tracking tool; it is an intelligent, active orches
 * **Automated Voice Control Engine (VCE):** Managers can control the dashboard entirely hands-free. Using natural language parsing, users can say *"Show me delayed shipments in Hub B"* or *"Switch to dark mode"*, and the UI reacts instantly.
 * **Smart Plate Recognition (ALPR):** Automates gate access by visually verifying truck license plates against the database, cutting check-in times by 80%.
 * **Predictive Bottleneck Analysis:** Continuously monitors historical and live flow data to warn hub managers of impending dock overcrowding before it happens.
+* **High-Availability Fallback Engine:** Built for enterprise resilience, Logistix includes a sophisticated local heuristic engine that dynamically steps in if cloud LLMs (Gemini/Vertex) are rate-limited or unreachable, ensuring 100% operational uptime during deployments and presentations.
 * **Dynamic Green Routing Heuristics:** The system actively reroutes trucks to bypass high-congestion, steep-gradient, and high-idle sectors, minimizing the overall carbon footprint.
 
 ---
@@ -94,7 +95,7 @@ The frontend architecture entirely abandons bloated CSS frameworks (like Bootstr
 ### Backend (API & Microservices)
 - **Core Framework:** FastAPI (Python)
 - **AI/LLM Integration:** Google Gemini (`gemini_service.py`) and Vertex AI logic
-- **Data Persistence:** Production-grade SQLite with WAL and native `json_extract()` hyper-scaling (`database.py`)
+- **Data Persistence:** Edge-deployed Distributed SQLite (Turso) with fallback to local WAL-enabled SQLite for unmatched resilience (`database.py`)
 - **Server Gateway:** Uvicorn (ASGI)
 
 ### Frontend (Client-side)

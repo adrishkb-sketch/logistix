@@ -1388,24 +1388,24 @@ class AutomatedControl {
             showSection(id);
         } else {
             const pageToSection = {
-                'manager_analytics.html': 'analytics',
-                'manager_warehouses.html': 'warehouses',
-                'manager_shipments.html': 'shipments',
-                'manager_receivers.html': 'receivers',
-                'manager_drivers.html': 'drivers',
-                'manager_weather.html': 'weather',
-                'manager_messages.html': 'messages',
-                'manager_leaderboard.html': 'leaderboard',
-                'manager_verifications.html': 'verifications',
-                'manager_safety.html': 'safety',
+                'executive_analytics.html': 'analytics',
+                'executive_warehouses.html': 'warehouses',
+                'executive_shipments.html': 'shipments',
+                'executive_receivers.html': 'receivers',
+                'executive_drivers.html': 'drivers',
+                'executive_weather.html': 'weather',
+                'executive_messages.html': 'messages',
+                'executive_leaderboard.html': 'leaderboard',
+                'executive_verifications.html': 'verifications',
+                'executive_safety.html': 'safety',
                 
-                'manager_oracle.html': 'oracle',
-                'manager_fuel_oracle.html': 'fuel-oracle',
-                'manager_payments.html': 'paisa-fast',
-                'manager_strategy.html': 'strategy-plan',
-                'manager_resilience.html': 'network-resilience',
-                'manager_system.html': 'system',
-                'manager_hub_leaves.html': 'hub-leaves'
+                'executive_oracle.html': 'oracle',
+                'executive_fuel_oracle.html': 'fuel-oracle',
+                'executive_payments.html': 'paisa-fast',
+                'executive_strategy.html': 'strategy-plan',
+                'executive_resilience.html': 'network-resilience',
+                'executive_system.html': 'system',
+                'executive_hub_leaves.html': 'hub-leaves'
             };
             const targetPage = Object.keys(pageToSection).find(key => pageToSection[key] === id);
             if (targetPage) {
@@ -1420,13 +1420,13 @@ class AutomatedControl {
             switchTab(tab);
         } else {
             const tabToPage = {
-                'dash': 'warehouse_manager_dash.html',
-                'verifications': 'warehouse_manager_verifications.html',
-                'fleet': 'warehouse_manager_fleet.html',
-                'gate': 'warehouse_manager_gate.html',
-                'audit': 'warehouse_manager_audit.html',
-                'leaderboard': 'warehouse_manager_leaderboard.html',
-                'settings': 'warehouse_manager_settings.html'
+                'dash': 'hub_manager_dashboard.html',
+                'verifications': 'hub_executive_verifications.html',
+                'fleet': 'hub_manager_fleet.html',
+                'gate': 'hub_manager_gate.html',
+                'audit': 'hub_manager_audit.html',
+                'leaderboard': 'hub_executive_leaderboard.html',
+                'settings': 'hub_manager_settings.html'
             };
             const targetPage = tabToPage[tab];
             if (targetPage) {

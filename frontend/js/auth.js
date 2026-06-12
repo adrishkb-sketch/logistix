@@ -117,18 +117,17 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('company_name', res.name);
             localStorage.setItem('session_token', res.token);
             
-            window.location.href = 'pages/manager.html';
+            window.location.href = 'pages/executive_dashboard.html';
         }
 
         // Warehouse Manager Login
         if (target.id === 'wh-manager-login-form') {
-            const company_id = document.getElementById('wh-company-id')?.value?.trim();
             const email = document.getElementById('wh-manager-email')?.value?.trim();
             const password = document.getElementById('wh-manager-password')?.value;
 
-            if (!company_id || !email || !password) throw new Error(getTranslation('auth_error_missing'));
+            if (!email || !password) throw new Error(getTranslation('auth_error_missing'));
 
-            const res = await apiCall('/auth/warehouse-manager/login', 'POST', { company_id, email, password });
+            const res = await apiCall('/auth/warehouse-manager/login', 'POST', { email, password });
             
             localStorage.setItem('warehouse_id', res.warehouse_id);
             localStorage.setItem('warehouse_name', res.warehouse_name);
@@ -136,7 +135,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('manager_name', res.manager_name);
             localStorage.setItem('session_token', res.token);
             
-            window.location.href = 'pages/warehouse_manager.html';
+            window.location.href = 'pages/hub_manager_portal.html';
         }
 
         // Driver Login
@@ -153,7 +152,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('company_id', res.company_id);
             localStorage.setItem('session_token', res.token);
             
-            window.location.href = 'pages/driver.html';
+            window.location.href = 'pages/driver_dashboard.html';
         }
 
         // Company Signup
@@ -268,7 +267,7 @@ function showWelcomeModal(companyName) {
                 </div>
             </div>
 
-            <button class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 1.1rem;" onclick="window.location.href='pages/manager.html'">
+            <button class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 1.1rem;" onclick="window.location.href='pages/executive_dashboard.html'">
                 Go to Dashboard →
             </button>
         </div>

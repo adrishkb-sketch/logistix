@@ -542,8 +542,8 @@ function injectAIStatusWidget(status) {
         pill.title = 'No Gemini API keys configured. Go to System Settings to add.';
         pill.onclick = () => {
             const href = window.location.pathname.includes('/pages/')
-                ? 'manager_system.html'
-                : 'pages/manager_system.html';
+                ? 'executive_system.html'
+                : 'pages/executive_system.html';
             window.location.href = href;
         };
         pill.style.cursor = 'pointer';
