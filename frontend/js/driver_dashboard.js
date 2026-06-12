@@ -1,47 +1,47 @@
 // Driver Dashboard Logic
 // API_BASE is globally defined in api.js
 
-const dId = localStorage.getItem('driver_id');
+const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
 
 function showStatusOverlay(message, duration = 4000) {
-    const overlay = document.createElement('div');
+    const overlay = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
     overlay.className = 'glass-card';
     overlay.style.cssText = `
         position: fixed;
         top: 30%;
         left: 50%;
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%}); m.addListener('click', () => info.open(map, m));
         z-index: 200000;
         padding: 40px;
         min-width: 300px;
         text-align: center;
-        background: rgba(10, 15, 28, 0.95);
-        border: 2px solid var(--accent);
-        box-shadow: 0 0 50px rgba(0, 242, 254, 0.4);
+        background: rgba(10, 15, 28, 0.95}); m.addListener('click', () => info.open(map, m));
+        border: 2px solid var(--accent}); m.addListener('click', () => info.open(map, m));
+        box-shadow: 0 0 50px rgba(0, 242, 254, 0.4}); m.addListener('click', () => info.open(map, m));
         border-radius: 24px;
-        backdrop-filter: blur(20px);
-        animation: slideInDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        backdrop-filter: blur(20px}); m.addListener('click', () => info.open(map, m));
+        animation: slideInDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275}); m.addListener('click', () => info.open(map, m));
     `;
     overlay.innerHTML = `
         <div style="font-size:4rem; margin-bottom:20px;">⚡</div>
-        <h2 style="color:var(--accent); margin-bottom:12px; font-size:2rem; font-weight:800; letter-spacing:-0.5px;">${message}</h2>
-        <p style="color:var(--text-muted); font-size:1rem; line-height:1.5;">${getTranslation('status_broadcasted')}</p>
+        <h2 style="color:var(--accent}); m.addListener('click', () => info.open(map, m)); margin-bottom:12px; font-size:2rem; font-weight:800; letter-spacing:-0.5px;">${message}</h2>
+        <p style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); font-size:1rem; line-height:1.5;">${getTranslation('status_broadcasted')}</p>
     `;
-    document.body.appendChild(overlay);
+    document.body.appendChild(overlay}); m.addListener('click', () => info.open(map, m));
     setTimeout(() => {
         overlay.style.transition = 'all 0.5s ease';
         overlay.style.opacity = '0';
         overlay.style.transform = 'translate(-50%, -60%)';
-        setTimeout(() => overlay.remove(), 500);
-    }, duration);
+        setTimeout(() => overlay.remove(), 500}); m.addListener('click', () => info.open(map, m));
+    }, duration}); m.addListener('click', () => info.open(map, m));
 }
 
 window.zoomImage = function(src) {
     if (!src || src === '#') return;
     
-    let modal = document.getElementById('image-zoom-modal');
+    let modal = document.getElementById('image-zoom-modal'}); m.addListener('click', () => info.open(map, m));
     if (!modal) {
-        modal = document.createElement('div');
+        modal = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
         modal.id = 'image-zoom-modal';
         modal.style.cssText = `
             position: fixed;
@@ -49,7 +49,7 @@ window.zoomImage = function(src) {
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.85}); m.addListener('click', () => info.open(map, m));
             display: flex;
             justify-content: center;
             align-items: center;
@@ -57,26 +57,26 @@ window.zoomImage = function(src) {
             opacity: 0;
             transition: opacity 0.25s ease;
             pointer-events: none;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px}); m.addListener('click', () => info.open(map, m));
         `;
         
         modal.innerHTML = `
-            <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; justify-content: center; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; justify-content: center; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5}); m.addListener('click', () => info.open(map, m)); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m));">
                 <img id="zoom-modal-img" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain; display: block; border-radius: 12px;" />
-                <button style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onclick="window.closeZoomModal()">✕</button>
+                <button style="position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6}); m.addListener('click', () => info.open(map, m)); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onclick="window.closeZoomModal()">✕</button>
             </div>
         `;
         
         modal.addEventListener('click', function(e) {
             if (e.target === modal || e.target.tagName === 'BUTTON') {
-                window.closeZoomModal();
+                window.closeZoomModal(}); m.addListener('click', () => info.open(map, m));
             }
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         
-        document.body.appendChild(modal);
+        document.body.appendChild(modal}); m.addListener('click', () => info.open(map, m));
     }
     
-    const img = document.getElementById('zoom-modal-img');
+    const img = document.getElementById('zoom-modal-img'}); m.addListener('click', () => info.open(map, m));
     img.src = src;
     
     modal.style.pointerEvents = 'auto';
@@ -84,7 +84,7 @@ window.zoomImage = function(src) {
 };
 
 window.closeZoomModal = function() {
-    const modal = document.getElementById('image-zoom-modal');
+    const modal = document.getElementById('image-zoom-modal'}); m.addListener('click', () => info.open(map, m));
     if (modal) {
         modal.style.opacity = '0';
         modal.style.pointerEvents = 'none';
@@ -92,46 +92,46 @@ window.closeZoomModal = function() {
 };
 
 function showNotification(message, type = 'info') {
-    const toast = document.createElement('div');
+    const toast = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
     toast.style.position = 'fixed';
     toast.style.top = '20px';
     toast.style.left = '50%';
     toast.style.transform = 'translateX(-50%)';
     toast.style.padding = '12px 24px';
     toast.style.borderRadius = '30px';
-    toast.style.background = type === 'success' ? '#48bb78' : (type === 'error' ? '#e53e3e' : '#3182ce');
+    toast.style.background = type === 'success' ? '#48bb78' : (type === 'error' ? '#e53e3e' : '#3182ce'}); m.addListener('click', () => info.open(map, m));
     toast.style.color = 'white';
     toast.style.zIndex = '9999999';
     toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
     toast.style.fontWeight = 'bold';
     toast.style.fontSize = '0.9rem';
     toast.innerText = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    document.body.appendChild(toast}); m.addListener('click', () => info.open(map, m));
+    setTimeout(() => toast.remove(), 3000}); m.addListener('click', () => info.open(map, m));
 }
 if (!dId || dId === "null" || dId === "undefined") {
-    console.warn("Driver ID missing or invalid. Redirecting to login...");
+    console.warn("Driver ID missing or invalid. Redirecting to login..."}); m.addListener('click', () => info.open(map, m));
     window.location.href = '../index.html';
     // Use return or a non-fatal error if possible, but throw is okay for halting script
-    throw new Error("AUTH_REQUIRED: Redirecting to login...");
+    throw new Error("AUTH_REQUIRED: Redirecting to login..."}); m.addListener('click', () => info.open(map, m));
 }
-const nameEl = document.getElementById('driver-name');
-if (nameEl) nameEl.innerText = localStorage.getItem('driver_name') || getTranslation('driver');
+const nameEl = document.getElementById('driver-name'}); m.addListener('click', () => info.open(map, m));
+if (nameEl) nameEl.innerText = localStorage.getItem('driver_name') || getTranslation('driver'}); m.addListener('click', () => info.open(map, m));
 
 // Check for Native App Mode (PWA)
-const urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(window.location.search}); m.addListener('click', () => info.open(map, m));
 if (urlParams.get('app_mode') === '1') {
     // Hide standard web navigation elements
-    const topBar = document.querySelector('.top-bar');
-    const tabs = document.querySelector('[data-layout-container="driver-tabs"]');
+    const topBar = document.querySelector('.top-bar'}); m.addListener('click', () => info.open(map, m));
+    const tabs = document.querySelector('[data-layout-container="driver-tabs"]'}); m.addListener('click', () => info.open(map, m));
     if (topBar) topBar.style.display = 'none';
     if (tabs) tabs.style.display = 'none';
 
     // Override logout to just message the parent iframe instead of clearing everything
     window.logout = function() {
         if(confirm("Logout from Driver App?")) {
-            localStorage.removeItem('driver_id');
-            window.parent.location.reload();
+            localStorage.removeItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+            window.parent.location.reload(}); m.addListener('click', () => info.open(map, m));
         }
     };
 }
@@ -142,10 +142,10 @@ function attachSimulationDrag(m) {
     if (!m) return;
     m.on('dragend', async (e) => {
         if (!isSimulationMode) return;
-        const { lat, lng } = e.target.getLatLng();
-        await apiCall(`/driver/${localStorage.getItem('driver_id')}/location`, 'POST', { lat, lng });
-        showNotification(getTranslation('sim_movement_synced'), "success");
-    });
+        const { lat, lng } = e.target.getLatLng(}); m.addListener('click', () => info.open(map, m));
+        await apiCall(`/driver/${localStorage.getItem('driver_id')}/location`, 'POST', { lat, lng }}); m.addListener('click', () => info.open(map, m));
+        showNotification(getTranslation('sim_movement_synced'), "success"}); m.addListener('click', () => info.open(map, m));
+    }}); m.addListener('click', () => info.open(map, m));
 }
 
 // Duplicate checkSimulationStatus removed
@@ -163,12 +163,12 @@ let rerouteControlBtn = null;
 let activeRoutePolylines = [];
 
 function showError(msg) {
-    const container = document.getElementById('mission-container');
+    const container = document.getElementById('mission-container'}); m.addListener('click', () => info.open(map, m));
     if (container) {
         container.innerHTML = `
-            <div class="glass-card" style="border-left: 4px solid var(--danger); padding: 24px; text-align: center;">
-                <h3 style="color: var(--danger);">⚠️ ${getTranslation('error') || 'Error'}</h3>
-                <p style="color: var(--muted);">${msg}</p>
+            <div class="glass-card" style="border-left: 4px solid var(--danger}); m.addListener('click', () => info.open(map, m)); padding: 24px; text-align: center;">
+                <h3 style="color: var(--danger}); m.addListener('click', () => info.open(map, m));">⚠️ ${getTranslation('error') || 'Error'}</h3>
+                <p style="color: var(--muted}); m.addListener('click', () => info.open(map, m));">${msg}</p>
                 <button class="btn-primary" style="margin-top: 15px; width: auto; padding: 10px 20px;" onclick="location.reload()">
                     ${getTranslation('retry') || 'Retry'} 🔄
                 </button>
@@ -176,60 +176,50 @@ function showError(msg) {
         `;
     }
     // Also show main content if it was hidden
-    const mainContent = document.getElementById('main-content');
+    const mainContent = document.getElementById('main-content'}); m.addListener('click', () => info.open(map, m));
     if (mainContent) mainContent.style.display = 'block';
     
     // Hide loading spinners
-    const spinners = document.querySelectorAll('.spinner');
-    spinners.forEach(s => s.style.display = 'none');
+    const spinners = document.querySelectorAll('.spinner'}); m.addListener('click', () => info.open(map, m));
+    spinners.forEach(s => s.style.display = 'none'}); m.addListener('click', () => info.open(map, m));
 }
-let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count_driver') || '-1');
+let lastMsgCount = parseInt(localStorage.getItem('last_seen_msg_count_driver') || '-1'}); m.addListener('click', () => info.open(map, m));
 let currentActiveTab = 'dash';
 let isHalted = false;
 let lastBearing = 0;
 
-const ICON_PICKUP = L.divIcon({
-    html: `<div style="background:#f6ad55; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px rgba(246,173,85,0.8), 0 0 30px rgba(246,173,85,0.4); font-size:18px;">🏢</div>`,
-    className: 'custom-marker', iconSize: [36, 36], iconAnchor: [18, 18]
-});
-
-const ICON_DROP = L.divIcon({
-    html: `<div style="background:#48bb78; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px rgba(72,187,120,0.8), 0 0 30px rgba(72,187,120,0.4); font-size:18px;">🏁</div>`,
-    className: 'custom-marker', iconSize: [36, 36], iconAnchor: [18, 18]
-});
+const ICON_PICKUP = { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><circle cx="18" cy="18" r="16" fill="#f6ad55" stroke="white" stroke-width="2"/><text x="18" y="24" font-size="18" text-anchor="middle">🏢</text></svg>'), scaledSize: new google.maps.Size(36,36) };
+const ICON_DROP = { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><circle cx="18" cy="18" r="16" fill="#48bb78" stroke="white" stroke-width="2"/><text x="18" y="24" font-size="18" text-anchor="middle">🏁</text></svg>'), scaledSize: new google.maps.Size(36,36) };
 
 function getVehicleIcon(bearing = 0) {
-    return L.divIcon({
-        html: `<div style="transform:rotate(${bearing}deg); font-size:26px; transition: transform 0.5s ease; filter: drop-shadow(0 0 10px rgba(0,229,255,0.8)); text-align:center;">🚛</div>`,
-        className: 'vehicle-marker', iconSize: [30, 30], iconAnchor: [15, 15]
-    });
+    return { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><g transform="rotate(${bearing} 20 20)"><text x="20" y="26" font-size="26" text-anchor="middle">🚛</text></g></svg>`), scaledSize: new google.maps.Size(40,40) };
 }
 
 async function checkSimulationStatus() {
     try {
-        const status = await apiCall('/simulation/mode/status');
+        const status = await apiCall('/simulation/mode/status'}); m.addListener('click', () => info.open(map, m));
         const prev = isSimulationMode;
         isSimulationMode = status.active;
-        const ctrl = document.getElementById('simulation-ctrl');
+        const ctrl = document.getElementById('simulation-ctrl'}); m.addListener('click', () => info.open(map, m));
         if (ctrl) ctrl.style.display = isSimulationMode ? 'block' : 'none';
         
         // If simulation state changed, update marker draggability
         if (prev !== isSimulationMode && marker) {
             if (isSimulationMode) {
-                marker.dragging.enable();
-                attachSimulationDrag(marker);
+                marker.dragging.enable(}); m.addListener('click', () => info.open(map, m));
+                attachSimulationDrag(marker}); m.addListener('click', () => info.open(map, m));
             } else {
-                marker.dragging.disable();
-                marker.off('dragend');
+                marker.dragging.disable(}); m.addListener('click', () => info.open(map, m));
+                marker.off('dragend'}); m.addListener('click', () => info.open(map, m));
             }
         }
         
         if (isSimulationMode) {
             // Check if this driver is halted
-            isHalted = status.halted_drivers.includes(dId);
-            const haltBtn = document.getElementById('sim-halt-btn');
+            isHalted = status.halted_drivers.includes(dId}); m.addListener('click', () => info.open(map, m));
+            const haltBtn = document.getElementById('sim-halt-btn'}); m.addListener('click', () => info.open(map, m));
             if (haltBtn) {
-                haltBtn.innerText = isHalted ? getTranslation('resume_movement') : getTranslation('emergency_halt');
+                haltBtn.innerText = isHalted ? getTranslation('resume_movement') : getTranslation('emergency_halt'}); m.addListener('click', () => info.open(map, m));
                 haltBtn.style.background = isHalted ? "var(--success)" : "var(--danger)";
             }
         }
@@ -238,24 +228,24 @@ async function checkSimulationStatus() {
 
 async function toggleSimHalt() {
     try {
-        const res = await apiCall(`/simulation/mode/toggle-halt/${dId}`, 'POST');
+        const res = await apiCall(`/simulation/mode/toggle-halt/${dId}`, 'POST'}); m.addListener('click', () => info.open(map, m));
         isHalted = res.halted;
-        const haltBtn = document.getElementById('sim-halt-btn');
+        const haltBtn = document.getElementById('sim-halt-btn'}); m.addListener('click', () => info.open(map, m));
         if (haltBtn) {
-            haltBtn.innerText = isHalted ? getTranslation('resume_movement_btn') : getTranslation('emergency_halt_btn');
+            haltBtn.innerText = isHalted ? getTranslation('resume_movement_btn') : getTranslation('emergency_halt_btn'}); m.addListener('click', () => info.open(map, m));
             haltBtn.style.background = isHalted ? "var(--success)" : "var(--danger)";
         }
-        showNotification(isHalted ? getTranslation('vehicle_halted_msg') : getTranslation('movement_resumed_msg'), isHalted ? "error" : "success");
+        showNotification(isHalted ? getTranslation('vehicle_halted_msg') : getTranslation('movement_resumed_msg'), isHalted ? "error" : "success"}); m.addListener('click', () => info.open(map, m));
     } catch (e) {
-        alert("Failed to toggle halt status.");
+        alert("Failed to toggle halt status."}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 // Initial status check
-setTimeout(checkSimulationStatus, 1000);
+setTimeout(checkSimulationStatus, 1000}); m.addListener('click', () => info.open(map, m));
 
 // Stationary Tracking Variables
-let lastMovedTimestamp = Date.now();
+let lastMovedTimestamp = Date.now(}); m.addListener('click', () => info.open(map, m));
 let lastLocation = null;
 let stationaryAlertShown = false;
 
@@ -266,31 +256,31 @@ let lastMotionAlert = 0;
 
 // Real-time Refresh Loop
 setInterval(() => {
-    const activeSection = document.querySelector('.section-content:not([style*="display: none"])');
+    const activeSection = document.querySelector('.section-content:not([style*="display: none"])'}); m.addListener('click', () => info.open(map, m));
     if (activeSection && (activeSection.id === 'active-tab' || activeSection.id === 'dash-tab')) {
-        if (activeSection.id === 'active-tab') loadActiveMission();
-        else loadDashStats();
+        if (activeSection.id === 'active-tab') loadActiveMission(}); m.addListener('click', () => info.open(map, m));
+        else loadDashStats(}); m.addListener('click', () => info.open(map, m));
     }
-    checkSimulationStatus();
-}, 5000);
+    checkSimulationStatus(}); m.addListener('click', () => info.open(map, m));
+}, 5000}); m.addListener('click', () => info.open(map, m));
 
 // Background Notification Poller (Snappier for Chat)
 setInterval(async () => {
     try {
-        const dId = localStorage.getItem('driver_id');
+        const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
         if (!dId) return;
         
-        const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`);
+        const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`}); m.addListener('click', () => info.open(map, m));
         
         if (msgs.length > lastMsgCount) {
             if (currentActiveTab !== 'chat') {
-                const badge = document.getElementById('chat-badge');
+                const badge = document.getElementById('chat-badge'}); m.addListener('click', () => info.open(map, m));
                 if (badge) {
                     badge.style.display = 'inline-block';
                     badge.style.background = 'var(--danger)';
                     badge.style.border = '1.5px solid var(--bg)';
                 }
-                const btn = document.getElementById('btn-tab-chat');
+                const btn = document.getElementById('btn-tab-chat'}); m.addListener('click', () => info.open(map, m));
                 if (btn) {
                     btn.style.fontWeight = '900';
                     btn.style.color = 'var(--text)';
@@ -298,14 +288,14 @@ setInterval(async () => {
             } else {
                 // Already in chat, just update the seen count
                 lastMsgCount = msgs.length;
-                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount);
+                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount}); m.addListener('click', () => info.open(map, m));
                 // Also update the chat list if we are looking at it
-                const container = document.getElementById('driver-messages');
-                if (container) renderDriverMessages(msgs);
+                const container = document.getElementById('driver-messages'}); m.addListener('click', () => info.open(map, m));
+                if (container) renderDriverMessages(msgs}); m.addListener('click', () => info.open(map, m));
             }
         }
     } catch(e) {}
-}, 5000);
+}, 5000}); m.addListener('click', () => info.open(map, m));
 
 function switchDriverTab(tab) {
     const tabToPage = {
@@ -317,40 +307,40 @@ function switchDriverTab(tab) {
         'wallet': 'driver_wallet',
         'profile': 'driver_account'
     };
-    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
+    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', ''}); m.addListener('click', () => info.open(map, m));
     const expectedPage = tabToPage[tab];
     if (expectedPage && expectedPage !== currentFilename && (currentFilename.startsWith('driver_') || currentFilename === 'driver' || currentFilename === 'driver_dashboard.html')) {
         if (urlParams.get('app_mode') === '1' && window.parent && window.parent.navigate) {
             // Let the parent shell handle it so the bottom nav updates
-            const targetEl = Array.from(window.parent.document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(expectedPage));
-            window.parent.navigate(expectedPage + '.html', targetEl);
+            const targetEl = Array.from(window.parent.document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick').includes(expectedPage)}); m.addListener('click', () => info.open(map, m));
+            window.parent.navigate(expectedPage + '.html', targetEl}); m.addListener('click', () => info.open(map, m));
             return;
         }
-        window.location.href = expectedPage + '.html' + (urlParams.get('app_mode') === '1' ? '?app_mode=1' : '');
+        window.location.href = expectedPage + '.html' + (urlParams.get('app_mode') === '1' ? '?app_mode=1' : ''}); m.addListener('click', () => info.open(map, m));
         return;
     }
 
     currentActiveTab = tab;
     const tabs = ['dash', 'active', 'chat', 'completed', 'contracts', 'wallet', 'profile'];
     tabs.forEach(t => {
-        const el = document.getElementById(`${t}-tab`);
-        const btn = document.getElementById(`btn-tab-${t}`);
+        const el = document.getElementById(`${t}-tab`}); m.addListener('click', () => info.open(map, m));
+        const btn = document.getElementById(`btn-tab-${t}`}); m.addListener('click', () => info.open(map, m));
         if (el) el.style.display = t === tab ? 'block' : 'none';
         if (btn) {
             btn.style.background = t === tab ? 'var(--primary)' : 'rgba(255,255,255,0.1)';
             btn.style.color = t === tab ? '#fff' : 'var(--muted)';
         }
-    });
-    if (tab === 'wallet') loadWallet();
-    if (tab === 'contracts') loadContracts();
+    }}); m.addListener('click', () => info.open(map, m));
+    if (tab === 'wallet') loadWallet(}); m.addListener('click', () => info.open(map, m));
+    if (tab === 'contracts') loadContracts(}); m.addListener('click', () => info.open(map, m));
 
-    if (tab === 'dash') loadDashStats();
-    if (tab === 'profile') loadProfileData();
+    if (tab === 'dash') loadDashStats(}); m.addListener('click', () => info.open(map, m));
+    if (tab === 'profile') loadProfileData(}); m.addListener('click', () => info.open(map, m));
     if (tab === 'chat') {
-        loadAlertsAndMessages();
-        const badge = document.getElementById('chat-badge');
+        loadAlertsAndMessages(}); m.addListener('click', () => info.open(map, m));
+        const badge = document.getElementById('chat-badge'}); m.addListener('click', () => info.open(map, m));
         if (badge) badge.style.display = 'none';
-        const btn = document.getElementById('btn-tab-chat');
+        const btn = document.getElementById('btn-tab-chat'}); m.addListener('click', () => info.open(map, m));
         if (btn) {
             btn.style.fontWeight = '700'; // Standard bold
             btn.style.color = 'var(--muted)';
@@ -360,39 +350,39 @@ function switchDriverTab(tab) {
         apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`)
             .then(msgs => {
                 lastMsgCount = msgs.length;
-                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount);
-            });
+                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount}); m.addListener('click', () => info.open(map, m));
+            }}); m.addListener('click', () => info.open(map, m));
     }
-    if (tab === 'active' && map) setTimeout(() => map.invalidateSize(), 200);
+    if (tab === 'active' && map) setTimeout(() => map.invalidateSize(), 200}); m.addListener('click', () => info.open(map, m));
 }
 
 async function loadDashStats() {
     try {
-        const stats = await apiCall(`/driver/${localStorage.getItem('driver_id')}/dashboard/stats`);
+        const stats = await apiCall(`/driver/${localStorage.getItem('driver_id')}/dashboard/stats`}); m.addListener('click', () => info.open(map, m));
         window.driverStats = stats;
         
         document.getElementById('d-stat-earned').innerText = `${Math.floor(stats.total_points || 0)}`;
         document.getElementById('d-stat-ontime').innerText = `${stats.timely_percent}%`;
-        document.getElementById('d-stat-safety').innerText = (5 - (stats.fatigue_score/100)).toFixed(1);
+        document.getElementById('d-stat-safety').innerText = (5 - (stats.fatigue_score/100)).toFixed(1}); m.addListener('click', () => info.open(map, m));
 
         // Populate Driver Notifications Banner
-        const notifContainer = document.getElementById('driver-notifications-container');
+        const notifContainer = document.getElementById('driver-notifications-container'}); m.addListener('click', () => info.open(map, m));
         if (notifContainer) {
-            const unread = (stats.notifications || []).filter(n => !n.read);
+            const unread = (stats.notifications || []).filter(n => !n.read}); m.addListener('click', () => info.open(map, m));
             if (unread.length > 0) {
                 notifContainer.style.display = 'block';
                 notifContainer.innerHTML = unread.map(n => `
-                    <div class="glass-card" style="padding: 1rem; border-left: 4px solid var(--warning); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.05); border-radius: 12px;">
-                        <div style="font-size: 0.85rem; color: var(--text); text-align: left;">
-                            <div style="font-weight: bold; color: var(--warning); margin-bottom: 4px;">⚠️ ${n.title || 'Notification'}</div>
+                    <div class="glass-card" style="padding: 1rem; border-left: 4px solid var(--warning}); m.addListener('click', () => info.open(map, m)); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.05}); m.addListener('click', () => info.open(map, m)); border-radius: 12px;">
+                        <div style="font-size: 0.85rem; color: var(--text}); m.addListener('click', () => info.open(map, m)); text-align: left;">
+                            <div style="font-weight: bold; color: var(--warning}); m.addListener('click', () => info.open(map, m)); margin-bottom: 4px;">⚠️ ${n.title || 'Notification'}</div>
                             <div>${n.message || ''}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">${n.timestamp ? new Date(n.timestamp).toLocaleString() : ''}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-top: 4px;">${n.timestamp ? new Date(n.timestamp).toLocaleString() : ''}</div>
                         </div>
-                        <button class="btn-primary" onclick="markDriverNotifRead('${n.id}')" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--warning); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 15px;">
+                        <button class="btn-primary" onclick="markDriverNotifRead('${n.id}')" style="width: auto; padding: 6px 12px; font-size: 0.75rem; background: var(--warning}); m.addListener('click', () => info.open(map, m)); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-left: 15px;">
                             Mark Read
                         </button>
                     </div>
-                `).join('');
+                `).join(''}); m.addListener('click', () => info.open(map, m));
             } else {
                 notifContainer.style.display = 'none';
                 notifContainer.innerHTML = '';
@@ -400,8 +390,8 @@ async function loadDashStats() {
         }
 
         // Populate Last Trip Breakdown
-        const summaryBox = document.getElementById('last-trip-summary');
-        const summaryContent = document.getElementById('trip-breakdown-content');
+        const summaryBox = document.getElementById('last-trip-summary'}); m.addListener('click', () => info.open(map, m));
+        const summaryContent = document.getElementById('trip-breakdown-content'}); m.addListener('click', () => info.open(map, m));
         if (stats.latest_breakdown) {
             summaryBox.style.display = 'block';
             const b = stats.latest_breakdown;
@@ -411,21 +401,21 @@ async function loadDashStats() {
                 <div style="display:flex; justify-content:space-between;"><span>🛡️ ${getTranslation('safety_incentive')}:</span> <span>+${b.safety_incentive}</span></div>
                 <div style="display:flex; justify-content:space-between;"><span>🧘 ${getTranslation('wellness_bonus')}:</span> <span>+${b.wellness_bonus}</span></div>
                 ${b.customer_rating_bonus !== undefined ? `<div style="display:flex; justify-content:space-between;"><span>🌟 ${getTranslation('receiver_rating_bonus')}:</span> <span>${b.customer_rating_bonus >= 0 ? '+' : ''}${b.customer_rating_bonus}</span></div>` : ''}
-                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:8px 0;">
-                <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--success);"><span>${getTranslation('total_points')}:</span> <span>${b.total}</span></div>
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m)); margin:8px 0;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; color:var(--success}); m.addListener('click', () => info.open(map, m));"><span>${getTranslation('total_points')}:</span> <span>${b.total}</span></div>
             `;
         } else {
             summaryBox.style.display = 'none';
         }
 
         if (stats.perf_history && stats.perf_history.length > 0) {
-            renderDriverChart(stats.perf_history);
+            renderDriverChart(stats.perf_history}); m.addListener('click', () => info.open(map, m));
         } else {
-            renderDriverChart([0, 0, 0, 0, 0]); 
+            renderDriverChart([0, 0, 0, 0, 0]}); m.addListener('click', () => info.open(map, m)); 
         }
         
         // Mini vehicle details
-        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
+        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`}); m.addListener('click', () => info.open(map, m));
         const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(localStorage.getItem('driver_id'))) : null;
         window.driverMe = me;
         
@@ -433,39 +423,39 @@ async function loadDashStats() {
             document.getElementById('vehicle-mini-details').innerText = `${getTranslation('active_vehicle_label')}${me.assigned_vehicle_id}`;
             
             // Handle Breakdown/Maintenance UI
-            const vehicles = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('company_id')}`);
+            const vehicles = await apiCall(`/manager/vehicles?company_id=${localStorage.getItem('company_id')}`}); m.addListener('click', () => info.open(map, m));
             const v = vehicles && Array.isArray(vehicles) ? vehicles.find(veh => veh.id === me.assigned_vehicle_id) : null;
             
-            const statusBadge = document.getElementById('vehicle-status-badge');
-            const actionsDiv = document.getElementById('vehicle-actions');
-            const rescueInfo = document.getElementById('breakdown-rescue-info');
+            const statusBadge = document.getElementById('vehicle-status-badge'}); m.addListener('click', () => info.open(map, m));
+            const actionsDiv = document.getElementById('vehicle-actions'}); m.addListener('click', () => info.open(map, m));
+            const rescueInfo = document.getElementById('breakdown-rescue-info'}); m.addListener('click', () => info.open(map, m));
             
             if (v) {
                 if (v.status === 'maintenance') {
-                    statusBadge.innerText = getTranslation('under_maintenance');
+                    statusBadge.innerText = getTranslation('under_maintenance'}); m.addListener('click', () => info.open(map, m));
                     statusBadge.style.background = 'rgba(239, 68, 68, 0.15)';
                     statusBadge.style.color = 'var(--danger)';
-                    actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success); font-size:0.85rem;" onclick="completeMaintenance()">🔧 ${getTranslation('mark_repaired')}</button>`;
+                    actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--success}); m.addListener('click', () => info.open(map, m)); font-size:0.85rem;" onclick="completeMaintenance()">🔧 ${getTranslation('mark_repaired')}</button>`;
                     rescueInfo.style.display = 'block';
-                    document.getElementById('rescue-details').innerText = getTranslation('maintenance_lock_desc');
+                    document.getElementById('rescue-details').innerText = getTranslation('maintenance_lock_desc'}); m.addListener('click', () => info.open(map, m));
                 } else {
-                    statusBadge.innerText = (getTranslation(v.status) || v.status).toUpperCase().replace('_', '-');
+                    statusBadge.innerText = (getTranslation(v.status) || v.status).toUpperCase().replace('_', '-'}); m.addListener('click', () => info.open(map, m));
                     statusBadge.style.background = 'rgba(16, 185, 129, 0.15)';
                     statusBadge.style.color = 'var(--success)';
-                    actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger); font-size:0.85rem;" onclick="reportBreakdown()">🚨 ${getTranslation('report_breakdown')}</button>`;
+                    actionsDiv.innerHTML = `<button class="btn-primary" style="padding:8px 16px; background:var(--danger}); m.addListener('click', () => info.open(map, m)); font-size:0.85rem;" onclick="reportBreakdown()">🚨 ${getTranslation('report_breakdown')}</button>`;
                     rescueInfo.style.display = 'none';
                 }
                 
                 // Enrich details with health and efficiency
                 const health = stats.vehicle_health || 100;
-                const healthColor = health > 70 ? 'var(--success)' : (health > 30 ? 'var(--warning)' : 'var(--danger)');
+                const healthColor = health > 70 ? 'var(--success)' : (health > 30 ? 'var(--warning)' : 'var(--danger)'}); m.addListener('click', () => info.open(map, m));
                 document.getElementById('vehicle-mini-details').innerHTML = `
                     <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
                         <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
                             <span>🛡️ ${getTranslation('vehicle_health')}</span>
                             <span style="color:${healthColor}">${health.toFixed(1)}%</span>
                         </div>
-                        <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                        <div style="width:100%; height:6px; background:rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m)); border-radius:3px; overflow:hidden;">
                             <div style="width:${health}%; height:100%; background:${healthColor}; transition:width 0.5s ease;"></div>
                         </div>
                         <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:0.8rem;">
@@ -475,43 +465,43 @@ async function loadDashStats() {
                     </div>
                 `;
             } else {
-                document.getElementById('vehicle-mini-details').innerText = getTranslation('vehicle_data_not_found');
+                document.getElementById('vehicle-mini-details').innerText = getTranslation('vehicle_data_not_found'}); m.addListener('click', () => info.open(map, m));
             }
         }
     } catch(e) {
-        console.error("Error in loadDashStats:", e);
+        console.error("Error in loadDashStats:", e}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 async function reportBreakdown() {
     if (!confirm(getTranslation('breakdown_confirm'))) return;
     try {
-        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000}));
-        const res = await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: pos.coords.latitude, lng: pos.coords.longitude });
-        showNotification(getTranslation('breakdown_reported'), "error");
-        loadDashStats();
+        const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000})}); m.addListener('click', () => info.open(map, m));
+        const res = await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: pos.coords.latitude, lng: pos.coords.longitude }}); m.addListener('click', () => info.open(map, m));
+        showNotification(getTranslation('breakdown_reported'), "error"}); m.addListener('click', () => info.open(map, m));
+        loadDashStats(}); m.addListener('click', () => info.open(map, m));
     } catch (e) {
-        await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: 0, lng: 0 });
-        showNotification(getTranslation('breakdown_no_gps'), "error");
-        loadDashStats();
+        await apiCall(`/driver/${dId}/breakdown`, 'POST', { lat: 0, lng: 0 }}); m.addListener('click', () => info.open(map, m));
+        showNotification(getTranslation('breakdown_no_gps'), "error"}); m.addListener('click', () => info.open(map, m));
+        loadDashStats(}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 async function completeMaintenance() {
     try {
-        await apiCall(`/driver/${dId}/maintenance-complete`, 'POST');
-        showNotification(getTranslation('vehicle_cleared'), "success");
-        loadDashStats();
+        await apiCall(`/driver/${dId}/maintenance-complete`, 'POST'}); m.addListener('click', () => info.open(map, m));
+        showNotification(getTranslation('vehicle_cleared'), "success"}); m.addListener('click', () => info.open(map, m));
+        loadDashStats(}); m.addListener('click', () => info.open(map, m));
     } catch (e) {
-        showNotification("Failed to update status.", "error");
+        showNotification("Failed to update status.", "error"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 function renderDriverChart(history) {
-    const ctx = document.getElementById('driverPerfChart')?.getContext('2d');
+    const ctx = document.getElementById('driverPerfChart')?.getContext('2d'}); m.addListener('click', () => info.open(map, m));
     if (!ctx) return;
 
-    if (driverPerfChart) driverPerfChart.destroy();
+    if (driverPerfChart) driverPerfChart.destroy(}); m.addListener('click', () => info.open(map, m));
 
     driverPerfChart = new Chart(ctx, {
         type: 'bar',
@@ -535,7 +525,7 @@ function renderDriverChart(history) {
                 x: { grid: { display: false } } 
             }
         }
-    });
+    }}); m.addListener('click', () => info.open(map, m));
 }
 
 // Helper functions for Vitals check and overlays
@@ -546,9 +536,9 @@ const checkVitalsStatus = (me) => {
     
     // Check 24 hour expiration
     try {
-        const lastCheck = new Date(me.last_health_check);
-        const now = new Date();
-        const diffHrs = (now - lastCheck) / (1000 * 60 * 60);
+        const lastCheck = new Date(me.last_health_check}); m.addListener('click', () => info.open(map, m));
+        const now = new Date(}); m.addListener('click', () => info.open(map, m));
+        const diffHrs = (now - lastCheck) / (1000 * 60 * 60}); m.addListener('click', () => info.open(map, m));
         if (diffHrs > 24) {
             return { valid: false, reason: "Vitals Expired: Vitals must be updated every 24 hours. Please sync your smartwatch." };
         }
@@ -567,9 +557,9 @@ const checkVitalsStatus = (me) => {
     
     if (bp && bp.includes('/')) {
         try {
-            const parts = bp.split('/');
-            const syst = parseInt(parts[0]);
-            const diast = parseInt(parts[1]);
+            const parts = bp.split('/'}); m.addListener('click', () => info.open(map, m));
+            const syst = parseInt(parts[0]}); m.addListener('click', () => info.open(map, m));
+            const diast = parseInt(parts[1]}); m.addListener('click', () => info.open(map, m));
             if (syst < 90 || syst > 140 || diast < 60 || diast > 95) {
                 return { valid: false, reason: `Abnormal Vitals: Blood Pressure (${bp}) is outside safe limits.` };
             }
@@ -581,111 +571,111 @@ const checkVitalsStatus = (me) => {
 
 function initBlockingOverlays() {
     if (!document.getElementById('vitals-warning-overlay')) {
-        const div = document.createElement('div');
+        const div = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
         div.id = 'vitals-warning-overlay';
-        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:100000; background:rgba(10, 15, 28, 0.9); backdrop-filter:blur(15px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:100000; background:rgba(10, 15, 28, 0.9}); m.addListener('click', () => info.open(map, m)); backdrop-filter:blur(15px}); m.addListener('click', () => info.open(map, m)); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
         div.innerHTML = `
-            <div class="glass-card" style="max-width:400px; padding:30px; border:2px solid var(--danger); box-shadow:0 0 50px rgba(239,68,68,0.2); border-radius:20px; box-sizing:border-box;">
-                <div style="font-size:4rem; margin-bottom:15px; filter:drop-shadow(0 0 10px var(--danger));">❤️</div>
-                <h3 style="color:var(--danger); margin-bottom:12px; font-weight:800; margin-top:0;">Vitals Sync Required</h3>
-                <p id="vitals-warning-text" style="color:var(--text-muted); margin-bottom:24px; font-size:0.95rem; line-height:1.5;"></p>
+            <div class="glass-card" style="max-width:400px; padding:30px; border:2px solid var(--danger}); m.addListener('click', () => info.open(map, m)); box-shadow:0 0 50px rgba(239,68,68,0.2}); m.addListener('click', () => info.open(map, m)); border-radius:20px; box-sizing:border-box;">
+                <div style="font-size:4rem; margin-bottom:15px; filter:drop-shadow(0 0 10px var(--danger)}); m.addListener('click', () => info.open(map, m));">❤️</div>
+                <h3 style="color:var(--danger}); m.addListener('click', () => info.open(map, m)); margin-bottom:12px; font-weight:800; margin-top:0;">Vitals Sync Required</h3>
+                <p id="vitals-warning-text" style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-bottom:24px; font-size:0.95rem; line-height:1.5;"></p>
                 <div style="display:flex; flex-direction:column; gap:10px;">
-                    <button class="btn-primary" id="vitals-sync-btn-overlay" style="background:var(--accent); color:#000; font-weight:800; border:none; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">⌚ Sync Smartwatch Vitals</button>
-                    <button class="btn-primary" id="vitals-manual-btn-overlay" style="background:var(--primary); color:#000; font-weight:800; border:none; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">📝 Enter Vitals Manually</button>
-                    <button class="btn-primary" id="vitals-close-btn-overlay" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:white; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">Close</button>
+                    <button class="btn-primary" id="vitals-sync-btn-overlay" style="background:var(--accent}); m.addListener('click', () => info.open(map, m)); color:#000; font-weight:800; border:none; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">⌚ Sync Smartwatch Vitals</button>
+                    <button class="btn-primary" id="vitals-manual-btn-overlay" style="background:var(--primary}); m.addListener('click', () => info.open(map, m)); color:#000; font-weight:800; border:none; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">📝 Enter Vitals Manually</button>
+                    <button class="btn-primary" id="vitals-close-btn-overlay" style="background:transparent; border:1px solid rgba(255,255,255,0.2}); m.addListener('click', () => info.open(map, m)); color:white; padding:12px; border-radius:10px; cursor:pointer; font-size:0.95rem;">Close</button>
                 </div>
             </div>
         `;
-        document.body.appendChild(div);
+        document.body.appendChild(div}); m.addListener('click', () => info.open(map, m));
         
         document.getElementById('vitals-sync-btn-overlay').addEventListener('click', () => {
             document.getElementById('vitals-warning-overlay').style.display = 'none';
-            const syncBtn = document.getElementById('relocated-watch-sync-btn') || document.getElementById('watch-sync-btn');
+            const syncBtn = document.getElementById('relocated-watch-sync-btn') || document.getElementById('watch-sync-btn'}); m.addListener('click', () => info.open(map, m));
             if (syncBtn) {
                 if (!watchSyncActiveRelocated) {
-                    toggleWatchSyncRelocated(syncBtn);
+                    toggleWatchSyncRelocated(syncBtn}); m.addListener('click', () => info.open(map, m));
                 }
             } else {
-                toggleWatchSync();
+                toggleWatchSync(}); m.addListener('click', () => info.open(map, m));
             }
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         document.getElementById('vitals-manual-btn-overlay').addEventListener('click', () => {
             document.getElementById('vitals-warning-overlay').style.display = 'none';
-            openHealthModal();
-        });
+            openHealthModal(}); m.addListener('click', () => info.open(map, m));
+        }}); m.addListener('click', () => info.open(map, m));
         document.getElementById('vitals-close-btn-overlay').addEventListener('click', () => {
             document.getElementById('vitals-warning-overlay').style.display = 'none';
-        });
+        }}); m.addListener('click', () => info.open(map, m));
     }
 
     if (!document.getElementById('vehicle-health-block-overlay')) {
-        const div = document.createElement('div');
+        const div = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
         div.id = 'vehicle-health-block-overlay';
-        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:99999; background:rgba(10, 15, 28, 0.92); backdrop-filter:blur(20px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:99999; background:rgba(10, 15, 28, 0.92}); m.addListener('click', () => info.open(map, m)); backdrop-filter:blur(20px}); m.addListener('click', () => info.open(map, m)); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
         div.innerHTML = `
-            <div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--warning); box-shadow:0 0 50px rgba(245,158,11,0.25); border-radius:24px; box-sizing:border-box;">
-                <div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 15px rgba(245,158,11,0.3));">🔧</div>
-                <h2 style="color:var(--warning); margin-bottom:15px; font-weight:800; font-size:1.8rem; margin-top:0;">Vehicle Health 0%</h2>
-                <p style="color:var(--text-muted); margin-bottom:30px; font-size:1.05rem; line-height:1.6;">Your vehicle is due for immediate maintenance. All actions are blocked until a vehicle checkup is approved by the manager.</p>
+            <div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--warning}); m.addListener('click', () => info.open(map, m)); box-shadow:0 0 50px rgba(245,158,11,0.25}); m.addListener('click', () => info.open(map, m)); border-radius:24px; box-sizing:border-box;">
+                <div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 15px rgba(245,158,11,0.3)}); m.addListener('click', () => info.open(map, m));">🔧</div>
+                <h2 style="color:var(--warning}); m.addListener('click', () => info.open(map, m)); margin-bottom:15px; font-weight:800; font-size:1.8rem; margin-top:0;">Vehicle Health 0%</h2>
+                <p style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-bottom:30px; font-size:1.05rem; line-height:1.6;">Your vehicle is due for immediate maintenance. All actions are blocked until a vehicle checkup is approved by the manager.</p>
                 <div id="checkup-status-container"></div>
             </div>
         `;
-        document.body.appendChild(div);
+        document.body.appendChild(div}); m.addListener('click', () => info.open(map, m));
     }
 
     if (!document.getElementById('rest-timer-overlay')) {
-        const div = document.createElement('div');
+        const div = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
         div.id = 'rest-timer-overlay';
-        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:99998; background:rgba(10, 15, 28, 0.95); backdrop-filter:blur(20px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:99998; background:rgba(10, 15, 28, 0.95}); m.addListener('click', () => info.open(map, m)); backdrop-filter:blur(20px}); m.addListener('click', () => info.open(map, m)); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
         div.innerHTML = `
-            <div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--primary); box-shadow:0 0 50px rgba(79, 140, 255, 0.25); border-radius:24px; box-sizing:border-box;">
+            <div class="glass-card" style="max-width:400px; padding:40px; border:2px solid var(--primary}); m.addListener('click', () => info.open(map, m)); box-shadow:0 0 50px rgba(79, 140, 255, 0.25}); m.addListener('click', () => info.open(map, m)); border-radius:24px; box-sizing:border-box;">
                 <div class="zen-breathing" style="font-size:5rem; margin-bottom:20px;">🧘</div>
-                <h2 style="color:var(--primary); margin-bottom:15px; font-weight:800; font-size:1.8rem; margin-top:0;">MANDATORY REST</h2>
-                <p style="color:var(--text-muted); margin-bottom:20px; font-size:1.05rem; line-height:1.6;">You are currently in your mandatory 8-hour rest period. Please take this time to recuperate.</p>
+                <h2 style="color:var(--primary}); m.addListener('click', () => info.open(map, m)); margin-bottom:15px; font-weight:800; font-size:1.8rem; margin-top:0;">MANDATORY REST</h2>
+                <p style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-bottom:20px; font-size:1.05rem; line-height:1.6;">You are currently in your mandatory 8-hour rest period. Please take this time to recuperate.</p>
                 <div id="rest-countdown-timer" style="font-size:2.2rem; font-weight:bold; font-family:monospace; color:white; margin-bottom:30px;">08:00:00</div>
-                <button class="btn-primary" id="fast-forward-rest-btn" style="background:var(--success); color:black; font-weight:800; border:none; padding:12px 24px; border-radius:10px; cursor:pointer; font-size:1rem; width:100%;">⚡ Fast-Forward Rest (Demo)</button>
+                <button class="btn-primary" id="fast-forward-rest-btn" style="background:var(--success}); m.addListener('click', () => info.open(map, m)); color:black; font-weight:800; border:none; padding:12px 24px; border-radius:10px; cursor:pointer; font-size:1rem; width:100%;">⚡ Fast-Forward Rest (Demo)</button>
             </div>
         `;
-        document.body.appendChild(div);
+        document.body.appendChild(div}); m.addListener('click', () => info.open(map, m));
         
         document.getElementById('fast-forward-rest-btn').addEventListener('click', async () => {
             try {
-                const res = await apiCall(`/driver/${dId}/end-rest`, 'POST');
-                showNotification(res.message, "success");
+                const res = await apiCall(`/driver/${dId}/end-rest`, 'POST'}); m.addListener('click', () => info.open(map, m));
+                showNotification(res.message, "success"}); m.addListener('click', () => info.open(map, m));
                 document.getElementById('rest-timer-overlay').style.display = 'none';
-                if (window.restTimerInterval) clearInterval(window.restTimerInterval);
-                loadMissions();
+                if (window.restTimerInterval) clearInterval(window.restTimerInterval}); m.addListener('click', () => info.open(map, m));
+                loadMissions(}); m.addListener('click', () => info.open(map, m));
             } catch(e) {
-                showNotification("Failed to fast-forward rest period", "error");
+                showNotification("Failed to fast-forward rest period", "error"}); m.addListener('click', () => info.open(map, m));
             }
-        });
+        }}); m.addListener('click', () => info.open(map, m));
     }
 
     if (!document.getElementById('geolocation-block-overlay')) {
-        const div = document.createElement('div');
+        const div = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
         div.id = 'geolocation-block-overlay';
-        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:100001; background:rgba(10, 15, 28, 0.97); backdrop-filter:blur(25px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
+        div.style.cssText = 'display:none; position:fixed; inset:0; z-index:100001; background:rgba(10, 15, 28, 0.97}); m.addListener('click', () => info.open(map, m)); backdrop-filter:blur(25px}); m.addListener('click', () => info.open(map, m)); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px; box-sizing:border-box;';
         div.innerHTML = `
-            <div class="glass-card" style="max-width:420px; padding:40px; border:2px solid var(--danger); box-shadow:0 0 80px rgba(239,68,68,0.3), inset 0 0 30px rgba(239,68,68,0.05); border-radius:24px; box-sizing:border-box;">
-                <div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 20px rgba(239,68,68,0.5)); animation: pulse 2s infinite;">🚨</div>
-                <h2 style="color:var(--danger); margin:0 0 12px 0; font-weight:900; font-size:1.6rem; letter-spacing:-0.5px;">Geolocation Access Required</h2>
-                <p style="color:var(--text-muted); margin-bottom:8px; font-size:0.95rem; line-height:1.6;">LogistiX requires real-time GPS tracking to operate. Location access is <strong style='color:var(--danger);'>mandatory</strong> for all active drivers.</p>
-                <p style="color:rgba(255,255,255,0.4); margin-bottom:24px; font-size:0.8rem; line-height:1.5;">Please enable location permissions in your browser settings and try again. Your position is tracked for route optimization, ETA calculation, and safety compliance.</p>
+            <div class="glass-card" style="max-width:420px; padding:40px; border:2px solid var(--danger}); m.addListener('click', () => info.open(map, m)); box-shadow:0 0 80px rgba(239,68,68,0.3), inset 0 0 30px rgba(239,68,68,0.05}); m.addListener('click', () => info.open(map, m)); border-radius:24px; box-sizing:border-box;">
+                <div style="font-size:5rem; margin-bottom:20px; filter:drop-shadow(0 0 20px rgba(239,68,68,0.5)}); m.addListener('click', () => info.open(map, m)); animation: pulse 2s infinite;">🚨</div>
+                <h2 style="color:var(--danger}); m.addListener('click', () => info.open(map, m)); margin:0 0 12px 0; font-weight:900; font-size:1.6rem; letter-spacing:-0.5px;">Geolocation Access Required</h2>
+                <p style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-bottom:8px; font-size:0.95rem; line-height:1.6;">LogistiX requires real-time GPS tracking to operate. Location access is <strong style='color:var(--danger}); m.addListener('click', () => info.open(map, m));'>mandatory</strong> for all active drivers.</p>
+                <p style="color:rgba(255,255,255,0.4}); m.addListener('click', () => info.open(map, m)); margin-bottom:24px; font-size:0.8rem; line-height:1.5;">Please enable location permissions in your browser settings and try again. Your position is tracked for route optimization, ETA calculation, and safety compliance.</p>
                 <div style="display:flex; flex-direction:column; gap:10px;">
-                    <button class="btn-primary" id="geo-retry-btn" style="background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:#000; font-weight:800; border:none; padding:14px; border-radius:12px; cursor:pointer; font-size:1rem; box-shadow:0 4px 15px rgba(79,140,255,0.3);">📍 Retry Location Access</button>
-                    <button class="btn-outline" id="geo-dismiss-btn" style="border: 1px solid var(--border); padding: 10px; border-radius: 12px; cursor: pointer; color: var(--text-main); background: transparent; font-size: 0.9rem;">✖ Continue without GPS (Simulation)</button>
-                    <p style="color:rgba(255,255,255,0.3); font-size:0.7rem; margin:8px 0 0 0;">If using Chrome: Settings → Site Settings → Location → Allow</p>
+                    <button class="btn-primary" id="geo-retry-btn" style="background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%}); m.addListener('click', () => info.open(map, m)); color:#000; font-weight:800; border:none; padding:14px; border-radius:12px; cursor:pointer; font-size:1rem; box-shadow:0 4px 15px rgba(79,140,255,0.3}); m.addListener('click', () => info.open(map, m));">📍 Retry Location Access</button>
+                    <button class="btn-outline" id="geo-dismiss-btn" style="border: 1px solid var(--border}); m.addListener('click', () => info.open(map, m)); padding: 10px; border-radius: 12px; cursor: pointer; color: var(--text-main}); m.addListener('click', () => info.open(map, m)); background: transparent; font-size: 0.9rem;">✖ Continue without GPS (Simulation)</button>
+                    <p style="color:rgba(255,255,255,0.3}); m.addListener('click', () => info.open(map, m)); font-size:0.7rem; margin:8px 0 0 0;">If using Chrome: Settings → Site Settings → Location → Allow</p>
                 </div>
             </div>
         `;
-        document.body.appendChild(div);
+        document.body.appendChild(div}); m.addListener('click', () => info.open(map, m));
 
         document.getElementById('geo-dismiss-btn').addEventListener('click', () => {
             document.getElementById('geolocation-block-overlay').style.display = 'none';
-        });
+        }}); m.addListener('click', () => info.open(map, m));
 
         document.getElementById('geo-retry-btn').addEventListener('click', () => {
-            const btn = document.getElementById('geo-retry-btn');
+            const btn = document.getElementById('geo-retry-btn'}); m.addListener('click', () => info.open(map, m));
             const originalText = btn.innerHTML;
             btn.innerHTML = '⏳ Checking...';
             btn.style.opacity = '0.7';
@@ -699,28 +689,28 @@ function initBlockingOverlays() {
                         btn.disabled = false;
                         // Success — hide overlay and start watch
                         document.getElementById('geolocation-block-overlay').style.display = 'none';
-                        showNotification('✅ Location access granted! GPS tracking active.', 'success');
-                        watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
+                        showNotification('✅ Location access granted! GPS tracking active.', 'success'}); m.addListener('click', () => info.open(map, m));
+                        watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true}}); m.addListener('click', () => info.open(map, m));
                     },
                     (err) => {
                         btn.innerHTML = originalText;
                         btn.style.opacity = '1';
                         btn.disabled = false;
-                        showNotification('❌ Location access still denied. Please check browser settings.', 'error');
+                        showNotification('❌ Location access still denied. Please check browser settings.', 'error'}); m.addListener('click', () => info.open(map, m));
                     },
                     {enableHighAccuracy: true, timeout: 10000}
-                );
+                }); m.addListener('click', () => info.open(map, m));
             } else {
                 btn.innerHTML = originalText;
                 btn.style.opacity = '1';
                 btn.disabled = false;
-                showNotification('Geolocation is not supported by this browser.', 'error');
+                showNotification('Geolocation is not supported by this browser.', 'error'}); m.addListener('click', () => info.open(map, m));
             }
-        });
+        }}); m.addListener('click', () => info.open(map, m));
     }
 
     if (!document.getElementById('switch-toggle-styles')) {
-        const style = document.createElement('style');
+        const style = document.createElement('style'}); m.addListener('click', () => info.open(map, m));
         style.id = 'switch-toggle-styles';
         style.textContent = `
             .switch {
@@ -738,10 +728,10 @@ function initBlockingOverlays() {
               position: absolute;
               cursor: pointer;
               top: 0; left: 0; right: 0; bottom: 0;
-              background-color: rgba(255,255,255,0.1);
+              background-color: rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m));
               transition: .4s;
               border-radius: 24px;
-              border: 1px solid var(--border);
+              border: 1px solid var(--border}); m.addListener('click', () => info.open(map, m));
             }
             .slider:before {
               position: absolute;
@@ -755,24 +745,24 @@ function initBlockingOverlays() {
               border-radius: 50%;
             }
             input:checked + .slider {
-              background-color: var(--success);
-              border-color: var(--success);
+              background-color: var(--success}); m.addListener('click', () => info.open(map, m));
+              border-color: var(--success}); m.addListener('click', () => info.open(map, m));
             }
             input:checked + .slider:before {
-              transform: translateX(24px);
+              transform: translateX(24px}); m.addListener('click', () => info.open(map, m));
             }
             input:disabled + .slider {
               opacity: 0.5;
               cursor: not-allowed;
             }
         `;
-        document.head.appendChild(style);
+        document.head.appendChild(style}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 function showVitalsWarningOverlay(reason) {
-    const overlay = document.getElementById('vitals-warning-overlay');
-    const textEl = document.getElementById('vitals-warning-text');
+    const overlay = document.getElementById('vitals-warning-overlay'}); m.addListener('click', () => info.open(map, m));
+    const textEl = document.getElementById('vitals-warning-text'}); m.addListener('click', () => info.open(map, m));
     if (overlay && textEl) {
         textEl.innerText = reason;
         overlay.style.display = 'flex';
@@ -780,56 +770,56 @@ function showVitalsWarningOverlay(reason) {
 }
 
 function closeVitalsWarningOverlay() {
-    const overlay = document.getElementById('vitals-warning-overlay');
+    const overlay = document.getElementById('vitals-warning-overlay'}); m.addListener('click', () => info.open(map, m));
     if (overlay) overlay.style.display = 'none';
 }
 
 function showRestOverlay(lastRestStartStr) {
-    const overlay = document.getElementById('rest-timer-overlay');
+    const overlay = document.getElementById('rest-timer-overlay'}); m.addListener('click', () => info.open(map, m));
     if (!overlay) return;
     
     overlay.style.display = 'flex';
     
-    if (window.restTimerInterval) clearInterval(window.restTimerInterval);
+    if (window.restTimerInterval) clearInterval(window.restTimerInterval}); m.addListener('click', () => info.open(map, m));
     
     const updateTimer = () => {
-        const restStart = new Date(lastRestStartStr);
-        const now = new Date();
+        const restStart = new Date(lastRestStartStr}); m.addListener('click', () => info.open(map, m));
+        const now = new Date(}); m.addListener('click', () => info.open(map, m));
         const elapsedMs = now - restStart;
         const totalMs = 8 * 60 * 60 * 1000; 
         const remainingMs = totalMs - elapsedMs;
         
         if (remainingMs <= 0) {
-            clearInterval(window.restTimerInterval);
+            clearInterval(window.restTimerInterval}); m.addListener('click', () => info.open(map, m));
             overlay.style.display = 'none';
             apiCall(`/driver/${dId}/end-rest`, 'POST').then(() => {
-                showNotification("Mandatory rest period completed! Rerouting to destination.", "success");
-                loadMissions();
-            });
+                showNotification("Mandatory rest period completed! Rerouting to destination.", "success"}); m.addListener('click', () => info.open(map, m));
+                loadMissions(}); m.addListener('click', () => info.open(map, m));
+            }}); m.addListener('click', () => info.open(map, m));
         } else {
-            const hrs = Math.floor(remainingMs / (1000 * 60 * 60));
-            const mins = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-            const secs = Math.floor((remainingMs % (1000 * 60)) / 1000);
+            const hrs = Math.floor(remainingMs / (1000 * 60 * 60)}); m.addListener('click', () => info.open(map, m));
+            const mins = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60)}); m.addListener('click', () => info.open(map, m));
+            const secs = Math.floor((remainingMs % (1000 * 60)) / 1000}); m.addListener('click', () => info.open(map, m));
             
-            const hrStr = String(hrs).padStart(2, '0');
-            const minStr = String(mins).padStart(2, '0');
-            const secStr = String(secs).padStart(2, '0');
+            const hrStr = String(hrs).padStart(2, '0'}); m.addListener('click', () => info.open(map, m));
+            const minStr = String(mins).padStart(2, '0'}); m.addListener('click', () => info.open(map, m));
+            const secStr = String(secs).padStart(2, '0'}); m.addListener('click', () => info.open(map, m));
             
             document.getElementById('rest-countdown-timer').innerText = `${hrStr}:${minStr}:${secStr}`;
         }
     };
     
-    updateTimer();
-    window.restTimerInterval = setInterval(updateTimer, 1000);
+    updateTimer(}); m.addListener('click', () => info.open(map, m));
+    window.restTimerInterval = setInterval(updateTimer, 1000}); m.addListener('click', () => info.open(map, m));
 }
 
 async function requestVehicleCheckup() {
     try {
-        const res = await apiCall(`/driver/${dId}/request-checkup`, 'POST');
-        showNotification(res.message, "success");
-        loadMissions();
+        const res = await apiCall(`/driver/${dId}/request-checkup`, 'POST'}); m.addListener('click', () => info.open(map, m));
+        showNotification(res.message, "success"}); m.addListener('click', () => info.open(map, m));
+        loadMissions(}); m.addListener('click', () => info.open(map, m));
     } catch(e) {
-        showNotification(e.message || "Failed to request checkup", "error");
+        showNotification(e.message || "Failed to request checkup", "error"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -843,7 +833,7 @@ function toggleWatchSyncRelocated(btn) {
         btn.innerText = '⌚ SYNCING...';
         btn.style.borderColor = 'var(--success)';
         btn.style.color = 'var(--success)';
-        showNotification("Smartwatch Sync Enabled", "success");
+        showNotification("Smartwatch Sync Enabled", "success"}); m.addListener('click', () => info.open(map, m));
         
         watchSyncIntervalRelocated = setInterval(async () => {
             const hr = Math.floor(Math.random() * (130 - 65 + 1)) + 65; 
@@ -859,9 +849,9 @@ function toggleWatchSyncRelocated(btn) {
             const o2Abnormal = o2 < 92;
             let bpAbnormal = false;
             try {
-                const parts = bp.split('/');
-                const syst = parseInt(parts[0]);
-                const diast = parseInt(parts[1]);
+                const parts = bp.split('/'}); m.addListener('click', () => info.open(map, m));
+                const syst = parseInt(parts[0]}); m.addListener('click', () => info.open(map, m));
+                const diast = parseInt(parts[1]}); m.addListener('click', () => info.open(map, m));
                 if (syst < 90 || syst > 140 || diast < 60 || diast > 95) bpAbnormal = true;
             } catch(e) {}
             
@@ -872,7 +862,7 @@ function toggleWatchSyncRelocated(btn) {
                     heart_rate: hr,
                     blood_pressure: bp,
                     oxygen_level: o2
-                });
+                }}); m.addListener('click', () => info.open(map, m));
                 
                 if (window.currentDriverObj) {
                     window.currentDriverObj.health_metrics = {
@@ -881,18 +871,18 @@ function toggleWatchSyncRelocated(btn) {
                         oxygen: o2,
                         last_updated: new Date().toISOString()
                     };
-                    window.currentDriverObj.last_health_check = new Date().toISOString();
+                    window.currentDriverObj.last_health_check = new Date().toISOString(}); m.addListener('click', () => info.open(map, m));
                 }
                 
                 if (abnormal) {
-                    clearInterval(watchSyncIntervalRelocated);
+                    clearInterval(watchSyncIntervalRelocated}); m.addListener('click', () => info.open(map, m));
                     btn.innerText = '⌚ SYNC WATCH';
                     btn.style.borderColor = 'var(--accent)';
                     btn.style.color = 'var(--text)';
                     watchSyncActiveRelocated = false;
                     
-                    const dutySwitch = document.getElementById('duty-switch');
-                    const statusText = document.getElementById('duty-status-text');
+                    const dutySwitch = document.getElementById('duty-switch'}); m.addListener('click', () => info.open(map, m));
+                    const statusText = document.getElementById('duty-status-text'}); m.addListener('click', () => info.open(map, m));
                     if (dutySwitch) {
                         dutySwitch.checked = false;
                         if (statusText) {
@@ -902,26 +892,26 @@ function toggleWatchSyncRelocated(btn) {
                     }
                     if (window.currentDriverObj) window.currentDriverObj.is_on_duty = false;
                     
-                    triggerHealthEmergency(hr, o2);
+                    triggerHealthEmergency(hr, o2}); m.addListener('click', () => info.open(map, m));
                 }
             } catch(err) {
-                console.error("Vitals update failed", err);
+                console.error("Vitals update failed", err}); m.addListener('click', () => info.open(map, m));
             }
-        }, 5000);
+        }, 5000}); m.addListener('click', () => info.open(map, m));
     } else {
         btn.innerText = '⌚ SYNC WATCH';
         btn.style.borderColor = 'var(--accent)';
         btn.style.color = 'var(--text)';
-        clearInterval(watchSyncIntervalRelocated);
-        showNotification("Smartwatch Sync Disabled", "warning");
+        clearInterval(watchSyncIntervalRelocated}); m.addListener('click', () => info.open(map, m));
+        showNotification("Smartwatch Sync Disabled", "warning"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 let uiInitialized = false;
 function replaceDutyAndWatchButtons(me, activeShipments) {
     if (uiInitialized) return;
-    const dutyBtn = document.getElementById('duty-toggle-btn');
-    const watchBtn = document.getElementById('watch-sync-btn');
+    const dutyBtn = document.getElementById('duty-toggle-btn'}); m.addListener('click', () => info.open(map, m));
+    const watchBtn = document.getElementById('watch-sync-btn'}); m.addListener('click', () => info.open(map, m));
     
     if (dutyBtn) {
         const parent = dutyBtn.parentNode;
@@ -930,15 +920,15 @@ function replaceDutyAndWatchButtons(me, activeShipments) {
             const isOnDuty = me.is_on_duty !== false;
             
             parent.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding: 12px 16px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px; box-sizing:border-box; margin-bottom:10px;">
-                    <span style="font-weight:700; font-size:0.9rem; color:var(--text); display:flex; align-items:center; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; width:100%; padding: 12px 16px; background:rgba(255,255,255,0.02}); m.addListener('click', () => info.open(map, m)); border:1px solid var(--border}); m.addListener('click', () => info.open(map, m)); border-radius:16px; box-sizing:border-box; margin-bottom:10px;">
+                    <span style="font-weight:700; font-size:0.9rem; color:var(--text}); m.addListener('click', () => info.open(map, m)); display:flex; align-items:center; gap:8px;">
                         🚦 <span data-i18n="duty_status_label">Duty Status</span>: 
                         <span id="duty-status-text" style="color:${isOnDuty ? 'var(--success)' : 'var(--danger)'};">
                             ${isOnDuty ? 'ON DUTY' : 'NOT WORKING'}
                         </span>
                     </span>
                     ${hasActiveTrip 
-                        ? `<span style="font-size:0.75rem; color:var(--warning); font-weight:bold; background:rgba(245,158,11,0.1); padding:4px 8px; border-radius:8px;">Locked During Mission</span>`
+                        ? `<span style="font-size:0.75rem; color:var(--warning}); m.addListener('click', () => info.open(map, m)); font-weight:bold; background:rgba(245,158,11,0.1}); m.addListener('click', () => info.open(map, m)); padding:4px 8px; border-radius:8px;">Locked During Mission</span>`
                         : `<label class="switch">
                                <input type="checkbox" id="duty-switch" ${isOnDuty ? 'checked' : ''}>
                                <span class="slider"></span>
@@ -947,61 +937,61 @@ function replaceDutyAndWatchButtons(me, activeShipments) {
                 </div>
             `;
             
-            const dutySwitch = document.getElementById('duty-switch');
+            const dutySwitch = document.getElementById('duty-switch'}); m.addListener('click', () => info.open(map, m));
             if (dutySwitch) {
                 dutySwitch.addEventListener('change', async function() {
                     const newStatus = this.checked;
                     if (newStatus && checkVitalsStatus(me).valid === false) {
                         this.checked = false;
-                        showVitalsWarningOverlay(checkVitalsStatus(me).reason);
+                        showVitalsWarningOverlay(checkVitalsStatus(me).reason}); m.addListener('click', () => info.open(map, m));
                         return;
                     }
                     
                     try {
-                        const res = await apiCall(`/driver/${dId}/toggle-duty`, 'POST', { is_on_duty: newStatus });
-                        const statusText = document.getElementById('duty-status-text');
+                        const res = await apiCall(`/driver/${dId}/toggle-duty`, 'POST', { is_on_duty: newStatus }}); m.addListener('click', () => info.open(map, m));
+                        const statusText = document.getElementById('duty-status-text'}); m.addListener('click', () => info.open(map, m));
                         if (statusText) {
                             statusText.innerText = newStatus ? 'ON DUTY' : 'NOT WORKING';
                             statusText.style.color = newStatus ? 'var(--success)' : 'var(--danger)';
                         }
                         me.is_on_duty = newStatus;
-                        showNotification(res.message, "success");
+                        showNotification(res.message, "success"}); m.addListener('click', () => info.open(map, m));
                     } catch(e) {
                         this.checked = !newStatus;
-                        showNotification(e.message || "Failed to update status", "error");
+                        showNotification(e.message || "Failed to update status", "error"}); m.addListener('click', () => info.open(map, m));
                     }
-                });
+                }}); m.addListener('click', () => info.open(map, m));
             }
         }
     }
     
-    const hStatus = document.getElementById('h-status');
+    const hStatus = document.getElementById('h-status'}); m.addListener('click', () => info.open(map, m));
     if (hStatus) {
-        let relocatedWatchBtn = document.getElementById('relocated-watch-sync-btn');
+        let relocatedWatchBtn = document.getElementById('relocated-watch-sync-btn'}); m.addListener('click', () => info.open(map, m));
         if (!relocatedWatchBtn) {
-            const medCard = hStatus.closest('.glass-card');
+            const medCard = hStatus.closest('.glass-card'}); m.addListener('click', () => info.open(map, m));
             if (medCard) {
-                relocatedWatchBtn = document.createElement('button');
+                relocatedWatchBtn = document.createElement('button'}); m.addListener('click', () => info.open(map, m));
                 relocatedWatchBtn.id = 'relocated-watch-sync-btn';
                 relocatedWatchBtn.className = 'btn-primary';
-                relocatedWatchBtn.style.cssText = 'width:100%; margin-top:12px; background:rgba(255,255,255,0.05); border:1px solid var(--accent); font-weight:800; border-radius:14px; padding:12px; box-sizing:border-box;';
+                relocatedWatchBtn.style.cssText = 'width:100%; margin-top:12px; background:rgba(255,255,255,0.05}); m.addListener('click', () => info.open(map, m)); border:1px solid var(--accent}); m.addListener('click', () => info.open(map, m)); font-weight:800; border-radius:14px; padding:12px; box-sizing:border-box;';
                 relocatedWatchBtn.innerHTML = '⌚ SYNC SMARTWATCH VITALS';
                 
                 relocatedWatchBtn.addEventListener('click', function() {
-                    toggleWatchSyncRelocated(this);
-                });
+                    toggleWatchSyncRelocated(this}); m.addListener('click', () => info.open(map, m));
+                }}); m.addListener('click', () => info.open(map, m));
                 
-                medCard.appendChild(relocatedWatchBtn);
+                medCard.appendChild(relocatedWatchBtn}); m.addListener('click', () => info.open(map, m));
 
-                const manualVitalsBtn = document.createElement('button');
+                const manualVitalsBtn = document.createElement('button'}); m.addListener('click', () => info.open(map, m));
                 manualVitalsBtn.id = 'manual-vitals-btn';
                 manualVitalsBtn.className = 'btn-primary';
-                manualVitalsBtn.style.cssText = 'width:100%; margin-top:8px; background:rgba(255,255,255,0.05); border:1px solid var(--primary); font-weight:800; border-radius:14px; padding:12px; box-sizing:border-box;';
+                manualVitalsBtn.style.cssText = 'width:100%; margin-top:8px; background:rgba(255,255,255,0.05}); m.addListener('click', () => info.open(map, m)); border:1px solid var(--primary}); m.addListener('click', () => info.open(map, m)); font-weight:800; border-radius:14px; padding:12px; box-sizing:border-box;';
                 manualVitalsBtn.innerHTML = '📝 ENTER VITALS MANUALLY';
                 manualVitalsBtn.addEventListener('click', function() {
-                    openHealthModal();
-                });
-                medCard.appendChild(manualVitalsBtn);
+                    openHealthModal(}); m.addListener('click', () => info.open(map, m));
+                }}); m.addListener('click', () => info.open(map, m));
+                medCard.appendChild(manualVitalsBtn}); m.addListener('click', () => info.open(map, m));
             }
         }
     }
@@ -1009,29 +999,29 @@ function replaceDutyAndWatchButtons(me, activeShipments) {
 }
 
 async function loadMissions(autoStartNext = false) {
-    console.info(`[Bootstrap] Starting loadMissions for Driver: ${dId}`);
+    console.info(`[Bootstrap] Starting loadMissions for Driver: ${dId}`}); m.addListener('click', () => info.open(map, m));
     try {
-        const companyId = localStorage.getItem('company_id');
+        const companyId = localStorage.getItem('company_id'}); m.addListener('click', () => info.open(map, m));
         if (!companyId || companyId === "undefined") {
-            console.warn("[Bootstrap] Missing company_id, attempting to fetch...");
+            console.warn("[Bootstrap] Missing company_id, attempting to fetch..."}); m.addListener('click', () => info.open(map, m));
         }
 
         // Fetch driver info to check verification status
-        const drivers = await apiCall(`/manager/drivers?company_id=${companyId}`);
+        const drivers = await apiCall(`/manager/drivers?company_id=${companyId}`}); m.addListener('click', () => info.open(map, m));
         const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(dId)) : null;
         window.currentDriverObj = me;
         
-        const mainContent = document.getElementById('main-content');
-        const vScreen = document.getElementById('verification-screen');
-        const vUploadBox = document.getElementById('v-upload-box');
-        const vPendingBox = document.getElementById('v-pending-box');
-        const vNoVehicleBox = document.getElementById('v-no-vehicle-box');
-        const vScreenMsg = document.getElementById('v-screen-msg');
-        const reportBtn = document.getElementById('report-issue-btn');
-        const secControls = document.getElementById('secondary-controls-bar');
+        const mainContent = document.getElementById('main-content'}); m.addListener('click', () => info.open(map, m));
+        const vScreen = document.getElementById('verification-screen'}); m.addListener('click', () => info.open(map, m));
+        const vUploadBox = document.getElementById('v-upload-box'}); m.addListener('click', () => info.open(map, m));
+        const vPendingBox = document.getElementById('v-pending-box'}); m.addListener('click', () => info.open(map, m));
+        const vNoVehicleBox = document.getElementById('v-no-vehicle-box'}); m.addListener('click', () => info.open(map, m));
+        const vScreenMsg = document.getElementById('v-screen-msg'}); m.addListener('click', () => info.open(map, m));
+        const reportBtn = document.getElementById('report-issue-btn'}); m.addListener('click', () => info.open(map, m));
+        const secControls = document.getElementById('secondary-controls-bar'}); m.addListener('click', () => info.open(map, m));
 
         if (!me) {
-            console.error("[Bootstrap] Driver profile not found in company list");
+            console.error("[Bootstrap] Driver profile not found in company list"}); m.addListener('click', () => info.open(map, m));
             if (mainContent) mainContent.style.display = 'none';
             if (secControls) secControls.style.display = 'none';
             if (vScreen) {
@@ -1043,24 +1033,24 @@ async function loadMissions(autoStartNext = false) {
             return;
         }
 
-        initBlockingOverlays();
+        initBlockingOverlays(}); m.addListener('click', () => info.open(map, m));
 
         // 1. MANDATORY REST OVERLAY CHECK
         if (me.last_rest_start) {
-            showRestOverlay(me.last_rest_start);
+            showRestOverlay(me.last_rest_start}); m.addListener('click', () => info.open(map, m));
             if (mainContent) mainContent.style.display = 'none';
             if (secControls) secControls.style.display = 'none';
             if (reportBtn) reportBtn.style.display = 'none';
             return;
         } else {
-            const restOverlay = document.getElementById('rest-timer-overlay');
+            const restOverlay = document.getElementById('rest-timer-overlay'}); m.addListener('click', () => info.open(map, m));
             if (restOverlay) restOverlay.style.display = 'none';
-            if (window.restTimerInterval) clearInterval(window.restTimerInterval);
+            if (window.restTimerInterval) clearInterval(window.restTimerInterval}); m.addListener('click', () => info.open(map, m));
         }
 
         // 2. Safety & Fitness Block
         const v_id = me.assigned_vehicle_id;
-        const vehicles = await apiCall(`/manager/vehicles?company_id=${companyId}`);
+        const vehicles = await apiCall(`/manager/vehicles?company_id=${companyId}`}); m.addListener('click', () => info.open(map, m));
         const myVehicle = v_id ? vehicles.find(v => v.id === v_id) : null;
         window.currentVehicleObj = myVehicle;
 
@@ -1079,9 +1069,9 @@ async function loadMissions(autoStartNext = false) {
                 
                 vScreenMsg.innerHTML = `<div style="padding:40px; text-align:center;">
                     <div style="font-size:5rem; margin-bottom:20px;">🛑</div>
-                    <h1 style="color:var(--danger); font-size:2.5rem; margin-bottom:20px;">SAFETY BLOCK</h1>
+                    <h1 style="color:var(--danger}); m.addListener('click', () => info.open(map, m)); font-size:2.5rem; margin-bottom:20px;">SAFETY BLOCK</h1>
                     <p style="font-size:1.4rem; line-height:1.6; font-weight:bold;">${blockMsg}</p>
-                    <p style="margin-top:20px; color:var(--text-muted);">Please contact your Hub Manager for clearance once you or your vehicle are ready.</p>
+                    <p style="margin-top:20px; color:var(--text-muted}); m.addListener('click', () => info.open(map, m));">Please contact your Hub Manager for clearance once you or your vehicle are ready.</p>
                 </div>`;
             }
             if (reportBtn) reportBtn.style.display = 'none';
@@ -1089,22 +1079,22 @@ async function loadMissions(autoStartNext = false) {
         }
 
         // 3. Vehicle Health 0% check (except during transit)
-        const shipments = await apiCall(`/driver/${dId}/shipments`);
-        const activeShipments = shipments.filter(s => s.status !== 'delivered' && s.status !== 'finalized');
-        const inTransit = activeShipments.some(s => s.status === 'in_transit');
+        const shipments = await apiCall(`/driver/${dId}/shipments`}); m.addListener('click', () => info.open(map, m));
+        const activeShipments = shipments.filter(s => s.status !== 'delivered' && s.status !== 'finalized'}); m.addListener('click', () => info.open(map, m));
+        const inTransit = activeShipments.some(s => s.status === 'in_transit'}); m.addListener('click', () => info.open(map, m));
 
         if (myVehicle && (myVehicle.vehicle_health_score <= 0) && !inTransit) {
-            const containerEl = document.getElementById('checkup-status-container');
+            const containerEl = document.getElementById('checkup-status-container'}); m.addListener('click', () => info.open(map, m));
             if (myVehicle.checkup_status === 'pending') {
                 containerEl.innerHTML = `
-                    <div style="font-size: 1.15rem; font-weight: bold; color: var(--warning); padding: 15px; background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); border-radius: 12px; margin-bottom: 15px;">
+                    <div style="font-size: 1.15rem; font-weight: bold; color: var(--warning}); m.addListener('click', () => info.open(map, m)); padding: 15px; background: rgba(245, 158, 11, 0.1}); m.addListener('click', () => info.open(map, m)); border: 1px solid var(--warning}); m.addListener('click', () => info.open(map, m)); border-radius: 12px; margin-bottom: 15px;">
                         ⏳ Checkup Request Pending Approval
                     </div>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; margin:0;">Please wait for warehouse or fleet manager approval.</p>
+                    <p style="color: var(--text-muted}); m.addListener('click', () => info.open(map, m)); font-size: 0.95rem; margin:0;">Please wait for warehouse or fleet manager approval.</p>
                 `;
             } else {
                 containerEl.innerHTML = `
-                    <button onclick="requestVehicleCheckup()" class="btn-primary" style="background: var(--warning); color: black; font-weight: 800; border: none; padding: 14px 24px; border-radius: 12px; font-size: 1.1rem; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2);">
+                    <button onclick="requestVehicleCheckup()" class="btn-primary" style="background: var(--warning}); m.addListener('click', () => info.open(map, m)); color: black; font-weight: 800; border: none; padding: 14px 24px; border-radius: 12px; font-size: 1.1rem; cursor: pointer; width: 100%; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2}); m.addListener('click', () => info.open(map, m));">
                         🔧 Request Vehicle Checkup
                     </button>
                 `;
@@ -1115,12 +1105,12 @@ async function loadMissions(autoStartNext = false) {
             if (reportBtn) reportBtn.style.display = 'none';
             return;
         } else {
-            const vOverlay = document.getElementById('vehicle-health-block-overlay');
+            const vOverlay = document.getElementById('vehicle-health-block-overlay'}); m.addListener('click', () => info.open(map, m));
             if (vOverlay) vOverlay.style.display = 'none';
         }
 
         // Dynamically replace the old duty and watch sync UI buttons
-        replaceDutyAndWatchButtons(me, activeShipments);
+        replaceDutyAndWatchButtons(me, activeShipments}); m.addListener('click', () => info.open(map, m));
 
 
         // 1. VEHICLE ASSIGNMENT CHECK
@@ -1136,19 +1126,19 @@ async function loadMissions(autoStartNext = false) {
                 vNoVehicleBox.innerHTML = `
                     <style>
                         @keyframes floatIcon {
-                            0% { transform: translateY(0px) scale(1); }
-                            50% { transform: translateY(-10px) scale(1.05); }
-                            100% { transform: translateY(0px) scale(1); }
+                            0% { transform: translateY(0px) scale(1}); m.addListener('click', () => info.open(map, m)); }
+                            50% { transform: translateY(-10px) scale(1.05}); m.addListener('click', () => info.open(map, m)); }
+                            100% { transform: translateY(0px) scale(1}); m.addListener('click', () => info.open(map, m)); }
                         }
                         @keyframes glowWarning {
-                            0% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
-                            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.3); }
-                            100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
+                            0% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.1}); m.addListener('click', () => info.open(map, m)); }
+                            50% { box-shadow: 0 0 30px rgba(245, 158, 11, 0.3}); m.addListener('click', () => info.open(map, m)); }
+                            100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.1}); m.addListener('click', () => info.open(map, m)); }
                         }
                         .premium-warn-card {
-                            background: rgba(15, 23, 42, 0.6);
-                            backdrop-filter: blur(20px);
-                            border: 1px solid rgba(245, 158, 11, 0.2);
+                            background: rgba(15, 23, 42, 0.6}); m.addListener('click', () => info.open(map, m));
+                            backdrop-filter: blur(20px}); m.addListener('click', () => info.open(map, m));
+                            border: 1px solid rgba(245, 158, 11, 0.2}); m.addListener('click', () => info.open(map, m));
                             border-radius: 24px;
                             padding: 40px 30px;
                             max-width: 450px;
@@ -1160,16 +1150,16 @@ async function loadMissions(autoStartNext = false) {
                             margin-bottom: 25px;
                             display: inline-block;
                             animation: floatIcon 3s infinite ease-in-out;
-                            filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.3));
+                            filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.3)}); m.addListener('click', () => info.open(map, m));
                         }
                     </style>
                     <div class="premium-warn-card">
                         <div class="floating-truck">🚛</div>
-                        <h2 style="color: var(--warning); font-size: 1.8rem; font-weight: 800; margin-bottom: 12px;">No Vehicle Assigned</h2>
-                        <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.6; margin-bottom: 30px;">
+                        <h2 style="color: var(--warning}); m.addListener('click', () => info.open(map, m)); font-size: 1.8rem; font-weight: 800; margin-bottom: 12px;">No Vehicle Assigned</h2>
+                        <p style="color: var(--text-muted}); m.addListener('click', () => info.open(map, m)); font-size: 1rem; line-height: 1.6; margin-bottom: 30px;">
                             Your profile has not been assigned a vehicle yet. Please check back later once your manager links you to a vehicle.
                         </p>
-                        <button class="btn-primary" onclick="loadMissions()" style="background: linear-gradient(135deg, var(--warning) 0%, var(--accent) 100%); color: #000; font-weight: 800; border: none; border-radius: 12px; padding: 12px 30px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); cursor: pointer;">
+                        <button class="btn-primary" onclick="loadMissions()" style="background: linear-gradient(135deg, var(--warning) 0%, var(--accent) 100%}); m.addListener('click', () => info.open(map, m)); color: #000; font-weight: 800; border: none; border-radius: 12px; padding: 12px 30px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3}); m.addListener('click', () => info.open(map, m)); cursor: pointer;">
                             🔄 Refresh Status
                         </button>
                     </div>
@@ -1183,7 +1173,7 @@ async function loadMissions(autoStartNext = false) {
         const vStatus = me.verification_status || "unverified";
         const imgUrl = me.verification_image;
         const isBrokenRelative = imgUrl && 
-            (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/'));
+            (imgUrl.startsWith('/images/') || imgUrl.startsWith('images/')}); m.addListener('click', () => info.open(map, m));
         
         if (vStatus === "unverified" || (vStatus === "pending_manual" && (!imgUrl || isBrokenRelative))) {
             if (mainContent) mainContent.style.display = 'none';
@@ -1196,11 +1186,11 @@ async function loadMissions(autoStartNext = false) {
                 vNoVehicleBox.style.display = 'none';
                 
                 if (vStatus === "pending_manual" && (!imgUrl || isBrokenRelative)) {
-                    vScreenMsg.innerHTML = `<span style="color:var(--danger); font-weight:bold;">⚠️ Previous upload was incomplete or invalid (image unavailable). Please re-upload your vehicle's number plate.</span>`;
+                    vScreenMsg.innerHTML = `<span style="color:var(--danger}); m.addListener('click', () => info.open(map, m)); font-weight:bold;">⚠️ Previous upload was incomplete or invalid (image unavailable). Please re-upload your vehicle's number plate.</span>`;
                 } else if (me.verification_message) {
-                    vScreenMsg.innerHTML = `<span style="color:var(--warning); font-weight:bold;">❌ Verification failed: ${me.verification_message}. Please try again.</span>`;
+                    vScreenMsg.innerHTML = `<span style="color:var(--warning}); m.addListener('click', () => info.open(map, m)); font-weight:bold;">❌ Verification failed: ${me.verification_message}. Please try again.</span>`;
                 } else {
-                    vScreenMsg.innerText = getTranslation('v_verify_desc');
+                    vScreenMsg.innerText = getTranslation('v_verify_desc'}); m.addListener('click', () => info.open(map, m));
                 }
             }
             return;
@@ -1223,29 +1213,29 @@ async function loadMissions(autoStartNext = false) {
         if (vScreen) vScreen.style.display = 'none';
         if (reportBtn) reportBtn.style.display = 'block';
         
-        loadDashStats();
+        loadDashStats(}); m.addListener('click', () => info.open(map, m));
 
-        const completedShipments = shipments.filter(s => s.status === 'delivered' || s.status === 'finalized');
-        const container = document.getElementById('mission-container');
+        const completedShipments = shipments.filter(s => s.status === 'delivered' || s.status === 'finalized'}); m.addListener('click', () => info.open(map, m));
+        const container = document.getElementById('mission-container'}); m.addListener('click', () => info.open(map, m));
         
         // Render Completed Orders
-        const completedContainer = document.getElementById('completed-container');
+        const completedContainer = document.getElementById('completed-container'}); m.addListener('click', () => info.open(map, m));
         let compHtml = `<h3>${getTranslation('completed_orders')}</h3>`;
         if (completedShipments.length === 0) {
             compHtml += `<p>${getTranslation('no_completed_orders')}</p>`;
         } else {
             completedShipments.forEach(s => {
                 const isWarehouseHandoff = s.is_leg && s.drop.address;
-                const dropTitle = isWarehouseHandoff ? `${getTranslation('warehouse_handoff')}: ${s.drop.address}` : getTranslation('customer_delivery');
+                const dropTitle = isWarehouseHandoff ? `${getTranslation('warehouse_handoff')}: ${s.drop.address}` : getTranslation('customer_delivery'}); m.addListener('click', () => info.open(map, m));
                 completedContainer.innerHTML += `
-                    <div class="glass-card" style="margin-bottom:15px; border-left: 4px solid var(--success); opacity: 0.8;">
-                        <h4 style="margin-bottom:5px; color:var(--success);">✅ ${s.description}</h4>
-                        <p style="margin-bottom:5px; font-size: 0.9rem; color:var(--text-muted);"><b>ID:</b> ${s.id}</p>
+                    <div class="glass-card" style="margin-bottom:15px; border-left: 4px solid var(--success}); m.addListener('click', () => info.open(map, m)); opacity: 0.8;">
+                        <h4 style="margin-bottom:5px; color:var(--success}); m.addListener('click', () => info.open(map, m));">✅ ${s.description}</h4>
+                        <p style="margin-bottom:5px; font-size: 0.9rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m));"><b>ID:</b> ${s.id}</p>
                         <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('type_label')}:</b> ${dropTitle}</p>
                         <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('otp_used')}:</b> ${s.delivery_otp || 'N/A'}</p>
                     </div>
                 `;
-            });
+            }}); m.addListener('click', () => info.open(map, m));
         }
         
         if (activeShipments.length === 0) {
@@ -1257,25 +1247,25 @@ async function loadMissions(autoStartNext = false) {
             return;
         }
 
-        const needsPickupOTP = activeShipments.some(s => s.status === 'assigned') && !activeShipments.some(s => s.status === 'in_transit');
+        const needsPickupOTP = activeShipments.some(s => s.status === 'assigned') && !activeShipments.some(s => s.status === 'in_transit'}); m.addListener('click', () => info.open(map, m));
 
         // Decompose into stops
         let stops = [];
         activeShipments.forEach(s => {
             if (s.status === 'assigned' || s.status === 'pending') {
-                stops.push({ type: 'pickup', shipment: s, lat: s.pickup.lat, lng: s.pickup.lng, id: s.id + '_pickup' });
+                stops.push({ type: 'pickup', shipment: s, lat: s.pickup.lat, lng: s.pickup.lng, id: s.id + '_pickup' }}); m.addListener('click', () => info.open(map, m));
                 // We also push the drop so the map shows the whole leg route they have to cover!
-                stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' });
+                stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' }}); m.addListener('click', () => info.open(map, m));
             } else if (s.status === 'in_transit') {
-                stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' });
+                stops.push({ type: 'drop', shipment: s, lat: s.drop.lat, lng: s.drop.lng, id: s.id + '_drop' }}); m.addListener('click', () => info.open(map, m));
             }
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         
         // TSP Route Optimization with Capacity Constraint
         let unvisited = [...stops];
         let orderedStops = [];
-        let carrying = new Set();
-        activeShipments.filter(s => s.status === 'in_transit').forEach(s => carrying.add(s.id));
+        let carrying = new Set(}); m.addListener('click', () => info.open(map, m));
+        activeShipments.filter(s => s.status === 'in_transit').forEach(s => carrying.add(s.id)}); m.addListener('click', () => info.open(map, m));
         
         let currentLocation = null;
         if (marker) {
@@ -1287,8 +1277,8 @@ async function loadMissions(autoStartNext = false) {
         while (unvisited.length > 0) {
             let validStops = unvisited.filter(stop => {
                 if (stop.type === 'pickup') return true;
-                if (stop.type === 'drop') return carrying.has(stop.shipment.id);
-            });
+                if (stop.type === 'drop') return carrying.has(stop.shipment.id}); m.addListener('click', () => info.open(map, m));
+            }}); m.addListener('click', () => info.open(map, m));
             
             // If somehow no valid stops (shouldn't happen unless bad state), fallback to all
             if (validStops.length === 0) validStops = unvisited;
@@ -1298,7 +1288,7 @@ async function loadMissions(autoStartNext = false) {
             
             for (let i = 0; i < validStops.length; i++) {
                 const stop = validStops[i];
-                const dist = Math.sqrt(Math.pow(stop.lat - currentLocation.lat, 2) + Math.pow(stop.lng - currentLocation.lng, 2));
+                const dist = Math.sqrt(Math.pow(stop.lat - currentLocation.lat, 2) + Math.pow(stop.lng - currentLocation.lng, 2)}); m.addListener('click', () => info.open(map, m));
                 if (dist < minDistance) {
                     minDistance = dist;
                     closestIdx = i;
@@ -1306,13 +1296,13 @@ async function loadMissions(autoStartNext = false) {
             }
             
             const nextStop = validStops[closestIdx];
-            orderedStops.push(nextStop);
+            orderedStops.push(nextStop}); m.addListener('click', () => info.open(map, m));
             
-            if (nextStop.type === 'pickup') carrying.add(nextStop.shipment.id);
-            if (nextStop.type === 'drop') carrying.delete(nextStop.shipment.id);
+            if (nextStop.type === 'pickup') carrying.add(nextStop.shipment.id}); m.addListener('click', () => info.open(map, m));
+            if (nextStop.type === 'drop') carrying.delete(nextStop.shipment.id}); m.addListener('click', () => info.open(map, m));
             
             currentLocation = {lat: nextStop.lat, lng: nextStop.lng};
-            unvisited = unvisited.filter(s => s.id !== nextStop.id);
+            unvisited = unvisited.filter(s => s.id !== nextStop.id}); m.addListener('click', () => info.open(map, m));
         }
         
         currentStops = orderedStops;
@@ -1322,7 +1312,7 @@ async function loadMissions(autoStartNext = false) {
             let html = '';
             if (me.fatigue_score >= 100) {
                 html += `
-                    <div style="background:linear-gradient(135deg, var(--danger), #c53030); color:white; padding:15px; border-radius:12px; margin-bottom:20px; font-weight:bold; box-shadow:0 10px 25px rgba(229,62,62,0.3); text-align:center;">
+                    <div style="background:linear-gradient(135deg, var(--danger), #c53030}); m.addListener('click', () => info.open(map, m)); color:white; padding:15px; border-radius:12px; margin-bottom:20px; font-weight:bold; box-shadow:0 10px 25px rgba(229,62,62,0.3}); m.addListener('click', () => info.open(map, m)); text-align:center;">
                         🚨 FATIGUE LIMIT EXCEEDED (100%): All normal actions are blocked. Please navigate to a resting spot on the map, click "Mark Rest Stop Reached & Start Rest", and begin your mandatory 8-hour rest.
                     </div>
                 `;
@@ -1341,7 +1331,7 @@ async function loadMissions(autoStartNext = false) {
                 if (isCurrent) {
                     if (me.fatigue_score >= 100) {
                         actionBtn = `
-                            <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--danger); font-weight:800; box-shadow:0 4px 15px rgba(239, 68, 68, 0.2);" onclick="startRest()">
+                            <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--danger}); m.addListener('click', () => info.open(map, m)); font-weight:800; box-shadow:0 4px 15px rgba(239, 68, 68, 0.2}); m.addListener('click', () => info.open(map, m));" onclick="startRest()">
                                 🚨 Mark Rest Stop Reached & Start Rest
                             </button>
                         `;
@@ -1353,7 +1343,7 @@ async function loadMissions(autoStartNext = false) {
                             const isIntermediateLeg = s.is_leg && s.leg_order > 1;
                             if (isIntermediateLeg) {
                                 actionBtn = `
-                                    <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--primary);" onclick="startTransit('${s.id}')">🚚 Start Transit</button>
+                                    <button class="btn-primary" style="margin-top:10px; width:100%; background:var(--primary}); m.addListener('click', () => info.open(map, m));" onclick="startTransit('${s.id}')">🚚 Start Transit</button>
                                 `;
                             } else {
                                 actionBtn = `
@@ -1366,57 +1356,57 @@ async function loadMissions(autoStartNext = false) {
                             `;
                         } else if (isWarehouseDelivery) {
                             actionBtn = `
-                                <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:var(--muted); opacity:0.6; cursor:not-allowed;">🏢 Awaiting Hub Manager Check-In</button>
+                                <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:var(--muted}); m.addListener('click', () => info.open(map, m)); opacity:0.6; cursor:not-allowed;">🏢 Awaiting Hub Manager Check-In</button>
                             `;
                         }
                     }
                 } else {
                         actionBtn = `
-                            <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.3); border:1px dashed rgba(255,255,255,0.1); cursor:not-allowed;">${getTranslation('locked_pending')}</button>
+                            <button class="btn-primary" disabled style="margin-top:10px; width:100%; background:rgba(255,255,255,0.05}); m.addListener('click', () => info.open(map, m)); color:rgba(255,255,255,0.3}); m.addListener('click', () => info.open(map, m)); border:1px dashed rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m)); cursor:not-allowed;">${getTranslation('locked_pending')}</button>
                         `;
                 }
                 
                 html += `
-                    <div class="timeline-node" style="${isLocked ? 'filter: grayscale(1) blur(2px); pointer-events: none;' : ''}">
+                    <div class="timeline-node" style="${isLocked ? 'filter: grayscale(1) blur(2px}); m.addListener('click', () => info.open(map, m)); pointer-events: none;' : ''}">
                         <div class="timeline-dot" style="background:${dotColor}; opacity:${isLocked ? 0.3 : 1}"></div>
-                        <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent);' : 'opacity: 0.4; filter: blur(3px);'}">
+                        <div class="glass-card" style="${isCurrent ? 'border-left: 4px solid var(--accent}); m.addListener('click', () => info.open(map, m));' : 'opacity: 0.4; filter: blur(3px}); m.addListener('click', () => info.open(map, m));'}">
                             <h4 style="margin-bottom:5px; color:${dotColor}; opacity:${isLocked ? 0.5 : 1}">${actionText} ${isLocked ? `(${getTranslation('queued')})` : ''}</h4>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('shipment_label')}:</b> ${s.description} (ID: ${s.id.slice(0,8)})</p>
                             
                             ${s.is_perishable ? `
-                                <div style="background:rgba(0,242,254,0.1); padding:10px; border-radius:8px; border:1px solid var(--primary); margin:10px 0;">
+                                <div style="background:rgba(0,242,254,0.1}); m.addListener('click', () => info.open(map, m)); padding:10px; border-radius:8px; border:1px solid var(--primary}); m.addListener('click', () => info.open(map, m)); margin:10px 0;">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                                        <span style="font-size:0.75rem; color:var(--primary); font-weight:bold;">❄️ ${getTranslation('cold_chain_cargo')}</span>
+                                        <span style="font-size:0.75rem; color:var(--primary}); m.addListener('click', () => info.open(map, m)); font-weight:bold;">❄️ ${getTranslation('cold_chain_cargo')}</span>
                                         <span style="font-size:0.75rem; font-weight:bold; color:${(s.vitality||100) < 60 ? 'var(--danger)' : 'var(--success)'}">${(s.vitality||100).toFixed(0)}% ${getTranslation('vitality')}</span>
                                     </div>
-                                    <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+                                    <div style="width:100%; height:6px; background:rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m)); border-radius:3px; overflow:hidden;">
                                         <div style="width:${s.vitality||100}%; height:100%; background:${(s.vitality||100) < 60 ? 'var(--danger)' : 'var(--primary)'};"></div>
                                     </div>
-                                    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:5px;">${getTranslation('perishable_ai_warning')}</p>
+                                    <p style="font-size:0.7rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-top:5px;">${getTranslation('perishable_ai_warning')}</p>
                                 </div>
                             ` : ''}
 
-                            <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning);"><b>⏳ ${getTranslation('deadline_label')}:</b> ${formatDate(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery)}</p>
+                            <p style="margin-bottom:5px; font-size: 0.85rem; color:var(--warning}); m.addListener('click', () => info.open(map, m));"><b>⏳ ${getTranslation('deadline_label')}:</b> ${formatDate(stop.type === 'pickup' ? s.pickup_deadline : s.expected_delivery)}</p>
                             <p style="margin-bottom:5px; font-size: 0.9rem;"><b>${getTranslation('location_label')}:</b> ${stop.lat.toFixed(4)}, ${stop.lng.toFixed(4)}</p>
                             
                             ${s.is_leg ? `
-                                <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(245, 158, 11, 0.1); border:1px solid var(--warning); border-left: 4px solid var(--warning);">
-                                    <p style="margin:0; font-size:0.75rem; color:var(--warning); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">${getTranslation('rendezvous_protocol')}</p>
+                                <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(245, 158, 11, 0.1}); m.addListener('click', () => info.open(map, m)); border:1px solid var(--warning}); m.addListener('click', () => info.open(map, m)); border-left: 4px solid var(--warning}); m.addListener('click', () => info.open(map, m));">
+                                    <p style="margin:0; font-size:0.75rem; color:var(--warning}); m.addListener('click', () => info.open(map, m)); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">${getTranslation('rendezvous_protocol')}</p>
                                     <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">${getTranslation('meet_at')} ${stop.type === 'pickup' ? getTranslation('outbound_hub') : getTranslation('receiving_hub')}</p>
-                                    <p style="margin:2px 0 0 0; font-size:0.9rem; color:var(--text-muted);">${getTranslation('handoff_coord_desc')}</p>
+                                    <p style="margin:2px 0 0 0; font-size:0.9rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m));">${getTranslation('handoff_coord_desc')}</p>
                                     
                                     ${isCurrent && stop.type === 'pickup' ? `
                                         <div style="display:flex; gap:10px; margin-top:12px;">
                                             ${s.has_refuel_req ? `
-                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ ${getTranslation('refuel_requested')}</button>
+                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05}); m.addListener('click', () => info.open(map, m)); color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); border:1px dashed var(--border}); m.addListener('click', () => info.open(map, m)); font-size:0.75rem; cursor:default;">✅ ${getTranslation('refuel_requested')}</button>
                                             ` : `
-                                                <button class="btn-primary" style="flex:1; background:rgba(245, 158, 11, 0.2); color:var(--warning); border:1px solid var(--warning); font-size:0.75rem;" id="refuel-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'refuel')">⛽ ${getTranslation('refuel')}</button>
+                                                <button class="btn-primary" style="flex:1; background:rgba(245, 158, 11, 0.2}); m.addListener('click', () => info.open(map, m)); color:var(--warning}); m.addListener('click', () => info.open(map, m)); border:1px solid var(--warning}); m.addListener('click', () => info.open(map, m)); font-size:0.75rem;" id="refuel-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'refuel')">⛽ ${getTranslation('refuel')}</button>
                                             `}
                                             
                                             ${s.has_toll_req ? `
-                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px dashed var(--border); font-size:0.75rem; cursor:default;">✅ ${getTranslation('toll_requested')}</button>
+                                                <button class="btn-primary" disabled style="flex:1; background:rgba(255,255,255,0.05}); m.addListener('click', () => info.open(map, m)); color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); border:1px dashed var(--border}); m.addListener('click', () => info.open(map, m)); font-size:0.75rem; cursor:default;">✅ ${getTranslation('toll_requested')}</button>
                                             ` : `
-                                                <button class="btn-primary" style="flex:1; background:rgba(79, 140, 255, 0.2); color:var(--primary); border:1px solid var(--primary); font-size:0.75rem;" id="toll-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'toll')">🛣️ ${getTranslation('toll')}</button>
+                                                <button class="btn-primary" style="flex:1; background:rgba(79, 140, 255, 0.2}); m.addListener('click', () => info.open(map, m)); color:var(--primary}); m.addListener('click', () => info.open(map, m)); border:1px solid var(--primary}); m.addListener('click', () => info.open(map, m)); font-size:0.75rem;" id="toll-btn-${s.id}" onclick="triggerFundRequest('${s.id}', 'toll')">🛣️ ${getTranslation('toll')}</button>
                                             `}
                                         </div>
                                     ` : ''}
@@ -1424,24 +1414,24 @@ async function loadMissions(autoStartNext = false) {
                             ` : ''}
 
                             ${s.performance_stats ? `
-                                <div style="margin:8px 0; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">
+                                <div style="margin:8px 0; padding:8px; border-radius:6px; background:rgba(255,255,255,0.05}); m.addListener('click', () => info.open(map, m)); border:1px solid rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m));">
                                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <span style="font-size:0.75rem; color:var(--text-muted);">${getTranslation('journey_status_label')}</span>
+                                        <span style="font-size:0.75rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m));">${getTranslation('journey_status_label')}</span>
                                         <span class="badge" style="background:${s.performance_stats.status === 'delayed' ? 'var(--danger)' : (s.performance_stats.status === 'early' ? 'var(--success)' : 'var(--primary)')}; font-size:0.7rem;">
                                             ${s.performance_stats.status.toUpperCase()} (${s.performance_stats.diff_mins}m)
                                         </span>
                                     </div>
-                                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+                                    <div style="font-size:0.7rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-top:4px;">
                                          ${s.performance_stats.dist_remaining_km}km ${getTranslation('left_label')} | ${getTranslation('weather_label')}: ${s.performance_stats.weather}
                                     </div>
                                 </div>
                             ` : ''}
                             
                             ${(stop.type === 'drop' && s.receiver_name) ? `
-                                <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(72, 187, 120, 0.1); border:1px solid var(--success); border-left: 4px solid var(--success);">
-                                    <p style="margin:0; font-size:0.75rem; color:var(--success); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">${getTranslation('recipient_details_label')}</p>
+                                <div style="margin:10px 0; padding:12px; border-radius:8px; background:rgba(72, 187, 120, 0.1}); m.addListener('click', () => info.open(map, m)); border:1px solid var(--success}); m.addListener('click', () => info.open(map, m)); border-left: 4px solid var(--success}); m.addListener('click', () => info.open(map, m));">
+                                    <p style="margin:0; font-size:0.75rem; color:var(--success}); m.addListener('click', () => info.open(map, m)); font-weight:bold; text-transform:uppercase; letter-spacing:1px;">${getTranslation('recipient_details_label')}</p>
                                     <p style="margin:5px 0 0 0; font-size:1.1rem; font-weight:bold; color:white;">👤 ${s.receiver_name}</p>
-                                    <p style="margin:2px 0 0 0; font-size:1rem; color:var(--text-muted);">📞 ${s.receiver_phone}</p>
+                                    <p style="margin:2px 0 0 0; font-size:1rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m));">📞 ${s.receiver_phone}</p>
                                 </div>
                             ` : ''}
 
@@ -1449,7 +1439,7 @@ async function loadMissions(autoStartNext = false) {
                         </div>
                     </div>
                 `;
-            });
+            }}); m.addListener('click', () => info.open(map, m));
             html += `</div>`;
             container.innerHTML = html;
             
@@ -1458,36 +1448,41 @@ async function loadMissions(autoStartNext = false) {
             document.getElementById('fullscreen-btn').style.display = 'block';
             
             if (!map) {
-                map = L.map('route-map').setView([orderedStops[0].lat, orderedStops[0].lng], 13);
+                const darkMapStyle = [
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+                ];
                 const theme = localStorage.getItem('theme') || 'dark';
-                const tileUrl = theme === 'dark' 
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-                L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
-                applyOfficialBorders(map);
+                map = new google.maps.Map(document.getElementById('route-map'), {
+                    center: { lat: orderedStops[0].lat, lng: orderedStops[0].lng },
+                    zoom: 13,
+                    styles: theme === 'dark' ? darkMapStyle : [],
+                    disableDefaultUI: true
+                }}); m.addListener('click', () => info.open(map, m));
                 
-                addMapControlsAndHUD();
+                // Add Map Controls safely if implemented for GMaps or skip
+                // applyOfficialBorders is typically L.geoJSON, we skip or use map.data
                 
                 if (navigator.geolocation) {
-                    watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true});
+                    watchId = navigator.geolocation.watchPosition(updateLocation, handleError, {enableHighAccuracy: true}}); m.addListener('click', () => info.open(map, m));
                 } else {
-                    handleError();
+                    handleError(}); m.addListener('click', () => info.open(map, m));
                 }
             } else {
-                map.eachLayer((layer) => {
-                    if (layer instanceof L.Polyline || layer instanceof L.Marker || layer instanceof L.CircleMarker) {
-                        map.removeLayer(layer);
-                    }
-                });
+                if (window.routeMarkers) window.routeMarkers.forEach(m => m.setMap(null)}); m.addListener('click', () => info.open(map, m));
+                if (window.directionsRenderer) window.directionsRenderer.setMap(null}); m.addListener('click', () => info.open(map, m));
             }
+            window.routeMarkers = window.routeMarkers || [];
             
-            setTimeout(() => { if (map) map.invalidateSize(true); }, 300);
+            setTimeout(() => { if (map) map.invalidateSize(true}); m.addListener('click', () => info.open(map, m)); }, 300}); m.addListener('click', () => info.open(map, m));
             
             // Un-hide the routing controls now that map is showing
-            const toolsContainer = document.getElementById('unified-tools-container');
+            const toolsContainer = document.getElementById('unified-tools-container'}); m.addListener('click', () => info.open(map, m));
             if (toolsContainer) toolsContainer.style.display = 'block';
             
-            drawMultiStopRoute(orderedStops);
+            drawMultiStopRoute(orderedStops}); m.addListener('click', () => info.open(map, m));
             
         } else if (me && me.verification_status !== "verified") {
             container.innerHTML = `<div class="glass-card"><p>${getTranslation('awaiting_verification')}</p></div>`;
@@ -1499,62 +1494,62 @@ async function loadMissions(autoStartNext = false) {
         }
         
         // Fetch and show dynamic alerts/messages
-        loadAlertsAndMessages();
+        loadAlertsAndMessages(}); m.addListener('click', () => info.open(map, m));
         
         // If OTP is required, auto-trigger the modal over the map
         if (needsPickupOTP) {
-            const assignedShipment = activeShipments.find(s => s.status === 'assigned');
+            const assignedShipment = activeShipments.find(s => s.status === 'assigned'}); m.addListener('click', () => info.open(map, m));
             setTimeout(() => {
-                window.openDriverOTPModal(assignedShipment.id, 'pickup');
-            }, 500);
+                window.openDriverOTPModal(assignedShipment.id, 'pickup'}); m.addListener('click', () => info.open(map, m));
+            }, 500}); m.addListener('click', () => info.open(map, m));
         }
         
     } catch(e) {
-        console.error("[Bootstrap] loadMissions Failed:", e);
-        showError(`${getTranslation('failed_load_dashboard')}: ${e.message}`);
+        console.error("[Bootstrap] loadMissions Failed:", e}); m.addListener('click', () => info.open(map, m));
+        showError(`${getTranslation('failed_load_dashboard')}: ${e.message}`}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 document.getElementById('verify-form-main')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    e.preventDefault(}); m.addListener('click', () => info.open(map, m));
     const file = document.getElementById('plate-image-main').files[0];
     if (!file) return;
     
-    const formData = new FormData();
-    formData.append('file', file);
+    const formData = new FormData(}); m.addListener('click', () => info.open(map, m));
+    formData.append('file', file}); m.addListener('click', () => info.open(map, m));
     
-    const btn = document.getElementById('verify-btn-main');
-    btn.innerText = getTranslation('scanning_plate');
+    const btn = document.getElementById('verify-btn-main'}); m.addListener('click', () => info.open(map, m));
+    btn.innerText = getTranslation('scanning_plate'}); m.addListener('click', () => info.open(map, m));
     btn.disabled = true;
     
     try {
-        console.log(`[Verification] Uploading to ${API_BASE}/driver/${dId}/verify...`);
+        console.log(`[Verification] Uploading to ${API_BASE}/driver/${dId}/verify...`}); m.addListener('click', () => info.open(map, m));
         const res = await fetch(`${API_BASE}/driver/${dId}/verify`, {
             method: 'POST',
             body: formData
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         
         if (!res.ok) {
-            const errData = await res.json().catch(() => ({detail: "Server Error"}));
-            throw new Error(errData.detail || getTranslation('verification_failed'));
+            const errData = await res.json().catch(() => ({detail: "Server Error"})}); m.addListener('click', () => info.open(map, m));
+            throw new Error(errData.detail || getTranslation('verification_failed')}); m.addListener('click', () => info.open(map, m));
         }
         
-        const data = await res.json();
-        console.log("[Verification] Success:", data);
+        const data = await res.json(}); m.addListener('click', () => info.open(map, m));
+        console.log("[Verification] Success:", data}); m.addListener('click', () => info.open(map, m));
         
         if (data.status === "verified") {
-            alert(getTranslation('verification_success') + "\n" + (data.ml_result.message || ""));
+            alert(getTranslation('verification_success') + "\n" + (data.ml_result.message || "")}); m.addListener('click', () => info.open(map, m));
         } else {
-            alert(getTranslation('verification_pending') + "\n" + (data.ml_result.message || getTranslation('manual_review_required')));
+            alert(getTranslation('verification_pending') + "\n" + (data.ml_result.message || getTranslation('manual_review_required'))}); m.addListener('click', () => info.open(map, m));
         }
-        loadMissions();
+        loadMissions(}); m.addListener('click', () => info.open(map, m));
     } catch (err) {
-        console.error("[Verification] Error:", err);
-        alert("❌ " + getTranslation('verification_error') + ": " + err.message);
-        btn.innerText = getTranslation('upload_verify');
+        console.error("[Verification] Error:", err}); m.addListener('click', () => info.open(map, m));
+        alert("❌ " + getTranslation('verification_error') + ": " + err.message}); m.addListener('click', () => info.open(map, m));
+        btn.innerText = getTranslation('upload_verify'}); m.addListener('click', () => info.open(map, m));
         btn.disabled = false;
     }
-});
+}}); m.addListener('click', () => info.open(map, m));
 
 // Removed old startJourney as map init is now auto-triggered in loadMissions
 
@@ -1563,14 +1558,20 @@ async function updateLocation(position) {
     const lng = position.coords.longitude;
     
     if (!marker) {
-        marker = L.marker([lat, lng], {icon: getVehicleIcon(0), draggable: isSimulationMode}).addTo(map);
-        attachSimulationDrag(marker);
+        marker = new google.maps.Marker({ position: {lat, lng}, map: map, icon: getVehicleIcon(0), draggable: isSimulationMode }}); m.addListener('click', () => info.open(map, m));
+        if (isSimulationMode) {
+            google.maps.event.addListener(marker, 'dragend', async function(e) {
+                await apiCall(`/driver/${localStorage.getItem('driver_id')}/location`, 'POST', { lat: e.latLng.lat(), lng: e.latLng.lng() }}); m.addListener('click', () => info.open(map, m));
+                showNotification(getTranslation('sim_movement_synced'), "success"}); m.addListener('click', () => info.open(map, m));
+            }}); m.addListener('click', () => info.open(map, m));
+        }
     } else {
-        marker.setLatLng([lat, lng]);
+        marker.setPosition({lat, lng}}); m.addListener('click', () => info.open(map, m));
     }
     
-    if (!hasSetInitialView) {
-        map.setView([lat, lng], 15);
+    if (!hasSetInitialView && map) {
+        map.setCenter({lat, lng}}); m.addListener('click', () => info.open(map, m));
+        map.setZoom(15}); m.addListener('click', () => info.open(map, m));
         hasSetInitialView = true;
     }
     
@@ -1578,7 +1579,7 @@ async function updateLocation(position) {
     if (lastLocation) {
         const dist = Math.sqrt(Math.pow(lat - lastLocation.lat, 2) + Math.pow(lng - lastLocation.lng, 2)) * 111000; // rough meters
         if (dist > 5) {
-            lastMovedTimestamp = Date.now();
+            lastMovedTimestamp = Date.now(}); m.addListener('click', () => info.open(map, m));
             stationaryAlertShown = false;
         } else {
             const idleTime = (Date.now() - lastMovedTimestamp) / 1000;
@@ -1592,21 +1593,21 @@ async function updateLocation(position) {
     lastLocation = {lat, lng};
     
     // Call new advanced features
-    if (typeof updateRouteProgress === 'function') updateRouteProgress(lat, lng);
-    if (typeof updateNavDrawerProgress === 'function') updateNavDrawerProgress(lat, lng);
-    if (typeof checkGeofenceArrival === 'function') checkGeofenceArrival(lat, lng, currentStops);
+    if (typeof updateRouteProgress === 'function') updateRouteProgress(lat, lng}); m.addListener('click', () => info.open(map, m));
+    if (typeof updateNavDrawerProgress === 'function') updateNavDrawerProgress(lat, lng}); m.addListener('click', () => info.open(map, m));
+    if (typeof checkGeofenceArrival === 'function') checkGeofenceArrival(lat, lng, currentStops}); m.addListener('click', () => info.open(map, m));
     
     // Send to backend
     try {
-        await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng});
+        await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng}}); m.addListener('click', () => info.open(map, m));
     } catch(e) {}
 }
 
 function handleError(err) {
-    console.warn('[GPS] Location error:', err);
+    console.warn('[GPS] Location error:', err}); m.addListener('click', () => info.open(map, m));
     
     // Show the fullscreen blocking overlay
-    const overlay = document.getElementById('geolocation-block-overlay');
+    const overlay = document.getElementById('geolocation-block-overlay'}); m.addListener('click', () => info.open(map, m));
     if (overlay) {
         overlay.style.display = 'flex';
     }
@@ -1615,7 +1616,7 @@ function handleError(err) {
     if (isSimulationMode && map) {
         map.on('click', async function(e) {
             if (isHalted) {
-                showNotification(getTranslation('vehicle_halted'), "error");
+                showNotification(getTranslation('vehicle_halted'), "error"}); m.addListener('click', () => info.open(map, m));
                 return;
             }
             
@@ -1623,32 +1624,32 @@ function handleError(err) {
             const lng = e.latlng.lng;
             
             if (!marker) {
-                marker = L.marker([lat, lng], {icon: getVehicleIcon(0), draggable: isSimulationMode}).addTo(map);
-                attachSimulationDrag(marker);
+                marker = L.marker([lat, lng], {icon: getVehicleIcon(0), draggable: isSimulationMode}).addTo(map}); m.addListener('click', () => info.open(map, m));
+                attachSimulationDrag(marker}); m.addListener('click', () => info.open(map, m));
             } else {
-                const prev = marker.getLatLng();
+                const prev = marker.getLatLng(}); m.addListener('click', () => info.open(map, m));
                 const bearing = Math.atan2(lng - prev.lng, lat - prev.lat) * 180 / Math.PI;
                 if (Math.abs(bearing - lastBearing) > 5) {
                     lastBearing = bearing;
-                    marker.setIcon(getVehicleIcon(bearing));
+                    marker.setIcon(getVehicleIcon(bearing)}); m.addListener('click', () => info.open(map, m));
                 }
-                marker.setLatLng([lat, lng]);
+                marker.setLatLng([lat, lng]}); m.addListener('click', () => info.open(map, m));
             }
             
             if (!hasSetInitialView) {
-                map.setView([lat, lng], 15);
+                map.setView([lat, lng], 15}); m.addListener('click', () => info.open(map, m));
                 hasSetInitialView = true;
             }
             
             // Call new advanced features
-            if (typeof updateRouteProgress === 'function') updateRouteProgress(lat, lng);
-            if (typeof updateNavDrawerProgress === 'function') updateNavDrawerProgress(lat, lng);
-            if (typeof checkGeofenceArrival === 'function') checkGeofenceArrival(lat, lng, currentStops);
+            if (typeof updateRouteProgress === 'function') updateRouteProgress(lat, lng}); m.addListener('click', () => info.open(map, m));
+            if (typeof updateNavDrawerProgress === 'function') updateNavDrawerProgress(lat, lng}); m.addListener('click', () => info.open(map, m));
+            if (typeof checkGeofenceArrival === 'function') checkGeofenceArrival(lat, lng, currentStops}); m.addListener('click', () => info.open(map, m));
             
             try {
-                await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng});
+                await apiCall(`/driver/${dId}/location`, 'POST', {lat, lng}}); m.addListener('click', () => info.open(map, m));
             } catch(e) {}
-        });
+        }}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -1656,14 +1657,14 @@ window.addMapControlsAndHUD = function() {
     if (!map) return;
     
     // Remove if already existing
-    if (legendControl) map.removeControl(legendControl);
-    if (hudControl) map.removeControl(hudControl);
-    if (rerouteControlBtn) map.removeControl(rerouteControlBtn);
+    if (legendControl) map.removeControl(legendControl}); m.addListener('click', () => info.open(map, m));
+    if (hudControl) map.removeControl(hudControl}); m.addListener('click', () => info.open(map, m));
+    if (rerouteControlBtn) map.removeControl(rerouteControlBtn}); m.addListener('click', () => info.open(map, m));
     
     // Legend
-    legendControl = L.control({position: 'bottomleft'});
+    // legendControl setup skipped for Google Maps custom controls
     legendControl.onAdd = function () {
-        const div = L.DomUtil.create('div', 'info legend');
+        const div = document.createElement('div'}); m.addListener('click', () => info.open(map, m)); div.className = 'info legend';
         div.style.background = 'rgba(15, 23, 42, 0.9)';
         div.style.padding = '10px';
         div.style.borderRadius = '8px';
@@ -1673,19 +1674,19 @@ window.addMapControlsAndHUD = function() {
         div.style.lineHeight = '1.5';
         div.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)';
         div.innerHTML = `
-            <h4 style="margin:0 0 6px 0; font-size:0.8rem; font-weight:bold; color:var(--primary);">🚦 Traffic Density</h4>
+            <h4 style="margin:0 0 6px 0; font-size:0.8rem; font-weight:bold; color:var(--primary}); m.addListener('click', () => info.open(map, m));">🚦 Traffic Density</h4>
             <div style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:4px; background:#ff4b4b; display:inline-block; border-radius:2px;"></span> High Congestion</div>
             <div style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:4px; background:#f6ad55; display:inline-block; border-radius:2px;"></span> Moderate Traffic</div>
             <div style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:4px; background:#3182ce; display:inline-block; border-radius:2px;"></span> Free Flowing</div>
         `;
         return div;
-    };
-    legendControl.addTo(map);
+    }
+    if(map) { const lg = buildLegendControl(}); m.addListener('click', () => info.open(map, m)); map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(lg}); m.addListener('click', () => info.open(map, m)); }
     
     // HUD
-    hudControl = L.control({position: 'topright'});
+    // hudControl setup
     hudControl.onAdd = function () {
-        const div = L.DomUtil.create('div', 'hud-control');
+        const div = document.createElement('div'}); m.addListener('click', () => info.open(map, m)); div.className = 'hud-control';
         div.style.background = 'rgba(15, 23, 42, 0.95)';
         div.style.padding = '12px 16px';
         div.style.borderRadius = '12px';
@@ -1699,37 +1700,37 @@ window.addMapControlsAndHUD = function() {
         div.style.minWidth = '200px';
         
         div.innerHTML = `
-            <div style="font-size:0.65rem; color:var(--text-muted); font-weight:800; text-transform:uppercase;">🛰️ Live Telemetry HUD</div>
-            <div><b>Speed:</b> <span id="hud-speed" style="color:var(--success); font-weight:bold;">45 km/h</span></div>
-            <div><b>ETA Status:</b> <span id="hud-eta" style="color:var(--accent); font-weight:bold;">On Time</span></div>
-            <div><b>Next Waypoint:</b> <span id="hud-waypoint" style="color:var(--primary); font-weight:600; font-size:0.75rem;">Loading...</span></div>
-            <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:6px; margin-top:2px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">
+            <div style="font-size:0.65rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); font-weight:800; text-transform:uppercase;">🛰️ Live Telemetry HUD</div>
+            <div><b>Speed:</b> <span id="hud-speed" style="color:var(--success}); m.addListener('click', () => info.open(map, m)); font-weight:bold;">45 km/h</span></div>
+            <div><b>ETA Status:</b> <span id="hud-eta" style="color:var(--accent}); m.addListener('click', () => info.open(map, m)); font-weight:bold;">On Time</span></div>
+            <div><b>Next Waypoint:</b> <span id="hud-waypoint" style="color:var(--primary}); m.addListener('click', () => info.open(map, m)); font-weight:600; font-size:0.75rem;">Loading...</span></div>
+            <div style="border-top:1px solid rgba(255,255,255,0.08}); m.addListener('click', () => info.open(map, m)); padding-top:6px; margin-top:2px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-bottom:4px;">
                     <span>Fatigue Level:</span>
                     <span id="hud-fatigue-text" style="font-weight:bold;">0%</span>
                 </div>
-                <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
-                    <div id="hud-fatigue-bar" style="width:0%; height:100%; background:var(--success); transition:width 0.5s ease;"></div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m)); border-radius:3px; overflow:hidden;">
+                    <div id="hud-fatigue-bar" style="width:0%; height:100%; background:var(--success}); m.addListener('click', () => info.open(map, m)); transition:width 0.5s ease;"></div>
                 </div>
             </div>
             <div style="margin-top:2px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-bottom:4px;">
                     <span>Leg Progress:</span>
                     <span id="hud-progress-text" style="font-weight:bold;">0%</span>
                 </div>
-                <div style="width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
-                    <div id="hud-progress-bar" style="width:0%; height:100%; background:var(--primary); transition:width 0.5s ease;"></div>
+                <div style="width:100%; height:6px; background:rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m)); border-radius:3px; overflow:hidden;">
+                    <div id="hud-progress-bar" style="width:0%; height:100%; background:var(--primary}); m.addListener('click', () => info.open(map, m)); transition:width 0.5s ease;"></div>
                 </div>
             </div>
         `;
         return div;
-    };
-    hudControl.addTo(map);
+    }
+    if(map) { const hc = buildHudControl(}); m.addListener('click', () => info.open(map, m)); map.controls[google.maps.ControlPosition.TOP_RIGHT].push(hc}); m.addListener('click', () => info.open(map, m)); }
     
     // Reroute Button
-    rerouteControlBtn = L.control({position: 'topleft'});
+    // rerouteControlBtn setup
     rerouteControlBtn.onAdd = function () {
-        const btn = L.DomUtil.create('button', 'btn-primary ai-reroute-btn');
+        const btn = document.createElement('button'}); m.addListener('click', () => info.open(map, m)); btn.className = 'btn-primary ai-reroute-btn';
         btn.style.padding = '8px 12px';
         btn.style.background = 'linear-gradient(135deg, #4f8cff 0%, #a855f7 100%)';
         btn.style.color = 'white';
@@ -1743,26 +1744,26 @@ window.addMapControlsAndHUD = function() {
         btn.innerHTML = '🔄 AI Reroute / Recalculate';
         
         btn.onclick = function(e) {
-            e.stopPropagation();
-            simulateAIReroute();
+            e.stopPropagation(}); m.addListener('click', () => info.open(map, m));
+            simulateAIReroute(}); m.addListener('click', () => info.open(map, m));
         };
         return btn;
-    };
-    rerouteControlBtn.addTo(map);
+    }
+    if(map) { const rc = buildRerouteControl(}); m.addListener('click', () => info.open(map, m)); map.controls[google.maps.ControlPosition.TOP_LEFT].push(rc}); m.addListener('click', () => info.open(map, m)); }
 };
 
 window.simulateAIReroute = function() {
-    showNotification("🧠 AI Engine analyzing alternative pathways for congestion avoidance...", "info");
+    showNotification("🧠 AI Engine analyzing alternative pathways for congestion avoidance...", "info"}); m.addListener('click', () => info.open(map, m));
     
     setTimeout(() => {
         // Change all route polylines to blue (free flowing!)
         activeRoutePolylines.forEach(p => {
-            p.setStyle({color: '#3182ce'}); 
-        });
+            p.setStyle({color: '#3182ce'}}); m.addListener('click', () => info.open(map, m)); 
+        }}); m.addListener('click', () => info.open(map, m));
         
         // Update HUD
-        const speedEl = document.getElementById('hud-speed');
-        const etaEl = document.getElementById('hud-eta');
+        const speedEl = document.getElementById('hud-speed'}); m.addListener('click', () => info.open(map, m));
+        const etaEl = document.getElementById('hud-eta'}); m.addListener('click', () => info.open(map, m));
         
         if (speedEl) {
             speedEl.innerText = "65 km/h";
@@ -1773,8 +1774,8 @@ window.simulateAIReroute = function() {
             etaEl.style.color = "var(--success)";
         }
         
-        showNotification("✅ Avoided high-congestion bottleneck. Recalculated path saved 14 minutes!", "success");
-    }, 1200);
+        showNotification("✅ Avoided high-congestion bottleneck. Recalculated path saved 14 minutes!", "success"}); m.addListener('click', () => info.open(map, m));
+    }, 1200}); m.addListener('click', () => info.open(map, m));
 };
 
 window.getDistanceKm = function(p1, p2) {
@@ -1783,8 +1784,8 @@ window.getDistanceKm = function(p1, p2) {
     const dLon = (p2[1] - p1[1]) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
               Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              Math.sin(dLon/2) * Math.sin(dLon/2}); m.addListener('click', () => info.open(map, m));
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)}); m.addListener('click', () => info.open(map, m));
     return R * c;
 };
 
@@ -1792,51 +1793,51 @@ async function drawMultiStopRoute(stops) {
     if (stops.length === 0) return;
     
     if (marker) {
-        marker.addTo(map);
+        marker.addTo(map}); m.addListener('click', () => info.open(map, m));
     }
     
     // Fit bounds to stops and marker initially
-    const bounds = L.latLngBounds(stops.map(s => [s.lat, s.lng]));
-    if (marker) bounds.extend(marker.getLatLng());
-    map.fitBounds(bounds, { padding: [50, 50] });
+    const bounds = L.latLngBounds(stops.map(s => [s.lat, s.lng])}); m.addListener('click', () => info.open(map, m));
+    if (marker) bounds.extend(marker.getLatLng()}); m.addListener('click', () => info.open(map, m));
+    map.fitBounds(bounds, { padding: [50, 50] }}); m.addListener('click', () => info.open(map, m));
     
     stops.forEach((stop, idx) => {
         const isCurrent = idx === 0;
         const icon = stop.type === 'pickup' ? ICON_PICKUP : ICON_DROP;
-        const m = L.marker([stop.lat, stop.lng], {icon: icon}).addTo(map);
+        const m = L.marker([stop.lat, stop.lng], {icon: icon}).addTo(map}); m.addListener('click', () => info.open(map, m));
         
         let popupHtml = `<b>${stop.type === 'pickup' ? getTranslation('pickup') : getTranslation('drop')}</b><br>${stop.shipment.description}`;
         if (isCurrent) {
             if (stop.type === 'pickup') {
-                 popupHtml += `<br><button style="margin-top:5px; background:var(--primary); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmPickup('${stop.shipment.id}')">${getTranslation('confirm_pickup')}</button>`;
+                 popupHtml += `<br><button style="margin-top:5px; background:var(--primary}); m.addListener('click', () => info.open(map, m)); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmPickup('${stop.shipment.id}')">${getTranslation('confirm_pickup')}</button>`;
             } else {
-                 popupHtml += `<br><button style="margin-top:5px; background:var(--success); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmDelivery('${stop.shipment.id}', '${stop.shipment.delivery_otp}')">${getTranslation('confirm_drop_otp')}</button>`;
+                 popupHtml += `<br><button style="margin-top:5px; background:var(--success}); m.addListener('click', () => info.open(map, m)); color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="confirmDelivery('${stop.shipment.id}', '${stop.shipment.delivery_otp}')">${getTranslation('confirm_drop_otp')}</button>`;
             }
         }
-        m.bindPopup(popupHtml);
-        if (isCurrent) m.openPopup();
-    });
+        const info = new google.maps.InfoWindow({content: popupHtml}); m.addListener('click', () => info.open(map, m));
+        if (isCurrent) m.openPopup(}); m.addListener('click', () => info.open(map, m));
+    }}); m.addListener('click', () => info.open(map, m));
     
-    let coordsString = stops.map(s => `${s.lng},${s.lat}`).join(';');
+    let coordsString = stops.map(s => `${s.lng},${s.lat}`).join(';'}); m.addListener('click', () => info.open(map, m));
     if (marker) {
         coordsString = `${marker.getLatLng().lng},${marker.getLatLng().lat};` + coordsString;
     }
     try {
-        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson&steps=true`);
-        const data = await res.json();
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson&steps=true`}); m.addListener('click', () => info.open(map, m));
+        const data = await res.json(}); m.addListener('click', () => info.open(map, m));
         if (data.routes && data.routes[0]) {
-            routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            routeCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]}); m.addListener('click', () => info.open(map, m));
             if (routeCoords.length > 0) {
-                map.fitBounds(L.polyline(routeCoords).getBounds(), { padding: [50, 50] });
+                map.fitBounds(L.polyline(routeCoords).getBounds(), { padding: [50, 50] }}); m.addListener('click', () => info.open(map, m));
             }
             
-            activeRoutePolylines.forEach(p => map.removeLayer(p));
+            activeRoutePolylines.forEach(p => map.removeLayer(p)}); m.addListener('click', () => info.open(map, m));
             activeRoutePolylines = [];
             
             // Initially render route progress
             const mLoc = marker ? marker.getLatLng() : null;
             if (mLoc) {
-                updateRouteProgress(mLoc.lat, mLoc.lng);
+                updateRouteProgress(mLoc.lat, mLoc.lng}); m.addListener('click', () => info.open(map, m));
             }
             
             let driverPos = marker ? [marker.getLatLng().lat, marker.getLatLng().lng] : [stops[0].lat, stops[0].lng];
@@ -1845,49 +1846,49 @@ async function drawMultiStopRoute(stops) {
             
             // Add current pos to covered path
             if (window.globalCoveredCoords.length === 0 || window.getDistanceKm(window.globalCoveredCoords[window.globalCoveredCoords.length-1], driverPos) > 0.05) {
-                window.globalCoveredCoords.push(driverPos);
+                window.globalCoveredCoords.push(driverPos}); m.addListener('click', () => info.open(map, m));
             }
             
             let remainingDist = 0;
             for(let i=0; i<routeCoords.length - 1; i++) {
-                remainingDist += window.getDistanceKm(routeCoords[i], routeCoords[i+1]);
+                remainingDist += window.getDistanceKm(routeCoords[i], routeCoords[i+1]}); m.addListener('click', () => info.open(map, m));
             }
             window.currentRemainingKm = remainingDist;
             
             if(window.globalCoveredCoords.length > 1) {
-                const polyCovered = L.polyline(window.globalCoveredCoords, {color: '#888888', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map);
-                activeRoutePolylines.push(polyCovered);
+                const polyCovered = L.polyline(window.globalCoveredCoords, {color: '#888888', weight: 6, opacity: 0.6, dashArray: '10, 10'}).addTo(map}); m.addListener('click', () => info.open(map, m));
+                activeRoutePolylines.push(polyCovered}); m.addListener('click', () => info.open(map, m));
             }
             
-            const chunkSize = Math.ceil(routeCoords.length / 5);
+            const chunkSize = Math.ceil(routeCoords.length / 5}); m.addListener('click', () => info.open(map, m));
             for(let i=0; i<routeCoords.length; i+=chunkSize) {
-                const chunk = routeCoords.slice(i, i+chunkSize+1);
+                const chunk = routeCoords.slice(i, i+chunkSize+1}); m.addListener('click', () => info.open(map, m));
                 if(chunk.length < 2) continue;
-                const rand = Math.random();
+                const rand = Math.random(}); m.addListener('click', () => info.open(map, m));
                 let color = '#3182ce'; 
                 if (rand > 0.9) color = '#ff4b4b'; 
                 else if (rand > 0.7) color = '#f6ad55'; 
                 
-                const poly = L.polyline(chunk, {color: color, weight: 6, opacity: 0.85}).addTo(map);
-                activeRoutePolylines.push(poly);
+                const poly = L.polyline(chunk, {color: color, weight: 6, opacity: 0.85}).addTo(map}); m.addListener('click', () => info.open(map, m));
+                activeRoutePolylines.push(poly}); m.addListener('click', () => info.open(map, m));
             }
             
             // Call Turn-by-Turn Panel
             if (data.routes[0].legs) {
-                renderTurnByTurnPanel(data.routes[0].legs);
+                renderTurnByTurnPanel(data.routes[0].legs}); m.addListener('click', () => info.open(map, m));
             }
             
             // Update ETA & Fuel Calculator Strip
-            const durationMins = Math.round(data.routes[0].duration / 60);
-            const distKm = parseFloat((data.routes[0].distance / 1000).toFixed(1));
+            const durationMins = Math.round(data.routes[0].duration / 60}); m.addListener('click', () => info.open(map, m));
+            const distKm = parseFloat((data.routes[0].distance / 1000).toFixed(1)}); m.addListener('click', () => info.open(map, m));
             const eff = (window.driverStats && window.driverStats.fuel_efficiency) || 15.0;
-            const fuelLiters = (distKm / eff).toFixed(1);
-            const fuelCost = Math.round(fuelLiters * 95);
+            const fuelLiters = (distKm / eff).toFixed(1}); m.addListener('click', () => info.open(map, m));
+            const fuelCost = Math.round(fuelLiters * 95}); m.addListener('click', () => info.open(map, m));
             
-            const durationEl = document.getElementById('calc-duration');
-            const distanceEl = document.getElementById('calc-distance');
-            const fuelEl = document.getElementById('calc-fuel');
-            const stripEl = document.getElementById('eta-fuel-strip');
+            const durationEl = document.getElementById('calc-duration'}); m.addListener('click', () => info.open(map, m));
+            const distanceEl = document.getElementById('calc-distance'}); m.addListener('click', () => info.open(map, m));
+            const fuelEl = document.getElementById('calc-fuel'}); m.addListener('click', () => info.open(map, m));
+            const stripEl = document.getElementById('eta-fuel-strip'}); m.addListener('click', () => info.open(map, m));
             
             if (durationEl) durationEl.innerText = `${durationMins} mins`;
             if (distanceEl) distanceEl.innerText = `${distKm} km`;
@@ -1895,46 +1896,46 @@ async function drawMultiStopRoute(stops) {
             if (stripEl) stripEl.style.display = 'flex';
             
             // Weather Strip Update
-            updateWeatherStrip(stops);
+            updateWeatherStrip(stops}); m.addListener('click', () => info.open(map, m));
             
             // Start HUD live telemetry ticker
-            startHUDTicker(stops);
+            startHUDTicker(stops}); m.addListener('click', () => info.open(map, m));
             
             // Update HUD
             setTimeout(() => {
                 const nextStop = stops[0];
-                const waypointEl = document.getElementById('hud-waypoint');
+                const waypointEl = document.getElementById('hud-waypoint'}); m.addListener('click', () => info.open(map, m));
                 if (waypointEl && nextStop) {
                     waypointEl.innerText = nextStop.shipment.drop.address || nextStop.shipment.drop.name || "Hub Base";
                 }
-            }, 500);
+            }, 500}); m.addListener('click', () => info.open(map, m));
         }
     } catch(err) {
-        console.error("OSRM drawing error:", err);
+        console.error("OSRM drawing error:", err}); m.addListener('click', () => info.open(map, m));
     }
 
     if (window.currentDriverObj && window.currentDriverObj.fatigue_score >= 100) {
         try {
             const currentLoc = marker ? marker.getLatLng() : stops[0];
-            const restStops = await apiCall(`/driver/safety/rest-stops?lat=${currentLoc.lat}&lng=${currentLoc.lng}`);
+            const restStops = await apiCall(`/driver/safety/rest-stops?lat=${currentLoc.lat}&lng=${currentLoc.lng}`}); m.addListener('click', () => info.open(map, m));
             restStops.forEach(stop => {
                 const bedIcon = L.icon({
                     iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
                     iconSize: [32, 32],
                     iconAnchor: [16, 32]
-                });
-                const m = L.marker([stop.lat, stop.lng], { icon: bedIcon }).addTo(map);
-                m.bindPopup(`<b>🏨 Rest Spot: ${stop.name} (${stop.rating}⭐)</b><br>Facilities: ${stop.amenities.join(', ')}<br><button onclick="window.startRest({name: '${stop.name.replace(/'/g, "\\'")}', lat: ${stop.lat}, lng: ${stop.lng}})" style="margin-top:5px; background:var(--success); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Start Rest Here</button>`);
-            });
+                }}); m.addListener('click', () => info.open(map, m));
+                const m = L.marker([stop.lat, stop.lng], { icon: bedIcon }).addTo(map}); m.addListener('click', () => info.open(map, m));
+                const info = new google.maps.InfoWindow({content: `<b>🏨 Rest Spot: ${stop.name} (${stop.rating}⭐)</b><br>Facilities: ${stop.amenities.join(', ')}<br><button onclick="window.startRest({name: '${stop.name.replace(/'/g, "\\'")}', lat: ${stop.lat}, lng: ${stop.lng}})" style="margin-top:5px; background:var(--success}); m.addListener('click', () => info.open(map, m)); color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Start Rest Here</button>`}); m.addListener('click', () => info.open(map, m));
+            }}); m.addListener('click', () => info.open(map, m));
         } catch(e) {
-            console.error("Failed to map rest stops", e);
+            console.error("Failed to map rest stops", e}); m.addListener('click', () => info.open(map, m));
         }
     }
 }
 
 
 function showDynamicAlert(type, msg) {
-    const banner = document.getElementById('instruction-banner');
+    const banner = document.getElementById('instruction-banner'}); m.addListener('click', () => info.open(map, m));
     banner.innerText = msg;
     banner.style.display = 'block';
     if (type === 'weather') banner.style.background = 'linear-gradient(90deg, #3182ce, #2b6cb0)';
@@ -1944,63 +1945,63 @@ function showDynamicAlert(type, msg) {
 
 
 function showPopupAlert(msg) {
-    const container = document.getElementById('alert-container');
-    const alertDiv = document.createElement('div');
+    const container = document.getElementById('alert-container'}); m.addListener('click', () => info.open(map, m));
+    const alertDiv = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
     alertDiv.className = 'glass-card alert-popup';
     alertDiv.style.borderLeft = '4px solid var(--danger)';
     alertDiv.style.marginBottom = '10px';
     alertDiv.innerHTML = `
-        <h4 style="color:var(--danger); margin-bottom:5px;">⚠️ ${getTranslation('alert_label')}</h4>
+        <h4 style="color:var(--danger}); m.addListener('click', () => info.open(map, m)); margin-bottom:5px;">⚠️ ${getTranslation('alert_label')}</h4>
         <p style="font-size:0.85rem">${msg}</p>
         <button class="btn-primary" style="margin-top:10px; padding: 5px;" onclick="this.parentElement.remove()">${getTranslation('acknowledge')}</button>
     `;
-    container.appendChild(alertDiv);
-    setTimeout(() => alertDiv.remove(), 10000);
+    container.appendChild(alertDiv}); m.addListener('click', () => info.open(map, m));
+    setTimeout(() => alertDiv.remove(), 10000}); m.addListener('click', () => info.open(map, m));
 }
 
 function toggleFullscreen() {
-    const mapDiv = document.getElementById('route-map');
+    const mapDiv = document.getElementById('route-map'}); m.addListener('click', () => info.open(map, m));
     if (!document.fullscreenElement) {
         if (mapDiv.requestFullscreen) {
-            mapDiv.requestFullscreen();
+            mapDiv.requestFullscreen(}); m.addListener('click', () => info.open(map, m));
         } else if (mapDiv.webkitRequestFullscreen) { /* Safari */
-            mapDiv.webkitRequestFullscreen();
+            mapDiv.webkitRequestFullscreen(}); m.addListener('click', () => info.open(map, m));
         } else if (mapDiv.msRequestFullscreen) { /* IE11 */
-            mapDiv.msRequestFullscreen();
+            mapDiv.msRequestFullscreen(}); m.addListener('click', () => info.open(map, m));
         }
     } else {
         if (document.exitFullscreen) {
-            document.exitFullscreen();
+            document.exitFullscreen(}); m.addListener('click', () => info.open(map, m));
         } else if (document.webkitExitFullscreen) { /* Safari */
-            document.webkitExitFullscreen();
+            document.webkitExitFullscreen(}); m.addListener('click', () => info.open(map, m));
         } else if (document.msExitFullscreen) { /* IE11 */
-            document.msExitFullscreen();
+            document.msExitFullscreen(}); m.addListener('click', () => info.open(map, m));
         }
     }
     if (map) {
-        setTimeout(() => { if (map) map.invalidateSize(true); }, 150);
-        setTimeout(() => { if (map) map.invalidateSize(true); }, 500);
+        setTimeout(() => { if (map) map.invalidateSize(true}); m.addListener('click', () => info.open(map, m)); }, 150}); m.addListener('click', () => info.open(map, m));
+        setTimeout(() => { if (map) map.invalidateSize(true}); m.addListener('click', () => info.open(map, m)); }, 500}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 document.addEventListener('fullscreenchange', () => {
     if (map) {
-        setTimeout(() => { if (map) map.invalidateSize(true); }, 150);
-        setTimeout(() => { if (map) map.invalidateSize(true); }, 500);
+        setTimeout(() => { if (map) map.invalidateSize(true}); m.addListener('click', () => info.open(map, m)); }, 150}); m.addListener('click', () => info.open(map, m));
+        setTimeout(() => { if (map) map.invalidateSize(true}); m.addListener('click', () => info.open(map, m)); }, 500}); m.addListener('click', () => info.open(map, m));
     }
-});
+}}); m.addListener('click', () => info.open(map, m));
 
 async function loadAlertsAndMessages() {
     try {
-        const dId = localStorage.getItem('driver_id');
-        const shipments = await apiCall(`/driver/${dId}/shipments`);
-        const activeShipment = shipments.find(s => s.status === 'in_transit');
+        const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+        const shipments = await apiCall(`/driver/${dId}/shipments`}); m.addListener('click', () => info.open(map, m));
+        const activeShipment = shipments.find(s => s.status === 'in_transit'}); m.addListener('click', () => info.open(map, m));
         
         if (activeShipment) {
             // Fetch real alerts for this shipment
-            const data = await apiCall(`/tracking/${activeShipment.id}`);
-            const banner = document.getElementById('instruction-banner');
-            const weatherAlert = data.alerts.find(a => a.type === 'weather');
+            const data = await apiCall(`/tracking/${activeShipment.id}`}); m.addListener('click', () => info.open(map, m));
+            const banner = document.getElementById('instruction-banner'}); m.addListener('click', () => info.open(map, m));
+            const weatherAlert = data.alerts.find(a => a.type === 'weather'}); m.addListener('click', () => info.open(map, m));
             
             if (weatherAlert) {
                 banner.innerText = `⚠️ ${weatherAlert.description}. ${weatherAlert.suggestion}`;
@@ -2016,38 +2017,38 @@ async function loadAlertsAndMessages() {
         }
         
         // Fetch Messages
-        const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`);
+        const msgs = await apiCall(`/tracking/messages/${dId}?company_id=${localStorage.getItem('company_id')}`}); m.addListener('click', () => info.open(map, m));
         
         if (msgs.length > lastMsgCount) {
             if (currentActiveTab !== 'chat') {
-                const badge = document.getElementById('chat-badge');
+                const badge = document.getElementById('chat-badge'}); m.addListener('click', () => info.open(map, m));
                 if (badge) {
                     badge.style.display = 'inline-block';
                     badge.style.background = 'var(--danger)';
                     badge.style.border = '1.5px solid var(--bg)';
                 }
-                const btn = document.getElementById('btn-tab-chat');
+                const btn = document.getElementById('btn-tab-chat'}); m.addListener('click', () => info.open(map, m));
                 if (btn) {
                     btn.style.fontWeight = '900';
                     btn.style.color = 'var(--text)';
                 }
             } else {
                 lastMsgCount = msgs.length;
-                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount);
+                localStorage.setItem('last_seen_msg_count_driver', lastMsgCount}); m.addListener('click', () => info.open(map, m));
             }
         }
 
-        renderDriverMessages(msgs);
+        renderDriverMessages(msgs}); m.addListener('click', () => info.open(map, m));
     } catch(e) {}
 }
 
 function renderDriverMessages(msgs) {
-    const container = document.getElementById('driver-messages');
+    const container = document.getElementById('driver-messages'}); m.addListener('click', () => info.open(map, m));
     if (!container) return;
     
     // Use the same beautiful bubble layout as the manager dashboard
     container.innerHTML = msgs.length === 0
-        ? `<p style="font-size:0.8rem; color:var(--text-muted); text-align:center; padding:20px;">${getTranslation('no_conversation_history')}</p>`
+        ? `<p style="font-size:0.8rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); text-align:center; padding:20px;">${getTranslation('no_conversation_history')}</p>`
         : msgs.map(m => {
             const isMe = m.sender_type === 'driver';
             let mediaHtml = '';
@@ -2063,7 +2064,7 @@ function renderDriverMessages(msgs) {
                                 color:${isMe ? '#fff' : 'var(--text)'};
                                 border-bottom-${isMe ? 'right' : 'left'}-radius:2px;
                                 border: 1px solid ${isMe ? 'transparent' : 'var(--border)'};
-                                box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1}); m.addListener('click', () => info.open(map, m));">
                         <div style="font-size:0.65rem; margin-bottom:4px; opacity:0.7; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">
                             ${isMe ? getTranslation('you') : getTranslation('operations_label')}
                         </div>
@@ -2075,12 +2076,12 @@ function renderDriverMessages(msgs) {
                     </div>
                 </div>
             `;
-        }).join('');
+        }).join(''}); m.addListener('click', () => info.open(map, m));
     
     container.scrollTop = container.scrollHeight;
     container.querySelectorAll('.audio-placeholder').forEach(ph => {
-        ph.replaceWith(buildAudioPlayer(ph.dataset.src, ph.dataset.accent));
-    });
+        ph.replaceWith(buildAudioPlayer(ph.dataset.src, ph.dataset.accent)}); m.addListener('click', () => info.open(map, m));
+    }}); m.addListener('click', () => info.open(map, m));
 }
 
 let driverChatMediaData = null;
@@ -2088,15 +2089,15 @@ let driverMediaRecorder = null;
 let driverRecording = false;
 
 async function sendMessageToManager() {
-    const content = (document.getElementById('manager-msg-content').value || '').trim();
+    const content = (document.getElementById('manager-msg-content').value || '').trim(}); m.addListener('click', () => info.open(map, m));
     if (!content && !driverChatMediaData) return;
 
-    const dId = localStorage.getItem('driver_id');
-    const shipments = await apiCall(`/driver/${dId}/shipments`);
-    const activeShipment = shipments.find(s => s.status === 'in_transit' || s.status === 'assigned');
+    const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+    const shipments = await apiCall(`/driver/${dId}/shipments`}); m.addListener('click', () => info.open(map, m));
+    const activeShipment = shipments.find(s => s.status === 'in_transit' || s.status === 'assigned'}); m.addListener('click', () => info.open(map, m));
 
     try {
-        const companyId = localStorage.getItem('company_id');
+        const companyId = localStorage.getItem('company_id'}); m.addListener('click', () => info.open(map, m));
         await apiCall('/tracking/messages', 'POST', {
             shipment_id: activeShipment ? activeShipment.id : null,
             company_id: companyId,
@@ -2106,73 +2107,73 @@ async function sendMessageToManager() {
             sender_type: 'driver',
             media_url: driverChatMediaData ? driverChatMediaData.url : null,
             media_type: driverChatMediaData ? driverChatMediaData.type : null
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         document.getElementById('manager-msg-content').value = '';
         driverChatMediaData = null;
-        const preview = document.getElementById('driver-media-preview');
+        const preview = document.getElementById('driver-media-preview'}); m.addListener('click', () => info.open(map, m));
         if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
-        loadAlertsAndMessages();
+        loadAlertsAndMessages(}); m.addListener('click', () => info.open(map, m));
     } catch(e) {
-        alert(getTranslation('failed_send_message'));
+        alert(getTranslation('failed_send_message')}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 function driverChatPickPhoto() {
-    document.getElementById('driver-photo-input').click();
+    document.getElementById('driver-photo-input').click(}); m.addListener('click', () => info.open(map, m));
 }
 
 function driverChatHandlePhoto(input) {
     const file = input.files[0];
     if (!file) return;
-    const reader = new FileReader();
+    const reader = new FileReader(}); m.addListener('click', () => info.open(map, m));
     reader.onload = (e) => {
         driverChatMediaData = { type: 'image', url: e.target.result };
-        const preview = document.getElementById('driver-media-preview');
+        const preview = document.getElementById('driver-media-preview'}); m.addListener('click', () => info.open(map, m));
         preview.style.display = 'flex';
-        preview.innerHTML = `<img src="${e.target.result}" style="height:52px;border-radius:8px;border:1px solid var(--border);"><span style="font-size:0.8rem;color:var(--muted);flex:1;">${getTranslation('photo_ready')}</span><button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;">✕</button>`;
+        preview.innerHTML = `<img src="${e.target.result}" style="height:52px;border-radius:8px;border:1px solid var(--border}); m.addListener('click', () => info.open(map, m));"><span style="font-size:0.8rem;color:var(--muted}); m.addListener('click', () => info.open(map, m));flex:1;">${getTranslation('photo_ready')}</span><button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger}); m.addListener('click', () => info.open(map, m));cursor:pointer;font-size:1.1rem;">✕</button>`;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(file}); m.addListener('click', () => info.open(map, m));
     input.value = '';
 }
 
 function driverClearMedia() {
     driverChatMediaData = null;
-    const preview = document.getElementById('driver-media-preview');
+    const preview = document.getElementById('driver-media-preview'}); m.addListener('click', () => info.open(map, m));
     if (preview) { preview.style.display = 'none'; preview.innerHTML = ''; }
 }
 
 async function driverChatToggleRecording() {
-    const btn = document.getElementById('driver-voice-btn');
+    const btn = document.getElementById('driver-voice-btn'}); m.addListener('click', () => info.open(map, m));
     if (!driverRecording) {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true }}); m.addListener('click', () => info.open(map, m));
             const chunks = [];
-            driverMediaRecorder = new MediaRecorder(stream);
-            driverMediaRecorder.ondataavailable = e => chunks.push(e.data);
+            driverMediaRecorder = new MediaRecorder(stream}); m.addListener('click', () => info.open(map, m));
+            driverMediaRecorder.ondataavailable = e => chunks.push(e.data}); m.addListener('click', () => info.open(map, m));
             driverMediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'audio/webm' });
-                const reader = new FileReader();
+                const blob = new Blob(chunks, { type: 'audio/webm' }}); m.addListener('click', () => info.open(map, m));
+                const reader = new FileReader(}); m.addListener('click', () => info.open(map, m));
                 reader.onload = (ev) => {
                     driverChatMediaData = { type: 'audio', url: ev.target.result };
-                    const preview = document.getElementById('driver-media-preview');
+                    const preview = document.getElementById('driver-media-preview'}); m.addListener('click', () => info.open(map, m));
                     preview.style.display = 'flex';
-                    preview.innerHTML = `<button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>`;
-                    const player = buildAudioPlayer(ev.target.result, 'rgba(79,140,255,0.4)');
-                    preview.insertBefore(player, preview.firstChild);
+                    preview.innerHTML = `<button onclick="driverClearMedia()" style="background:none;border:none;color:var(--danger}); m.addListener('click', () => info.open(map, m));cursor:pointer;font-size:1.1rem;flex-shrink:0;">✕</button>`;
+                    const player = buildAudioPlayer(ev.target.result, 'rgba(79,140,255,0.4)'}); m.addListener('click', () => info.open(map, m));
+                    preview.insertBefore(player, preview.firstChild}); m.addListener('click', () => info.open(map, m));
                 };
-                reader.readAsDataURL(blob);
-                stream.getTracks().forEach(t => t.stop());
+                reader.readAsDataURL(blob}); m.addListener('click', () => info.open(map, m));
+                stream.getTracks().forEach(t => t.stop()}); m.addListener('click', () => info.open(map, m));
             };
-            driverMediaRecorder.start();
+            driverMediaRecorder.start(}); m.addListener('click', () => info.open(map, m));
             driverRecording = true;
             btn.innerText = '⏹️';
             btn.style.background = 'rgba(229,62,62,0.2)';
             btn.style.color = 'var(--danger)';
         } catch(e) {
-            alert(getTranslation('mic_access_denied'));
+            alert(getTranslation('mic_access_denied')}); m.addListener('click', () => info.open(map, m));
         }
     } else {
-        driverMediaRecorder.stop();
+        driverMediaRecorder.stop(}); m.addListener('click', () => info.open(map, m));
         driverRecording = false;
         btn.innerText = '🎙️';
         btn.style.background = 'rgba(255,255,255,0.08)';
@@ -2181,14 +2182,14 @@ async function driverChatToggleRecording() {
 }
 
 // Polling for updates
-setInterval(loadAlertsAndMessages, 5000);
+setInterval(loadAlertsAndMessages, 5000}); m.addListener('click', () => info.open(map, m));
 
 async function loadProfileData() {
-    const dId = localStorage.getItem('driver_id');
-    const data = await apiCall(`/manager/drivers/${dId}/profile`);
+    const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+    const data = await apiCall(`/manager/drivers/${dId}/profile`}); m.addListener('click', () => info.open(map, m));
     const p = data.profile;
     
-    document.getElementById('p-name').innerText = p.name || getTranslation('driver_label');
+    document.getElementById('p-name').innerText = p.name || getTranslation('driver_label'}); m.addListener('click', () => info.open(map, m));
     document.getElementById('p-login').innerText = `@${p.login_id || 'user'}`;
     document.getElementById('p-trips').innerText = p.total_trips || 0;
     document.getElementById('p-safety').innerText = `${(p.safety_index || 100).toFixed(1)}%`;
@@ -2204,15 +2205,15 @@ async function loadProfileData() {
     document.getElementById('p-wallet').innerText = `${p.reward_points || 0}`;
     
     // Calculate Platform Tenure in Days & Hours Worked
-    const joinDate = p.join_date ? new Date(p.join_date) : new Date();
-    const today = new Date();
-    const diffTime = Math.abs(today - joinDate);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const drivingHours = (p.driving_hours || 0).toFixed(1);
+    const joinDate = p.join_date ? new Date(p.join_date) : new Date(}); m.addListener('click', () => info.open(map, m));
+    const today = new Date(}); m.addListener('click', () => info.open(map, m));
+    const diffTime = Math.abs(today - joinDate}); m.addListener('click', () => info.open(map, m));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)}); m.addListener('click', () => info.open(map, m));
+    const drivingHours = (p.driving_hours || 0).toFixed(1}); m.addListener('click', () => info.open(map, m));
     document.getElementById('p-experience').innerText = `${diffDays} Days | ${drivingHours} Hours Worked`;
     
     // Health Card Population
-    const hStatus = document.getElementById('h-status');
+    const hStatus = document.getElementById('h-status'}); m.addListener('click', () => info.open(map, m));
     if (p.is_fit === false) {
         hStatus.innerText = getTranslation('status_unfit') || "UNFIT (AUDIT)";
         hStatus.style.background = "var(--danger)";
@@ -2226,9 +2227,9 @@ async function loadProfileData() {
         let abnormal = hr < 55 || hr > 110 || o2 < 92;
         if (p.health_metrics.blood_pressure && p.health_metrics.blood_pressure.includes('/')) {
             try {
-                const parts = p.health_metrics.blood_pressure.split('/');
-                const syst = parseInt(parts[0]);
-                const diast = parseInt(parts[1]);
+                const parts = p.health_metrics.blood_pressure.split('/'}); m.addListener('click', () => info.open(map, m));
+                const syst = parseInt(parts[0]}); m.addListener('click', () => info.open(map, m));
+                const diast = parseInt(parts[1]}); m.addListener('click', () => info.open(map, m));
                 if (syst < 90 || syst > 140 || diast < 60 || diast > 95) abnormal = true;
             } catch(e) {}
         }
@@ -2242,7 +2243,7 @@ async function loadProfileData() {
         }
     }
 
-    const fBar = document.getElementById('p-fatigue-bar');
+    const fBar = document.getElementById('p-fatigue-bar'}); m.addListener('click', () => info.open(map, m));
     fBar.style.width = `${p.fatigue_score}%`;
     fBar.style.background = p.fatigue_score > 80 ? 'var(--danger)' : p.fatigue_score > 50 ? 'var(--warning)' : 'var(--primary)';
     
@@ -2262,7 +2263,7 @@ function closeHealthModal() {
 }
 
 document.getElementById('health-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+    e.preventDefault(}); m.addListener('click', () => info.open(map, m));
     const metrics = {
         heart_rate: document.getElementById('v-heart-rate').value,
         blood_pressure: document.getElementById('v-bp').value,
@@ -2270,53 +2271,53 @@ document.getElementById('health-form')?.addEventListener('submit', async (e) => 
     };
     
     try {
-        await apiCall(`/driver/${localStorage.getItem('driver_id')}/health`, 'POST', metrics);
-        alert(getTranslation('vitals_updated_success'));
-        closeHealthModal();
-        loadProfileData();
+        await apiCall(`/driver/${localStorage.getItem('driver_id')}/health`, 'POST', metrics}); m.addListener('click', () => info.open(map, m));
+        alert(getTranslation('vitals_updated_success')}); m.addListener('click', () => info.open(map, m));
+        closeHealthModal(}); m.addListener('click', () => info.open(map, m));
+        loadProfileData(}); m.addListener('click', () => info.open(map, m));
     } catch (e) {
-        alert(getTranslation('failed_update_vitals'));
+        alert(getTranslation('failed_update_vitals')}); m.addListener('click', () => info.open(map, m));
     }
-});
+}}); m.addListener('click', () => info.open(map, m));
 
 async function uploadProfilePic() {
     const file = document.getElementById('profile-upload').files[0];
     if (!file) return;
     
-    const formData = new FormData();
-    formData.append('file', file);
+    const formData = new FormData(}); m.addListener('click', () => info.open(map, m));
+    formData.append('file', file}); m.addListener('click', () => info.open(map, m));
     
     try {
-        const dId = localStorage.getItem('driver_id');
+        const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
         // Re-use vehicle verification endpoint for image upload or create new
         // For demo, we'll just convert to base64 and update driver profile
-        const reader = new FileReader();
+        const reader = new FileReader(}); m.addListener('click', () => info.open(map, m));
         reader.onload = async (e) => {
             const base64 = e.target.result;
-            await apiCall(`/manager/drivers/${dId}`, 'PUT', { profile_pic: base64 });
-            loadProfileData();
+            await apiCall(`/manager/drivers/${dId}`, 'PUT', { profile_pic: base64 }}); m.addListener('click', () => info.open(map, m));
+            loadProfileData(}); m.addListener('click', () => info.open(map, m));
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(file}); m.addListener('click', () => info.open(map, m));
     } catch(e) {
-        alert(getTranslation('upload_failed'));
+        alert(getTranslation('upload_failed')}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 async function startRest(selectedStop = null) {
-    const dId = localStorage.getItem('driver_id');
+    const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
     
     // If fatigue is >= 100, they must be at a rest stop
     if (window.currentDriverObj && window.currentDriverObj.fatigue_score >= 100) {
         let currentLoc = null;
         if (marker) {
-            const ll = marker.getLatLng();
+            const ll = marker.getLatLng(}); m.addListener('click', () => info.open(map, m));
             currentLoc = { lat: ll.lat, lng: ll.lng };
         } else if (lastLocation) {
             currentLoc = lastLocation;
         }
         
         if (!currentLoc) {
-            alert("Unable to determine current location. Please ensure GPS or simulated location is active.");
+            alert("Unable to determine current location. Please ensure GPS or simulated location is active."}); m.addListener('click', () => info.open(map, m));
             return;
         }
         
@@ -2330,8 +2331,8 @@ async function startRest(selectedStop = null) {
 
             const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
                       Math.cos(phi1) * Math.cos(phi2) *
-                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                      Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2}); m.addListener('click', () => info.open(map, m));
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)}); m.addListener('click', () => info.open(map, m));
             return R * c;
         };
         
@@ -2339,28 +2340,28 @@ async function startRest(selectedStop = null) {
         if (!targetStop) {
             // Fetch nearby rest stops
             try {
-                const stopsToCheck = await apiCall(`/driver/safety/rest-stops?lat=${currentLoc.lat}&lng=${currentLoc.lng}`);
+                const stopsToCheck = await apiCall(`/driver/safety/rest-stops?lat=${currentLoc.lat}&lng=${currentLoc.lng}`}); m.addListener('click', () => info.open(map, m));
                 let minDistance = Infinity;
                 stopsToCheck.forEach(stop => {
-                    const dist = getDistance(currentLoc.lat, currentLoc.lng, stop.lat, stop.lng);
+                    const dist = getDistance(currentLoc.lat, currentLoc.lng, stop.lat, stop.lng}); m.addListener('click', () => info.open(map, m));
                     if (dist < minDistance) {
                         minDistance = dist;
                         targetStop = stop;
                     }
-                });
+                }}); m.addListener('click', () => info.open(map, m));
                 if (targetStop) {
                     targetStop.distance = minDistance;
                 }
             } catch (e) {
-                console.error("Failed to fetch rest stops during validation:", e);
+                console.error("Failed to fetch rest stops during validation:", e}); m.addListener('click', () => info.open(map, m));
             }
         } else {
-            targetStop.distance = getDistance(currentLoc.lat, currentLoc.lng, targetStop.lat, targetStop.lng);
+            targetStop.distance = getDistance(currentLoc.lat, currentLoc.lng, targetStop.lat, targetStop.lng}); m.addListener('click', () => info.open(map, m));
         }
         
         if (!targetStop || targetStop.distance > 300) {
             const distMsg = targetStop ? `You are currently ${Math.round(targetStop.distance)}m away from the nearest rest stop.` : '';
-            alert(`⚠️ You must reach a resting spot on the map (green marker) before starting your rest. ${distMsg} Please navigate closer on the map.`);
+            alert(`⚠️ You must reach a resting spot on the map (green marker) before starting your rest. ${distMsg} Please navigate closer on the map.`}); m.addListener('click', () => info.open(map, m));
             return;
         }
         
@@ -2373,15 +2374,15 @@ async function startRest(selectedStop = null) {
         }
     }
     
-    await submitIncident('resting');
-    alert(getTranslation('rest_period_logged'));
-    loadProfileData();
-    loadMissions();
+    await submitIncident('resting'}); m.addListener('click', () => info.open(map, m));
+    alert(getTranslation('rest_period_logged')}); m.addListener('click', () => info.open(map, m));
+    loadProfileData(}); m.addListener('click', () => info.open(map, m));
+    loadMissions(}); m.addListener('click', () => info.open(map, m));
 }
 
 function logout() {
-    if (watchId) navigator.geolocation.clearWatch(watchId);
-    localStorage.clear();
+    if (watchId) navigator.geolocation.clearWatch(watchId}); m.addListener('click', () => info.open(map, m));
+    localStorage.clear(}); m.addListener('click', () => info.open(map, m));
     window.location.href = '../index.html';
 }
 
@@ -2395,13 +2396,13 @@ window.startRest = startRest;
 
 window.markDriverNotifRead = async function(notifId) {
     try {
-        const dId = localStorage.getItem('driver_id');
-        await apiCall(`/driver/${dId}/notifications/read`, 'POST', { notification_id: notifId });
-        showNotification("Notification marked as read.", "success");
-        loadDashStats(); // refresh
+        const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+        await apiCall(`/driver/${dId}/notifications/read`, 'POST', { notification_id: notifId }}); m.addListener('click', () => info.open(map, m));
+        showNotification("Notification marked as read.", "success"}); m.addListener('click', () => info.open(map, m));
+        loadDashStats(}); m.addListener('click', () => info.open(map, m)); // refresh
     } catch(e) {
-        console.error("Failed to mark notification as read", e);
-        showNotification("Failed to mark notification as read", "error");
+        console.error("Failed to mark notification as read", e}); m.addListener('click', () => info.open(map, m));
+        showNotification("Failed to mark notification as read", "error"}); m.addListener('click', () => info.open(map, m));
     }
 };
 
@@ -2415,7 +2416,7 @@ async function submitIncident(type, fromStationary = false) {
     else document.getElementById('incident-modal').style.display = 'none';
     
     if (type === 'breakdown') {
-        return reportBreakdown();
+        return reportBreakdown(}); m.addListener('click', () => info.open(map, m));
     }
     
     // Get current location if available
@@ -2423,8 +2424,8 @@ async function submitIncident(type, fromStationary = false) {
     let lng = null;
     if (navigator.geolocation) {
         const pos = await new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(resolve, () => resolve(null));
-        });
+            navigator.geolocation.getCurrentPosition(resolve, () => resolve(null)}); m.addListener('click', () => info.open(map, m));
+        }}); m.addListener('click', () => info.open(map, m));
         if (pos) {
             lat = pos.coords.latitude;
             lng = pos.coords.longitude;
@@ -2432,18 +2433,18 @@ async function submitIncident(type, fromStationary = false) {
     }
 
     try {
-        const dId = localStorage.getItem('driver_id');
+        const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
         await apiCall(`/driver/${dId}/incident`, 'POST', {
             type: type,
             description: `${getTranslation('driver_reported')} ${type} ${getTranslation('issue_label')}.`,
             lat: lat,
             lng: lng
-        });
-        alert(`🚨 ${getTranslation('incident_reported')}: ${type.toUpperCase()}. ${getTranslation('manager_notified')}.`);
-        loadMissions();
-        loadProfileData();
+        }}); m.addListener('click', () => info.open(map, m));
+        alert(`🚨 ${getTranslation('incident_reported')}: ${type.toUpperCase()}. ${getTranslation('manager_notified')}.`}); m.addListener('click', () => info.open(map, m));
+        loadMissions(}); m.addListener('click', () => info.open(map, m));
+        loadProfileData(}); m.addListener('click', () => info.open(map, m));
     } catch(err) {
-        alert(getTranslation('failed_report_incident'));
+        alert(getTranslation('failed_report_incident')}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -2451,23 +2452,23 @@ async function requestSensorPermission() {
     if (typeof DeviceMotionEvent.requestPermission === 'function') {
         // iOS 13+ requires explicit permission
         try {
-            const permissionState = await DeviceMotionEvent.requestPermission();
+            const permissionState = await DeviceMotionEvent.requestPermission(}); m.addListener('click', () => info.open(map, m));
             if (permissionState === 'granted') {
-                window.addEventListener('devicemotion', handleMotion);
+                window.addEventListener('devicemotion', handleMotion}); m.addListener('click', () => info.open(map, m));
                 document.getElementById('sensor-btn').innerText = `🛡️ ${getTranslation('safety_active')}`;
                 document.getElementById('sensor-btn').style.background = "var(--success)";
-                alert(getTranslation('sensors_calibrated'));
+                alert(getTranslation('sensors_calibrated')}); m.addListener('click', () => info.open(map, m));
             }
         } catch (error) {
-            console.error(error);
-            alert(getTranslation('sensor_access_denied'));
+            console.error(error}); m.addListener('click', () => info.open(map, m));
+            alert(getTranslation('sensor_access_denied')}); m.addListener('click', () => info.open(map, m));
         }
     } else {
         // Android / Desktop non-standard
-        window.addEventListener('devicemotion', handleMotion);
+        window.addEventListener('devicemotion', handleMotion}); m.addListener('click', () => info.open(map, m));
         document.getElementById('sensor-btn').innerText = `🛡️ ${getTranslation('safety_active')}`;
         document.getElementById('sensor-btn').style.background = "var(--success)";
-        alert(getTranslation('sensors_active'));
+        alert(getTranslation('sensors_active')}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -2476,36 +2477,36 @@ function handleMotion(event) {
     const acc = event.accelerationIncludingGravity;
     if (!acc) return;
     
-    const force = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z);
+    const force = Math.sqrt(acc.x*acc.x + acc.y*acc.y + acc.z*acc.z}); m.addListener('click', () => info.open(map, m));
     
     // Erratic detection (Sudden Braking / Swerving)
     if (force > motionThreshold && (Date.now() - lastMotionAlert > 5000)) {
-        console.log("Erratic driving detected! Force:", force);
-        lastMotionAlert = Date.now();
-        triggerZenMode("erratic_driving");
+        console.log("Erratic driving detected! Force:", force}); m.addListener('click', () => info.open(map, m));
+        lastMotionAlert = Date.now(}); m.addListener('click', () => info.open(map, m));
+        triggerZenMode("erratic_driving"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 // ZEN MODE & MOTION DETECTION
 // Initial check (Android often doesn't need click, but we added button for safety)
 if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission !== 'function') {
-    window.addEventListener('devicemotion', handleMotion);
+    window.addEventListener('devicemotion', handleMotion}); m.addListener('click', () => info.open(map, m));
 }
 
 async function triggerZenMode(reason) {
     if (isZenMode) return;
     isZenMode = true;
     
-    const overlay = document.getElementById('zen-overlay');
+    const overlay = document.getElementById('zen-overlay'}); m.addListener('click', () => info.open(map, m));
     overlay.style.display = 'flex';
     
     // Get current loc for rest stop search
     const pos = await new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(resolve, () => resolve({coords:{latitude:20.59, longitude:78.96}}));
-    });
+        navigator.geolocation.getCurrentPosition(resolve, () => resolve({coords:{latitude:20.59, longitude:78.96}})}); m.addListener('click', () => info.open(map, m));
+    }}); m.addListener('click', () => info.open(map, m));
     
     try {
-        const stops = await apiCall(`/driver/safety/rest-stops?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+        const stops = await apiCall(`/driver/safety/rest-stops?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`}); m.addListener('click', () => info.open(map, m));
         const bestStop = stops[0]; // Nearest high rated
         
         document.getElementById('zen-rest-stop-name').innerText = `${getTranslation('nearest_label')}: ${bestStop.name} (${bestStop.rating}⭐)`;
@@ -2516,41 +2517,41 @@ async function triggerZenMode(reason) {
             is_active: true,
             reason: reason,
             destination: bestStop
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         
         // Update mission roadmap temporarily (visual only for now)
-        const banner = document.getElementById('instruction-banner');
+        const banner = document.getElementById('instruction-banner'}); m.addListener('click', () => info.open(map, m));
         banner.innerHTML = `🧘 <b>${getTranslation('zen_mode_active')}:</b> ${getTranslation('safety_reroute_to')} ${bestStop.name}. ${getTranslation('take_a_break')}.`;
         banner.style.background = 'linear-gradient(90deg, #6b46c1, #553c9a)';
         banner.style.display = 'block';
         
     } catch(e) {
-        console.error("Zen Mode error:", e);
+        console.error("Zen Mode error:", e}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 async function deactivateZen() {
     isZenMode = false;
     document.getElementById('zen-overlay').style.display = 'none';
-    await apiCall(`/driver/${localStorage.getItem('driver_id')}/zen`, 'POST', { is_active: false });
-    loadMissions();
+    await apiCall(`/driver/${localStorage.getItem('driver_id')}/zen`, 'POST', { is_active: false }}); m.addListener('click', () => info.open(map, m));
+    loadMissions(}); m.addListener('click', () => info.open(map, m));
 }
 
 async function confirmArrival() {
-    alert(getTranslation('rest_logged_fatigue_reduced'));
-    await submitIncident('resting');
-    deactivateZen();
+    alert(getTranslation('rest_logged_fatigue_reduced')}); m.addListener('click', () => info.open(map, m));
+    await submitIncident('resting'}); m.addListener('click', () => info.open(map, m));
+    deactivateZen(}); m.addListener('click', () => info.open(map, m));
 }
 
 // Predictive Fatigue check
 setInterval(async () => {
-    const dId = localStorage.getItem('driver_id');
-    const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
-    const me = drivers.find(d => d.id === dId);
+    const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+    const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`}); m.addListener('click', () => info.open(map, m));
+    const me = drivers.find(d => d.id === dId}); m.addListener('click', () => info.open(map, m));
     if (me && me.fatigue_score > 90 && !isZenMode) {
-        triggerZenMode("extreme_fatigue");
+        triggerZenMode("extreme_fatigue"}); m.addListener('click', () => info.open(map, m));
     }
-}, 10000);
+}, 10000}); m.addListener('click', () => info.open(map, m));
 
 // === PREMIUM GLASSMORPHIC OTP VERIFICATION SYSTEM (replaces QR scan) ===
 window.openDriverOTPModal = function(shipmentId, type = 'pickup') {
@@ -2560,43 +2561,43 @@ window.openDriverOTPModal = function(shipmentId, type = 'pickup') {
         : 'Enter the 6-digit delivery OTP code provided by the receiver.';
     const confirmBtnText = type === 'pickup' ? '✓ Verify Pickup' : '✓ Verify Delivery';
 
-    const overlay = document.createElement('div');
+    const overlay = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
     overlay.className = 'driver-otp-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,15,30,0.9);backdrop-filter:blur(15px);z-index:99999;display:flex;align-items:center;justify-content:center;color:white;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,15,30,0.9}); m.addListener('click', () => info.open(map, m));backdrop-filter:blur(15px}); m.addListener('click', () => info.open(map, m));z-index:99999;display:flex;align-items:center;justify-content:center;color:white;';
     overlay.innerHTML = `
-        <div class="glass-card" style="border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:32px;max-width:400px;width:90%;box-shadow:0 30px 60px rgba(0,0,0,0.6);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1);background:#0f172a;text-align:center;">
+        <div class="glass-card" style="border:1px solid rgba(255,255,255,0.1}); m.addListener('click', () => info.open(map, m));border-radius:24px;padding:32px;max-width:400px;width:90%;box-shadow:0 30px 60px rgba(0,0,0,0.6}); m.addListener('click', () => info.open(map, m));animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1}); m.addListener('click', () => info.open(map, m));background:#0f172a;text-align:center;">
             <div style="font-size:3rem;margin-bottom:12px;">${type === 'pickup' ? '📦' : '🏁'}</div>
-            <h3 style="margin:0;font-size:1.3rem;color:var(--primary);font-weight:800;">${titleText}</h3>
-            <p style="font-size:0.85rem;color:var(--text-muted);margin:10px 0 24px 0;line-height:1.5;">${descText}</p>
+            <h3 style="margin:0;font-size:1.3rem;color:var(--primary}); m.addListener('click', () => info.open(map, m));font-weight:800;">${titleText}</h3>
+            <p style="font-size:0.85rem;color:var(--text-muted}); m.addListener('click', () => info.open(map, m));margin:10px 0 24px 0;line-height:1.5;">${descText}</p>
             
             <div style="margin-bottom:20px;text-align:left;">
-                <label style="font-size:0.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:1px;">Enter 6-Digit Code</label>
+                <label style="font-size:0.75rem;text-transform:uppercase;color:var(--text-muted}); m.addListener('click', () => info.open(map, m));font-weight:700;letter-spacing:1px;">Enter 6-Digit Code</label>
                 <input id="dr-otp-input" type="text" maxlength="6" pattern="[0-9]*" inputmode="numeric"
                     placeholder="000000"
-                    style="width:100%;margin-top:8px;font-family:monospace;font-size:1.8rem;font-weight:800;letter-spacing:8px;text-align:center;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:2px solid var(--border);color:var(--text);outline:none;transition:border-color 0.3s;"
-                    oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6);"/>
+                    style="width:100%;margin-top:8px;font-family:monospace;font-size:1.8rem;font-weight:800;letter-spacing:8px;text-align:center;padding:12px;border-radius:12px;background:rgba(255,255,255,0.03}); m.addListener('click', () => info.open(map, m));border:2px solid var(--border}); m.addListener('click', () => info.open(map, m));color:var(--text}); m.addListener('click', () => info.open(map, m));outline:none;transition:border-color 0.3s;"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,6}); m.addListener('click', () => info.open(map, m));"/>
             </div>
             
             <div style="display:flex;gap:12px;">
                 <button onclick="this.closest('.driver-otp-overlay').remove()" 
-                    style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:white;font-weight:700;cursor:pointer;transition:background 0.2s;">
+                    style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border}); m.addListener('click', () => info.open(map, m));background:transparent;color:white;font-weight:700;cursor:pointer;transition:background 0.2s;">
                     Cancel
                 </button>
                 <button id="dr-otp-confirm" onclick="submitDriverOTP('${shipmentId}', '${type}', this)"
-                    style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--primary);color:white;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(79,140,255,0.3);transition:transform 0.2s;">
+                    style="flex:2;padding:12px;border-radius:12px;border:none;background:var(--primary}); m.addListener('click', () => info.open(map, m));color:white;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(79,140,255,0.3}); m.addListener('click', () => info.open(map, m));transition:transform 0.2s;">
                     ${confirmBtnText}
                 </button>
             </div>
         </div>
     `;
-    document.body.appendChild(overlay);
-    setTimeout(() => document.getElementById('dr-otp-input')?.focus(), 150);
+    document.body.appendChild(overlay}); m.addListener('click', () => info.open(map, m));
+    setTimeout(() => document.getElementById('dr-otp-input')?.focus(), 150}); m.addListener('click', () => info.open(map, m));
 };
 
 window.submitDriverOTP = async function(shipmentId, type, btn) {
-    const dId = localStorage.getItem('driver_id');
-    const inputEl = document.getElementById('dr-otp-input');
-    const enteredOTP = inputEl?.value?.trim();
+    const dId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+    const inputEl = document.getElementById('dr-otp-input'}); m.addListener('click', () => info.open(map, m));
+    const enteredOTP = inputEl?.value?.trim(}); m.addListener('click', () => info.open(map, m));
     if (!enteredOTP || enteredOTP.length !== 6) {
         inputEl.style.border = '2px solid var(--danger)';
         inputEl.placeholder = 'Must be 6 digits!';
@@ -2608,82 +2609,82 @@ window.submitDriverOTP = async function(shipmentId, type, btn) {
     
     try {
         if (type === 'pickup') {
-            const res = await apiCall(`/driver/${dId}/verify-pickup/${shipmentId}?code=${enteredOTP}`, 'POST');
-            document.querySelector('.driver-otp-overlay')?.remove();
-            showNotification("Pickup verified successfully! 📦", "success");
-            loadMissions();
+            const res = await apiCall(`/driver/${dId}/verify-pickup/${shipmentId}?code=${enteredOTP}`, 'POST'}); m.addListener('click', () => info.open(map, m));
+            document.querySelector('.driver-otp-overlay')?.remove(}); m.addListener('click', () => info.open(map, m));
+            showNotification("Pickup verified successfully! 📦", "success"}); m.addListener('click', () => info.open(map, m));
+            loadMissions(}); m.addListener('click', () => info.open(map, m));
         } else {
-            document.querySelector('.driver-otp-overlay')?.remove();
+            document.querySelector('.driver-otp-overlay')?.remove(}); m.addListener('click', () => info.open(map, m));
             
-            alert(getTranslation('capture_photo_at_location') || "Please capture/select a photo as proof of delivery.");
-            const input = document.createElement('input');
+            alert(getTranslation('capture_photo_at_location') || "Please capture/select a photo as proof of delivery."}); m.addListener('click', () => info.open(map, m));
+            const input = document.createElement('input'}); m.addListener('click', () => info.open(map, m));
             input.type = 'file';
             input.accept = 'image/*';
             input.capture = 'environment';
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) {
-                    showNotification("Proof of delivery photo is required to complete delivery.", "error");
+                    showNotification("Proof of delivery photo is required to complete delivery.", "error"}); m.addListener('click', () => info.open(map, m));
                     return;
                 }
                 
-                showNotification("Uploading evidence & completing delivery...", "info");
+                showNotification("Uploading evidence & completing delivery...", "info"}); m.addListener('click', () => info.open(map, m));
                 try {
-                    const formData = new FormData();
-                    formData.append('file', file);
+                    const formData = new FormData(}); m.addListener('click', () => info.open(map, m));
+                    formData.append('file', file}); m.addListener('click', () => info.open(map, m));
                     const uploadRes = await fetch(`${API_BASE}/driver/${dId}/upload-evidence`, {
                         method: 'POST',
                         body: formData
-                    });
-                    const uploadData = await uploadRes.json();
+                    }}); m.addListener('click', () => info.open(map, m));
+                    const uploadData = await uploadRes.json(}); m.addListener('click', () => info.open(map, m));
                     const photoUrl = uploadData.image_url || uploadData.url;
                     
-                    await apiCall(`/driver/${dId}/complete-delivery-code/${shipmentId}?code=${enteredOTP}&image_url=${encodeURIComponent(photoUrl)}`, 'POST');
-                    showNotification("Delivery completed successfully! 🏁", "success");
-                    loadMissions();
-                    loadWallet();
+                    await apiCall(`/driver/${dId}/complete-delivery-code/${shipmentId}?code=${enteredOTP}&image_url=${encodeURIComponent(photoUrl)}`, 'POST'}); m.addListener('click', () => info.open(map, m));
+                    showNotification("Delivery completed successfully! 🏁", "success"}); m.addListener('click', () => info.open(map, m));
+                    loadMissions(}); m.addListener('click', () => info.open(map, m));
+                    loadWallet(}); m.addListener('click', () => info.open(map, m));
                 } catch(err) {
-                    alert("Error completing delivery: " + (err.detail || err.message));
+                    alert("Error completing delivery: " + (err.detail || err.message)}); m.addListener('click', () => info.open(map, m));
                 }
             };
-            input.click();
+            input.click(}); m.addListener('click', () => info.open(map, m));
         }
     } catch(e) {
         if (inputEl) inputEl.style.border = '2px solid var(--danger)';
-        alert("Verification failed: " + (e.detail || e.message));
+        alert("Verification failed: " + (e.detail || e.message)}); m.addListener('click', () => info.open(map, m));
         btn.disabled = false;
         btn.innerText = type === 'pickup' ? '✓ Verify Pickup' : '✓ Verify Delivery';
     }
 };
 
 window.verifyPickupPrompt = function(shipmentId) {
-    window.openDriverOTPModal(shipmentId, 'pickup');
+    window.openDriverOTPModal(shipmentId, 'pickup'}); m.addListener('click', () => info.open(map, m));
 };
 
 window.completeDeliveryFlow = function(shipmentId) {
-    window.openDriverOTPModal(shipmentId, 'delivery');
+    window.openDriverOTPModal(shipmentId, 'delivery'}); m.addListener('click', () => info.open(map, m));
 };
 
 
 async function uploadFile(file) {
     return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-    });
+        const reader = new FileReader(}); m.addListener('click', () => info.open(map, m));
+        reader.onloadend = () => resolve(reader.result}); m.addListener('click', () => info.open(map, m));
+        reader.readAsDataURL(file}); m.addListener('click', () => info.open(map, m));
+    }}); m.addListener('click', () => info.open(map, m));
 }
 
 async function applyOfficialBorders(mapInstance) {
     const boundaryUrl = 'https://raw.githubusercontent.com/datameet/maps/master/Country/india-osm.geojson';
     try {
-        const response = await fetch(boundaryUrl);
-        const data = await response.json();
+        const response = await fetch(boundaryUrl}); m.addListener('click', () => info.open(map, m));
+        const data = await response.json(}); m.addListener('click', () => info.open(map, m));
         L.geoJSON(data, {
             style: { color: '#3182ce', weight: 3, fillOpacity: 0, dashArray: '5, 5' },
             interactive: false
-        }).addTo(mapInstance);
+        }).addTo(mapInstance}); m.addListener('click', () => info.open(map, m));
     } catch(e) {
-        console.warn("Sovereignty overlay failed to load");
+        console.warn("Sovereignty overlay failed to load"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -2691,12 +2692,12 @@ async function initDriverDashboard(isRetry = false) {
     if (sessionStorage.getItem('location_granted') === 'true') {
         isRetry = true;
     }
-    const overlay = document.getElementById('location-lock-overlay');
+    const overlay = document.getElementById('location-lock-overlay'}); m.addListener('click', () => info.open(map, m));
     const btn = overlay ? overlay.querySelector('button') : null;
     const originalText = btn ? btn.innerText : '';
 
     if (!navigator.geolocation) {
-        showNotification("Geolocation is not supported by your browser.", "error");
+        showNotification("Geolocation is not supported by your browser.", "error"}); m.addListener('click', () => info.open(map, m));
         return;
     }
 
@@ -2713,15 +2714,15 @@ async function initDriverDashboard(isRetry = false) {
                     enableHighAccuracy: true, 
                     timeout: 8000,
                     maximumAge: 0
-                });
-            });
-            sessionStorage.setItem('location_granted', 'true');
+                }}); m.addListener('click', () => info.open(map, m));
+            }}); m.addListener('click', () => info.open(map, m));
+            sessionStorage.setItem('location_granted', 'true'}); m.addListener('click', () => info.open(map, m));
         } catch (err) {
             if (isRetry) {
-                console.warn("Geolocation API failed, falling back to IP location", err);
+                console.warn("Geolocation API failed, falling back to IP location", err}); m.addListener('click', () => info.open(map, m));
                 try {
-                    const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json');
-                    const ipData = await ipRes.json();
+                    const ipRes = await fetch('https://get.geojs.io/v1/ip/geo.json'}); m.addListener('click', () => info.open(map, m));
+                    const ipData = await ipRes.json(}); m.addListener('click', () => info.open(map, m));
                     if (ipData.latitude && ipData.longitude) {
                         pos = {
                             coords: {
@@ -2730,7 +2731,7 @@ async function initDriverDashboard(isRetry = false) {
                             }
                         };
                         if (typeof updateLocation === 'function') {
-                            updateLocation(pos);
+                            updateLocation(pos}); m.addListener('click', () => info.open(map, m));
                         }
                     } else {
                         throw err;
@@ -2747,16 +2748,16 @@ async function initDriverDashboard(isRetry = false) {
         document.querySelector('.driver-layout').style.filter = 'none';
         document.querySelector('.driver-layout').style.pointerEvents = 'auto';
         
-        loadMissions();
+        loadMissions(}); m.addListener('click', () => info.open(map, m));
     } catch (err) {
-        console.error("Location Error:", err);
+        console.error("Location Error:", err}); m.addListener('click', () => info.open(map, m));
         let msgKey = 'location_error_unknown';
         if (err.code === 1) msgKey = 'location_error_denied';
         else if (err.code === 2) msgKey = 'location_error_unavailable';
         else if (err.code === 3) msgKey = 'location_error_timeout';
         
-        const msg = getTranslation(msgKey);
-        showNotification(msg, "error");
+        const msg = getTranslation(msgKey}); m.addListener('click', () => info.open(map, m));
+        showNotification(msg, "error"}); m.addListener('click', () => info.open(map, m));
 
         if (overlay) overlay.style.display = 'flex';
         document.querySelector('.driver-layout').style.filter = 'blur(15px)';
@@ -2764,32 +2765,32 @@ async function initDriverDashboard(isRetry = false) {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerText = originalText || getTranslation('btn_enable_location');
+            btn.innerText = originalText || getTranslation('btn_enable_location'}); m.addListener('click', () => info.open(map, m));
         }
     }
 }
 
-window.retryLocation = () => initDriverDashboard(true);
+window.retryLocation = () => initDriverDashboard(true}); m.addListener('click', () => info.open(map, m));
 
 
 
-initDriverDashboard();
+initDriverDashboard(}); m.addListener('click', () => info.open(map, m));
 
 async function loadWallet() {
     try {
-        const driverId = localStorage.getItem('driver_id');
-        const stats = await apiCall(`/driver/wallet/${driverId}`);
+        const driverId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+        const stats = await apiCall(`/driver/wallet/${driverId}`}); m.addListener('click', () => info.open(map, m));
         
         document.getElementById('w-balance').innerText = `₹ ${stats.balance.toLocaleString()}`;
         document.getElementById('w-today').innerText = `₹ ${stats.today_earning.toLocaleString()}`;
         document.getElementById('w-bonus').innerText = `₹ ${stats.total_earnings.toLocaleString()}`;
         
         // Disable UI if not active
-        const reqBtn = document.querySelector('button[onclick="handleFundRequest()"]');
-        const oracleBtn = document.getElementById('oracle-btn');
-        const amtInput = document.getElementById('fund-req-amount');
-        const typeSelect = document.getElementById('fund-req-type');
-        const emSection = document.getElementById('emergency-funds-section');
+        const reqBtn = document.querySelector('button[onclick="handleFundRequest()"]'}); m.addListener('click', () => info.open(map, m));
+        const oracleBtn = document.getElementById('oracle-btn'}); m.addListener('click', () => info.open(map, m));
+        const amtInput = document.getElementById('fund-req-amount'}); m.addListener('click', () => info.open(map, m));
+        const typeSelect = document.getElementById('fund-req-type'}); m.addListener('click', () => info.open(map, m));
+        const emSection = document.getElementById('emergency-funds-section'}); m.addListener('click', () => info.open(map, m));
         
         if (!stats.is_active_route) {
             if (emSection) {
@@ -2817,15 +2818,15 @@ async function loadWallet() {
                 if (opt.value === 'FOOD' && !stats.food_allowed) { opt.disabled = true; if(!opt.text.includes('Used')) opt.text += ' (Used Today)'; }
                 if (opt.value === 'MAINTENANCE' && !stats.maintenance_allowed) { opt.disabled = true; if(!opt.text.includes('Active')) opt.text += ' (Active)'; }
                 if (opt.value === 'FUEL' && !stats.fuel_allowed) { opt.disabled = true; if(!opt.text.includes('Locked')) opt.text += ' (Locked)'; }
-            });
+            }}); m.addListener('click', () => info.open(map, m));
             // trigger onchange to handle amount input lock
-            if (typeof window.onFundTypeChange === 'function') window.onFundTypeChange();
+            if (typeof window.onFundTypeChange === 'function') window.onFundTypeChange(}); m.addListener('click', () => info.open(map, m));
         }
 
-        const tList = document.getElementById('wallet-transactions');
+        const tList = document.getElementById('wallet-transactions'}); m.addListener('click', () => info.open(map, m));
         tList.innerHTML = '';
         stats.transactions.forEach(t => {
-            const div = document.createElement('div');
+            const div = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
             div.className = 'glass-card';
             div.style.padding = '12px';
             div.style.display = 'flex';
@@ -2843,29 +2844,29 @@ async function loadWallet() {
                     <small style="color:var(--text-muted)">${t.type}</small>
                 </div>
             `;
-            tList.appendChild(div);
-        });
+            tList.appendChild(div}); m.addListener('click', () => info.open(map, m));
+        }}); m.addListener('click', () => info.open(map, m));
     } catch (e) {
-        console.error("Wallet Error:", e);
+        console.error("Wallet Error:", e}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 async function withdrawMoney() {
-    alert(getTranslation('withdrawal_initiated'));
+    alert(getTranslation('withdrawal_initiated')}); m.addListener('click', () => info.open(map, m));
 }
 
 window.onFundTypeChange = async function() {
     const type = document.getElementById('fund-req-type').value;
-    const amtInput = document.getElementById('fund-req-amount');
-    const oracleBtn = document.getElementById('oracle-btn');
+    const amtInput = document.getElementById('fund-req-amount'}); m.addListener('click', () => info.open(map, m));
+    const oracleBtn = document.getElementById('oracle-btn'}); m.addListener('click', () => info.open(map, m));
     
-    let explanationDiv = document.getElementById('fund-explanation');
+    let explanationDiv = document.getElementById('fund-explanation'}); m.addListener('click', () => info.open(map, m));
     if (!explanationDiv) {
-        explanationDiv = document.createElement('div');
+        explanationDiv = document.createElement('div'}); m.addListener('click', () => info.open(map, m));
         explanationDiv.id = 'fund-explanation';
-        explanationDiv.style.cssText = 'font-size:0.75rem; color:var(--text-muted); margin-top:8px; line-height:1.4;';
+        explanationDiv.style.cssText = 'font-size:0.75rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-top:8px; line-height:1.4;';
         if (amtInput && amtInput.parentNode) {
-            amtInput.parentNode.parentNode.appendChild(explanationDiv);
+            amtInput.parentNode.parentNode.appendChild(explanationDiv}); m.addListener('click', () => info.open(map, m));
         }
     }
     
@@ -2882,8 +2883,8 @@ window.onFundTypeChange = async function() {
             const remaining_km = window.currentRemainingKm || 300.0;
             const driverId = localStorage.getItem('driver_id') || dId;
             
-            const data = await apiCall(`/driver/${driverId}/calculate-fuel?lat=${lat}&lng=${lng}&remaining_km=${remaining_km}&type=${type}`, 'GET');
-            amtInput.value = Math.round(data.suggested_amount);
+            const data = await apiCall(`/driver/${driverId}/calculate-fuel?lat=${lat}&lng=${lng}&remaining_km=${remaining_km}&type=${type}`, 'GET'}); m.addListener('click', () => info.open(map, m));
+            amtInput.value = Math.round(data.suggested_amount}); m.addListener('click', () => info.open(map, m));
             explanationDiv.innerText = data.explanation;
         } catch (e) {
             explanationDiv.innerText = "Failed to calculate emergency fund amount.";
@@ -2899,23 +2900,23 @@ window.onFundTypeChange = async function() {
 };
 
 window.calculateSuggestedFuel = async function(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    if (typeof window.onFundTypeChange === 'function') window.onFundTypeChange();
+    if (e && e.preventDefault) e.preventDefault(}); m.addListener('click', () => info.open(map, m));
+    if (typeof window.onFundTypeChange === 'function') window.onFundTypeChange(}); m.addListener('click', () => info.open(map, m));
 }
 
 window.loadContracts = async function() {
-    const container = document.getElementById('contracts-list');
+    const container = document.getElementById('contracts-list'}); m.addListener('click', () => info.open(map, m));
     container.innerHTML = `<p style="text-align:center;">${getTranslation('analyzing_escrow')}</p>`;
     
     try {
-        const shipments = await apiCall(`/driver/${dId}/shipments`, 'GET');
-        const stats = await apiCall(`/driver/${dId}/dashboard/stats`, 'GET');
+        const shipments = await apiCall(`/driver/${dId}/shipments`, 'GET'}); m.addListener('click', () => info.open(map, m));
+        const stats = await apiCall(`/driver/${dId}/dashboard/stats`, 'GET'}); m.addListener('click', () => info.open(map, m));
         
-        const totalPointsEl = document.getElementById('contract-points-total');
+        const totalPointsEl = document.getElementById('contract-points-total'}); m.addListener('click', () => info.open(map, m));
         if (totalPointsEl) totalPointsEl.innerText = `${stats.total_points || 0} pts`;
         
         if (!shipments || shipments.length === 0) {
-            container.innerHTML = `<p style="text-align:center; color:var(--text-muted); padding:20px;">${getTranslation('no_contracts_found')}</p>`;
+            container.innerHTML = `<p style="text-align:center; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); padding:20px;">${getTranslation('no_contracts_found')}</p>`;
             return;
         }
         
@@ -2936,19 +2937,19 @@ window.loadContracts = async function() {
                         </div>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; font-size:0.85rem;">
-                        <div style="color:var(--text-muted);">
-                            💰 ${getTranslation('payout_label')}: <span style="color:var(--text); font-weight:bold;">₹${s.finance?.driver_payout || 0}</span>
+                        <div style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m));">
+                            💰 ${getTranslation('payout_label')}: <span style="color:var(--text}); m.addListener('click', () => info.open(map, m)); font-weight:bold;">₹${s.finance?.driver_payout || 0}</span>
                         </div>
-                        <div style="color:var(--accent); font-weight:bold;">
+                        <div style="color:var(--accent}); m.addListener('click', () => info.open(map, m)); font-weight:bold;">
                             🏆 +${pointsValue} ${getTranslation('reward_points')}
                         </div>
                     </div>
-                    ${!isPaid ? `<p style="margin:10px 0 0 0; font-size:0.7rem; color:var(--warning);">⚠️ ${getTranslation('manager_verify_payment_notice')}</p>` : ''}
+                    ${!isPaid ? `<p style="margin:10px 0 0 0; font-size:0.7rem; color:var(--warning}); m.addListener('click', () => info.open(map, m));">⚠️ ${getTranslation('manager_verify_payment_notice')}</p>` : ''}
                 </div>
             `;
-        }).join('');
+        }).join(''}); m.addListener('click', () => info.open(map, m));
     } catch (e) {
-        container.innerHTML = `<p style="text-align:center; color:var(--danger);">${getTranslation('failed_load_contracts')}</p>`;
+        container.innerHTML = `<p style="text-align:center; color:var(--danger}); m.addListener('click', () => info.open(map, m));">${getTranslation('failed_load_contracts')}</p>`;
     }
 }
 
@@ -2956,7 +2957,7 @@ async function handleFundRequest() {
     const amt = document.getElementById('fund-req-amount').value;
     const type = document.getElementById('fund-req-type').value;
     if (!amt || amt <= 0) {
-        showNotification(getTranslation('enter_valid_amount'), "error");
+        showNotification(getTranslation('enter_valid_amount'), "error"}); m.addListener('click', () => info.open(map, m));
         return;
     }
     
@@ -2965,31 +2966,31 @@ async function handleFundRequest() {
             amount: parseFloat(amt), 
             type: type,
             remaining_km: window.currentRemainingKm || 0
-        });
-        showNotification(`${getTranslation('emergency_fund_sent')} ₹${amt} (${type})!`, 'success');
+        }}); m.addListener('click', () => info.open(map, m));
+        showNotification(`${getTranslation('emergency_fund_sent')} ₹${amt} (${type})!`, 'success'}); m.addListener('click', () => info.open(map, m));
         document.getElementById('fund-req-amount').value = '';
-        loadWallet(); // Reload to check locks
+        loadWallet(}); m.addListener('click', () => info.open(map, m)); // Reload to check locks
     } catch (e) {
-        showNotification(e.message || getTranslation('failed_send_request'), "error");
+        showNotification(e.message || getTranslation('failed_send_request'), "error"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 async function completeDelivery(shipmentId) {
-    const otp = prompt(getTranslation('enter_delivery_otp'));
+    const otp = prompt(getTranslation('enter_delivery_otp')}); m.addListener('click', () => info.open(map, m));
     if (!otp) return;
     
     // We also need to upload a photo proof
-    const confirmPhoto = confirm(getTranslation('confirm_photo_upload'));
+    const confirmPhoto = confirm(getTranslation('confirm_photo_upload')}); m.addListener('click', () => info.open(map, m));
     if (!confirmPhoto) return;
     
     try {
         const dummyPhoto = `https://api.dicebear.com/7.x/identicon/svg?seed=${shipmentId}_proof`;
-        const res = await apiCall(`/driver/${dId}/complete-delivery/${shipmentId}?otp=${otp}&image_url=${encodeURIComponent(dummyPhoto)}`, 'POST');
-        showNotification(res.message, 'success');
-        loadMissions();
-        loadWallet();
+        const res = await apiCall(`/driver/${dId}/complete-delivery/${shipmentId}?otp=${otp}&image_url=${encodeURIComponent(dummyPhoto)}`, 'POST'}); m.addListener('click', () => info.open(map, m));
+        showNotification(res.message, 'success'}); m.addListener('click', () => info.open(map, m));
+        loadMissions(}); m.addListener('click', () => info.open(map, m));
+        loadWallet(}); m.addListener('click', () => info.open(map, m));
     } catch(e) {
-        showNotification(getTranslation('error_label') + ": " + (e.message || getTranslation('invalid_otp_or_pending')), "error");
+        showNotification(getTranslation('error_label') + ": " + (e.message || getTranslation('invalid_otp_or_pending')), "error"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -3002,37 +3003,37 @@ window.addEventListener('themeChanged', (e) => {
     
     map.eachLayer(layer => {
         if (layer instanceof L.TileLayer) {
-            map.removeLayer(layer);
+            map.removeLayer(layer}); m.addListener('click', () => info.open(map, m));
         }
-    });
-    L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
-});
+    }}); m.addListener('click', () => info.open(map, m));
+    L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map}); m.addListener('click', () => info.open(map, m));
+}}); m.addListener('click', () => info.open(map, m));
 
 
 async function triggerFundRequest(shipmentId, type) {
-    const driverId = localStorage.getItem('driver_id');
+    const driverId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
     let amount = 0;
     
     if (type === 'toll') {
-        const val = prompt(getTranslation('enter_toll_amount'));
+        const val = prompt(getTranslation('enter_toll_amount')}); m.addListener('click', () => info.open(map, m));
         if (!val || isNaN(val)) return;
-        amount = parseFloat(val);
+        amount = parseFloat(val}); m.addListener('click', () => info.open(map, m));
     }
 
     try {
-        const btn = document.getElementById(`${type}-btn-${shipmentId}`);
+        const btn = document.getElementById(`${type}-btn-${shipmentId}`}); m.addListener('click', () => info.open(map, m));
         
         // Show high-visibility overlay
-        const actionLabel = type === 'refuel' ? getTranslation('refuelling_in_progress') : getTranslation('toll_payment_processing');
-        showStatusOverlay(actionLabel);
+        const actionLabel = type === 'refuel' ? getTranslation('refuelling_in_progress') : getTranslation('toll_payment_processing'}); m.addListener('click', () => info.open(map, m));
+        showStatusOverlay(actionLabel}); m.addListener('click', () => info.open(map, m));
 
         if (btn) {
             btn.disabled = true;
-            btn.innerText = getTranslation('requested');
+            btn.innerText = getTranslation('requested'}); m.addListener('click', () => info.open(map, m));
         }
         
-        const res = await apiCall(`/driver/${driverId}/fund-request/${shipmentId}`, 'POST', { type, amount });
-        alert(res.message);
+        const res = await apiCall(`/driver/${driverId}/fund-request/${shipmentId}`, 'POST', { type, amount }}); m.addListener('click', () => info.open(map, m));
+        alert(res.message}); m.addListener('click', () => info.open(map, m));
         
         // Disable button visually
         if (btn) {
@@ -3041,8 +3042,8 @@ async function triggerFundRequest(shipmentId, type) {
             btn.innerText = type === 'refuel' ? `✅ ${getTranslation('refuel_req_sent')}` : `✅ ${getTranslation('toll_req_sent')}`;
         }
     } catch (e) {
-        alert(getTranslation('failed_submit_request') + ": " + (e.message || "Error"));
-        const btn = document.getElementById(`${type}-btn-${shipmentId}`);
+        alert(getTranslation('failed_submit_request') + ": " + (e.message || "Error")}); m.addListener('click', () => info.open(map, m));
+        const btn = document.getElementById(`${type}-btn-${shipmentId}`}); m.addListener('click', () => info.open(map, m));
         if (btn) {
             btn.disabled = false;
         }
@@ -3054,37 +3055,37 @@ let watchSyncActive = false;
 let watchSyncInterval = null;
 
 async function toggleDuty() {
-    const btn = document.getElementById('duty-toggle-btn');
-    const isOnDuty = btn.innerText.includes('ON DUTY');
+    const btn = document.getElementById('duty-toggle-btn'}); m.addListener('click', () => info.open(map, m));
+    const isOnDuty = btn.innerText.includes('ON DUTY'}); m.addListener('click', () => info.open(map, m));
     const newStatus = !isOnDuty;
 
     try {
-        const res = await apiCall(`/driver/${dId}/toggle-duty`, 'POST', { is_on_duty: newStatus });
+        const res = await apiCall(`/driver/${dId}/toggle-duty`, 'POST', { is_on_duty: newStatus }}); m.addListener('click', () => info.open(map, m));
         btn.innerText = newStatus ? '🟢 ON DUTY' : '🔴 NOT WORKING';
         btn.style.background = newStatus ? 'var(--success)' : 'var(--danger)';
-        showNotification(res.message, "success");
+        showNotification(res.message, "success"}); m.addListener('click', () => info.open(map, m));
     } catch(e) {
-        showNotification("Failed to update status", "error");
+        showNotification("Failed to update status", "error"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 function toggleWatchSync() {
-    const btn = document.getElementById('watch-sync-btn');
+    const btn = document.getElementById('watch-sync-btn'}); m.addListener('click', () => info.open(map, m));
     watchSyncActive = !watchSyncActive;
 
     if (watchSyncActive) {
         btn.innerText = '⌚ SYNCING...';
         btn.style.borderColor = 'var(--success)';
         btn.style.color = 'var(--success)';
-        showNotification("Smartwatch Sync Enabled", "success");
+        showNotification("Smartwatch Sync Enabled", "success"}); m.addListener('click', () => info.open(map, m));
         
-        watchSyncInterval = setInterval(simulateWatchData, 5000);
+        watchSyncInterval = setInterval(simulateWatchData, 5000}); m.addListener('click', () => info.open(map, m));
     } else {
         btn.innerText = '⌚ SYNC WATCH';
         btn.style.borderColor = 'var(--accent)';
         btn.style.color = 'var(--text)';
-        clearInterval(watchSyncInterval);
-        showNotification("Smartwatch Sync Disabled", "warning");
+        clearInterval(watchSyncInterval}); m.addListener('click', () => info.open(map, m));
+        showNotification("Smartwatch Sync Disabled", "warning"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -3103,22 +3104,22 @@ async function simulateWatchData() {
     // Abnormal Check
     let bpAbnormal = false;
     try {
-        const parts = bp.split('/');
-        const syst = parseInt(parts[0]);
-        const diast = parseInt(parts[1]);
+        const parts = bp.split('/'}); m.addListener('click', () => info.open(map, m));
+        const syst = parseInt(parts[0]}); m.addListener('click', () => info.open(map, m));
+        const diast = parseInt(parts[1]}); m.addListener('click', () => info.open(map, m));
         if (syst < 90 || syst > 140 || diast < 60 || diast > 95) bpAbnormal = true;
     } catch(e) {}
     const abnormal = hr < 55 || hr > 110 || o2 < 92 || bpAbnormal;
 
     if (abnormal) {
-        triggerHealthEmergency(hr, o2);
+        triggerHealthEmergency(hr, o2}); m.addListener('click', () => info.open(map, m));
     } else {
         // Normal update to backend
         apiCall(`/driver/${dId}/update-vitals`, 'POST', {
             heart_rate: hr,
             blood_pressure: bp,
             oxygen_level: o2
-        }).catch(() => {});
+        }).catch(() => {}}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -3126,25 +3127,25 @@ async function triggerHealthEmergency(hr, o2) {
     if (window.emergencyInProgress) return;
     window.emergencyInProgress = true;
     
-    clearInterval(watchSyncInterval);
-    alert(`🚨 HEALTH ALERT: Abnormal vitals detected (HR: ${hr}, SpO2: ${o2}%). Initiating Emergency Docking.`);
+    clearInterval(watchSyncInterval}); m.addListener('click', () => info.open(map, m));
+    alert(`🚨 HEALTH ALERT: Abnormal vitals detected (HR: ${hr}, SpO2: ${o2}%). Initiating Emergency Docking.`}); m.addListener('click', () => info.open(map, m));
     
     try {
         const loc = marker ? marker.getLatLng() : {lat: 28.6139, lng: 77.2090};
-        const res = await apiCall(`/driver/${dId}/health-emergency`, 'POST', { lat: loc.lat, lng: loc.lng });
+        const res = await apiCall(`/driver/${dId}/health-emergency`, 'POST', { lat: loc.lat, lng: loc.lng }}); m.addListener('click', () => info.open(map, m));
         
-        alert(`🚑 ROUTE UPDATED: Nearest warehouse found - ${res.warehouse_name}. Please proceed there immediately and dock the vehicle.`);
+        alert(`🚑 ROUTE UPDATED: Nearest warehouse found - ${res.warehouse_name}. Please proceed there immediately and dock the vehicle.`}); m.addListener('click', () => info.open(map, m));
         
         // Force UI update
-        location.reload();
+        location.reload(}); m.addListener('click', () => info.open(map, m));
     } catch(e) {
-        showNotification("Emergency signal failed. Contact manager immediately!", "error");
+        showNotification("Emergency signal failed. Contact manager immediately!", "error"}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 // Dynamic CSS Injection for Animated Polylines
 (function injectDynamicCSS() {
-    const style = document.createElement('style');
+    const style = document.createElement('style'}); m.addListener('click', () => info.open(map, m));
     style.innerHTML = `
     @keyframes dash {
       to {
@@ -3165,17 +3166,17 @@ async function triggerHealthEmergency(hr, o2) {
       100% { fill-opacity: 0.15; stroke-width: 1px; }
     }
     `;
-    document.head.appendChild(style);
-})();
+    document.head.appendChild(style}); m.addListener('click', () => info.open(map, m));
+})(}); m.addListener('click', () => info.open(map, m));
 
 window.isVoiceNavOn = true;
 function speakInstruction(text) {
     if (window.isVoiceNavOn === false) return;
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.cancel(}); m.addListener('click', () => info.open(map, m));
+        const utterance = new SpeechSynthesisUtterance(text}); m.addListener('click', () => info.open(map, m));
         utterance.rate = 1.0;
-        window.speechSynthesis.speak(utterance);
+        window.speechSynthesis.speak(utterance}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -3184,8 +3185,8 @@ let navSteps = [];
 let lastSpokenStepIndex = -1;
 
 function renderTurnByTurnPanel(routeLegs) {
-    const navDrawer = document.getElementById('nav-drawer');
-    const navStepsList = document.getElementById('nav-steps-list');
+    const navDrawer = document.getElementById('nav-drawer'}); m.addListener('click', () => info.open(map, m));
+    const navStepsList = document.getElementById('nav-steps-list'}); m.addListener('click', () => info.open(map, m));
     if (!navDrawer || !navStepsList) return;
 
     navSteps = [];
@@ -3193,11 +3194,11 @@ function renderTurnByTurnPanel(routeLegs) {
         if (leg.steps) {
             leg.steps.forEach(step => {
                 if (step.maneuver) {
-                    navSteps.push(step);
+                    navSteps.push(step}); m.addListener('click', () => info.open(map, m));
                 }
-            });
+            }}); m.addListener('click', () => info.open(map, m));
         }
-    });
+    }}); m.addListener('click', () => info.open(map, m));
 
     if (navSteps.length === 0) {
         navDrawer.style.display = 'none';
@@ -3225,22 +3226,22 @@ function renderTurnByTurnPanel(routeLegs) {
             ? `${(step.distance / 1000).toFixed(1)} km` 
             : `${Math.round(step.distance)} m`;
 
-        const instruction = getStepInstruction(step);
+        const instruction = getStepInstruction(step}); m.addListener('click', () => info.open(map, m));
 
         return `
-            <div class="nav-step" id="nav-step-${idx}" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.85rem;">
-                <div class="nav-icon" style="font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(79, 140, 255, 0.1); color: var(--primary);">${icon}</div>
+            <div class="nav-step" id="nav-step-${idx}" style="display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05}); m.addListener('click', () => info.open(map, m)); font-size: 0.85rem;">
+                <div class="nav-icon" style="font-size: 1.2rem; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(79, 140, 255, 0.1}); m.addListener('click', () => info.open(map, m)); color: var(--primary}); m.addListener('click', () => info.open(map, m));">${icon}</div>
                 <div style="flex:1;">
                     <div style="font-weight:600; color:white;">${instruction}</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">for ${distanceStr}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); margin-top:2px;">for ${distanceStr}</div>
                 </div>
             </div>
         `;
-    }).join('');
+    }).join(''}); m.addListener('click', () => info.open(map, m));
     
     // Auto-read first instruction
     if (navSteps.length > 0) {
-        speakStepIfNeeded(0);
+        speakStepIfNeeded(0}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -3262,12 +3263,12 @@ function speakStepIfNeeded(index) {
     if (index !== lastSpokenStepIndex && navSteps[index]) {
         lastSpokenStepIndex = index;
         const text = getStepInstruction(navSteps[index]) + ` for ${navSteps[index].distance > 1000 ? (navSteps[index].distance / 1000).toFixed(1) + ' kilometers' : Math.round(navSteps[index].distance) + ' meters'}`;
-        speakInstruction(text);
+        speakInstruction(text}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 window.toggleNavDrawer = function() {
-    const navDrawer = document.getElementById('nav-drawer');
+    const navDrawer = document.getElementById('nav-drawer'}); m.addListener('click', () => info.open(map, m));
     if (navDrawer) {
         if (navDrawer.style.maxHeight === '40px') {
             navDrawer.style.maxHeight = '250px';
@@ -3293,13 +3294,13 @@ function updateNavDrawerProgress(driverLat, driverLng) {
     }
 
     for (let i = 0; i < navSteps.length; i++) {
-        const el = document.getElementById(`nav-step-${i}`);
+        const el = document.getElementById(`nav-step-${i}`}); m.addListener('click', () => info.open(map, m));
         if (el) {
             if (i === closestIdx) {
                 el.style.background = 'rgba(79, 140, 255, 0.15)';
                 el.style.fontWeight = 'bold';
-                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                speakStepIfNeeded(i);
+                el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }}); m.addListener('click', () => info.open(map, m));
+                speakStepIfNeeded(i}); m.addListener('click', () => info.open(map, m));
             } else {
                 el.style.background = 'none';
                 el.style.fontWeight = 'normal';
@@ -3315,24 +3316,24 @@ let poiLayers = {
     mechanic: L.layerGroup(),
     rest: L.layerGroup()
 };
-let activePoiTypes = new Set();
+let activePoiTypes = new Set(}); m.addListener('click', () => info.open(map, m));
 
 async function loadNearbyPOIs(lat, lng) {
     if (activePoiTypes.size === 0) {
         Object.keys(poiLayers).forEach(type => {
-            if (map) map.removeLayer(poiLayers[type]);
-        });
+            if (map) map.removeLayer(poiLayers[type]}); m.addListener('click', () => info.open(map, m));
+        }}); m.addListener('click', () => info.open(map, m));
         return;
     }
     
-    const typesParam = Array.from(activePoiTypes).join(',');
+    const typesParam = Array.from(activePoiTypes).join(','}); m.addListener('click', () => info.open(map, m));
     try {
-        const pois = await apiCall(`/driver/nearby-pois?lat=${lat}&lng=${lng}&types=${typesParam}`);
+        const pois = await apiCall(`/driver/nearby-pois?lat=${lat}&lng=${lng}&types=${typesParam}`}); m.addListener('click', () => info.open(map, m));
         
         // Clear layers
         Object.keys(poiLayers).forEach(type => {
-            poiLayers[type].clearLayers();
-        });
+            poiLayers[type].forEach(m => m.setMap(null)}); m.addListener('click', () => info.open(map, m)); poiLayers[type] = [];
+        }}); m.addListener('click', () => info.open(map, m));
         
         const typeIcons = {
             fuel: '⛽',
@@ -3342,49 +3343,49 @@ async function loadNearbyPOIs(lat, lng) {
         };
 
         pois.forEach(poi => {
-            const iconHtml = `<div style="font-size: 1.4rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">${typeIcons[poi.type] || '📍'}</div>`;
+            const iconHtml = `<div style="font-size: 1.4rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)}); m.addListener('click', () => info.open(map, m));">${typeIcons[poi.type] || '📍'}</div>`;
             const customIcon = L.divIcon({
                 html: iconHtml,
                 className: 'custom-poi-icon',
                 iconSize: [24, 24],
                 iconAnchor: [12, 12]
-            });
+            }}); m.addListener('click', () => info.open(map, m));
 
-            const m = L.marker([poi.lat, poi.lng], {icon: customIcon});
-            m.bindPopup(`<b>${poi.name}</b><br>${poi.desc}`);
+            const m = new google.maps.Marker({ position: {lat: poi.lat, lng: poi.lng}, icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(customIcon.options.html), scaledSize: new google.maps.Size(32,32) }}}); m.addListener('click', () => info.open(map, m));
+            const info = new google.maps.InfoWindow({content: `<b>${poi.name}</b><br>${poi.desc}`}); m.addListener('click', () => info.open(map, m));
             
             if (poiLayers[poi.type]) {
-                m.addTo(poiLayers[poi.type]);
+                m.addTo(poiLayers[poi.type]}); m.addListener('click', () => info.open(map, m));
             }
-        });
+        }}); m.addListener('click', () => info.open(map, m));
 
         // Ensure active layers are on map
         Object.keys(poiLayers).forEach(type => {
             if (activePoiTypes.has(type)) {
-                if (map) poiLayers[type].addTo(map);
+                if (map) poiLayers[type].forEach(m => m.setMap(map)}); m.addListener('click', () => info.open(map, m));
             } else {
-                if (map) map.removeLayer(poiLayers[type]);
+                if (map) map.removeLayer(poiLayers[type]}); m.addListener('click', () => info.open(map, m));
             }
-        });
+        }}); m.addListener('click', () => info.open(map, m));
     } catch (e) {
-        console.error("Failed to load POIs:", e);
+        console.error("Failed to load POIs:", e}); m.addListener('click', () => info.open(map, m));
     }
 }
 
 window.togglePOILayer = function(type) {
-    const btn = document.getElementById(`poi-btn-${type}`);
+    const btn = document.getElementById(`poi-btn-${type}`}); m.addListener('click', () => info.open(map, m));
     if (activePoiTypes.has(type)) {
-        activePoiTypes.delete(type);
+        activePoiTypes.delete(type}); m.addListener('click', () => info.open(map, m));
         if (map && poiLayers[type]) {
-            map.removeLayer(poiLayers[type]);
+            map.removeLayer(poiLayers[type]}); m.addListener('click', () => info.open(map, m));
         }
         if (btn) btn.style.background = 'rgba(255, 255, 255, 0.05)';
     } else {
-        activePoiTypes.add(type);
+        activePoiTypes.add(type}); m.addListener('click', () => info.open(map, m));
         if (btn) btn.style.background = 'var(--primary)';
-        const mLoc = marker ? marker.getLatLng() : (currentStops.length > 0 ? currentStops[0] : null);
+        const mLoc = marker ? marker.getLatLng() : (currentStops.length > 0 ? currentStops[0] : null}); m.addListener('click', () => info.open(map, m));
         if (mLoc) {
-            loadNearbyPOIs(mLoc.lat || mLoc.latlng?.lat, mLoc.lng || mLoc.latlng?.lng);
+            loadNearbyPOIs(mLoc.lat || mLoc.latlng?.lat, mLoc.lng || mLoc.latlng?.lng}); m.addListener('click', () => info.open(map, m));
         }
     }
 };
@@ -3393,19 +3394,19 @@ window.togglePOILayer = function(type) {
 let hudTickerInterval = null;
 
 function startHUDTicker(stops) {
-    if (hudTickerInterval) clearInterval(hudTickerInterval);
+    if (hudTickerInterval) clearInterval(hudTickerInterval}); m.addListener('click', () => info.open(map, m));
     
     hudTickerInterval = setInterval(() => {
         if (!marker || !window.currentDriverObj) return;
         
-        const speedEl = document.getElementById('hud-speed');
-        const etaEl = document.getElementById('hud-eta');
-        const fatigueBarEl = document.getElementById('hud-fatigue-bar');
-        const fatigueTextEl = document.getElementById('hud-fatigue-text');
+        const speedEl = document.getElementById('hud-speed'}); m.addListener('click', () => info.open(map, m));
+        const etaEl = document.getElementById('hud-eta'}); m.addListener('click', () => info.open(map, m));
+        const fatigueBarEl = document.getElementById('hud-fatigue-bar'}); m.addListener('click', () => info.open(map, m));
+        const fatigueTextEl = document.getElementById('hud-fatigue-text'}); m.addListener('click', () => info.open(map, m));
         
         if (speedEl) {
             const baseSpeed = 45;
-            const variance = Math.floor(Math.sin(Date.now() / 5000) * 10);
+            const variance = Math.floor(Math.sin(Date.now() / 5000) * 10}); m.addListener('click', () => info.open(map, m));
             speedEl.innerText = `${baseSpeed + variance} km/h`;
         }
         
@@ -3425,13 +3426,13 @@ function startHUDTicker(stops) {
 
         if (etaEl && stops && stops[0] && stops[0].shipment) {
             const s = stops[0].shipment;
-            const deadline = new Date(stops[0].type === 'pickup' ? s.pickup_deadline : s.expected_delivery);
-            const now = new Date();
+            const deadline = new Date(stops[0].type === 'pickup' ? s.pickup_deadline : s.expected_delivery}); m.addListener('click', () => info.open(map, m));
+            const now = new Date(}); m.addListener('click', () => info.open(map, m));
             const diffMs = deadline - now;
             
             if (diffMs > 0) {
-                const diffHrs = Math.floor(diffMs / 3600000);
-                const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                const diffHrs = Math.floor(diffMs / 3600000}); m.addListener('click', () => info.open(map, m));
+                const diffMins = Math.floor((diffMs % 3600000) / 60000}); m.addListener('click', () => info.open(map, m));
                 etaEl.innerText = `${diffHrs}h ${diffMins}m remaining`;
                 etaEl.style.color = 'var(--accent)';
             } else {
@@ -3439,7 +3440,7 @@ function startHUDTicker(stops) {
                 etaEl.style.color = 'var(--danger)';
             }
         }
-    }, 1000);
+    }, 1000}); m.addListener('click', () => info.open(map, m));
 }
 
 // Route Progress Helper
@@ -3454,31 +3455,31 @@ function updateRouteProgress(driverLat, driverLng) {
 
     for (let i = 0; i < routeCoords.length; i++) {
         const c = routeCoords[i];
-        const dist = Math.sqrt(Math.pow(c[0] - driverLat, 2) + Math.pow(c[1] - driverLng, 2));
+        const dist = Math.sqrt(Math.pow(c[0] - driverLat, 2) + Math.pow(c[1] - driverLng, 2)}); m.addListener('click', () => info.open(map, m));
         if (dist < minDistance) {
             minDistance = dist;
             closestIdx = i;
         }
     }
 
-    const progressPct = Math.round((closestIdx / (routeCoords.length - 1)) * 100);
-    const progressTextEl = document.getElementById('hud-progress-text');
-    const progressBarEl = document.getElementById('hud-progress-bar');
+    const progressPct = Math.round((closestIdx / (routeCoords.length - 1)) * 100}); m.addListener('click', () => info.open(map, m));
+    const progressTextEl = document.getElementById('hud-progress-text'}); m.addListener('click', () => info.open(map, m));
+    const progressBarEl = document.getElementById('hud-progress-bar'}); m.addListener('click', () => info.open(map, m));
     if (progressTextEl) progressTextEl.innerText = `${progressPct}%`;
     if (progressBarEl) progressBarEl.style.width = `${progressPct}%`;
 
-    if (completedPolyline) map.removeLayer(completedPolyline);
-    if (remainingPolyline) map.removeLayer(remainingPolyline);
+    if (completedPolyline) map.removeLayer(completedPolyline}); m.addListener('click', () => info.open(map, m));
+    if (remainingPolyline) map.removeLayer(remainingPolyline}); m.addListener('click', () => info.open(map, m));
 
-    const completedCoords = routeCoords.slice(0, closestIdx + 1);
-    const remainingCoords = routeCoords.slice(closestIdx);
+    const completedCoords = routeCoords.slice(0, closestIdx + 1}); m.addListener('click', () => info.open(map, m));
+    const remainingCoords = routeCoords.slice(closestIdx}); m.addListener('click', () => info.open(map, m));
 
     if (completedCoords.length > 1) {
         completedPolyline = L.polyline(completedCoords, {
             color: '#64748b',
             weight: 5,
             opacity: 0.5
-        }).addTo(map);
+        }).addTo(map}); m.addListener('click', () => info.open(map, m));
     }
 
     if (remainingCoords.length > 1) {
@@ -3487,7 +3488,7 @@ function updateRouteProgress(driverLat, driverLng) {
             weight: 6,
             opacity: 0.85,
             className: 'animated-route-polyline'
-        }).addTo(map);
+        }).addTo(map}); m.addListener('click', () => info.open(map, m));
     }
 }
 
@@ -3509,18 +3510,18 @@ function checkGeofenceArrival(driverLat, driverLng, stops) {
             fillOpacity: 0.15,
             weight: 1,
             className: 'pulse-circle'
-        }).addTo(map);
+        }).addTo(map}); m.addListener('click', () => info.open(map, m));
     } else {
-        geofenceCircle.setLatLng([nextStop.lat, nextStop.lng]);
+        geofenceCircle.setLatLng([nextStop.lat, nextStop.lng]}); m.addListener('click', () => info.open(map, m));
     }
     
     if (dist <= 150) {
         if (!hasTriggeredGeofence) {
             hasTriggeredGeofence = true;
-            showNotification(`🎯 You are within 150m of your next stop!`, "info");
+            showNotification(`🎯 You are within 150m of your next stop!`, "info"}); m.addListener('click', () => info.open(map, m));
             
             if ('vibrate' in navigator) {
-                navigator.vibrate([200, 100, 200]);
+                navigator.vibrate([200, 100, 200]}); m.addListener('click', () => info.open(map, m));
             }
             
             map.eachLayer(layer => {
@@ -3529,10 +3530,10 @@ function checkGeofenceArrival(driverLat, driverLng, stops) {
                     const lLng = layer.getLatLng().lng;
                     const diff = Math.sqrt(Math.pow(lLat - nextStop.lat, 2) + Math.pow(lLng - nextStop.lng, 2)) * 111000;
                     if (diff < 5) {
-                        layer.openPopup();
+                        layer.openPopup(}); m.addListener('click', () => info.open(map, m));
                     }
                 }
-            });
+            }}); m.addListener('click', () => info.open(map, m));
         }
     } else {
         hasTriggeredGeofence = false;
@@ -3580,10 +3581,10 @@ const _WMO_BG = {
 };
 
 async function updateWeatherStrip(stops) {
-    const strip = document.getElementById('route-weather-strip');
-    const iconEl = document.getElementById('weather-icon');
-    const textEl = document.getElementById('weather-text');
-    const tempEl = document.getElementById('weather-temp');
+    const strip = document.getElementById('route-weather-strip'}); m.addListener('click', () => info.open(map, m));
+    const iconEl = document.getElementById('weather-icon'}); m.addListener('click', () => info.open(map, m));
+    const textEl = document.getElementById('weather-text'}); m.addListener('click', () => info.open(map, m));
+    const tempEl = document.getElementById('weather-temp'}); m.addListener('click', () => info.open(map, m));
     
     if (!strip || !stops || stops.length === 0) {
         if (strip) strip.style.display = 'none';
@@ -3608,9 +3609,9 @@ async function updateWeatherStrip(stops) {
             `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
             `&current=temperature_2m,weather_code,wind_speed_10m,apparent_temperature` +
             `&timezone=auto`
-        );
+        }); m.addListener('click', () => info.open(map, m));
         if (resp.ok) {
-            const data = await resp.json();
+            const data = await resp.json(}); m.addListener('click', () => info.open(map, m));
             const curr = data.current || {};
             const code = curr.weather_code ?? 0;
             const temp = curr.temperature_2m ?? '—';
@@ -3627,7 +3628,7 @@ async function updateWeatherStrip(stops) {
             else if (code >= 61 || code === 45 || code === 48) strip.style.borderColor = 'rgba(245,158,11,0.5)';
             else strip.style.borderColor = 'rgba(255,255,255,0.08)';
         } else {
-            throw new Error('Open-Meteo unavailable');
+            throw new Error('Open-Meteo unavailable'}); m.addListener('click', () => info.open(map, m));
         }
     } catch(e) {
         // Fallback to shipment field if API fails
@@ -3651,27 +3652,27 @@ async function updateWeatherStrip(stops) {
 
 async function triggerAIDriverBriefing() {
     if (!window._aiStatus?.configured) {
-        showToast('⚠️ Your manager has not configured Gemini API keys. AI features are not available.', 'error');
+        showToast('⚠️ Your manager has not configured Gemini API keys. AI features are not available.', 'error'}); m.addListener('click', () => info.open(map, m));
         return;
     }
 
-    const reportDiv = document.getElementById('driver-briefing-report');
-    const modal = document.getElementById('driver-briefing-modal');
+    const reportDiv = document.getElementById('driver-briefing-report'}); m.addListener('click', () => info.open(map, m));
+    const modal = document.getElementById('driver-briefing-modal'}); m.addListener('click', () => info.open(map, m));
     if (!reportDiv || !modal) return;
 
-    reportDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🔮 Compiling route vitals & calamity outlook... Please wait.</p>';
+    reportDiv.innerHTML = '<p style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); text-align:center; padding:40px 0;">🔮 Compiling route vitals & calamity outlook... Please wait.</p>';
     modal.style.display = 'block';
 
     try {
-        const driverId = localStorage.getItem('driver_id');
-        const res = await apiCall(`/driver/${driverId}/ai/briefing`, 'POST', {});
-        reportDiv.innerHTML = parseMarkdownToHtml(res.report);
+        const driverId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+        const res = await apiCall(`/driver/${driverId}/ai/briefing`, 'POST', {}}); m.addListener('click', () => info.open(map, m));
+        reportDiv.innerHTML = parseMarkdownToHtml(res.report}); m.addListener('click', () => info.open(map, m));
     } catch(err) {
         const msg = err.message || '';
         if (msg.includes('No Gemini API keys') || msg.includes('not configured')) {
-            reportDiv.innerHTML = `<p style="color:var(--warning);">⚠️ Gemini API keys not configured by your company manager.</p>`;
+            reportDiv.innerHTML = `<p style="color:var(--warning}); m.addListener('click', () => info.open(map, m));">⚠️ Gemini API keys not configured by your company manager.</p>`;
         } else {
-            reportDiv.innerHTML = `<p style="color:var(--danger);">Failed to generate AI Route Briefing: ${msg}</p>`;
+            reportDiv.innerHTML = `<p style="color:var(--danger}); m.addListener('click', () => info.open(map, m));">Failed to generate AI Route Briefing: ${msg}</p>`;
         }
     }
 }
@@ -3679,7 +3680,7 @@ window.triggerAIDriverBriefing = triggerAIDriverBriefing;
 
 // ─── Init AI gating on driver pages ──────────────────────────────────────────
 if (typeof initAIGating === 'function') {
-    document.addEventListener('DOMContentLoaded', () => initAIGating());
+    document.addEventListener('DOMContentLoaded', () => initAIGating()}); m.addListener('click', () => info.open(map, m));
 }
 
 
@@ -3689,15 +3690,15 @@ let isHeatmapOn = false;
 
 window.toggleTrafficHeatmap = function() {
     isHeatmapOn = !isHeatmapOn;
-    const btn = document.getElementById('toggle-heatmap-btn');
+    const btn = document.getElementById('toggle-heatmap-btn'}); m.addListener('click', () => info.open(map, m));
     if (isHeatmapOn) {
         if (btn) {
             btn.innerText = '🚦 Traffic Heatmap: On';
             btn.style.background = 'rgba(245, 158, 11, 0.2)';
             btn.style.borderColor = 'var(--warning)';
         }
-        showNotification("Generating real-time traffic density heatmap...", "info");
-        fetchTrafficOverlay();
+        showNotification("Generating real-time traffic density heatmap...", "info"}); m.addListener('click', () => info.open(map, m));
+        fetchTrafficOverlay(}); m.addListener('click', () => info.open(map, m));
     } else {
         if (btn) {
             btn.innerText = '🚦 Traffic Heatmap: Off';
@@ -3705,7 +3706,7 @@ window.toggleTrafficHeatmap = function() {
             btn.style.borderColor = 'rgba(245, 158, 11, 0.3)';
         }
         if (trafficHeatmapLayer && map) {
-            map.removeLayer(trafficHeatmapLayer);
+            map.removeLayer(trafficHeatmapLayer}); m.addListener('click', () => info.open(map, m));
             trafficHeatmapLayer = null;
         }
     }
@@ -3717,44 +3718,44 @@ window.fetchTrafficOverlay = function() {
     const heatPoints = [];
     routeCoords.forEach((coord, index) => {
         let intensity = 0.2;
-        const segment = Math.floor(index / (routeCoords.length / 5));
+        const segment = Math.floor(index / (routeCoords.length / 5)}); m.addListener('click', () => info.open(map, m));
         if (segment === 1) intensity = 0.85; 
         if (segment === 3) intensity = 0.6;  
         
-        heatPoints.push([coord[0], coord[1], intensity]);
-    });
+        heatPoints.push([coord[0], coord[1], intensity]}); m.addListener('click', () => info.open(map, m));
+    }}); m.addListener('click', () => info.open(map, m));
     
     if (trafficHeatmapLayer && map) {
-        map.removeLayer(trafficHeatmapLayer);
+        map.removeLayer(trafficHeatmapLayer}); m.addListener('click', () => info.open(map, m));
     }
     
     if (typeof L.heatLayer === 'function') {
-        trafficHeatmapLayer = L.heatLayer(heatPoints, {
+        trafficHeatmapLayer = new google.maps.visualization.HeatmapLayer({ data: heatPoints.map(p=>({location: new google.maps.LatLng(p[0],p[1]), weight: p[2]})),
             radius: 25,
-            blur: 15,
+            
             maxZoom: 17,
             gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
-        }).addTo(map);
+        }).addTo(map}); m.addListener('click', () => info.open(map, m));
     } else {
-        console.warn("L.heatLayer is not loaded.");
+        console.warn("L.heatLayer is not loaded."}); m.addListener('click', () => info.open(map, m));
     }
 };
 
 window.toggleVoiceNav = function() {
     window.isVoiceNavOn = !window.isVoiceNavOn;
-    const btn = document.getElementById('toggle-voice-btn');
+    const btn = document.getElementById('toggle-voice-btn'}); m.addListener('click', () => info.open(map, m));
     if (btn) {
         if (window.isVoiceNavOn) {
             btn.innerText = '🔊 Voice Nav: On';
             btn.style.background = 'rgba(16, 185, 129, 0.2)';
             btn.style.borderColor = 'var(--success)';
-            speakInstruction("Voice navigation enabled.");
+            speakInstruction("Voice navigation enabled."}); m.addListener('click', () => info.open(map, m));
         } else {
             btn.innerText = '🔇 Voice Nav: Off';
             btn.style.background = 'rgba(255, 255, 255, 0.05)';
             btn.style.borderColor = 'rgba(16, 185, 129, 0.3)';
             if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+                window.speechSynthesis.cancel(}); m.addListener('click', () => info.open(map, m));
             }
         }
     }
@@ -3763,21 +3764,21 @@ window.toggleVoiceNav = function() {
 let originalRouteCoords = null;
 window.triggerSmartReroute = async function() {
     if (!window._aiStatus?.configured) {
-        showToast('⚠️ Your manager has not configured Gemini API keys. AI features are not available.', 'error');
+        showToast('⚠️ Your manager has not configured Gemini API keys. AI features are not available.', 'error'}); m.addListener('click', () => info.open(map, m));
         return;
     }
     
-    const contentDiv = document.getElementById('ai-reroute-content');
-    const modal = document.getElementById('ai-reroute-modal');
+    const contentDiv = document.getElementById('ai-reroute-content'}); m.addListener('click', () => info.open(map, m));
+    const modal = document.getElementById('ai-reroute-modal'}); m.addListener('click', () => info.open(map, m));
     if (!contentDiv || !modal) return;
     
-    contentDiv.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:40px 0;">🧠 Analyzing route traffic and requesting alternative corridors... Please wait.</p>';
+    contentDiv.innerHTML = '<p style="color:var(--text-muted}); m.addListener('click', () => info.open(map, m)); text-align:center; padding:40px 0;">🧠 Analyzing route traffic and requesting alternative corridors... Please wait.</p>';
     modal.style.display = 'block';
     
     try {
-        const driverId = localStorage.getItem('driver_id');
-        let lat = window.lastLat || (marker ? marker.getLatLng().lat : null);
-        let lng = window.lastLng || (marker ? marker.getLatLng().lng : null);
+        const driverId = localStorage.getItem('driver_id'}); m.addListener('click', () => info.open(map, m));
+        let lat = window.lastLat || (marker ? marker.getLatLng().lat : null}); m.addListener('click', () => info.open(map, m));
+        let lng = window.lastLng || (marker ? marker.getLatLng().lng : null}); m.addListener('click', () => info.open(map, m));
         
         if (!lat || !lng) {
             lat = 19.0760;
@@ -3787,11 +3788,11 @@ window.triggerSmartReroute = async function() {
         let destLat = 19.2183;
         let destLng = 72.9780;
         
-        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`);
+        const drivers = await apiCall(`/manager/drivers?company_id=${localStorage.getItem('company_id')}`}); m.addListener('click', () => info.open(map, m));
         const me = drivers && Array.isArray(drivers) ? drivers.find(d => String(d.id) === String(driverId)) : null;
         if (me) {
-            const assigned = await apiCall(`/driver/${driverId}/shipments`);
-            const active = assigned.filter(s => ['assigned', 'in_transit', 'delayed'].includes(s.status));
+            const assigned = await apiCall(`/driver/${driverId}/shipments`}); m.addListener('click', () => info.open(map, m));
+            const active = assigned.filter(s => ['assigned', 'in_transit', 'delayed'].includes(s.status)}); m.addListener('click', () => info.open(map, m));
             if (active.length > 0) {
                 const dropLoc = active[0].drop || {};
                 destLat = dropLoc.lat || destLat;
@@ -3804,17 +3805,17 @@ window.triggerSmartReroute = async function() {
             lng: lng,
             dest_lat: destLat,
             dest_lng: destLng
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         
-        contentDiv.innerHTML = parseMarkdownToHtml(res.suggestion);
+        contentDiv.innerHTML = parseMarkdownToHtml(res.suggestion}); m.addListener('click', () => info.open(map, m));
     } catch(err) {
-        contentDiv.innerHTML = `<p style="color:var(--danger);">Failed to get alternate route: ${err.message}</p>`;
+        contentDiv.innerHTML = `<p style="color:var(--danger}); m.addListener('click', () => info.open(map, m));">Failed to get alternate route: ${err.message}</p>`;
     }
 };
 
 window.acceptReroute = function() {
     if (!originalRouteCoords) {
-        originalRouteCoords = JSON.parse(JSON.stringify(routeCoords));
+        originalRouteCoords = JSON.parse(JSON.stringify(routeCoords)}); m.addListener('click', () => info.open(map, m));
     }
     
     if (routeCoords && routeCoords.length > 0) {
@@ -3824,16 +3825,16 @@ window.acceptReroute = function() {
                 return [coord[0] + offset, coord[1] + offset];
             }
             return coord;
-        });
+        }}); m.addListener('click', () => info.open(map, m));
         
-        activeRoutePolylines.forEach(p => map.removeLayer(p));
+        activeRoutePolylines.forEach(p => map.removeLayer(p)}); m.addListener('click', () => info.open(map, m));
         activeRoutePolylines = [];
         
-        const polyRerouted = L.polyline(reroutedCoords, {color: '#a855f7', weight: 8, opacity: 0.9}).addTo(map);
-        activeRoutePolylines.push(polyRerouted);
+        const polyRerouted = L.polyline(reroutedCoords, {color: '#a855f7', weight: 8, opacity: 0.9}).addTo(map}); m.addListener('click', () => info.open(map, m));
+        activeRoutePolylines.push(polyRerouted}); m.addListener('click', () => info.open(map, m));
         
-        showNotification("🧠 Smart detour applied. Saved 12 mins and bypassed heavy congestion!", "success");
-        speakInstruction("detour applied. Bypassing primary expressways to avoid congestion.");
+        showNotification("🧠 Smart detour applied. Saved 12 mins and bypassed heavy congestion!", "success"}); m.addListener('click', () => info.open(map, m));
+        speakInstruction("detour applied. Bypassing primary expressways to avoid congestion."}); m.addListener('click', () => info.open(map, m));
     }
     
     document.getElementById('ai-reroute-modal').style.display = 'none';

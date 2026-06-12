@@ -18,9 +18,16 @@ import requests
 from typing import List, Dict, Any, Optional
 
 # Config
-_RAW_URL = os.environ.get("TURSO_DATABASE_URL", "")
-_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
-_HTTP_URL = _RAW_URL.replace("libsql://", "https://") if _RAW_URL else ""
+_RAW_URL = os.environ.get("TURSO_DATABASE_URL", "").strip().strip('"').strip("'")
+_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "").strip().strip('"').strip("'")
+
+# Defensively convert libsql:// to https://
+_HTTP_URL = _RAW_URL
+if _HTTP_URL.startswith("libsql://"):
+    _HTTP_URL = "https://" + _HTTP_URL[len("libsql://"):]
+elif _HTTP_URL.startswith("http://libsql://"):
+    _HTTP_URL = "https://" + _HTTP_URL[len("http://libsql://"):]
+
 _SESSION = requests.Session()
 
 _DEFAULT_COMPANY = {
