@@ -14,7 +14,10 @@ load_dotenv(os.path.join(base_dir, ".env"))
 supabase = None
 
 # Configure SQLite WAL DB
-primary_data_dir = os.path.join(base_dir, "data")
+if os.environ.get("VERCEL"):
+    primary_data_dir = "/tmp/data"
+else:
+    primary_data_dir = os.path.join(base_dir, "data")
 os.makedirs(primary_data_dir, exist_ok=True)
 sqlite_db_path = os.path.join(primary_data_dir, "logistix_local.db")
 db_url = f"sqlite:///{sqlite_db_path}"

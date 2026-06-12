@@ -10,6 +10,11 @@ class CompanyCreate(BaseModel):
     email: EmailStr
     password: str
 
+class WarehouseManagerLogin(BaseModel):
+    company_id: str
+    email: str
+    password: str
+
 class CompanyLogin(BaseModel):
     email: EmailStr
     password: str

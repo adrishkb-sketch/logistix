@@ -236,13 +236,23 @@ def driver_login(data: DriverLogin):
 
 @router.post("/warehouse-manager/login")
 def warehouse_manager_login(data: WarehouseManagerLogin):
-    """Warehouse manager login with email + password."""
+    """Warehouse manager login with company_id + email + password."""
     ec  = _clean_email(data.email)
+    cid = data.company_id.strip()
+
+    company = companies_db.get_by_id(cid)
+    if not company:
+        companies = companies_db.get_all()
+        company = next((c for c in companies if c.get("name", "").strip().lower() == cid.lower()), None)
+        if not company:
+            raise HTTPException(status_code=401, detail="Invalid Company ID.")
+    actual_cid = company["id"]
 
     warehouses_db = JSONDatabase("warehouses")
     wh = next(
         (w for w in warehouses_db.get_all()
          if w
+         and w.get("company_id") == actual_cid
          and w.get("manager_email", "").strip().lower() == ec
          and w.get("manager_password") == data.password),
         None

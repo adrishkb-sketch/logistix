@@ -122,12 +122,13 @@ document.addEventListener('submit', async (e) => {
 
         // Warehouse Manager Login
         if (target.id === 'wh-manager-login-form') {
+            const company_id = document.getElementById('wh-manager-company-id')?.value?.trim();
             const email = document.getElementById('wh-manager-email')?.value?.trim();
             const password = document.getElementById('wh-manager-password')?.value;
 
-            if (!email || !password) throw new Error(getTranslation('auth_error_missing'));
+            if (!company_id || !email || !password) throw new Error(getTranslation('auth_error_missing'));
 
-            const res = await apiCall('/auth/warehouse-manager/login', 'POST', { email, password });
+            const res = await apiCall('/auth/warehouse-manager/login', 'POST', { company_id, email, password });
             
             localStorage.setItem('warehouse_id', res.warehouse_id);
             localStorage.setItem('warehouse_name', res.warehouse_name);
