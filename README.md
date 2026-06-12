@@ -481,7 +481,7 @@ Logistix stops problems *before* they happen by connecting Managers, Hub Supervi
 * **Smart Route Updates:**
   * If a vehicle runs into a storm or natural disaster, Gemini suggests whether to **Keep Going**, **Stop and Wait**, or **Take a Detour**.
   * **Backup Plan:** If the AI key runs out of quota or is offline, the system automatically uses a simple backup rule. It looks at the vehicle type and finds the closest safe warehouse on the map, ensuring the system never goes down.
-* **Quick Vehicle Rescue:** If a vehicle breaks down (detected by cabin sensors or reported by the driver), the system automatically assigns the nearest active driver/vehicle. It also splits the payout fairly based on how much of the trip was already completed.
+* **Quick Vehicle Rescue:** If a vehicle breaks down (detected by cabin sensors or reported by the driver), the system automatically reassigns the remaining cargo tasks to the nearest active driver/vehicle, getting the shipment back on track immediately.
 * **Driver-Friendly App:** Drivers get an easy-to-use app in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) that supports multiple regional languages and has a hands-free Voice Command Engine (VCE) so they can report issues while driving safely.
 
 ### 📈 8.3. Expected Impact
@@ -491,7 +491,7 @@ Logistix stops problems *before* they happen by connecting Managers, Hub Supervi
 Logistix has a direct, positive impact on safety, cargo protection, and the environment:
 * **Better Driver Safety:** By monitoring biometric metrics (heart rate, stress level, blood oxygen, and eye blinking), the system detects if a driver is too tired. It automatically locks the driver's app and tells them to take a rest break.
 * **Less Cargo Waste:** Cold-chain sensors monitor temperatures to prevent food or medicine from spoiling. Drones are used for the last part of the delivery (if the package is light, the battery is full, and weather is good) to avoid traffic jams.
-* **Saving Money on Fines:** By predicting delays, the system returns shipments to the sender automatically if the travel permit is about to expire, avoiding huge government fines.
+* **Regulatory Compliance Protection:** By predicting delays, the system returns shipments to the sender automatically if the travel permit is about to expire, keeping operations fully compliant with transport rules.
 * **Helping the Environment:** Logistix tracks carbon emissions in [strategy_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/strategy_engine.py) based on whether the truck runs on diesel, electricity, or if a drone is used, helping businesses meet green energy goals (supporting UN Sustainable Development Goals for Clean Energy and Climate Action).
 
 ---
@@ -506,7 +506,7 @@ Logistix introduces creative approaches and smart technologies to solve logistic
 
 * **Active Prevention vs. Waiting for Delays:** Most shipping apps only tell you when a package is late. Logistix is different because it actively predicts issues. It constantly watches weather forecasts, driver fatigue levels, and warehouse congestion to stop delays before they start.
 * **Connecting Humans, AI, and Sensors:** We bring together live vehicle sensors, wearable health bands, smart maps, and generative AI. This combination makes the entire supply chain feel like a single, self-healing system that protects both cargo and drivers.
-* **Fair Payout Splitter:** If a vehicle breaks down and another driver rescues the cargo, the system automatically splits the driver's payout fairly based on the exact distance each person drove. This is a highly practical and fair way to handle real-world emergencies.
+* **Automatic Multi-Leg Route Splitting:** Instead of treating a delivery as one long, risky journey, the system splits it into first-mile, middle-mile, and last-mile parts. Each part can be handled by different drivers or autonomous drones, which spreads the risk and makes shipping much more efficient.
 
 ### 💻 9.2. Creative Use of Technologies
 > [!NOTE]
@@ -522,4 +522,4 @@ Logistix introduces creative approaches and smart technologies to solve logistic
 
 * **Growing into a Real Product:** Logistix uses industry-standard APIs (like OSRM for maps, SQLite/Turso for data, and SMTP/WhatsApp for messaging). This means it can easily be connected to actual hardware sensors and corporate databases.
 * **Expanding the Voice Companion:** The driver's Voice Command Engine in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) can be updated to support more local dialects and handle complex commands like voice-based cargo checking or check-in updates.
-* **Smarter AI Predictions:** In the future, the system can learn from past weather patterns and warehouse traffic to predict the best dispatch times, helping logistics companies save millions of dollars and reduce carbon emissions.
+* **Smarter AI Predictions:** In the future, the system can learn from past weather patterns and warehouse traffic to predict the best dispatch times, helping logistics companies avoid delays and reduce carbon emissions.
