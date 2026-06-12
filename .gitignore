@@ -35,5 +35,5 @@ data/images/
 # Firebase cache
 .firebase/
 
-
-
+# Local scratch scripts
+scratch/

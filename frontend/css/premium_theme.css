@@ -1,5 +1,5 @@
 /* Disable 3D tilt transformation across all glass cards, pricing cards, KPI cards, history cards, and order cards */
-.glass-card, 
+.glass-card:not(.modal-glass), 
 .pricing-card, 
 .kpi-card, 
 .history-card, 
