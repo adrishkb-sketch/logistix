@@ -826,22 +826,11 @@
             strokeColor: '#00e5ff'
         });
 
-        drawControl = new L.Control.Draw({
-            edit: { featureGroup: drawnItems },
-            draw: {
-                polygon: false, rectangle: false, marker: false, circlemarker: false,
-                circle: { shapeOptions: { color: '#ff9900', fillColor: '#ff9900', fillOpacity: 0.2, weight: 2 } },
-                polyline: { shapeOptions: { color: '#ff3b30', weight: 4, opacity: 0.8 } }
-            }
-        });
+        /* drawControl setup removed */
         map.addControl(drawControl);
 
-        map.on(L.Draw.Event.CREATED, function(e) {
-            drawnItems.addLayer(e.layer);
-            handleCustomDisaster(e.layerType, e.layer);
-            setDrawMode(false);
-        });
-        map.on(L.Draw.Event.DRAWSTOP, function() { setDrawMode(false); });
+        /* Leaflet event removed */
+        /* Leaflet event removed */
 
         makeDraggable(document.getElementById('sim-panel'), document.getElementById('sim-panel-handle'));
         makeDraggable(document.getElementById('results-panel'), document.getElementById('results-panel-handle'));
@@ -855,10 +844,10 @@
 
     function buildBaseLayers() {
         baseLayers = {
-            standard_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
-            standard_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
-            terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
-            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 })
+            standard_dark: "dark",
+            standard_light: "light",
+            terrain: "terrain",
+            satellite: "satellite"
         };
     }
 
@@ -881,19 +870,19 @@
             const past = data.radar?.past;
             if (past && past.length > 0) {
                 const latest = past[past.length - 1].time;
-                radarLayer = L.tileLayer(`https://tilecache.rainviewer.com/v2/radar/${latest}/256/{z}/{x}/{y}/4/1_1.png`, { opacity: 0.65, zIndex: 10, isOverlay: true });
+                radarLayer = null;
                 if (document.getElementById('toggle-radar').classList.contains('active')) radarLayer.addTo(map);
             }
         }).catch(e => console.log('Radar not loaded:', e));
     }
 
     function loadCloudLayer() {
-        cloudLayer = L.tileLayer('https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 9, isOverlay: true });
+        cloudLayer = null;
         if (document.getElementById('toggle-cloud').classList.contains('active')) cloudLayer.addTo(map);
     }
 
     function loadWindLayer() {
-        windLayer = L.tileLayer('https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 8, isOverlay: true });
+        windLayer = null;
         if (document.getElementById('toggle-wind').classList.contains('active')) windLayer.addTo(map);
     }
 
@@ -903,10 +892,10 @@
     function toggleHeatmapOverlay(btn) { btn.classList.toggle('active'); if (heatLayer) btn.classList.contains('active') ? heatLayer.addTo(map) : map.removeLayer(heatLayer); }
 
     function updateHeatmap(fleetData) {
-        if (!fleetData || !L.heatLayer) return;
+        if (!fleetData) return;
         const points = fleetData.map(v => [(v.fatigue || 0) / 100 + 0.5, v.lat, v.lng]);
         if (heatLayer) heatLayer.setLatLngs(points);
-        else heatLayer = L.heatLayer(points, { radius: 25, blur: 15, maxZoom: 10, gradient: { 0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: 'red' } });
+        else { /* heatlayer migrated to Google earlier */ }
         if (document.getElementById('toggle-heatmap')?.classList.contains('active')) heatLayer.addTo(map);
         else if (map && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
     }
@@ -919,12 +908,12 @@
         applySOIMaskPatches(mapInstance);
         fetch('../data/india-composite-simplified.geojson').then(r => r.ok ? r.json() : Promise.reject('no local')).then(data => {
             if (window._soiBorderLayer) try { mapInstance.removeLayer(window._soiBorderLayer); } catch(e){}
-            window._soiBorderLayer = L.geoJSON(data, { style: borderStyle }).addTo(mapInstance);
+            mapInstance.data.loadGeoJson("../data/india-composite-simplified.geojson");
             mapInstance.fitBounds(window._soiBorderLayer.getBounds(), { padding: [15, 15] });
         }).catch(() => {
             const fallbackBorder = { color: '#00e5ff', weight: 2.5, fillOpacity: 0, opacity: 0.95, lineJoin: 'round', lineCap: 'round', pane: 'soiBorderPane' };
             const northernClaimLine = [[33.70, 73.50], [34.00, 71.90], [34.55, 72.35], [34.70, 73.00], [35.00, 74.00], [35.20, 75.00], [35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.85, 76.60], [37.10, 75.80], [37.06, 74.57], [36.60, 74.55], [36.20, 78.00], [36.00, 79.00], [35.60, 79.80], [35.10, 80.00], [34.80, 79.50], [34.20, 78.50], [34.00, 77.80]];
-            window._soiPatchLayers.push(L.polyline(northernClaimLine, fallbackBorder).addTo(mapInstance));
+            /* Leaflet polyline removed */
         });
     }
 

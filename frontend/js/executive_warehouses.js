@@ -12,8 +12,19 @@ function initMap() {
     if (!document.getElementById('map')) return;
     if (map) return; // Prevent double initialization
     
-    // Default to a central location (e.g., India center)
-    map = L.map('map').setView([20.5937, 78.9629], 5);
+    const theme = localStorage.getItem('theme') || 'dark';
+    const darkMapStyle = [
+        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+    ];
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 20.5937, lng: 78.9629 },
+        zoom: 5,
+        styles: theme === 'dark' ? darkMapStyle : [],
+        mapTypeControl: false, streetViewControl: false, fullscreenControl: false
+    });
     updateMapTheme(map);
 
     // Apply Official Indian Boundaries (SOI Compliant Overlay)
@@ -39,7 +50,7 @@ async function processLocationDeployment(lat, lng) {
     document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     if (window.tempMarker) map.removeLayer(window.tempMarker);
-    window.tempMarker = L.marker([lat, lng], { draggable: true }).addTo(map)
+    window.tempMarker = new google.maps.Marker({position: {lat, lng}, map, draggable: true})
         .bindPopup("Selected Deployment Site").openPopup();
     
     window.tempMarker.on('dragend', function(e) {
@@ -158,289 +169,13 @@ async function applyOfficialBorders(mapInstance) {
     try {
         const response = await fetch(boundaryUrl);
         const data = await response.json();
-        L.geoJSON(data, {
-            style: { 
-                color: '#3182ce', 
-                weight: 3, 
-                fillOpacity: 0,
-                dashArray: '5, 5'
-            },
-            interactive: false
-        }).addTo(mapInstance);
+        
+        map.data.addGeoJson(data);
+        map.data.setStyle({ fillColor: "transparent", strokeWeight: 2.5, strokeColor: "#00e5ff" });
+        
+        setTimeout(() => { if (highlightCircle) highlightCircle.setMap(null); }, 5000);
     } catch(e) {
-        console.warn("Sovereignty overlay failed to load");
-    }
-}
-
-async function saveWarehouse(name, lat, lng) {
-    try {
-        await apiCall('/manager/warehouses', 'POST', {
-            company_id: localStorage.getItem('manager_id'),
-            name: name,
-            lat: lat,
-            lng: lng
-        });
-        loadMapData();
-        alert(`Warehouse "${name}" deployed successfully!`);
-    } catch (err) {
-        alert("Failed to deploy warehouse.");
-    }
-}
-
-async function deleteWarehouse(id) {
-    if (!confirm("Are you sure you want to decommission this warehouse? This might affect existing route assignments.")) return;
-    try {
-        await apiCall(`/manager/warehouses/${id}?company_id=${localStorage.getItem('manager_id')}`, 'DELETE');
-        loadMapData();
-    } catch(e) {
-        alert("Failed to delete warehouse.");
-    }
-}
-
-async function triggerManualAICheck() {
-    if (!pendingWhLoc) return;
-    document.getElementById('wh-modal').style.display = 'none';
-    processLocationDeployment(pendingWhLoc.lat, pendingWhLoc.lng);
-}
-
-async function loadMapData(retryCount = 0) {
-    if (!map) return;
-
-    try {
-        const companyId = localStorage.getItem('manager_id');
-        const [warehouses, allLeaves] = await Promise.all([
-            apiCall(`/manager/warehouses/congestion?company_id=${companyId}`),
-            apiCall(`/manager/warehouses/leave-requests?company_id=${companyId}`).catch(() => [])
-        ]);
-        
-        // Clear temp marker only after successful fetch
-        if (window.tempMarker) {
-            map.removeLayer(window.tempMarker);
-            window.tempMarker = null;
-        }
-        // Clear old markers only after successful fetch
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
-
-        globalHubs = warehouses;
-        globalWarehouses = warehouses;
-        const activeLeaves = allLeaves.filter(l => l.status === 'approved');
-
-        warehouses.forEach(w => {
-            const isOnLeave = activeLeaves.find(l => l.warehouse_id === w.id);
-            const icon = isOnLeave ? ICON_WAREHOUSE_LEAVE : ICON_WAREHOUSE;
-            
-            const m = L.marker([w.lat, w.lng], {icon: icon, title: w.name}).addTo(map)
-                .bindPopup(`<b>Hub:</b> ${w.name}<br><small>Manager: ${w.manager_name}</small>${isOnLeave ? `<br><b style="color:var(--danger)">💤 ON LEAVE (${isOnLeave.start_date})</b>` : ''}`);
-            m.whId = w.id;
-            markers.push(m);
-        });
-
-        // Populate base warehouse dropdowns
-        const dBase = document.getElementById('d-base');
-        const vBase = document.getElementById('v-base');
-        if (dBase && vBase && warehouses.length > 0) {
-            dBase.innerHTML = '<option value="">Select Base Warehouse</option>';
-            vBase.innerHTML = '<option value="">Select Base Warehouse</option>';
-            warehouses.forEach(w => {
-                dBase.innerHTML += `<option value="${w.id}">${w.name}</option>`;
-                vBase.innerHTML += `<option value="${w.id}">${w.name}</option>`;
-            });
-        }
-        
-        await loadWarehousesList(warehouses);
-
-    } catch(e) {
-        console.error("Map Load Error:", e);
-        if (typeof retryCount === 'number' && retryCount < 3) {
-            console.log(`Retrying loadMapData in 1s (attempt ${retryCount + 1})...`);
-            setTimeout(() => loadMapData(retryCount + 1), 1000);
-        }
-    }
-}
-
-async function loadWarehousesList(warehouses) {
-    const tbody = document.getElementById('warehouses-table-body');
-    if (!tbody) return;
-    
-    if (warehouses.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;">${getTranslation('no_warehouses')}</td></tr>`;
-        return;
-    }
-    
-    const limit = window.tableLimits.warehouses;
-    const limited = warehouses.slice(0, limit);
-
-    // Fetch leave status for all warehouses
-    const company_id = localStorage.getItem('manager_id');
-    const allLeaves = await apiCall(`/manager/warehouses/leave-requests?company_id=${company_id}`).catch(() => []);
-    const activeLeaves = allLeaves.filter(l => l.status === 'approved');
-
-    tbody.innerHTML = limited.map(w => {
-        const isOnLeave = activeLeaves.find(l => l.warehouse_id === w.id);
-        const rowStyle = isOnLeave ? 'background:rgba(239, 68, 68, 0.05); border-left:4px solid var(--danger);' : '';
-        
-        // Extract congestion parameters
-        const incomingCount = w.incoming_count || 0;
-        const capacity = w.capacity || 5;
-        const congestionPercentage = w.congestion_percentage || 0;
-        const barColor = congestionPercentage > 90 ? '#ef4444' : (congestionPercentage > 70 ? '#f59e0b' : '#10b981');
-        
-        return `
-        <tr id="row-wh-${w.id}" style="${rowStyle}">
-            <td style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${w.id.substring(0,8)}</td>
-            <td>
-                <strong id="wh-name-display-${w.id}">${w.name}</strong>
-                ${isOnLeave ? `<br><small style="color:var(--danger); font-weight:bold;">💤 ON LEAVE (${isOnLeave.start_date} to ${isOnLeave.end_date})</small>` : ''}
-            </td>
-            <td>
-                <div style="font-size:0.85rem; font-weight:bold; color:var(--primary);" id="wh-manager-display-${w.id}">${w.manager_name || getTranslation('na')}</div>
-                <div style="font-size:0.75rem; color:var(--text-muted);" id="wh-contact-display-${w.id}">📞 ${w.contact_number || getTranslation('na')}</div>
-            </td>
-            <td><span style="font-size:0.85rem;">${w.manager_email || getTranslation('na')}</span></td>
-            <td>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="password" readonly value="${w.manager_password || ''}" id="wh-pass-${w.id}" 
-                        style="background:transparent; border:none; color:var(--text); width:80px; font-size:0.85rem; pointer-events:none;">
-                    <button onclick="toggleWhPass('${w.id}')" style="background:none; border:none; cursor:pointer; padding:0; font-size:1rem;">👁️</button>
-                </div>
-            </td>
-            <td>
-                <div style="display:flex; flex-direction:column; gap:4px; min-width:120px; padding-top:4px;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                        <span style="color:var(--text-muted);">${incomingCount}/${capacity} inbound</span>
-                        <span style="font-weight:bold; color:${barColor};">${congestionPercentage}%</span>
-                    </div>
-                    <div style="width:100%; height:8px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; border: 1px solid rgba(255,255,255,0.04);">
-                        <div style="width:${congestionPercentage}%; height:100%; background:linear-gradient(90deg, ${barColor} 0%, #3b82f6 100%); transition:width 0.5s ease;"></div>
-                    </div>
-                </div>
-            </td>
-            <td>
-                <button class="btn-primary btn-outline" style="padding:6px 12px; font-size:0.75rem; display:flex; align-items:center; gap:4px; width:auto;" onclick="showCongestionForecast('${w.id}')">
-                    📊 <span>Forecast</span>
-                </button>
-            </td>
-            <td>${w.lat.toFixed(4)}, ${w.lng.toFixed(4)}</td>
-            <td>
-                <div style="display:flex; gap:8px;">
-                    <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem; background:linear-gradient(135deg, #a855f7 0%, #6366f1 100%); border:none; box-shadow:0 2px 8px rgba(168,85,247,0.2);" onclick="triggerRegionalAIWarehouseReadiness('${w.id}')">🔮 AI Audit</button>
-                    <button class="btn-primary btn-accent" style="padding:6px 12px; font-size:0.75rem;" onclick="openEditWarehouse('${w.id}')">✏️ ${getTranslation('edit')}</button>
-                    <button class="btn-primary" style="padding:6px 12px; font-size:0.75rem;" onclick="locateWarehouse('${w.id}')">📍 ${getTranslation('locate')}</button>
-                </div>
-            </td>
-        </tr>
-        `;
-    }).join('');
-
-    renderTableControls('warehouses', warehouses.length, limit, 'refreshWarehousesTable');
-}
-
-let congestionChartInstance = null;
-
-function showCongestionForecast(whId) {
-    const wh = (globalWarehouses || []).find(w => w.id === whId);
-    if (!wh) return;
-
-    document.getElementById('congestion-wh-name').innerText = wh.name;
-    document.getElementById('congestion-incoming-count').innerText = wh.incoming_count || 0;
-    
-    const adviceEl = document.getElementById('congestion-advice');
-    adviceEl.innerText = wh.mitigation_advice || "Operations Normal (Optimal Capacity)";
-    adviceEl.style.color = wh.needs_mitigation ? "var(--danger)" : "var(--success)";
-
-    document.getElementById('congestion-modal').style.display = 'block';
-
-    const ctx = document.getElementById('congestion-chart').getContext('2d');
-    if (congestionChartInstance) {
-        congestionChartInstance.destroy();
-    }
-
-    const labels = wh.forecast.map(f => f.hour);
-    const dataLoads = wh.forecast.map(f => f.predicted_load);
-    const dataCongestion = wh.forecast.map(f => f.predicted_congestion);
-
-    congestionChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Predicted Congestion',
-                data: dataCongestion,
-                borderColor: '#4f8cff',
-                backgroundColor: 'rgba(79, 140, 255, 0.15)',
-                borderWidth: 2.5,
-                tension: 0.4,
-                fill: true,
-                pointRadius: 2,
-                pointHoverRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const val = context.parsed.y;
-                            const idx = context.dataIndex;
-                            const load = dataLoads[idx];
-                            return ` Congestion: ${val}% (Load: ${load}/${wh.capacity || 5})`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    min: 0,
-                    max: 100,
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.05)'
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        callback: function(value) { return value + '%'; }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        maxTicksLimit: 8
-                    }
-                }
-            }
-        }
-    });
-}
-window.showCongestionForecast = showCongestionForecast;
-
-function locateWarehouse(id) {
-    const marker = markers.find(m => m.whId === id);
-    if (marker) {
-        map.setView(marker.getLatLng(), 15);
-        marker.openPopup();
-
-        // Smooth scroll to map
-        document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Visual highlight
-        if (highlightCircle) map.removeLayer(highlightCircle);
-        highlightCircle = L.circle(marker.getLatLng(), {
-            radius: 200,
-            color: 'var(--accent)',
-            fillColor: 'var(--accent)',
-            fillOpacity: 0.3,
-            className: 'pulse-animation'
-        }).addTo(map);
-        
-        setTimeout(() => { if (highlightCircle) map.removeLayer(highlightCircle); }, 5000);
+        console.warn("Boundary overlay failed to load", e);
     }
 }
 
@@ -627,7 +362,7 @@ async function drawRouteWithTraffic(start, end) {
                 if (rand > 0.9) color = '#ff4b4b'; // Red
                 else if (rand > 0.7) color = '#f6ad55'; // Orange
                 
-                const pline = L.polyline(chunk, {color: color, weight: 5, opacity: 0.7}).addTo(map);
+                const pline = new google.maps.Polyline({path: chunk.map(c => ({lat: c[0], lng: c[1]})), strokeColor: color, strokeWeight: 5, strokeOpacity: 0.7, map});
             markers.push(pline); // Push to markers array so it gets cleared on refresh
             }
         }
