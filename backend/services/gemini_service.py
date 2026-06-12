@@ -277,7 +277,46 @@ def local_heuristic_fallback_engine(prompt: str, system_instruction: Optional[st
         healthy_vehicles = len([v for v in wh_vehicles if v.get("vehicle_health_score", 100.0) >= 80.0])
         total_vehicles = len(wh_vehicles)
         
+        wh_lat = wh.get("lat", 20.5937) if wh else 20.5937
+        wh_lng = wh.get("lng", 78.9629) if wh else 78.9629
         weather_summary = "Clear Sky ☀️ | Temp: 28°C | Wind: 12 km/h | Humidity: 60%"
+        try:
+            import requests as http_req
+            wmo_labels = {
+                0: "Clear sky ☀️", 1: "Mainly clear 🌤️", 2: "Partly cloudy ⛅", 3: "Overcast ☁️",
+                45: "Foggy 🌫️", 48: "Dense fog 🌫️",
+                51: "Light drizzle 🌦️", 53: "Drizzle 🌦️", 55: "Heavy drizzle 🌧️",
+                61: "Light rain 🌧️", 63: "Moderate rain 🌧️", 65: "Heavy rain 🌧️",
+                71: "Light snow 🌨️", 73: "Moderate snow 🌨️", 75: "Heavy snow ❄️",
+                80: "Rain showers 🌦️", 81: "Moderate showers 🌧️", 82: "Violent showers ⛈️",
+                95: "Thunderstorm ⛈️", 96: "Thunderstorm with hail ⛈️", 99: "Severe thunderstorm ⛈️",
+            }
+            wx_resp = http_req.get(
+                f"https://api.open-meteo.com/v1/forecast?latitude={wh_lat}&longitude={wh_lng}"
+                f"&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,precipitation"
+                f"&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code"
+                f"&timezone=auto&forecast_days=2",
+                timeout=6
+            )
+            if wx_resp.status_code == 200:
+                wx = wx_resp.json()
+                curr = wx.get("current", {})
+                daily = wx.get("daily", {})
+                code = curr.get("weather_code", 0)
+                temp = curr.get("temperature_2m", "N/A")
+                wind = curr.get("wind_speed_10m", 0)
+                humidity = curr.get("relative_humidity_2m", 0)
+                rain = curr.get("precipitation", 0)
+                tomorrow_code = daily.get("weather_code", [0, 0])[1] if daily.get("weather_code") else 0
+                tomorrow_max = daily.get("temperature_2m_max", [0, 0])[1] if daily.get("temperature_2m_max") else "N/A"
+                tomorrow_rain = daily.get("precipitation_sum", [0, 0])[1] if daily.get("precipitation_sum") else 0
+                weather_summary = (
+                    f"{wmo_labels.get(code, 'Clear')} | Temp: {temp}°C | Wind: {wind} km/h | Humidity: {humidity}% | Precipitation: {rain}mm. "
+                    f"Tomorrow: {wmo_labels.get(tomorrow_code, 'Clear')} | Max: {tomorrow_max}°C | Expected Rain: {tomorrow_rain}mm"
+                )
+        except Exception:
+            pass
+
         
         return f"""# 📋 Morning Operational AI Daily Briefing ({wh_name})
 

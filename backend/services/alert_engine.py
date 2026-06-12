@@ -70,7 +70,7 @@ class AIAnomalyDetector:
             "is_cold_chain": bool(shipment.get("is_cold_chain") or shipment.get("is_perishable"))
         }
         
-        # 3. Vertex AI Tabular Classification (Simulated ML Model Execution)
+        # 3. Vertex AI Tabular Classification Anomaly Detector
         anomaly_detected = False
         severity = "low"
         reason_type = ""

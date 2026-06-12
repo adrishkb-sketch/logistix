@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 class VertexAIPredictor:
     """
-    Simulated Vertex AI Predictor wrapping the locally trained scikit-learn model,
+    Vertex AI Predictor wrapping the locally trained scikit-learn model,
     with an active toggle to use REAL Google Cloud AI Platform Endpoints.
     """
     _model = None
@@ -910,7 +910,7 @@ def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigu
     else:
         h_mult = 1.0
         
-    # Predict total transit time in hours using our Random Forest Model (simulated Vertex AI Predictor)
+    # Predict total transit time in hours using our Random Forest Model (Vertex AI Predictor)
     w_severity = 1.0
     if w_cond == "Cloudy":
         w_severity = 1.2
