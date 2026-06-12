@@ -547,7 +547,7 @@ def get_shipments(company_id: str):
                             break
                     db_changed = True
         
-        # Run Indian-specific "Killer Feature" checks using pre-loaded parameters
+        # Run India-specific key compliance checks using pre-loaded parameters
         check_compliance_alerts(s, alerts=alerts_list)
         check_street_intel_alerts(s, zones=zones_list, vehicles=vehicles_list, alerts=alerts_list)
         
