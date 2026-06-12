@@ -2009,7 +2009,7 @@ window.fetchBottleneckAlerts = async function() {
     if (!el) return;
     el.innerHTML = "Analyzing...";
     try {
-        const res = await apiCall(`/manager/warehouses/${currentWarehouseId}/bottleneck-alerts`, 'GET');
+        const res = await apiCall(`/manager/warehouses/${currentWarehouseId}/bottleneck-alerts?company_id=${companyId}`, 'GET');
         el.innerHTML = `<div>${res.alert}</div><div style="margin-top:10px; font-size:0.8rem; font-weight:normal;">Inbound: ${res.stats.inbound} | Outbound: ${res.stats.outbound} | At Hub: ${res.stats.at_hub}</div>`;
         const btn = document.getElementById('btn-toggle-scheduling');
         if (btn) {
@@ -2032,7 +2032,8 @@ window.toggleScheduling = async function() {
         const btn = document.getElementById('btn-toggle-scheduling');
         const isAccepting = btn.innerText.includes("Unblock"); // If it says Unblock, we are changing it to true
         await apiCall(`/manager/warehouses/${currentWarehouseId}/toggle-scheduling`, 'POST', {
-            is_accepting_shipments: isAccepting
+            is_accepting_shipments: isAccepting,
+            company_id: companyId
         });
         fetchBottleneckAlerts();
     } catch(e) {
@@ -2091,7 +2092,10 @@ window.renderDockScheduling = async function() {
 window.assignDock = async function(shipmentId, dockId) {
     if (!shipmentId) return; // Unassigning is handled backend side generally, but we can allow it
     try {
-        await apiCall(`/manager/shipments/${shipmentId}/assign-dock`, 'PUT', { dock_id: dockId });
+        await apiCall(`/manager/shipments/${shipmentId}/assign-dock`, 'PUT', { 
+            dock_id: dockId,
+            company_id: companyId
+        });
         await loadGlobalData(); // reload shipments
         if (typeof loadGateQueue === 'function') loadGateQueue(); // reload gate tab if defined
         renderDockScheduling();
