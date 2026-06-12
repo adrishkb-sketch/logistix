@@ -549,3 +549,41 @@ Logistix introduces creative approaches and smart technologies to solve logistic
 * **Growing into a Real Product:** Logistix uses industry-standard APIs (like OSRM for maps, SQLite/Turso for data, and SMTP/WhatsApp for messaging). This means it can easily be connected to actual hardware sensors and corporate databases.
 * **Expanding the Voice Companion:** The driver's Voice Command Engine in [driver_dashboard.html](file:///Users/adrish/Desktop/Projects/logistix/frontend/pages/driver_dashboard.html) can be updated to support more local dialects and handle complex commands like voice-based cargo checking or check-in updates.
 * **Smarter AI Predictions:** In the future, the system can learn from past weather patterns and warehouse traffic to predict the best dispatch times, helping logistics companies avoid delays and reduce carbon emissions.
+
+---
+
+## 💻 10. Technical Merit (Hackathon Evaluation Criteria)
+
+Logistix is built with high-quality engineering. Here is how our project meets the four core technical merit criteria in simple terms:
+
+### ⚙️ 10.1. Technical Complexity
+> [!NOTE]
+> **Evaluation Metric:** *Is the technology behind the app challenging and well-written? Is the codebase clean, robust, and reliable?*
+
+* **Advanced Map & Location Services:** The app does not guess routes. It integrates OSRM in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py) to calculate actual road paths. It also checks coordinate records via Nominatim to ensure depot placements are realistic (not in water).
+* **Simulated IoT Sensor Grid:** We built a real-time data listener in [iot_gateway.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/iot_gateway.py) that models multi-sensor inputs. This includes accelerometer cabin crashes, cargo temperature thresholds, and driver heart rate monitors.
+* **Complex Operational Workflows:** The system handles multi-leg dispatches, driver assignments, automatic breakdown re-routing, and E-Way Bill compliance checking. All these operations are mapped in our combined workflow flowchart (see Section 3).
+
+### 🤖 10.2. AI Integration
+> [!NOTE]
+> **Evaluation Metric:** *How well is AI integrated into the project? Does it use advanced AI models correctly, or could a simpler rule-based approach work instead?*
+
+* **Sophisticated Multi-Model Integration:** We use two advanced Google AI technologies. We use **Vertex AI** to host custom machine learning models for predictive ETA calculations. We use **Google Gemini 1.5** for high-level reasoning, such as auditing driver safety, forecasting shipment demand, and analyzing warehouse bottlenecks.
+* **16 Custom AI Features:** We did not just add a simple chatbot. Logistix calls the Gemini API in 16 different endpoints (listed in Section 3) to solve specific business tasks. This includes generating morning briefings, sentiment classification of feedback, and choosing rescue vehicles.
+* **Seamless Backup System:** If the AI services go offline or run out of free-tier limits, [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) automatically switches to local rule-based formulas, ensuring the app continues to work without disruption.
+
+### ⚡ 10.3. Performance & Scalability
+> [!NOTE]
+> **Evaluation Metric:** *Is the solution optimized to run fast? Can it handle large amounts of data and many active users?*
+
+* **Fast Edge Databases:** Powered by Turso (libSQL) in [turso_db.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/turso_db.py) to sync quickly and keep reading speeds fast, even under heavy load.
+* **Batch Operations:** To prevent database slowdowns, the backend uses batch update operations (`update_many`) in [manager.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/manager.py) to assign hundreds of drivers and update routes at the exact same time without blocking other queries.
+* **Efficient Coding Practices:** All data models are validated instantly using Pydantic, and background tasks are managed efficiently to prevent server lags.
+
+### 🔒 10.4. Security & Privacy
+> [!NOTE]
+> **Evaluation Metric:** *Are standard security practices followed? Is user data handled securely, keeping privacy and ethics in mind?*
+
+* **Secure Authentication:** All user accounts (managers, drivers, and customers) are protected using industry-standard JWT tokens in [auth.py](file:///Users/adrish/Desktop/Projects/logistix/backend/routers/auth.py) and password hashing (bcrypt) to keep login credentials safe.
+* **Two-Factor Verification (OTP):** Cargo handoffs are verified using secure 6-digit one-time passwords (OTPs) sent directly to mobile numbers using the Meta WhatsApp API and Gmail.
+* **Data Privacy & Isolated Sandboxes:** Test simulations are run in isolated sandbox environments to prevent mock data from leaking into live shipment records. Company data is protected so managers can only access routes belonging to their own organization ID.
