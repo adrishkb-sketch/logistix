@@ -478,7 +478,24 @@
                         <h3 data-i18n="gemini_mgmt" class="split-text" style="margin:0;">AI API Configuration</h3>
                         <span id="ai-status-badge" style="font-size:0.75rem; font-weight:800; padding:6px 14px; border-radius:20px; background:rgba(255,70,70,0.15); color:var(--danger); border:1px solid rgba(255,59,48,0.3);">Not Configured 🔴</span>
                     </div>
-                    <p data-i18n="gemini_mgmt_desc" class="subtitle">Manage your Google Gemini API Keys for LLM-powered features.</p>
+                    <p data-i18n="gemini_mgmt_desc" class="subtitle">Manage your Google Gemini API Keys and AI routing preferences.</p>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-radius: 16px; border:1px solid rgba(0, 229, 255, 0.4); background:rgba(0, 229, 255, 0.08); margin-bottom: 20px;">
+                        <div>
+                            <h4 style="color:var(--text-main); margin-bottom: 4px; font-size: 1.1rem;">Gemini AI Intelligence Engine</h4>
+                            <p style="color:var(--text-muted); font-size: 0.85rem; margin:0;">Toggle to switch routing and analytics from the Local Rule Engine to the deep-integrated Gemini AI Engine.</p>
+                        </div>
+                        <label class="switch" style="position: relative; display: inline-block; width: 60px; height: 34px;">
+                            <input type="checkbox" id="ai-engine-toggle" onchange="toggleAIEngine()" style="opacity: 0; width: 0; height: 0;">
+                            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2);"></span>
+                        </label>
+                    </div>
+
+                    <style>
+                        .switch input:checked + .slider { background-color: var(--primary); border-color: var(--primary); box-shadow: 0 0 15px var(--neon-glow); }
+                        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+                        .switch input:checked + .slider:before { transform: translateX(26px); }
+                    </style>
 
                     <div style="padding:25px; border-radius: 16px; border:1px solid rgba(0, 229, 255, 0.2); background:rgba(0, 229, 255, 0.03);">
                         <p style="font-size:0.9rem; margin:0 0 20px 0; color:var(--text-muted); line-height: 1.6;">

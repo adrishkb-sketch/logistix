@@ -27,6 +27,11 @@ async function loadGeminiKeyPool() {
                 badge.style.borderColor = 'rgba(248,113,113,0.3)';
             }
         }
+        
+        const aiToggle = document.getElementById('ai-engine-toggle');
+        if (aiToggle) {
+            aiToggle.checked = res.ai_mode === true;
+        }
 
         if (!list) return;
 
@@ -93,6 +98,22 @@ async function deleteGeminiKey(index) {
         localStorage.setItem('ai_configured_ts', Date.now().toString());
     } catch (e) {
         showToast('Failed to delete key: ' + (e.message || 'Unknown error'), 'error');
+    }
+}
+
+// ─── AI Mode Toggle ──────────────────────────────────────────────────────────
+async function toggleAIEngine() {
+    const aiToggle = document.getElementById('ai-engine-toggle');
+    if (!aiToggle) return;
+    
+    try {
+        const mode = aiToggle.checked;
+        const res = await apiCall('/manager/system/ai-mode', 'POST', { ai_mode: mode });
+        showToast(res.message || (mode ? 'Gemini AI Engine Activated' : 'Local Rule Engine Activated'), 'success');
+        localStorage.setItem('ai_configured_ts', Date.now().toString());
+    } catch (e) {
+        aiToggle.checked = !aiToggle.checked;
+        showToast('Failed to toggle AI mode: ' + (e.message || 'Unknown error'), 'error');
     }
 }
 

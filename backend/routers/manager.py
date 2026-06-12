@@ -2582,11 +2582,14 @@ def get_gemini_keys(x_logistix_context: Optional[str] = Header(None)):
     from backend.database import JSONDatabase
     config_db = JSONDatabase("config")
     cfg = config_db.get_by_id(company_id)
-    if cfg and cfg.get("gemini_keys"):
-        keys = [k.strip() for k in cfg.get("gemini_keys").split(",") if k.strip()]
-        masked = [f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "invalid" for k in keys]
-        return {"key_count": len(keys), "masked_keys": masked}
-    return {"key_count": 0, "masked_keys": []}
+    ai_mode = False
+    if cfg:
+        ai_mode = cfg.get("ai_mode", False)
+        if cfg.get("gemini_keys"):
+            keys = [k.strip() for k in cfg.get("gemini_keys").split(",") if k.strip()]
+            masked = [f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "invalid" for k in keys]
+            return {"key_count": len(keys), "masked_keys": masked, "ai_mode": ai_mode}
+    return {"key_count": 0, "masked_keys": [], "ai_mode": ai_mode}
 
 class SaveGeminiKeysRequest(BaseModel):
     keys: str   # single key or comma-separated
@@ -2617,9 +2620,30 @@ def save_gemini_keys(data: SaveGeminiKeysRequest, x_logistix_context: Optional[s
     else:
         keys_str = ",".join(new_keys)
     
-    config_db.insert({"id": company_id, "gemini_keys": keys_str})
+    config_db.update(company_id, {"gemini_keys": keys_str}) if config_db.get_by_id(company_id) else config_db.insert({"id": company_id, "gemini_keys": keys_str})
     count = len(keys_str.split(","))
     return {"message": f"✅ Key added! Pool now has {count} key(s)."}
+
+class AIModeRequest(BaseModel):
+    ai_mode: bool
+
+@router.post("/system/ai-mode")
+def set_ai_mode(data: AIModeRequest, x_logistix_context: Optional[str] = Header(None)):
+    from backend.services.auth_utils import get_company_id_from_context
+    company_id = get_company_id_from_context(x_logistix_context)
+    if not company_id:
+        raise HTTPException(status_code=401, detail="Unauthorized: Context missing")
+        
+    from backend.database import JSONDatabase
+    config_db = JSONDatabase("config")
+    cfg = config_db.get_by_id(company_id)
+    if cfg:
+        config_db.update(company_id, {"ai_mode": data.ai_mode})
+    else:
+        config_db.insert({"id": company_id, "ai_mode": data.ai_mode})
+        
+    mode_str = "Gemini AI Engine" if data.ai_mode else "Local Rule Engine"
+    return {"message": f"✅ Switched to {mode_str}"}
 
 class DeleteGeminiKeyRequest(BaseModel):
     index: int

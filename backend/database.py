@@ -198,18 +198,35 @@ class JSONDatabase:
         if self.use_turso:
             return self.turso_db.get_filtered(filters)
         
-        # Pull all and filter in memory to match the flexible JSON filtering
-        all_items = self.get_all()
-        filtered = []
-        for item in all_items:
-            match = True
-            for key, val in filters.items():
-                if str(item.get(key)) != str(val):
-                    match = False
-                    break
-            if match:
-                filtered.append(item)
-        return filtered
+        if not filters:
+            return self.get_all()
+            
+        db = SessionLocal()
+        try:
+            where_clauses = []
+            params = {}
+            for i, (k, v) in enumerate(filters.items()):
+                where_clauses.append(f"json_extract(data, '$.{k}') = :val_{i}")
+                if isinstance(v, bool):
+                    params[f"val_{i}"] = 1 if v else 0
+                elif isinstance(v, (int, float)):
+                    params[f"val_{i}"] = v
+                else:
+                    params[f"val_{i}"] = str(v)
+            
+            where_sql = " AND ".join(where_clauses)
+            query = f"SELECT data FROM {self.table_name} WHERE {where_sql}"
+            
+            rows = db.execute(text(query), params).all()
+            items = []
+            for row in rows:
+                try:
+                    items.append(json.loads(row[0]))
+                except Exception:
+                    pass
+            return items
+        finally:
+            db.close()
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         if self.use_turso:
@@ -309,28 +326,17 @@ class JSONDatabase:
         try:
             key_to_check = filter_column.replace("data->>", "") if filter_column.startswith("data->>") else filter_column
             
-            # Since data is stored as a json blob, we query the SQL table and filter/delete
-            rows = db.execute(text(f"SELECT id, data FROM {self.table_name}")).all()
-            ids_to_delete = []
-            for r_id, r_data in rows:
-                try:
-                    item = json.loads(r_data)
-                    val = item.get(key_to_check)
-                    if str(val) == str(filter_value):
-                        ids_to_delete.append(r_id)
-                except Exception:
-                    pass
-            
-            if ids_to_delete:
-                with db.begin():
-                    # Construct placeholders for IN clause safely
-                    placeholders = ",".join([f":id{i}" for i in range(len(ids_to_delete))])
-                    params = {f"id{i}": str(ids_to_delete[i]) for i in range(len(ids_to_delete))}
-                    db.execute(
-                        text(f"DELETE FROM {self.table_name} WHERE id IN ({placeholders})"),
-                        params
-                    )
-            return len(ids_to_delete)
+            with db.begin():
+                if isinstance(filter_value, bool):
+                    val = 1 if filter_value else 0
+                elif isinstance(filter_value, (int, float)):
+                    val = filter_value
+                else:
+                    val = str(filter_value)
+                    
+                query = text(f"DELETE FROM {self.table_name} WHERE json_extract(data, '$.{key_to_check}') = :val")
+                res = db.execute(query, {"val": val})
+                return res.rowcount
         finally:
             db.close()
 

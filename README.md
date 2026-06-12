@@ -62,6 +62,8 @@ The transparent, end-user facing delivery tracking experience.
 
 Logistix isn't just a passive tracking tool; it is an intelligent, active orchestrator.
 
+* **Deep Gemini Combinatorial Routing Engine:** Dynamically assigns vehicles and drivers by feeding Gemini live weather anomalies, fatigue vectors, and payload capacities, turning an LLM into an operational combinatorial solver.
+* **Real-World ML Traffic Models:** ETA prediction pipelines are trained on authentic geospatial datasets (e.g., NYC TLC open-source dispatch data) mapped against Haversine distances, not synthetic arrays.
 * **Automated Voice Control Engine (VCE):** Managers can control the dashboard entirely hands-free. Using natural language parsing, users can say *"Show me delayed shipments in Hub B"* or *"Switch to dark mode"*, and the UI reacts instantly.
 * **Smart Plate Recognition (ALPR):** Automates gate access by visually verifying truck license plates against the database, cutting check-in times by 80%.
 * **Predictive Bottleneck Analysis:** Continuously monitors historical and live flow data to warn hub managers of impending dock overcrowding before it happens.
@@ -91,8 +93,8 @@ The frontend architecture entirely abandons bloated CSS frameworks (like Bootstr
 
 ### Backend (API & Microservices)
 - **Core Framework:** FastAPI (Python)
-- **AI/LLM Integration:** Google Gemini (`gemini_service.py`)
-- **Data Persistence:** SQLite (Development) / Abstracted Key-Value Store (`kv_store.py`)
+- **AI/LLM Integration:** Google Gemini (`gemini_service.py`) and Vertex AI logic
+- **Data Persistence:** Production-grade SQLite with WAL and native `json_extract()` hyper-scaling (`database.py`)
 - **Server Gateway:** Uvicorn (ASGI)
 
 ### Frontend (Client-side)

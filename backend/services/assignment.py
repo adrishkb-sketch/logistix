@@ -211,6 +211,69 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not drivers:
         return {"error": "Hub Empty: No drivers registered."}
 
+    # -- START AI ENGINE OVERRIDE --
+    config_db = JSONDatabase("config")
+    cfg = config_db.get_by_id(company_id)
+    if cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys"):
+        api_keys = cfg.get("gemini_keys")
+        try:
+            from backend.services.gemini_service import call_gemini
+            import json
+            
+            prompt = (
+                f"You are the Logistix Advanced AI Routing Engine.\n"
+                f"Task: Select the most optimal vehicle and driver for this shipment.\n"
+                f"Shipment Leg: {leg_type}, Distance: {distance:.1f}km, Weight: {shipment.get('weight', 0)}kg\n"
+                f"Pickup Lat/Lng: {p_lat}, {p_lng}. Drop Lat/Lng: {d_lat}, {d_lng}\n"
+                f"Weather Alert at Pickup: {'Yes' if p_weather_disrupted else 'No'}. Weather Alert at Drop: {'Yes' if d_weather_disrupted else 'No'}\n\n"
+                f"Available Fleet Pool:\n"
+            )
+            for d in drivers:
+                if d.get("status") not in ["available", "on_duty"] or d.get("is_fit") is False: continue
+                v_id = d.get("assigned_vehicle_id")
+                if not v_id: continue
+                v = next((x for x in vehicles if x.get("id") == v_id), None)
+                if not v or v.get("is_operational") is False or float(v.get("vehicle_health_score", 100)) <= 0: continue
+                
+                v_type = v.get("type", "Unknown")
+                v_cap = v.get("capacity", 1000.0)
+                score = calculate_driver_performance_score(d)
+                prompt += f"- Driver ID: {d['id']}, Name: {d.get('name')}, Perf_Score: {score}. Vehicle ID: {v['id']}, Type: {v_type}, Capacity: {v_cap}kg\n"
+            
+            prompt += (
+                f"\nRouting Rules:\n"
+                f"1. DIRECT deliveries (<50km, not leg) prefer Small Trucks or Vans.\n"
+                f"2. FIRST MILE prefers Bikes/EVs.\n"
+                f"3. MIDDLE MILE requires Heavy or Small Trucks.\n"
+                f"4. LAST MILE prefers Vans or Bikes (Drones if suitable).\n"
+                f"5. WEATHER RULE: If Weather Alert is 'Yes', DO NOT use Bikes or Drones. Use Vans/Trucks.\n"
+                f"6. CAPACITY RULE: Do not exceed vehicle capacity.\n"
+                f"7. PREFERENCE: Pick drivers with highest Perf_Score.\n\n"
+                f"Return EXACTLY a raw JSON object (no markdown, no backticks):\n"
+                f"{{\"assigned_driver_id\": \"<id>\", \"assigned_vehicle_id\": \"<id>\", \"reasoning\": \"<short professional explanation>\"}}"
+            )
+            
+            system_instruction = "You are a rigid AI system that outputs ONLY raw valid JSON. Do not wrap in ```json or ```."
+            response = call_gemini(prompt, system_instruction, api_keys)
+            response = response.replace('```json', '').replace('```', '').strip()
+            ai_choice = json.loads(response)
+            
+            if ai_choice.get("assigned_driver_id") and ai_choice.get("assigned_vehicle_id"):
+                v = next((x for x in vehicles if x.get("id") == ai_choice["assigned_vehicle_id"]), None)
+                v_type = v.get("type", "unknown") if v else "unknown"
+                return {
+                    "assigned_driver_id": ai_choice["assigned_driver_id"],
+                    "assigned_vehicle_id": ai_choice["assigned_vehicle_id"],
+                    "status": "assigned",
+                    "stage": "Assigned via Gemini AI Engine",
+                    "ai_reasoning": ai_choice.get("reasoning", "Optimal route determined by AI."),
+                    "finance": estimate_delivery_cost(shipment, v_type.lower()),
+                    "pickup_deadline": None
+                }
+        except Exception as e:
+            print(f"Gemini AI Engine failed, seamlessly falling back to Local Rule Engine: {e}")
+    # -- END AI ENGINE OVERRIDE --
+
     # Two-pass assignment check: first strict hub, then relaxed
     available_pairs = []
     rejection_reasons = []
@@ -719,33 +782,59 @@ def reoptimize_driver_route(driver_id: str):
     start_lng = vehicle.get("last_known_location", {}).get("lng") if vehicle else active_tasks[0]["pickup"]["lng"]
 
     # Simple Optimization: Group by Shipment
-    # 1. Try OSRM Trip API for optimal Traveling Salesperson routing
+    # 1. Try Gemini AI Engine first if enabled
     try:
-        import requests
-        # Create a list of all coordinates starting with current location
-        coords = [f"{start_lng},{start_lat}"]
-        for s in active_tasks:
-            coords.append(f"{s['pickup']['lng']},{s['pickup']['lat']}")
+        config_db = JSONDatabase("config")
+        company_id = active_tasks[0].get("company_id")
+        cfg = config_db.get_by_id(company_id) if company_id else None
         
-        coords_str = ";".join(coords)
-        url = f"http://router.project-osrm.org/trip/v1/driving/{coords_str}?source=first"
-        response = requests.get(url, timeout=3)
-        if response.status_code == 200:
-            data = response.json()
-            waypoints = data.get("waypoints", [])
-            order_map = {}
-            for pos, wp in enumerate(waypoints):
-                order_map[wp["waypoint_index"]] = pos
-                
-            # Copy active tasks to preserve original indices for lookup
-            orig_tasks = list(active_tasks)
-            active_tasks.sort(key=lambda item: order_map.get(orig_tasks.index(item) + 1, 999))
-            print("Successfully optimized route using OSRM AI Engine")
+        if cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys"):
+            from backend.services.gemini_service import call_gemini
+            import json
+            
+            prompt = f"Optimize the Traveling Salesperson route for these stops. Current Location: ({start_lat}, {start_lng}).\n"
+            for i, s in enumerate(active_tasks):
+                prompt += f"Stop {i}: ({s['pickup']['lat']}, {s['pickup']['lng']})\n"
+            prompt += "Return EXACTLY a raw JSON array of indices representing the optimal visiting order (e.g., [2, 0, 1])."
+            
+            response = call_gemini(prompt, "You are an AI TSP solver. Output strictly a valid JSON array of ints. No markdown.", cfg.get("gemini_keys"))
+            response = response.replace('```json', '').replace('```', '').strip()
+            order = json.loads(response)
+            
+            optimized_tasks = [active_tasks[i] for i in order if i < len(active_tasks)]
+            for t in active_tasks:
+                if t not in optimized_tasks:
+                    optimized_tasks.append(t)
+            active_tasks = optimized_tasks
+            print("Successfully optimized route using Gemini AI Engine")
         else:
-            raise Exception("OSRM API returned non-200")
-    except Exception as e:
-        print(f"OSRM Routing Fallback (using Haversine): {e}")
-        active_tasks.sort(key=lambda s: haversine(start_lat, start_lng, s["pickup"]["lat"], s["pickup"]["lng"]))
+            raise Exception("AI mode not enabled, fallback to OSRM")
+            
+    except Exception as e_ai:
+        # Fallback to OSRM Trip API
+        try:
+            import requests
+            coords = [f"{start_lng},{start_lat}"]
+            for s in active_tasks:
+                coords.append(f"{s['pickup']['lng']},{s['pickup']['lat']}")
+            
+            coords_str = ";".join(coords)
+            url = f"http://router.project-osrm.org/trip/v1/driving/{coords_str}?source=first"
+            response = requests.get(url, timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                waypoints = data.get("waypoints", [])
+                order_map = {}
+                for pos, wp in enumerate(waypoints):
+                    order_map[wp["waypoint_index"]] = pos
+                    
+                orig_tasks = list(active_tasks)
+                active_tasks.sort(key=lambda item: order_map.get(orig_tasks.index(item) + 1, 999))
+            else:
+                raise Exception("OSRM API returned non-200")
+        except Exception as e_osrm:
+            print(f"OSRM Routing Fallback (using Haversine): {e_osrm}")
+            active_tasks.sort(key=lambda s: haversine(start_lat, start_lng, s["pickup"]["lat"], s["pickup"]["lng"]))
     
     # 2. Update deadlines sequentially
     curr_lat, curr_lng = start_lat, start_lng
