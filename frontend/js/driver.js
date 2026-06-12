@@ -673,11 +673,16 @@ function initBlockingOverlays() {
                 <p style="color:rgba(255,255,255,0.4); margin-bottom:24px; font-size:0.8rem; line-height:1.5;">Please enable location permissions in your browser settings and try again. Your position is tracked for route optimization, ETA calculation, and safety compliance.</p>
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     <button class="btn-primary" id="geo-retry-btn" style="background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:#000; font-weight:800; border:none; padding:14px; border-radius:12px; cursor:pointer; font-size:1rem; box-shadow:0 4px 15px rgba(79,140,255,0.3);">📍 Retry Location Access</button>
+                    <button class="btn-outline" id="geo-dismiss-btn" style="border: 1px solid var(--border); padding: 10px; border-radius: 12px; cursor: pointer; color: var(--text-main); background: transparent; font-size: 0.9rem;">✖ Continue without GPS (Simulation)</button>
                     <p style="color:rgba(255,255,255,0.3); font-size:0.7rem; margin:8px 0 0 0;">If using Chrome: Settings → Site Settings → Location → Allow</p>
                 </div>
             </div>
         `;
         document.body.appendChild(div);
+
+        document.getElementById('geo-dismiss-btn').addEventListener('click', () => {
+            document.getElementById('geolocation-block-overlay').style.display = 'none';
+        });
 
         document.getElementById('geo-retry-btn').addEventListener('click', () => {
             const btn = document.getElementById('geo-retry-btn');

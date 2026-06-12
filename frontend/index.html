@@ -1487,14 +1487,7 @@ body.light-mode .pin-box:focus { background: rgba(255,255,255,1) !important; }
             <h3 class="text-shine-hover" data-i18n="platform_driver">Driver</h3>
             <p data-i18n="platform_driver_desc">Access tasks and track deliveries.</p>
         </div>
-        <div class="card" onclick="handleActionClick(event, this, () => { window.location.href = 'driver_app.html'; })">
-            <div class="icon-box">
-                <!-- App Download Icon -->
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line><path d="M12 8v4"></path><polyline points="10 10 12 12 14 10"></polyline></svg>
-            </div>
-            <h3 class="text-shine-hover">Driver App</h3>
-            <p>Download the dedicated native-like mobile app.</p>
-        </div>
+
         <div class="card" onclick="handleActionClick(event, this, () => { window.location.href = 'pages/track.html'; })">
             <div class="icon-box">
                 <!-- Track Order / Box Target -->
@@ -1530,6 +1523,17 @@ body.light-mode .pin-box:focus { background: rgba(255,255,255,1) !important; }
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    // Auto-login Redirects
+    if (localStorage.getItem('driver_token')) {
+        window.location.href = 'pages/driver.html';
+        return;
+    } else if (localStorage.getItem('wh_manager_token')) {
+        window.location.href = 'pages/warehouse_manager.html';
+        return;
+    } else if (localStorage.getItem('manager_token')) {
+        window.location.href = 'pages/manager.html';
+        return;
+    }
 
     // Global Pointer Coordinates
     const pointer = { x: -1000, y: -1000 };
@@ -1938,6 +1942,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 <h2 class="modal-title" data-i18n="modal_manager_title">Manager Portal</h2>
                 <p class="modal-subtitle">Securely authenticate to access your dashboard</p>
                 <form class="auth-form" id="manager-login-form" onsubmit="handleActionClick(event, this.querySelector('button[type=submit]'))">
+                    <div class="input-group">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                            <line x1="9" y1="21" x2="9" y2="9"></line>
+                        </svg>
+                        <input class="premium-input" id="manager-company-id" type="text" placeholder="Company ID" data-i18n-placeholder="placeholder_company_id" required>
+                    </div>
                     <div class="input-group">
                         <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
