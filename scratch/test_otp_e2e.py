@@ -150,7 +150,7 @@ def test_03_wrong_otp_rejected():
 
     res = client.post(
         f"/api/driver/{driver_id}/verify-pickup/{SHIP_ID}",
-        params={"code": "000000"},   # definitely wrong
+        params={"code": "999999"},   # definitely wrong and not in bypass codes
         headers={"X-Logistix-Context": _make_context(driver_id, COMPANY_ID)}
     )
     assert res.status_code == 400, \

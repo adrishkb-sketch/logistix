@@ -8,8 +8,6 @@ from fastapi.testclient import TestClient
 from backend.main import app
 from backend.database import JSONDatabase
 
-client = TestClient(app)
-
 def test_calamity_filtering():
     company_id = "557f9b08-30da-4b99-b233-a16c9df5191d"
     
@@ -25,6 +23,7 @@ def test_calamity_filtering():
     orig_alerts = alerts_db.get_all()
     orig_shipments = shipments_db.get_all()
     
+    client = TestClient(app)
     try:
         # Clear out simulated cells and active calamity alerts for testing
         weather_db.write([])
