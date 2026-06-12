@@ -12,6 +12,9 @@
 > **Short on time?** Use these pre-configured login credentials to immediately access the different stakeholder portals of Logistix and see all operations in action:
 > 
 > * **Company ID:** `1cd1e383-5cba-45ee-b38d-c14b4a080a44`
+> * **Executive / Regional Manager Portal Login:**
+>   * **Email:** `work.nidhip06@gmail.com`
+>   * **Password:** `123`
 > * **Driver Portal Login:**
 >   * **Driver ID:** `ravi.sharma1`
 >   * **Password:** `Pass@8432`
