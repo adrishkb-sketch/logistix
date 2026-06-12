@@ -474,20 +474,14 @@ async function initMap(shipment, dynamicEta, vehicleType, legs = []) {
     if (!trackMap) {
         const mapContainer = document.getElementById('track-map');
         if (!mapContainer) return;
-        
+        trackMap = L.map('track-map').setView([loc.lat, loc.lng], 13);
         const theme = localStorage.getItem('theme') || 'dark';
-        trackMap = new google.maps.Map(document.getElementById('track-map'), {
-            center: { lat: loc.lat, lng: loc.lng }, zoom: 13,
-            styles: theme === 'dark' ? [
-                { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-                { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-            ] : []
-        });
-        
+        const tileUrl = theme === 'dark' 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(trackMap);
     } else {
-        trackMap.setCenter({lat: loc.lat, lng: loc.lng});
+        trackMap.setView([loc.lat, loc.lng], 13);
         if (trackMarker) trackMap.removeLayer(trackMarker);
     }
 

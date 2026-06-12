@@ -1458,20 +1458,12 @@ async function loadMissions(autoStartNext = false) {
             document.getElementById('fullscreen-btn').style.display = 'block';
             
             if (!map) {
-                
-    const theme = localStorage.getItem('theme') || 'dark';
-    map = new google.maps.Map(document.getElementById('route-map'), {
-        center: { lat: orderedStops[0].lat, lng: orderedStops[0].lng },
-        zoom: 13,
-        styles: theme === 'dark' ? [
-            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-            { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-        ] : [],
-        disableDefaultUI: true
-    });
-    
+                map = L.map('route-map').setView([orderedStops[0].lat, orderedStops[0].lng], 13);
+                const theme = localStorage.getItem('theme') || 'dark';
+                const tileUrl = theme === 'dark' 
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                L.tileLayer(tileUrl, { attribution: '&copy; CARTO' }).addTo(map);
                 applyOfficialBorders(map);
                 
                 addMapControlsAndHUD();
@@ -3475,8 +3467,8 @@ function updateRouteProgress(driverLat, driverLng) {
     if (progressTextEl) progressTextEl.innerText = `${progressPct}%`;
     if (progressBarEl) progressBarEl.style.width = `${progressPct}%`;
 
-    if (completedPolyline) completedPolyline.setMap(null);
-    if (remainingPolyline) remainingPolyline.setMap(null);
+    if (completedPolyline) map.removeLayer(completedPolyline);
+    if (remainingPolyline) map.removeLayer(remainingPolyline);
 
     const completedCoords = routeCoords.slice(0, closestIdx + 1);
     const remainingCoords = routeCoords.slice(closestIdx);
@@ -3837,7 +3829,7 @@ window.acceptReroute = function() {
         activeRoutePolylines.forEach(p => map.removeLayer(p));
         activeRoutePolylines = [];
         
-        const polyRerouted = new google.maps.Polyline({path: reroutedCoords.map(c=>({lat:c[0],lng:c[1]})), strokeColor: '#a855f7', strokeWeight: 8, strokeOpacity: 0.9, map: map});
+        const polyRerouted = L.polyline(reroutedCoords, {color: '#a855f7', weight: 8, opacity: 0.9}).addTo(map);
         activeRoutePolylines.push(polyRerouted);
         
         showNotification("🧠 Smart detour applied. Saved 12 mins and bypassed heavy congestion!", "success");

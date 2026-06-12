@@ -13,11 +13,10 @@ let smartStepIndex = -1;
 let smartType = 'shipment';
 let currentLookedUpReceiverId = null;
 
-const ICON_PICKER = {
-    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#3b82f6" stroke="white" stroke-width="2"/></svg>'),
-    scaledSize: new google.maps.Size(24, 24),
-    anchor: new google.maps.Point(12, 12)
-};
+const ICON_PICKER = L.divIcon({
+    html: `<div style="background:var(--accent); width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 0 15px var(--accent); font-size:12px; color:black;">📍</div>`,
+    className: 'custom-marker', iconSize: [24, 24], iconAnchor: [12, 12]
+});
 
 // === LOGISTIX ENVIRONMENTAL & AI SCORING ENGINE ===
 function haversineDistance(lat1, lng1, lat2, lng2) {
@@ -1758,9 +1757,9 @@ function openMapPicker(targetId, callback) {
             if (currentVal && currentVal.includes(',')) {
                 const [lat, lng] = currentVal.split(',').map(s => parseFloat(s.trim()));
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    const ll = {lat, lng};
-                    pickingMap.setCenter(ll); pickingMap.setZoom(12);
-                    pickingMarker = new google.maps.Marker({position: ll, map: pickingMap, icon: ICON_PICKER});
+                    const ll = L.latLng(lat, lng);
+                    pickingMap.setView(ll, 12);
+                    pickingMarker = L.marker(ll, { icon: ICON_PICKER }).addTo(pickingMap);
                     pickedCoords = { lat, lng };
                     document.getElementById('current-pick-display').innerText = `Current: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
                 }
@@ -1769,29 +1768,25 @@ function openMapPicker(targetId, callback) {
     };
 
     if (!pickingMap) {
-        
-    pickingMap = new google.maps.Map(document.getElementById('picking-map'), {
-        center: { lat: 20.5937, lng: 78.9629 }, zoom: 5,
-        styles: [{ elementType: "geometry", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] }, { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }, { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }],
-        disableDefaultUI: true
-    });
-    
+        pickingMap = L.map('picking-map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png').addTo(pickingMap);
         applyOfficialBorders(pickingMap);
     }
 
     pickingMap.off('click');
-    google.maps.event.addListener(pickingMap, "click", function(e) { const lat = e.latLng.lat(); const lng = e.latLng.lng();
+    pickingMap.on('click', function(e) {
+        const { lat, lng } = e.latlng;
         pickedCoords = { lat, lng };
         if (pickingMarker) {
-            pickingMarker.setPosition(e.latLng);
+            pickingMarker.setLatLng(e.latlng);
         } else {
-            pickingMarker = new google.maps.Marker({position: e.latLng, map: pickingMap, icon: ICON_PICKER});
+            pickingMarker = L.marker(e.latlng, { icon: ICON_PICKER }).addTo(pickingMap);
         }
         document.getElementById('current-pick-display').innerText = `Selected: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     });
 
     setTimeout(() => {
-        google.maps.event.trigger(pickingMap, "resize");
+        pickingMap.invalidateSize();
         if (pickingMarker) {
             pickingMap.removeLayer(pickingMarker);
             pickingMarker = null;
@@ -2867,17 +2862,8 @@ window.openTrackModal = async function(shipmentId) {
     document.getElementById('track-modal').style.display = 'block';
     
     if (!trackMap) {
-        
-    trackMap = new google.maps.Map(document.getElementById('track-map'), {
-        center: { lat: 20.5937, lng: 78.9629 }, zoom: 5,
-        styles: localStorage.getItem('theme') === 'dark' ? [
-            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-            { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-        ] : []
-    });
-    
+        trackMap = L.map('track-map').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(trackMap);
     }
     if (window.updateMapTheme) {
         window.updateMapTheme(trackMap);
@@ -2908,37 +2894,28 @@ window.openTrackModal = async function(shipmentId) {
         }
         legs.sort((a,b) => a.leg_order - b.leg_order);
         
-        const localIconPickup = { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#10b981" stroke="white" stroke-width="2"/></svg>'), scaledSize: new google.maps.Size(24, 24), anchor: new google.maps.Point(12, 12) };
-        const localIconDrop = { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#ef4444" stroke="white" stroke-width="2"/></svg>'), scaledSize: new google.maps.Size(24, 24), anchor: new google.maps.Point(12, 12) };
-        const localIconWarehouse = { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="#f59e0b" stroke="white" stroke-width="2"/></svg>'), scaledSize: new google.maps.Size(24, 24), anchor: new google.maps.Point(12, 12) };
+        const localIconPickup = window.ICON_PICKUP || L.divIcon({className: 'custom-marker'});
+        const localIconDrop = window.ICON_DROP || L.divIcon({className: 'custom-marker'});
+        const localIconWarehouse = window.ICON_WAREHOUSE || L.divIcon({className: 'custom-marker'});
 
         // 1. Plot Origin (of the tracked segment)
         let pName = mainShipment.pickup.address || mainShipment.pickup.name || "Initial Pickup";
-        
-    const originMarker = new google.maps.Marker({position: {lat: mainShipment.pickup.lat, lng: mainShipment.pickup.lng}, map: trackMap, icon: localIconPickup});
-    const oInfo = new google.maps.InfoWindow({content: target.is_leg ? `<b>Leg ${target.leg_order} Pickup:</b> ${pName}` : `<b>Initial Pickup:</b> ${pName}`});
-    originMarker.addListener('click', () => oInfo.open(trackMap, originMarker));
-    
+        const originMarker = L.marker([mainShipment.pickup.lat, mainShipment.pickup.lng], {icon: localIconPickup})
+            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Pickup:</b> ${pName}` : `<b>Initial Pickup:</b> ${pName}`);
         trackMarkers.push(originMarker);
 
         // 2. Plot Destination (of the tracked segment)
         let dName = mainShipment.drop.address || mainShipment.drop.name || "Final Delivery Point";
-        
-    const destinationMarker = new google.maps.Marker({position: {lat: mainShipment.drop.lat, lng: mainShipment.drop.lng}, map: trackMap, icon: localIconDrop});
-    const dInfo = new google.maps.InfoWindow({content: target.is_leg ? `<b>Leg ${target.leg_order} Drop:</b> ${dName}` : `<b>Final Delivery Point:</b> ${dName}`});
-    destinationMarker.addListener('click', () => dInfo.open(trackMap, destinationMarker));
-    
+        const destinationMarker = L.marker([mainShipment.drop.lat, mainShipment.drop.lng], {icon: localIconDrop})
+            .addTo(trackMap).bindPopup(target.is_leg ? `<b>Leg ${target.leg_order} Drop:</b> ${dName}` : `<b>Final Delivery Point:</b> ${dName}`);
         trackMarkers.push(destinationMarker);
 
         // 3. Plot Intermediate Hubs (ONLY if it's the Parent view)
         if (!target.is_leg && legs.length > 1) {
             legs.forEach((leg, idx) => {
                 if (idx < legs.length - 1) {
-                    
-    const hubMarker = new google.maps.Marker({position: {lat: leg.drop.lat, lng: leg.drop.lng}, map: trackMap, icon: localIconWarehouse});
-    const hInfo = new google.maps.InfoWindow({content: `<b>Hub ${idx + 1}:</b> ${leg.drop.address || leg.drop.name || 'Network Hub'}`});
-    hubMarker.addListener('click', () => hInfo.open(trackMap, hubMarker));
-    
+                    const hubMarker = L.marker([leg.drop.lat, leg.drop.lng], {icon: localIconWarehouse})
+                        .addTo(trackMap).bindPopup(`<b>Hub ${idx + 1}:</b> ${leg.drop.address || leg.drop.name || 'Network Hub'}`);
                     trackMarkers.push(hubMarker);
                 }
             });
@@ -2948,30 +2925,20 @@ window.openTrackModal = async function(shipmentId) {
         let activeLeg = target.is_leg ? target : (legs.find(l => l.status === 'in_transit' || l.status === 'assigned') || legs[legs.length - 1] || target);
         
         if (activeLeg.current_location) {
-            const mC = new google.maps.Marker({
-                position: {lat: activeLeg.current_location.lat, lng: activeLeg.current_location.lng},
-                map: trackMap,
-                title: "Current Unit Location",
-                icon: {
-                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="white" stroke-width="2"/></svg>'),
-                    scaledSize: new google.maps.Size(20, 20), anchor: new google.maps.Point(10, 10)
-                }
-            });
-            const cInfo = new google.maps.InfoWindow({content: "Current Unit Location"});
-            mC.addListener('click', () => cInfo.open(trackMap, mC));
+            const mC = L.circleMarker([activeLeg.current_location.lat, activeLeg.current_location.lng], {
+                color: '#fff', fillColor: '#3b82f6', weight: 3, radius: 10, fillOpacity: 1
+            }).addTo(trackMap).bindPopup("Current Unit Location");
             trackMarkers.push(mC);
-            trackMap.setCenter({lat: activeLeg.current_location.lat, lng: activeLeg.current_location.lng});
-            trackMap.setZoom(8);
+            trackMap.setView([activeLeg.current_location.lat, activeLeg.current_location.lng], 8);
         } else {
-            trackMap.setCenter({lat: activeLeg.pickup.lat, lng: activeLeg.pickup.lng});
-            trackMap.setZoom(8);
+            trackMap.setView([activeLeg.pickup.lat, activeLeg.pickup.lng], 8);
         }
 
         // 5. Draw Routes (OSRM)
         const segments = legs.length > 0 ? legs : [target];
         for (const seg of segments) {
             if (seg.route_type === 'drone-leg') {
-                const dronePath = new google.maps.Polyline({path: [{lat: seg.pickup.lat, lng: seg.pickup.lng}, {lat: seg.drop.lat, lng: seg.drop.lng}], strokeColor: "#f6ad55", strokeWeight: 3, map: trackMap});
+                const dronePath = L.polyline([[seg.pickup.lat, seg.pickup.lng], [seg.drop.lat, seg.drop.lng]], {color: '#f6ad55', weight: 3, dashArray: '5, 10'}).addTo(trackMap);
                 trackMarkers.push(dronePath);
             } else {
                 try {
@@ -2980,7 +2947,7 @@ window.openTrackModal = async function(shipmentId) {
                     if(rData.routes && rData.routes[0]) {
                         const coords = rData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
                         const color = seg.status === 'delivered' ? '#a0aec0' : '#3182ce';
-                        const pline = new google.maps.Polyline({path: coords.map(c => ({lat: c[0], lng: c[1]})), strokeColor: color, strokeWeight: 6, strokeOpacity: 0.85, map: trackMap});
+                        const pline = L.polyline(coords, {color, weight: 6, opacity: 0.85}).addTo(trackMap);
                         trackMarkers.push(pline);
                     }
                 } catch(e) {}

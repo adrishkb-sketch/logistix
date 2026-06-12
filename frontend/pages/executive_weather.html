@@ -13,7 +13,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
     <!-- Leaflet & Draw CSS -->
-    <!-- Leaflet CSS removed -->
+    <link crossorigin="" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" rel="stylesheet"/>
 
     <!-- External Base Styles -->
     <link href="../css/premium_theme.css" rel="stylesheet"/>
@@ -704,9 +705,9 @@
 
 <!-- ── SCRIPTS ── -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDVPnuQKHJxNnw3kstRBfIynZbafz2llpo&libraries=drawing,visualization,places,geometry"></script>
-
-
+<script crossorigin="" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script src="../js/translator.js?v=2.3"></script>
 <script src="../js/logo.js"></script>
 <script src="../js/voice.js?v=2.3"></script>
@@ -791,46 +792,38 @@
 
     function initWeatherMap() {
         if (map) return;
-        const theme = localStorage.getItem('theme') || 'dark';
-        
-        map = new google.maps.Map(document.getElementById("map"), {
-            center: { lat: 20.5937, lng: 78.9629 },
-            zoom: 5,
-            styles: theme === 'dark' ? darkMapStyle : lightMapStyle,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false
-        });
+        map = L.map('map', { zoomControl: true, attributionControl: true }).setView([20.5937, 78.9629], 5);
         window._weatherMap = map;
 
-        drawingManager = new google.maps.drawing.DrawingManager({
-            drawingMode: null,
-            drawingControl: false,
-            circleOptions: { fillColor: '#ff9900', fillOpacity: 0.2, strokeWeight: 2, strokeColor: '#ff9900', clickable: true, editable: false, zIndex: 1 },
-            polylineOptions: { strokeColor: '#ff3b30', strokeWeight: 4, strokeOpacity: 0.8 }
-        });
-        drawingManager.setMap(map);
+        applyOfficialBorders(map);
+        buildBaseLayers();
 
-        google.maps.event.addListener(drawingManager, 'overlaycomplete', function(e) {
-            drawnItems.push(e.overlay);
-            let shapeType = e.type === 'polyline' ? 'polyline' : 'circle';
-            handleCustomDisaster(shapeType, e.overlay);
-            setDrawMode(false);
-        });
+        const theme = localStorage.getItem('theme') || 'dark';
+        (theme === 'dark' ? baseLayers.standard_dark : baseLayers.standard_light).addTo(map);
 
-        // India boundary
-        map.data.loadGeoJson('../data/india-composite-simplified.geojson');
-        map.data.setStyle({
-            fillColor: 'transparent',
-            strokeWeight: 2.5,
-            strokeColor: '#00e5ff'
-        });
+        loadRadarLayer();
+        loadCloudLayer();
+        loadWindLayer();
 
-        /* drawControl setup removed */
+        drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: {
+                polygon: false, rectangle: false, marker: false, circlemarker: false,
+                circle: { shapeOptions: { color: '#ff9900', fillColor: '#ff9900', fillOpacity: 0.2, weight: 2 } },
+                polyline: { shapeOptions: { color: '#ff3b30', weight: 4, opacity: 0.8 } }
+            }
+        });
         map.addControl(drawControl);
 
-        /* Leaflet event removed */
-        /* Leaflet event removed */
+        map.on(L.Draw.Event.CREATED, function(e) {
+            drawnItems.addLayer(e.layer);
+            handleCustomDisaster(e.layerType, e.layer);
+            setDrawMode(false);
+        });
+        map.on(L.Draw.Event.DRAWSTOP, function() { setDrawMode(false); });
 
         makeDraggable(document.getElementById('sim-panel'), document.getElementById('sim-panel-handle'));
         makeDraggable(document.getElementById('results-panel'), document.getElementById('results-panel-handle'));
@@ -844,25 +837,31 @@
 
     function buildBaseLayers() {
         baseLayers = {
-            standard_dark: "dark",
-            standard_light: "light",
-            terrain: "terrain",
-            satellite: "satellite"
+            standard_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
+            standard_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO', subdomains: 'abcd', maxZoom: 19 }),
+            terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 })
         };
     }
 
     function updateMapTheme(mapInstance) {
-        if (!mapInstance) return;
+        if (!mapInstance || !baseLayers) return;
         const theme = localStorage.getItem('theme') || 'dark';
-        mapInstance.setOptions({ styles: theme === 'dark' ? darkMapStyle : lightMapStyle });
+        const currentLayer = document.getElementById('map-layer').value;
+        if (currentLayer !== 'standard') return;
+
+        mapInstance.eachLayer(layer => { if (layer instanceof L.TileLayer && !layer.options.isOverlay) mapInstance.removeLayer(layer); });
+        const newBase = theme === 'dark' ? baseLayers.standard_dark : baseLayers.standard_light;
+        newBase.addTo(mapInstance);
     }
 
     function changeMapLayer() {
         if (!map) return;
         const layerType = document.getElementById('map-layer').value;
-        if (layerType === 'terrain') map.setMapTypeId('terrain');
-        else if (layerType === 'satellite') map.setMapTypeId('satellite');
-        else map.setMapTypeId('roadmap');
+        map.eachLayer(layer => { if (layer instanceof L.TileLayer && !layer.options.isOverlay) map.removeLayer(layer); });
+        const theme = localStorage.getItem('theme') || 'dark';
+        let target = layerType === 'terrain' ? baseLayers.terrain : layerType === 'satellite' ? baseLayers.satellite : (theme === 'dark' ? baseLayers.standard_dark : baseLayers.standard_light);
+        if (target) target.addTo(map);
     }
 
     function loadRadarLayer() {
@@ -870,19 +869,19 @@
             const past = data.radar?.past;
             if (past && past.length > 0) {
                 const latest = past[past.length - 1].time;
-                radarLayer = null;
+                radarLayer = L.tileLayer(`https://tilecache.rainviewer.com/v2/radar/${latest}/256/{z}/{x}/{y}/4/1_1.png`, { opacity: 0.65, zIndex: 10, isOverlay: true });
                 if (document.getElementById('toggle-radar').classList.contains('active')) radarLayer.addTo(map);
             }
         }).catch(e => console.log('Radar not loaded:', e));
     }
 
     function loadCloudLayer() {
-        cloudLayer = null;
+        cloudLayer = L.tileLayer('https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 9, isOverlay: true });
         if (document.getElementById('toggle-cloud').classList.contains('active')) cloudLayer.addTo(map);
     }
 
     function loadWindLayer() {
-        windLayer = null;
+        windLayer = L.tileLayer('https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=439d4b804bc8187953eb36d2a8c26a02', { opacity: 0.5, zIndex: 8, isOverlay: true });
         if (document.getElementById('toggle-wind').classList.contains('active')) windLayer.addTo(map);
     }
 
@@ -892,10 +891,10 @@
     function toggleHeatmapOverlay(btn) { btn.classList.toggle('active'); if (heatLayer) btn.classList.contains('active') ? heatLayer.addTo(map) : map.removeLayer(heatLayer); }
 
     function updateHeatmap(fleetData) {
-        if (!fleetData) return;
+        if (!fleetData || !L.heatLayer) return;
         const points = fleetData.map(v => [(v.fatigue || 0) / 100 + 0.5, v.lat, v.lng]);
         if (heatLayer) heatLayer.setLatLngs(points);
-        else { /* heatlayer migrated to Google earlier */ }
+        else heatLayer = L.heatLayer(points, { radius: 25, blur: 15, maxZoom: 10, gradient: { 0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: 'red' } });
         if (document.getElementById('toggle-heatmap')?.classList.contains('active')) heatLayer.addTo(map);
         else if (map && map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
     }
@@ -908,60 +907,60 @@
         applySOIMaskPatches(mapInstance);
         fetch('../data/india-composite-simplified.geojson').then(r => r.ok ? r.json() : Promise.reject('no local')).then(data => {
             if (window._soiBorderLayer) try { mapInstance.removeLayer(window._soiBorderLayer); } catch(e){}
-            mapInstance.data.loadGeoJson("../data/india-composite-simplified.geojson");
+            window._soiBorderLayer = L.geoJSON(data, { style: borderStyle }).addTo(mapInstance);
             mapInstance.fitBounds(window._soiBorderLayer.getBounds(), { padding: [15, 15] });
         }).catch(() => {
             const fallbackBorder = { color: '#00e5ff', weight: 2.5, fillOpacity: 0, opacity: 0.95, lineJoin: 'round', lineCap: 'round', pane: 'soiBorderPane' };
             const northernClaimLine = [[33.70, 73.50], [34.00, 71.90], [34.55, 72.35], [34.70, 73.00], [35.00, 74.00], [35.20, 75.00], [35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.85, 76.60], [37.10, 75.80], [37.06, 74.57], [36.60, 74.55], [36.20, 78.00], [36.00, 79.00], [35.60, 79.80], [35.10, 80.00], [34.80, 79.50], [34.20, 78.50], [34.00, 77.80]];
-            /* Leaflet polyline removed */
+            window._soiPatchLayers.push(L.polyline(northernClaimLine, fallbackBorder).addTo(mapInstance));
         });
     }
 
     function applySOIMaskPatches(mapInstance) {
-        // Handled by google maps boundary styling naturally
+        const theme = localStorage.getItem('theme') || 'dark';
+        const fillColor = theme === 'dark' ? '#24222e' : '#d4dae8';
+        const patchStyle = { fillColor, fillOpacity: 1, stroke: false, lineJoin: 'round', pane: 'soiMaskPane' };
+        const pok = [[37.06, 74.57], [37.10, 75.80], [36.85, 76.60], [36.15, 77.00], [35.80, 76.40], [35.50, 76.10], [35.20, 75.00], [35.00, 74.00], [34.70, 73.00], [34.55, 72.35], [34.00, 71.90], [33.70, 73.50], [33.50, 74.20], [33.75, 74.50], [34.00, 74.80], [34.30, 74.95], [34.55, 74.65], [34.80, 74.35], [35.10, 74.55], [35.40, 75.00], [35.90, 75.50], [36.40, 75.00], [36.60, 74.55], [37.06, 74.57]];
+        const azadKashmir = [[33.70, 73.50], [33.90, 73.90], [34.10, 74.30], [34.35, 74.65], [34.55, 74.65], [34.30, 74.95], [34.00, 74.80], [33.75, 74.50], [33.50, 74.20], [33.70, 73.50]];
+        const aksaiChin = [[35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.20, 78.00], [36.00, 79.00], [35.60, 79.80], [35.10, 80.00], [34.80, 79.50], [34.50, 79.00], [34.20, 78.50], [34.00, 77.80], [34.30, 77.00], [34.70, 76.50], [35.10, 76.20], [35.50, 76.10]];
+        const shaksgam = [[36.85, 76.60], [37.06, 74.57], [36.60, 74.55], [36.40, 75.00], [35.90, 75.50], [35.40, 75.00], [35.10, 74.55], [35.50, 76.10], [35.80, 76.40], [36.15, 77.00], [36.85, 76.60]];
+        [pok, azadKashmir, aksaiChin, shaksgam].forEach(c => window._soiPatchLayers.push(L.polygon(c, patchStyle).addTo(mapInstance)));
     }
 
     // ── DRAWING LOGIC ──
     function setDrawMode(active) {
         isDrawing = active;
         const btn = document.getElementById('draw-btn');
-        if (active) { 
-            btn.classList.add('drawing'); btn.innerHTML = '⏹️ Cancel Draw'; 
-        } else { 
-            btn.classList.remove('drawing'); btn.innerHTML = '✏️ Draw on Map';
-            if (drawingManager) drawingManager.setDrawingMode(null);
-        }
+        if (active) { btn.classList.add('drawing'); btn.innerHTML = '⏹️ Cancel Draw'; }
+        else { btn.classList.remove('drawing'); btn.innerHTML = '✏️ Draw on Map'; if (currentDrawHandler) { try { currentDrawHandler.disable(); } catch(e) {} currentDrawHandler = null; } }
     }
 
     function toggleDrawMode() {
-        if (!map || !drawingManager) return showToast('Map not ready.', 'error');
+        if (!map || !drawControl) return showToast('Map not ready.', 'error');
         if (isDrawing) return setDrawMode(false);
         const type = document.getElementById('disaster-type').value;
         const circleTypes = ['cyclone', 'flood', 'heatwave', 'earthquake', 'riot', 'hail', 'storm', 'snow', 'fog', 'rain'];
-        
-        drawingManager.setDrawingMode(circleTypes.includes(type) ? google.maps.drawing.OverlayType.CIRCLE : google.maps.drawing.OverlayType.POLYLINE);
+        if (currentDrawHandler) { try { currentDrawHandler.disable(); } catch(e) {} }
+        const drawOpts = drawControl.options?.draw || {};
+        currentDrawHandler = circleTypes.includes(type) ? new L.Draw.Circle(map, drawOpts.circle || {}) : new L.Draw.Polyline(map, drawOpts.polyline || {});
+        currentDrawHandler.enable();
         setDrawMode(true);
     }
 
     async function handleCustomDisaster(shapeType, layer) {
         const type = document.getElementById('disaster-type').value;
         let payload = { company_id: localStorage.getItem('manager_id'), type, shapeType };
-        if (shapeType === 'circle') { 
-            payload.lat = layer.getCenter().lat(); 
-            payload.lng = layer.getCenter().lng(); 
-            payload.radius = layer.getRadius() / 1000; 
-        } else if (shapeType === 'polyline') { 
-            payload.coordinates = layer.getPath().getArray().map(ll => ({ lat: ll.lat(), lng: ll.lng() })); 
-        }
+        if (shapeType === 'circle') { payload.lat = layer.getLatLng().lat; payload.lng = layer.getLatLng().lng; payload.radius = layer.getRadius() / 1000; }
+        else if (shapeType === 'polyline') { payload.coordinates = layer.getLatLngs().map(ll => ({ lat: ll.lat, lng: ll.lng })); }
 
         try {
             await apiCall('/simulation/disaster/custom', 'POST', payload);
             simulationPanelClosedByUser = false;
             showToast(`${type.toUpperCase()} zone created!`, 'success');
-            layer.setMap(null); // Remove from drawnItems visually, let reload fetch it
+            if (drawnItems && layer) drawnItems.removeLayer(layer);
             loadWeatherFleetData();
         } catch(err) {
-            layer.setMap(null);
+            if (drawnItems && layer) drawnItems.removeLayer(layer);
             showToast('Failed to create zone.', 'error');
         }
     }
@@ -970,7 +969,7 @@
         if (!confirm('Clear all zones?')) return;
         try {
             await apiCall('/simulation/disaster/clear', 'POST', { company_id: localStorage.getItem('manager_id') });
-            drawnItems.forEach(i => i.setMap(null)); drawnItems = [];
+            drawnItems.clearLayers();
             document.getElementById('results-panel').style.display = 'none';
             showToast('Simulation zones cleared.', 'success');
             loadWeatherFleetData();
@@ -1104,7 +1103,7 @@
         if (map) {
             map.on('click', async function(e) {
                 const { lat, lng } = e.latlng;
-                const info = new google.maps.InfoWindow({ position: {lat: e.latLng.lat(), lng: e.latLng.lng()}, content: '<div style="font-family:Space Grotesk,sans-serif;font-size:0.85rem;padding:6px;color:black;">⏳ Fetching intel…</div>' }); info.open(map);
+                const popup = L.popup().setLatLng(e.latlng).setContent('<div style="font-family:Space Grotesk,sans-serif;font-size:0.85rem;padding:6px;">⏳ Fetching intel…</div>').openOn(map);
                 try {
                     const res = await apiCall(`/tracking/weather-at?lat=${lat}&lng=${lng}&company_id=${localStorage.getItem('manager_id')}`);
                     const w = res.weather, ships = res.shipments;
@@ -1171,14 +1170,8 @@
             try {
                 const warehouses = await apiCall('/manager/warehouses?company_id=' + localStorage.getItem('manager_id'), 'GET', null, true);
                 warehouses.forEach(wh => {
-                    const m = new google.maps.Marker({
-                        position: {lat: wh.lat, lng: wh.lng},
-                        map: map,
-                        title: wh.name,
-                        icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><circle cx="14" cy="14" r="12" fill="rgba(0, 255, 115, 0.15)" stroke="#00ff73" stroke-width="2"/></svg>'), scaledSize: new google.maps.Size(28,28) }
-                    });
-                    const info = new google.maps.InfoWindow({ content: `<div style="min-width:180px; font-family:Space Grotesk,sans-serif; line-height:1.6; color:#0f172a;"><b style="color:#10b981; font-size:1.1rem;">🏭 ${wh.name}</b><br><small style="color:#64748b;">📍 ${wh.address||'N/A'}</small></div>` });
-                    m.addListener('click', () => info.open(map, m));
+                    const icon = L.divIcon({ html: `<div style="background:rgba(0, 255, 115, 0.15); border:2px solid var(--success); box-shadow:0 0 12px rgba(0, 255, 115, 0.5); border-radius:8px; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:14px;">🏢</div>`, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+                    const m = L.marker([wh.lat, wh.lng], { icon, zIndexOffset: 150 }).addTo(map).bindPopup(`<div style="min-width:180px; font-family:Space Grotesk,sans-serif; line-height:1.6; color:var(--text-main);"><b style="color:var(--success); font-size:1.1rem;">🏭 ${wh.name}</b><br><small style="color:var(--text-muted);">📍 ${wh.address||'N/A'}</small></div>`);
                     warehouseMarkers.push(m);
                 });
             } catch(e) {}
@@ -1196,29 +1189,17 @@
             data.cells.forEach(cell => {
                 let animClass = cell.type.toLowerCase() === 'cyclone' ? 'anim-cyclone' : cell.type.toLowerCase() === 'flood' ? 'anim-flood' : 'anim-rain';
                 if (cell.shapeType === 'polyline') {
-                    const poly = new google.maps.Polyline({
-                        path: cell.coordinates,
-                        geodesic: true, strokeColor: cell.color || '#ff9900', strokeOpacity: 0.85, strokeWeight: 6, map: map
-                    });
-                    weatherMarkers.push(poly);
+                    weatherMarkers.push(L.polyline(cell.coordinates, { color: cell.color || '#ff9900', weight: 6, opacity: 0.85, className: animClass }).addTo(map).bindPopup(`<b>${cell.icon||'🌡️'} ${cell.type}</b><br>${cell.is_simulation?'⚗️ Simulation':'🛰️ Live'}`));
                 } else {
                     const bc = cell.is_simulation ? '#ff9900' : (cell.color || '#00e5ff');
-                    const circ = new google.maps.Circle({
-                        strokeColor: bc, strokeOpacity: cell.is_simulation?0.8:0.4, strokeWeight: cell.is_simulation?2:1.5, fillColor: bc, fillOpacity: cell.is_simulation?0.18:0.12, map: map, center: {lat: cell.lat, lng: cell.lng}, radius: (cell.radius||80)*1000
-                    });
-                    weatherMarkers.push(circ);
+                    weatherMarkers.push(L.circle([cell.lat, cell.lng], { radius: (cell.radius||80)*1000, color: bc, fillColor: bc, fillOpacity: cell.is_simulation?0.18:0.12, weight: cell.is_simulation?2:1.5, dashArray: cell.is_simulation?'8,4':null, className: animClass }).addTo(map).bindPopup(`<div style="min-width:180px; font-family:Space Grotesk,sans-serif;"><b style="font-size:1.1rem;">${cell.icon||'🌩️'} ${cell.condition||cell.type}</b></div>`));
+                    weatherMarkers.push(L.marker([cell.lat, cell.lng], { icon: L.divIcon({ className: '', html: `<div style="font-size:24px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));">${cell.icon||'🌦️'}</div>`, iconSize: [28,28], iconAnchor: [14,14] }), zIndexOffset: 100 }).addTo(map));
                 }
             });
 
             data.fleet.forEach(v => {
-                const m = new google.maps.Marker({
-                    position: {lat: v.lat, lng: v.lng},
-                    map: map,
-                    icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><g transform="rotate(${v.bearing||0} 15 15)"><text x="15" y="20" font-size="20" text-anchor="middle">🚛</text></g></svg>`), scaledSize: new google.maps.Size(30,30) }
-                });
-                const info = new google.maps.InfoWindow({ content: `<div style="color:black;min-width:150px; font-family:Space Grotesk,sans-serif;"><b style="color:#6366f1;">🚛 ${v.driver}</b><br><small>${v.weather?.icon||'☀️'} ${v.weather?.condition||'Clear'}</small></div>` });
-                m.addListener('click', () => info.open(map, m));
-                weatherMarkers.push(m);
+                const icon = L.divIcon({ html: `<div style="background: linear-gradient(135deg, var(--accent-1), #6366f1); width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 0 12px var(--accent-1); position:relative;"><div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%); font-size:12px;">${v.weather?.icon||'☀️'}</div></div>`, className: '', iconSize: [16,16], iconAnchor: [8,8] });
+                weatherMarkers.push(L.marker([v.lat, v.lng], { icon, zIndexOffset: 200 }).addTo(map).bindPopup(`<div style="min-width:150px; font-family:Space Grotesk,sans-serif;"><b style="color:var(--accent-1);">🚛 ${v.driver}</b><br><small>${v.weather?.icon||'☀️'} ${v.weather?.condition||'Clear'}</small></div>`));
             });
             updateHeatmap(data.fleet);
 
