@@ -2,12 +2,55 @@ from fastapi import HTTPException, Header, status
 from typing import Optional
 import json
 
+def resolve_context_from_token(header_value: Optional[str]) -> Optional[str]:
+    """
+    Decodes JWT token if present in header, and converts it to a standard JSON context.
+    Raises 401 if a token is present but expired or invalid.
+    """
+    if not header_value:
+        return None
+    
+    val = header_value.strip()
+    token = val
+    if val.startswith("Bearer "):
+        token = val[7:]
+    
+    # If the format looks like a JWT token
+    if len(token.split('.')) == 3:
+        from backend.services.auth import decode_jwt_token
+        payload = decode_jwt_token(token)
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session expired or invalid token. Please log in again."
+            )
+            
+        role = payload.get("role")
+        company_id = payload.get("company_id")
+        
+        ctx = {}
+        if role:
+            ctx["role"] = role
+        if company_id:
+            ctx["company_id"] = company_id
+            
+        if role == "driver" and payload.get("id"):
+            ctx["driver_id"] = payload.get("id")
+        elif role == "warehouse_manager" and payload.get("id"):
+            ctx["warehouse_id"] = payload.get("id")
+            
+        return json.dumps(ctx)
+        
+    return header_value
+
+
 def verify_context(context_id: str, x_logistix_context: Optional[str] = Header(None)):
     """
     Verifies that the incoming request has a context header matching the resource ID.
     Supports JSON context with role-based access.
     """
-    if not x_logistix_context:
+    resolved_context = resolve_context_from_token(x_logistix_context)
+    if not resolved_context:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing security context header (X-Logistix-Context)"
@@ -15,7 +58,7 @@ def verify_context(context_id: str, x_logistix_context: Optional[str] = Header(N
     
     try:
         # Try to parse as JSON first (modern frontend pattern)
-        ctx = json.loads(x_logistix_context)
+        ctx = json.loads(resolved_context)
         
         # If it's a manager, allow if they are in the same company context
         if ctx.get("role") == "manager" or ctx.get("bypass_auth"):
@@ -29,7 +72,7 @@ def verify_context(context_id: str, x_logistix_context: Optional[str] = Header(N
         
     except json.JSONDecodeError:
         # Fallback to legacy string comparison (if context is just the ID)
-        if x_logistix_context != context_id:
+        if resolved_context != context_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Security context mismatch. Access denied."
@@ -43,12 +86,13 @@ def get_company_id_from_context(x_logistix_context: Optional[str]) -> Optional[s
     Resolves the company_id from the X-Logistix-Context header.
     Supports JSON context or raw string IDs (company_id, driver_id, or warehouse_id).
     """
-    if not x_logistix_context:
+    resolved_context = resolve_context_from_token(x_logistix_context)
+    if not resolved_context:
         return None
         
     # 1. Parse JSON context if applicable
     try:
-        ctx = json.loads(x_logistix_context)
+        ctx = json.loads(resolved_context)
         if isinstance(ctx, dict):
             if ctx.get("company_id"):
                 return ctx.get("company_id")
@@ -61,7 +105,7 @@ def get_company_id_from_context(x_logistix_context: Optional[str]) -> Optional[s
         pass
 
     # 2. Parse leg/legacy string context ID
-    val = x_logistix_context.strip()
+    val = resolved_context.strip()
     if not val or val == "null" or val == "undefined":
         return None
 
@@ -84,4 +128,3 @@ def get_company_id_from_context(x_logistix_context: Optional[str]) -> Optional[s
 
     # Return val as fallback
     return val
-

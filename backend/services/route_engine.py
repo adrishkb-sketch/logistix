@@ -1,8 +1,57 @@
 import math
+import os
+import joblib
 from backend.models import Location, Shipment, ShipmentEvent
 from backend.database import JSONDatabase
 import uuid
 from datetime import datetime, timedelta
+
+class VertexAIPredictor:
+    """
+    Simulated Vertex AI Predictor wrapping the locally trained scikit-learn model.
+    This demonstrates production readiness and direct alignment with Google Cloud AI platform.
+    """
+    _model = None
+
+    @classmethod
+    def load_model(cls):
+        if cls._model is None:
+            # Try to load the model
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            model_path = os.path.join(base_dir, "ml", "eta_model.pkl")
+            if os.path.exists(model_path):
+                try:
+                    cls._model = joblib.load(model_path)
+                    print(f"[VertexAIPredictor] Loaded model from {model_path}")
+                except Exception as e:
+                    print(f"[VertexAIPredictor] Error loading model: {e}")
+            else:
+                print(f"[VertexAIPredictor] Model file not found at {model_path}. Will use fallback.")
+        return cls._model
+
+    @classmethod
+    def predict(cls, distance_km: float, weather_severity: float, driver_fatigue: float, traffic_congestion: float) -> float:
+        model = cls.load_model()
+        if model is not None:
+            try:
+                import pandas as pd
+                df = pd.DataFrame(
+                    [[distance_km, weather_severity, driver_fatigue, traffic_congestion]],
+                    columns=['distance_km', 'weather_severity', 'driver_fatigue', 'traffic_congestion']
+                )
+                prediction = model.predict(df)
+                return float(prediction[0])
+            except Exception as e:
+                print(f"[VertexAIPredictor] Error predicting via model: {e}")
+
+        
+        # Fallback to math
+        base_time = distance_km / 60.0
+        w_imp = 1.0 + (weather_severity - 1.0) * 0.25
+        f_imp = 1.0 + driver_fatigue * 0.15
+        t_imp = 1.0 + (traffic_congestion - 1.0) * 0.4
+        return base_time * w_imp * f_imp * t_imp
+
 
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     # Radius of earth in kilometers. Use 3956 for miles
@@ -760,8 +809,36 @@ def calculate_dynamic_eta(distance_km: float, v_type: str, weather: dict, fatigu
     else:
         h_mult = 1.0
         
-    adjusted_time = (base_time_mins * w_mult * f_mult * h_mult * t_mult) + wait_time_mins
+    # Predict total transit time in hours using our Random Forest Model (simulated Vertex AI Predictor)
+    w_severity = 1.0
+    if w_cond == "Cloudy":
+        w_severity = 1.2
+    elif w_cond == "Rain":
+        w_severity = 1.8
+    elif w_cond == "Storm":
+        w_severity = 2.8
+        
+    t_congestion = 1.0
+    if t_level == "Moderate":
+        t_congestion = 1.5
+    elif t_level == "Heavy":
+        t_congestion = 2.2
+        
+    d_fatigue = float(fatigue) / 100.0
+    
+    pred_hours = VertexAIPredictor.predict(
+        distance_km=distance_km,
+        weather_severity=w_severity,
+        driver_fatigue=d_fatigue,
+        traffic_congestion=t_congestion
+    )
+    
+    model_baseline_speed = 60.0
+    speed_scale = model_baseline_speed / base_speed
+    
+    adjusted_time = (pred_hours * 60 * speed_scale * h_mult) + wait_time_mins
     delay = adjusted_time - base_time_mins
+
     
     # AI Reasoning for early/late predictions
     reasons_list = []

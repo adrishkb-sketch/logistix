@@ -11,3 +11,7 @@ numpy==2.2.2
 python-multipart==0.0.20
 httpx==0.28.1
 email-validator==2.2.0
+scikit-learn>=1.2.0
+joblib>=1.2.0
+SQLAlchemy>=2.0.0
+PyJWT>=2.8.0

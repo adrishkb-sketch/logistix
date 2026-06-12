@@ -33,13 +33,17 @@ async function apiCall(endpoint, method = "GET", body = null, isSilent = false) 
         throw new Error("AUTH_REQUIRED");
     }
 
+    const sessionToken = localStorage.getItem('session_token');
     const options = {
         method,
         headers: {
             "Content-Type": "application/json",
-            "X-Logistix-Context": context || ""
+            "X-Logistix-Context": sessionToken || context || ""
         }
     };
+    if (sessionToken) {
+        options.headers["Authorization"] = `Bearer ${sessionToken}`;
+    }
     if (body) {
         options.body = JSON.stringify(body);
     }

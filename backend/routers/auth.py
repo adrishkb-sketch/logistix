@@ -14,6 +14,7 @@ import os
 from backend.models import CompanyCreate, CompanyLogin, DriverLogin
 from backend.database import JSONDatabase
 from backend.services.turso_db import TursoCompaniesDB
+from backend.services.auth import create_jwt_token
 
 router = APIRouter()
 
@@ -161,7 +162,8 @@ def verify_signup(data: OTPVerify):
         pass
 
     print(f"[AUTH] New company registered: {company_name} <{company_email}> id={new_company['id']}")
-    return {"message": "Company registered successfully", "company_id": new_company["id"]}
+    token = create_jwt_token({"company_id": new_company["id"], "role": "manager", "id": new_company["id"]})
+    return {"message": "Company registered successfully", "company_id": new_company["id"], "token": token}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -178,10 +180,12 @@ def company_login(data: CompanyLogin):
         if (c.get("email", "").strip().lower() == ec and
                 c.get("password") == data.password):
             print(f"[AUTH] Manager login OK: {ec}")
+            token = create_jwt_token({"company_id": c["id"], "role": "manager", "id": c["id"]})
             return {
                 "message":    "Login successful",
                 "company_id": c["id"],
                 "name":       c["name"],
+                "token":      token
             }
 
     # Debug info to Vercel logs (never sent to client)
@@ -218,10 +222,12 @@ def driver_login(data: DriverLogin):
     if not driver:
         raise HTTPException(status_code=401, detail="Invalid Driver ID or password.")
 
+    token = create_jwt_token({"company_id": driver["company_id"], "role": "driver", "id": driver["id"]})
     return {
         "driver_id":  driver["id"],
         "name":       driver["name"],
         "company_id": driver["company_id"],
+        "token":      token
     }
 
 
@@ -255,11 +261,13 @@ def warehouse_manager_login(data: WarehouseManagerLogin):
     if not wh:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
+    token = create_jwt_token({"company_id": wh["company_id"], "role": "warehouse_manager", "id": wh["id"]})
     return {
         "warehouse_id":   wh["id"],
         "warehouse_name": wh["name"],
         "company_id":     wh["company_id"],
         "manager_name":   wh.get("manager_name", "Warehouse Manager"),
+        "token":          token
     }
 
 

@@ -24,3 +24,8 @@ frontend/*.log
 
 # Binary image cache only — JSON data files ARE tracked for deployment
 data/images/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+

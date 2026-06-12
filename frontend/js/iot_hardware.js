@@ -585,3 +585,62 @@ function appendTermLog(text, color) {
     term.insertAdjacentHTML('beforeend', html);
     term.scrollTop = term.scrollHeight;
 }
+
+let telemetryWs = null;
+
+function connectTelemetryWs() {
+    const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProto}//${window.location.host}/ws/telemetry`;
+    
+    telemetryWs = new WebSocket(wsUrl);
+    
+    telemetryWs.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            Object.keys(data).forEach(key => {
+                if (iotHardwareData[key]) {
+                    // Update initial payload
+                    iotHardwareData[key].payload = { ...data[key] };
+                    
+                    // If this device is the currently active modal, update currentMockPayload and UI inputs
+                    if (currentActiveIoT === key) {
+                        // Only auto-update if the user hasn't edited the fields to prevent cursor jump
+                        const editor = document.getElementById('payload-editor');
+                        const isFocused = editor && editor.contains(document.activeElement);
+                        if (!isFocused) {
+                            currentMockPayload = { ...data[key] };
+                            renderPayloadEditor();
+                        }
+                        
+                        const term = document.getElementById('iot-term-body');
+                        if (term) {
+                            const time = new Date().toLocaleTimeString();
+                            const logLine = `<div style="color: #10b981; font-size: 0.8rem; font-family: monospace; padding: 2px 0; border-bottom: 1px dotted #334155;">📡 [Live Telemetry Stream] ${JSON.stringify(data[key])}</div>`;
+                            term.insertAdjacentHTML('beforeend', logLine);
+                            
+                            // Keep terminal scrolled to bottom, capped at last 50 lines to prevent memory bloat
+                            if (term.childNodes.length > 50) {
+                                term.removeChild(term.firstChild);
+                            }
+                            term.scrollTop = term.scrollHeight;
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            console.error("Error parsing telemetry WebSocket message", e);
+        }
+    };
+    
+    telemetryWs.onclose = () => {
+        setTimeout(connectTelemetryWs, 5000);
+    };
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', connectTelemetryWs);
+} else {
+    connectTelemetryWs();
+}
+

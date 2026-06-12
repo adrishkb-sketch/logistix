@@ -115,6 +115,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('company_id', res.company_id);
             localStorage.setItem('manager_name', res.name);
             localStorage.setItem('company_name', res.name);
+            localStorage.setItem('session_token', res.token);
             
             window.location.href = 'pages/manager.html';
         }
@@ -133,6 +134,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('warehouse_name', res.warehouse_name);
             localStorage.setItem('company_id', res.company_id);
             localStorage.setItem('manager_name', res.manager_name);
+            localStorage.setItem('session_token', res.token);
             
             window.location.href = 'pages/warehouse_manager.html';
         }
@@ -149,6 +151,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('driver_id', res.driver_id);
             localStorage.setItem('driver_name', res.name);
             localStorage.setItem('company_id', res.company_id);
+            localStorage.setItem('session_token', res.token);
             
             window.location.href = 'pages/driver.html';
         }
@@ -181,6 +184,7 @@ document.addEventListener('submit', async (e) => {
             localStorage.setItem('company_id', res.company_id);
             localStorage.setItem('manager_name', name);
             localStorage.setItem('company_name', name);
+            localStorage.setItem('session_token', res.token);
 
             // Show Welcome Modal
             showWelcomeModal(name);
