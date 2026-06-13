@@ -274,7 +274,7 @@ def migrate_all_shipment_finances():
     # Perform targeted updates for modified shipments
     if modified_shipments:
         print(f"[Migration] Writing {len(modified_shipments)} updated shipments...")
-        for ms in modified_shipments:
-            shipments_db.update(ms["id"], ms)
+        updates = [(ms["id"], ms) for ms in modified_shipments]
+        shipments_db.update_many(updates)
             
     print(f"[Migration] Successfully migrated {len(all_shipments)} shipments.")

@@ -172,16 +172,20 @@ class TursoCompaniesDB:
     """Persistent companies store backed by Turso. Falls back to local JSON."""
 
     def __init__(self):
-        if _is_configured():
-            _ensure_companies_table()
-        else:
+        self.initialized = False
+        if not _is_configured():
             print("[TursoDB] Turso not configured - using local JSON")
 
+    def _lazy_init(self):
+        if not self.initialized and _is_configured():
+            _ensure_companies_table()
+            self.initialized = True
+
     def _fallback(self):
-        from backend.database import JSONDatabase
         return JSONDatabase("companies", force_local=True)
 
     def get_all(self) -> List[Dict[str, Any]]:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().get_all()
         
@@ -216,6 +220,7 @@ class TursoCompaniesDB:
         return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().insert(item)
         
@@ -256,6 +261,7 @@ class TursoCompaniesDB:
             raise e
 
     def delete(self, item_id: str) -> bool:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().delete(item_id)
         
@@ -270,6 +276,7 @@ class TursoCompaniesDB:
             raise e
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
+        self._lazy_init()
         global _DB_CACHE
         _DB_CACHE.pop("companies", None)
         if not _is_configured():
@@ -295,6 +302,7 @@ class TursoCompaniesDB:
             raise e
 
     def write(self, data: List[Dict[str, Any]]):
+        self._lazy_init()
         global _DB_CACHE
         _DB_CACHE.pop("companies", None)
         if not _is_configured():
@@ -346,20 +354,23 @@ class TursoGenericDB:
 
     def __init__(self, table_name: str):
         self.table_name = table_name
-        if _is_configured():
-            try:
-                _ensure_generic_table(table_name)
-                global _SEEDED_TABLES
-                if table_name not in _SEEDED_TABLES:
-                    self._seed_if_empty()
-                    _SEEDED_TABLES.add(table_name)
-            except Exception as e:
-                print(f"[TursoGenericDB:{table_name}] init error: {e}")
-        else:
+        self.initialized = False
+        if not _is_configured():
             print(f"[TursoGenericDB:{table_name}] Turso not configured - using local JSON")
 
+    def _lazy_init(self):
+        if not self.initialized and _is_configured():
+            try:
+                _ensure_generic_table(self.table_name)
+                global _SEEDED_TABLES
+                if self.table_name not in _SEEDED_TABLES:
+                    self._seed_if_empty()
+                    _SEEDED_TABLES.add(self.table_name)
+            except Exception as e:
+                print(f"[TursoGenericDB:{self.table_name}] lazy init error: {e}")
+            self.initialized = True
+
     def _fallback(self):
-        from backend.database import JSONDatabase
         return JSONDatabase(self.table_name, force_local=True)
 
     def _seed_if_empty(self):
@@ -393,6 +404,7 @@ class TursoGenericDB:
             print(f"[TursoGenericDB:{self.table_name}] seed_if_empty error: {e}")
 
     def get_all(self) -> List[Dict[str, Any]]:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().get_all()
         
@@ -429,6 +441,7 @@ class TursoGenericDB:
         return None
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().get_filtered(filters)
         if not filters:
@@ -463,6 +476,7 @@ class TursoGenericDB:
 
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().insert(item)
         
@@ -501,6 +515,7 @@ class TursoGenericDB:
             raise e
 
     def delete(self, item_id: str) -> bool:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().delete(item_id)
         
@@ -518,6 +533,7 @@ class TursoGenericDB:
             raise e
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().delete_many(filter_column, filter_value)
         
@@ -547,6 +563,7 @@ class TursoGenericDB:
             raise e
 
     def write(self, data: List[Dict[str, Any]]):
+        self._lazy_init()
         if not _is_configured():
             return self._fallback().write(data)
         
@@ -578,6 +595,7 @@ class TursoGenericDB:
         if not items_to_update:
             return 0
             
+        self._lazy_init()
         if not _is_configured():
             fallback_db = self._fallback()
             data = fallback_db.get_all()

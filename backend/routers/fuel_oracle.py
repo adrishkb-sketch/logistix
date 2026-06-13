@@ -5,6 +5,8 @@ import re
 import datetime
 import math
 
+import time
+
 router = APIRouter()
 
 # Base fuel prices for major Indian states (INR per Liter)
@@ -33,6 +35,11 @@ CITY_TO_STATE = {
     "Gurgaon": "Haryana"
 }
 
+# Cache parameters
+_FUEL_CACHE = None
+_LAST_FETCH_TIME = 0.0
+_CACHE_DURATION = 3600.0  # 1 hour
+
 def get_fallback_dynamic_prices() -> dict:
     today = datetime.date.today()
     # Seed based on date so prices fluctuate daily but are consistent for a given day
@@ -51,6 +58,11 @@ def get_fallback_dynamic_prices() -> dict:
     return live_prices
 
 def scrape_fuel_prices() -> dict:
+    global _FUEL_CACHE, _LAST_FETCH_TIME
+    now = time.time()
+    if _FUEL_CACHE and (now - _LAST_FETCH_TIME < _CACHE_DURATION):
+        return _FUEL_CACHE
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
     }
@@ -111,6 +123,8 @@ def scrape_fuel_prices() -> dict:
         if state not in merged_prices:
             merged_prices[state] = fallback[state]
             
+    _FUEL_CACHE = merged_prices
+    _LAST_FETCH_TIME = now
     return merged_prices
 
 @router.get("/prices")
