@@ -151,7 +151,7 @@ def find_nearest_warehouse(lat: float, lng: float, company_id: str) -> dict:
     from backend.services.water_check import is_location_in_water
     valid_wh = []
     for w in company_wh:
-        if not is_location_in_water(w.get("lat", 0.0), w.get("lng", 0.0)):
+        if not is_location_in_water(w.get("lat", 0.0), w.get("lng", 0.0), skip_network=True):
             valid_wh.append(w)
             
     if not valid_wh:
@@ -169,7 +169,7 @@ def find_nearest_safe_warehouse(lat: float, lng: float, company_id: str, disaste
     from backend.services.water_check import is_location_in_water
     valid_wh = []
     for w in company_wh:
-        if not is_location_in_water(w.get("lat", 0.0), w.get("lng", 0.0)):
+        if not is_location_in_water(w.get("lat", 0.0), w.get("lng", 0.0), skip_network=True):
             valid_wh.append(w)
             
     safe_whs = []
@@ -319,7 +319,7 @@ def check_and_reroute_calamities(shipment: dict, disaster_cells: list = None) ->
     if safe_wh:
         # Check water boundary for the safe warehouse to ensure it's on land
         from backend.services.water_check import is_location_in_water
-        if is_location_in_water(safe_wh["lat"], safe_wh["lng"]):
+        if is_location_in_water(safe_wh["lat"], safe_wh["lng"], skip_network=True):
             print(f"[Calamity Rerouting / Water Check] Warehouse {safe_wh.get('name')} is flagged as in a water body. Skipping.")
             safe_wh = None
         else:

@@ -42,7 +42,17 @@ STILL_WATER_BODIES = [
 ]
 
 
-def is_location_in_water(lat: float, lon: float) -> bool:
+_WATER_CACHE = {}
+
+def is_location_in_water(lat: float, lon: float, skip_network: bool = False) -> bool:
+    key = (round(lat, 5), round(lon, 5))
+    if key in _WATER_CACHE:
+        return _WATER_CACHE[key]
+    res = _is_location_in_water_impl(lat, lon, skip_network)
+    _WATER_CACHE[key] = res
+    return res
+
+def _is_location_in_water_impl(lat: float, lon: float, skip_network: bool = False) -> bool:
     """
     Returns True if the given (lat, lon) is likely over a water body (sea, lake, river, reservoir).
     Uses boundary checks, still water bounding boxes, an external water API, and Nominatim.
@@ -62,6 +72,9 @@ def is_location_in_water(lat: float, lon: float) -> bool:
         if min_lat <= lat <= max_lat and min_lon <= lon <= max_lon:
             logger.info(f"Location is inside known still water body: {name}")
             return True
+
+    if skip_network:
+        return False
 
     # 3. Query dedicated water detection API
     is_water_api = False
