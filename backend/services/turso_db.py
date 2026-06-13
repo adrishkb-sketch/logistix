@@ -182,6 +182,7 @@ class TursoCompaniesDB:
             self.initialized = True
 
     def _fallback(self):
+        from backend.database import JSONDatabase
         return JSONDatabase("companies", force_local=True)
 
     def get_all(self) -> List[Dict[str, Any]]:
@@ -381,6 +382,7 @@ class TursoGenericDB:
             self.initialized = True
 
     def _fallback(self):
+        from backend.database import JSONDatabase
         return JSONDatabase(self.table_name, force_local=True)
 
     def _seed_if_empty(self):

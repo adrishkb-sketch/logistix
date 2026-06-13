@@ -1317,7 +1317,8 @@ class AutomatedControl {
 
     getCurrentRole() {
         const path = window.location.pathname;
-        if (path.includes('warehouse_manager')) return 'warehouse_manager';
+        if (path.includes('executive')) return 'manager';
+        if (path.includes('hub_manager') || path.includes('warehouse_manager')) return 'warehouse_manager';
         if (path.includes('manager')) return 'manager';
         if (path.includes('driver')) return 'driver';
         return 'all';
