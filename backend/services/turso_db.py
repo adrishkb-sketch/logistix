@@ -225,7 +225,14 @@ class TursoCompaniesDB:
             return self._fallback().insert(item)
         
         global _DB_CACHE
-        _DB_CACHE.pop("companies", None)
+        now = time.time()
+        if "companies" in _DB_CACHE:
+            ts, val = _DB_CACHE["companies"]
+            new_val = [x for x in val if x.get("id") != item.get("id")]
+            new_val.append(copy.deepcopy(item))
+            _DB_CACHE["companies"] = (now, new_val)
+        else:
+            _DB_CACHE["companies"] = (now, [copy.deepcopy(item)])
         
         try:
             _execute([{
@@ -247,9 +254,6 @@ class TursoCompaniesDB:
         if not _is_configured():
             return self._fallback().update(item_id, updated)
         
-        global _DB_CACHE
-        _DB_CACHE.pop("companies", None)
-        
         try:
             current = self.get_by_id(item_id)
             if not current:
@@ -266,7 +270,10 @@ class TursoCompaniesDB:
             return self._fallback().delete(item_id)
         
         global _DB_CACHE
-        _DB_CACHE.pop("companies", None)
+        if "companies" in _DB_CACHE:
+            ts, val = _DB_CACHE["companies"]
+            new_val = [x for x in val if str(x.get("id")) != str(item_id)]
+            _DB_CACHE["companies"] = (time.time(), new_val)
         
         try:
             _execute([{"sql": "DELETE FROM companies WHERE id = :id", "args": {"id": item_id}}])
@@ -277,10 +284,15 @@ class TursoCompaniesDB:
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
         self._lazy_init()
-        global _DB_CACHE
-        _DB_CACHE.pop("companies", None)
         if not _is_configured():
             return self._fallback().delete_many(filter_column, filter_value)
+        
+        global _DB_CACHE
+        if "companies" in _DB_CACHE:
+            ts, val = _DB_CACHE["companies"]
+            new_val = [x for x in val if str(x.get(filter_column)) != str(filter_value)]
+            _DB_CACHE["companies"] = (time.time(), new_val)
+            
         try:
             count_res = _execute([{
                 "sql": f"SELECT COUNT(*) as cnt FROM companies WHERE {filter_column} = :val",
@@ -304,7 +316,7 @@ class TursoCompaniesDB:
     def write(self, data: List[Dict[str, Any]]):
         self._lazy_init()
         global _DB_CACHE
-        _DB_CACHE.pop("companies", None)
+        _DB_CACHE["companies"] = (time.time(), copy.deepcopy(data))
         if not _is_configured():
             self._fallback().write(data)
             return
@@ -329,8 +341,6 @@ class TursoCompaniesDB:
             raise e
 
     def clear_all(self):
-        global _DB_CACHE
-        _DB_CACHE.pop("companies", None)
         self.write([])
 
 
@@ -481,7 +491,14 @@ class TursoGenericDB:
             return self._fallback().insert(item)
         
         global _DB_CACHE
-        _DB_CACHE.pop(self.table_name, None)
+        now = time.time()
+        if self.table_name in _DB_CACHE:
+            ts, val = _DB_CACHE[self.table_name]
+            new_val = [x for x in val if x.get("id") != item.get("id")]
+            new_val.append(copy.deepcopy(item))
+            _DB_CACHE[self.table_name] = (now, new_val)
+        else:
+            _DB_CACHE[self.table_name] = (now, [copy.deepcopy(item)])
         
         try:
             _execute([{
@@ -500,9 +517,6 @@ class TursoGenericDB:
         if not _is_configured():
             return self._fallback().update(item_id, updated)
         
-        global _DB_CACHE
-        _DB_CACHE.pop(self.table_name, None)
-        
         try:
             current = self.get_by_id(item_id)
             if current is None:
@@ -520,7 +534,10 @@ class TursoGenericDB:
             return self._fallback().delete(item_id)
         
         global _DB_CACHE
-        _DB_CACHE.pop(self.table_name, None)
+        if self.table_name in _DB_CACHE:
+            ts, val = _DB_CACHE[self.table_name]
+            new_val = [x for x in val if str(x.get("id")) != str(item_id)]
+            _DB_CACHE[self.table_name] = (time.time(), new_val)
         
         try:
             _execute([{
@@ -538,10 +555,13 @@ class TursoGenericDB:
             return self._fallback().delete_many(filter_column, filter_value)
         
         global _DB_CACHE
-        _DB_CACHE.pop(self.table_name, None)
+        key_to_check = filter_column.replace("data->>", "") if filter_column.startswith("data->>") else filter_column
+        if self.table_name in _DB_CACHE:
+            ts, val = _DB_CACHE[self.table_name]
+            new_val = [x for x in val if str(x.get(key_to_check)) != str(filter_value)]
+            _DB_CACHE[self.table_name] = (time.time(), new_val)
         
         try:
-            key_to_check = filter_column.replace("data->>", "") if filter_column.startswith("data->>") else filter_column
             # Count the items to be deleted first
             count_res = _execute([{
                 "sql": f"SELECT COUNT(*) as cnt FROM {self.table_name} WHERE json_extract(data, '$.{key_to_check}') = :val",
@@ -564,11 +584,10 @@ class TursoGenericDB:
 
     def write(self, data: List[Dict[str, Any]]):
         self._lazy_init()
+        global _DB_CACHE
+        _DB_CACHE[self.table_name] = (time.time(), copy.deepcopy(data))
         if not _is_configured():
             return self._fallback().write(data)
-        
-        global _DB_CACHE
-        _DB_CACHE.pop(self.table_name, None)
         
         try:
             stmts = [{"sql": f"DELETE FROM {self.table_name}"}]
@@ -610,7 +629,16 @@ class TursoGenericDB:
             return updated_count
 
         global _DB_CACHE
-        _DB_CACHE.pop(self.table_name, None)
+        if self.table_name in _DB_CACHE:
+            ts, val = _DB_CACHE[self.table_name]
+            val_map = {str(item.get("id")): item for item in val if item}
+            for item_id, fields in items_to_update:
+                s_id = str(item_id)
+                if s_id in val_map:
+                    val_map[s_id].update(fields)
+            _DB_CACHE[self.table_name] = (time.time(), list(val_map.values()))
+        else:
+            _DB_CACHE.pop(self.table_name, None)
 
         try:
             stmts = []
@@ -633,6 +661,4 @@ class TursoGenericDB:
             raise e
 
     def clear_all(self):
-        global _DB_CACHE
-        _DB_CACHE.pop(self.table_name, None)
         self.write([])

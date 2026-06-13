@@ -2691,26 +2691,42 @@ def save_gemini_keys(data: SaveGeminiKeysRequest, x_logistix_context: Optional[s
         if len(key) < 10 or key.startswith("YOUR_"):
             raise HTTPException(status_code=400, detail=f"API Key format is invalid or too short: {key[:6]}...")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
         headers = {"Content-Type": "application/json"}
         payload = {"contents": [{"parts": [{"text": "Ping"}]}]}
-        try:
-            response = requests.post(url, headers=headers, json=payload, timeout=5.0)
-            if response.status_code != 200:
+        models_to_try = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-2.0-flash"]
+        valid = False
+        last_err_msg = "Unknown Error"
+        last_status_code = 400
+        
+        for model in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=5.0)
+                if response.status_code == 200:
+                    valid = True
+                    break
+                
+                last_status_code = response.status_code
                 try:
                     err_json = response.json()
-                    err_msg = err_json.get("error", {}).get("message", response.text)
+                    last_err_msg = err_json.get("error", {}).get("message", response.text)
                 except:
-                    err_msg = response.text
+                    last_err_msg = response.text
                 
+                # If key itself is unauthorized/invalid (401, 403), no need to try other models
                 if response.status_code in (401, 403):
-                    raise HTTPException(status_code=400, detail=f"Invalid Gemini API Key ({key[:6]}...): Unauthorized or invalid (HTTP {response.status_code}). Details: {err_msg}")
-                elif response.status_code == 429:
-                    raise HTTPException(status_code=400, detail=f"Quota Exceeded ({key[:6]}...): Rate limit or billing quota exceeded (HTTP 429). Details: {err_msg}")
-                else:
-                    raise HTTPException(status_code=400, detail=f"API Key Validation Failed ({key[:6]}...): HTTP {response.status_code}. Details: {err_msg}")
-        except requests.RequestException as re:
-            raise HTTPException(status_code=400, detail=f"Could not connect to Google API endpoint to validate key: {str(re)}")
+                    break
+            except requests.RequestException as re:
+                last_status_code = 500
+                last_err_msg = str(re)
+                
+        if not valid:
+            if last_status_code in (401, 403):
+                raise HTTPException(status_code=400, detail=f"Invalid Gemini API Key ({key[:6]}...): Unauthorized or invalid (HTTP {last_status_code}). Details: {last_err_msg}")
+            elif last_status_code == 429:
+                raise HTTPException(status_code=400, detail=f"Quota Exceeded ({key[:6]}...): Rate limit or billing quota exceeded (HTTP 429). Details: {last_err_msg}")
+            else:
+                raise HTTPException(status_code=400, detail=f"API Key Validation Failed ({key[:6]}...): HTTP {last_status_code}. Details: {last_err_msg}")
         
     from backend.database import JSONDatabase
     config_db = JSONDatabase("config")

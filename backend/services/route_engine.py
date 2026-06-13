@@ -820,32 +820,31 @@ def optimize_multi_stop_route(start_lat: float, start_lng: float, stops: list) -
         
     return optimized
 
-def predict_weather_impact(lat: float, lng: float) -> dict:
+def predict_weather_impact(lat: float, lng: float, skip_network: bool = True) -> dict:
     """
     Live Weather API Integration with Fail-safe fallback.
     """
-    import random
-    import requests
-    
-    # Try fetching real-time weather from Open-Meteo
-    try:
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=weather_code"
-        response = requests.get(url, timeout=2)
-        if response.status_code == 200:
-            data = response.json()
-            code = data.get("current", {}).get("weather_code", 0)
-            
-            # Map WMO weather codes to our conditions
-            if code in [0, 1]:
-                return {"condition": "Clear", "multiplier": 1.0, "icon": "☀️"}
-            elif code in [2, 3, 45, 48]:
-                return {"condition": "Cloudy", "multiplier": 1.1, "icon": "☁️"}
-            elif code in [51, 53, 55, 61, 63, 65, 80, 81, 82]:
-                return {"condition": "Rain", "multiplier": 1.5, "icon": "🌧️"}
-            elif code >= 71: # Snow and Thunderstorms
-                return {"condition": "Storm", "multiplier": 2.5, "icon": "⛈️"}
-    except Exception as e:
-        print(f"Weather API Error: {e}, falling back to simulation.")
+    if not skip_network:
+        import requests
+        # Try fetching real-time weather from Open-Meteo
+        try:
+            url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&current=weather_code"
+            response = requests.get(url, timeout=2)
+            if response.status_code == 200:
+                data = response.json()
+                code = data.get("current", {}).get("weather_code", 0)
+                
+                # Map WMO weather codes to our conditions
+                if code in [0, 1]:
+                    return {"condition": "Clear", "multiplier": 1.0, "icon": "☀️"}
+                elif code in [2, 3, 45, 48]:
+                    return {"condition": "Cloudy", "multiplier": 1.1, "icon": "☁️"}
+                elif code in [51, 53, 55, 61, 63, 65, 80, 81, 82]:
+                    return {"condition": "Rain", "multiplier": 1.5, "icon": "🌧️"}
+                elif code >= 71: # Snow and Thunderstorms
+                    return {"condition": "Storm", "multiplier": 2.5, "icon": "⛈️"}
+        except Exception as e:
+            print(f"Weather API Error: {e}, falling back to simulation.")
 
     # Fallback: Deterministic-ish weather based on lat/lng for demo consistency
     seed = int((lat + lng) * 100) % 100
