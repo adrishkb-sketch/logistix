@@ -37,3 +37,6 @@ data/images/
 
 # Local scratch scripts
 scratch/
+backend/scratch/
+backend/scripts/
+
