@@ -733,9 +733,25 @@ def decompose_shipment(shipment: dict) -> list:
     4. Omit first_mile if pickup is within 2km of Wp.
     5. Omit last_mile if drop is within 2km of Wd.
     """
+    company_id = shipment.get("company_id")
+    
+    # Intercept for Gemini AI splitting (Non-disruptive, fail-safe check)
+    try:
+        if company_id:
+            from backend.database import JSONDatabase
+            config_db = JSONDatabase("config")
+            cfg = config_db.get_by_id(company_id)
+            if cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys"):
+                from backend.services.gemini_service import gemini_decompose_shipment
+                api_keys = cfg.get("gemini_keys")
+                ai_legs = gemini_decompose_shipment(shipment, api_keys)
+                if ai_legs is not None:
+                    return ai_legs
+    except Exception as e:
+        print(f"[Gemini Route Splitter] Failed: {e}. Falling back to deterministic splitter.")
+
     p_lat, p_lng = shipment["pickup"]["lat"], shipment["pickup"]["lng"]
     d_lat, d_lng = shipment["drop"]["lat"], shipment["drop"]["lng"]
-    company_id = shipment["company_id"]
     
     dist_total = haversine(p_lat, p_lng, d_lat, d_lng)
     

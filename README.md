@@ -35,7 +35,7 @@ To make evaluation easy, we pre-loaded **5 free Google Gemini API keys** in the 
 
 Here are the 12 most important features built into Logistix that solve real shipping problems. Each of these features can be tested directly in the code and portals:
 
-1. **Dynamic Route Splitting & Re-routing:** Automatically divides long journeys into first-mile, middle-mile, and last-mile parts. It assigns them to the best transport types in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py).
+1. **Dynamic Route Splitting & Re-routing:** Automatically divides long journeys into first-mile, middle-mile, and last-mile parts. When AI mode is active and Gemini keys are configured, routes are split and assigned using Gemini. If disabled or rate-limited, it falls back immediately to built-in deterministic OSRM splits in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py).
 2. **Calamity-Aware Rerouting Gates:** Detects active disasters (like storm cells or floods) on the map and uses Gemini AI (or backup rules) to calculate detour paths in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py).
 3. **Automated Fleet Rescue Swap:** Instantly transfers cargo tasks to the nearest compatible backup vehicle if a truck breaks down on the road to keep dispatches moving in [assignment.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/assignment.py).
 4. **E-Way Bill Compliance Checker:** Monitors active deliveries in real-time. If it predicts that a travel permit (E-Way Bill) is about to expire, it automatically routes the shipment back to the sender in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py).
@@ -154,7 +154,9 @@ Logistix is engineered with production-ready software architecture and robust te
 
 * **Vertex AI Predictions:** Hosts custom Random Forest regression models trained on real Uber TLC trip data, predicting precise travel durations (ETAs) dynamically under varying weather, fatigue, and traffic congestion conditions.
 * **Key Rotation Pool:** Deploys a self-healing API rotation pool for Gemini API queries in [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) to avoid rate limits and quotas.
-* **Fail-Safe Local Fallback Engine:** Features a `local_heuristic_fallback_engine` in [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) that queries active database tables to synthesize context-rich briefings, route splits, and safety reports locally if the Gemini APIs are offline.
+* **AI-Powered Route Splitting:** Gemini dynamically decomposes shipments into optimized multi-leg route segments (first-mile, middle-mile, and last-mile) by evaluating candidate warehouse depot locations and payload configurations in [route_engine.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/route_engine.py), with immediate local fallback if keys are missing or offline.
+* **AI-Powered Driver & Fleet Assignment:** When active, Gemini evaluates candidate driver-vehicle pairs and selects the best assignment based on safety ratings and performance score telemetry, generating a structured explanation for the selection in [assignment.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/assignment.py).
+* **Fail-Safe Local Fallback Engine:** Features a `local_heuristic_fallback_engine` in [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) that queries active database tables to synthesize context-rich briefings, route splits, and safety reports locally if the Gemini APIs are offline or deactivated.
 
 ### ⚡ 5.3. Performance & Scalability
 > [!NOTE]

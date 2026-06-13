@@ -413,28 +413,65 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     available_pairs.sort(key=lambda x: x["score"], reverse=True)
     best = available_pairs[0]
 
-    # Post-assignment Gemini reasoning check
+    # Post-assignment Gemini selection & reasoning check
     config_db = JSONDatabase("config")
     cfg = config_db.get_by_id(company_id)
     if cfg and cfg.get("ai_mode") is True and cfg.get("gemini_keys"):
         api_keys = cfg.get("gemini_keys")
+        candidates = available_pairs[:5]  # Limit to top 5 candidates for AI selection
+        
         try:
             from backend.services.gemini_service import call_gemini
             import json
-            sys_inst = "You are an AI logistics dispatcher. Write a single sentence explaining why this specific driver and vehicle pair was chosen for the shipment based on suitability, capacity, and distance."
+            
             prompt = (
-                f"Shipment details: Leg Type: {leg_type}, Distance: {distance:.1f}km, Weight: {shipment.get('weight', 0)}kg. "
-                f"Chosen Driver: Name: {best['driver'].get('name')}, Performance Score: {calculate_driver_performance_score(best['driver'])}. "
-                f"Chosen Vehicle: Type: {best['vehicle'].get('type')}, Capacity: {best['vehicle'].get('capacity')}kg. "
-                f"Explain why this pair was selected in exactly one professional sentence."
+                f"You are an AI logistics dispatcher. Select the single best candidate pair (driver and vehicle) from the following list of candidates for this shipment:\n"
+                f"Shipment details:\n"
+                f"  - Leg Type: {leg_type}\n"
+                f"  - Distance: {distance:.1f}km\n"
+                f"  - Weight: {shipment.get('weight', 0)}kg\n\n"
+                f"Candidates:\n"
             )
-            print("[Gemini AI Engine] Generating post-assignment reasoning...")
-            ai_reasoning = call_gemini(prompt, sys_inst, api_keys).strip()
-            ai_reasoning = ai_reasoning.replace('"', '').strip()
+            for idx, item in enumerate(candidates):
+                d = item["driver"]
+                v = item["vehicle"]
+                prompt += (
+                    f"Candidate {idx}:\n"
+                    f"  - Driver ID: {d['id']} | Name: {d.get('name')} | Safety Score: {d.get('safety_rating', 5.0)} | Performance Score: {calculate_driver_performance_score(d)}\n"
+                    f"  - Vehicle ID: {v['id']} | Type: {v.get('type')} | Capacity: {v.get('capacity')}kg\n"
+                    f"  - Priority Score: {item['score']:.1f}\n"
+                )
+            
+            prompt += (
+                "\nSelect the best candidate and respond with strictly valid JSON formatted exactly like this:\n"
+                "{\n"
+                "  \"candidate_index\": <int>,\n"
+                "  \"reasoning\": \"<one sentence explaining why this candidate was selected>\"\n"
+                "}\n"
+                "Do not include any markdown styling, conversational text, or ``` blocks."
+            )
+            
+            sys_inst = "You are an AI logistics dispatcher. Select the best candidate index and output strictly JSON. No markdown."
+            
+            print("[Gemini AI Engine] Selecting best driver/vehicle candidate via Gemini...")
+            response = call_gemini(prompt, sys_inst, api_keys).strip()
+            response = response.replace('```json', '').replace('```', '').strip()
+            
+            result = json.loads(response)
+            cand_idx = result.get("candidate_index")
+            if isinstance(cand_idx, int) and 0 <= cand_idx < len(candidates):
+                best = candidates[cand_idx]
+                ai_reasoning = result.get("reasoning", "").replace('"', '').strip()
+                print(f"[Gemini AI Engine] Successfully assigned candidate {cand_idx} ({best['driver'].get('name')}) via Gemini AI.")
+            else:
+                ai_reasoning = "Gemini failed to return a valid candidate index. Falling back to deterministic best selection."
         except Exception as e:
-            print(f"[Gemini AI Engine] Post-assignment explanation failed: {e}")
-            ai_reasoning = f"Deterministic pairing completed: Driver {best['driver'].get('name')} with vehicle {best['vehicle'].get('type')} chosen based on priority score."
-        
+            print(f"[Gemini AI Engine] AI assignment/reasoning failed: {e}. Falling back to deterministic.")
+            ai_reasoning = f"Deterministic pairing completed (Gemini AI limit crossed or key issue): Driver {best['driver'].get('name')} with vehicle {best['vehicle'].get('type')} chosen based on priority score."
+
+        if not ai_reasoning:
+            ai_reasoning = f"Assigned Driver {best['driver'].get('name')} with vehicle {best['vehicle'].get('type')} based on Gemini AI selection."
+
         return {
             "assigned_driver_id": best["driver"]["id"],
             "assigned_vehicle_id": best["vehicle"]["id"],
@@ -449,7 +486,7 @@ def auto_assign_shipment(shipment: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "assigned_driver_id": best["driver"]["id"],
         "assigned_vehicle_id": best["vehicle"]["id"],
         "status": "assigned",
-        "stage": "Assigned to Driver",
+        "stage": "Assigned to Driver (Gemini AI not activated)",
         "finance": estimate_delivery_cost(shipment, best["vehicle"]["type"].lower()),
         "pickup_deadline": None
     }

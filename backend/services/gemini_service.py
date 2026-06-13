@@ -562,3 +562,82 @@ def gemini_dynamic_router(shipment_data: dict, weather_cells: list, api_key: str
     except Exception as e:
         print(f"[Gemini Dynamic Router] Error: {e}")
         return None
+
+def gemini_decompose_shipment(shipment: dict, api_key: str = None) -> Optional[list]:
+    """
+    Calls Gemini to split a shipment into legs (first-mile, middle-mile, last-mile) 
+    using the list of available warehouses.
+    """
+    from backend.database import JSONDatabase
+    from backend.services.route_engine import haversine
+    
+    try:
+        company_id = shipment.get("company_id")
+        if not company_id:
+            return None
+            
+        # 1. Fetch available warehouses for the company
+        wh_db = JSONDatabase("warehouses")
+        all_whs = [w for w in wh_db.get_all() if w and w.get("company_id") == company_id]
+        if not all_whs:
+            return None
+            
+        p_lat, p_lng = shipment["pickup"]["lat"], shipment["pickup"]["lng"]
+        d_lat, d_lng = shipment["drop"]["lat"], shipment["drop"]["lng"]
+        dist_total = haversine(p_lat, p_lng, d_lat, d_lng)
+        
+        # Build prompt
+        prompt = (
+            f"You are an AI Logistics Route-Splitting Engine. Decompose the following shipment into multi-leg journeys if appropriate.\n"
+            f"Shipment details:\n"
+            f"  - Total Distance: {dist_total:.1f}km\n"
+            f"  - Pickup: lat={p_lat}, lng={p_lng}, address={shipment['pickup'].get('address')}\n"
+            f"  - Drop: lat={d_lat}, lng={d_lng}, address={shipment['drop'].get('address')}\n"
+            f"  - Weight: {shipment.get('weight', 0)}kg\n\n"
+            f"Candidate Warehouses available in company network:\n"
+        )
+        for w in all_whs:
+            d_to_p = haversine(p_lat, p_lng, w["lat"], w["lng"])
+            d_to_d = haversine(d_lat, d_lng, w["lat"], w["lng"])
+            prompt += f"  - ID: {w['id']} | Name: {w['name']} | Coordinates: lat={w['lat']}, lng={w['lng']} | Dist from Pickup: {d_to_p:.1f}km | Dist from Drop: {d_to_d:.1f}km\n"
+            
+        prompt += (
+            "\nRules for route splitting:\n"
+            "1. If the total distance is under 50km, or if direct routing is more optimal (e.g., direct distance is shorter than going through hubs), do not split. Return an empty JSON list: [].\n"
+            "2. Otherwise, select the nearest warehouse to pickup (Wp) and nearest to drop (Wd) and divide the journey into:\n"
+            "   - 'first_mile': pickup to Wp (omit if pickup is within 2.0km of Wp).\n"
+            "   - 'middle_mile': Wp to Wd.\n"
+            "   - 'last_mile': Wd to drop (omit if drop is within 2.0km of Wd).\n"
+            "3. Format each leg strictly as JSON dictionary in an array. Output no conversational text, no markdown. Format:\n"
+            "[\n"
+            "  {\n"
+            "    \"pickup\": {\"lat\": float, \"lng\": float, \"address\": \"string\"},\n"
+            "    \"drop\": {\"lat\": float, \"lng\": float, \"address\": \"string\"},\n"
+            "    \"leg_type\": \"first_mile\"|\"middle_mile\"|\"last_mile\",\n"
+            "    \"pickup_warehouse_id\": \"string\"|null,\n"
+            "    \"drop_warehouse_id\": \"string\"|null,\n"
+            "    \"is_leg\": true\n"
+            "  }\n"
+            "]"
+        )
+        
+        sys_inst = "Act as an AI Logistics Route-Splitting Engine. Output ONLY a valid JSON array of leg dictionaries. No markdown formatting."
+        
+        print("[Gemini AI Engine] Generating AI route splitting dispatches...")
+        response = call_gemini(prompt, sys_inst, api_key)
+        response = response.replace('```json', '').replace('```', '').strip()
+        
+        legs = json.loads(response)
+        if not isinstance(legs, list):
+            return None
+            
+        # Add leg_order
+        for idx, leg in enumerate(legs):
+            leg["leg_order"] = idx + 1
+            
+        return legs
+        
+    except Exception as e:
+        print(f"[Gemini Route Splitter] Error during AI routing: {e}")
+        return None
+
