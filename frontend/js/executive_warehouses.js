@@ -694,7 +694,11 @@ async function initPage() {
     initMap(); loadMapData();
 }
 
-document.addEventListener('DOMContentLoaded', initPage);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPage);
+} else {
+    initPage();
+}
 
 window.addEventListener('themeChanged', () => {
     if (map) {

@@ -501,7 +501,7 @@ function enforceAIButtonState(configured) {
  */
 function injectAIStatusWidget(status) {
     // Don't inject on system settings page (redundant)
-    if (window.location.pathname.includes('manager_system')) return;
+    if (window.location.pathname.includes('executive_system')) return;
 
     let pill = document.getElementById('ai-status-pill');
     if (!pill) {

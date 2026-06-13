@@ -797,24 +797,24 @@ async function drawRouteWithTraffic(start, end) {
 
 function showSection(id) {
     const pageToSection = {
-        'manager_analytics': 'analytics',
-        'manager_warehouses': 'warehouses',
-        'manager_shipments': 'shipments',
-        'manager_receivers': 'receivers',
-        'manager_drivers': 'drivers',
-        'manager_weather': 'weather',
-        'manager_messages': 'messages',
-        'manager_leaderboard': 'leaderboard',
-        'manager_verifications': 'verifications',
-        'manager_safety': 'safety',
+        'executive_analytics': 'analytics',
+        'executive_warehouses': 'warehouses',
+        'executive_shipments': 'shipments',
+        'executive_receivers': 'receivers',
+        'executive_drivers': 'drivers',
+        'executive_weather': 'weather',
+        'executive_messages': 'messages',
+        'executive_leaderboard': 'leaderboard',
+        'executive_verifications': 'verifications',
+        'executive_safety': 'safety',
         
-        'manager_oracle': 'oracle',
-        'manager_fuel_oracle': 'fuel-oracle',
-        'manager_payments': 'paisa-fast',
-        'manager_strategy': 'strategy-plan',
-        'manager_resilience': 'network-resilience',
-        'manager_system': 'system',
-        'manager_hub_leaves': 'hub-leaves'
+        'executive_oracle': 'oracle',
+        'executive_fuel_oracle': 'fuel-oracle',
+        'executive_payments': 'paisa-fast',
+        'executive_strategy': 'strategy-plan',
+        'executive_resilience': 'network-resilience',
+        'executive_system': 'system',
+        'executive_hub_leaves': 'hub-leaves'
     };
     const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
     const currentSection = pageToSection[currentFilename] || 'analytics';
@@ -898,24 +898,24 @@ function loadVerifications() {
 }
 
 const pageToSectionInit = {
-    'manager_analytics': 'analytics',
-    'manager_warehouses': 'warehouses',
-    'manager_shipments': 'shipments',
-    'manager_receivers': 'receivers',
-    'manager_drivers': 'drivers',
-    'manager_weather': 'weather',
-    'manager_messages': 'messages',
-    'manager_leaderboard': 'leaderboard',
-    'manager_verifications': 'verifications',
-    'manager_safety': 'safety',
+    'executive_analytics': 'analytics',
+    'executive_warehouses': 'warehouses',
+    'executive_shipments': 'shipments',
+    'executive_receivers': 'receivers',
+    'executive_drivers': 'drivers',
+    'executive_weather': 'weather',
+    'executive_messages': 'messages',
+    'executive_leaderboard': 'leaderboard',
+    'executive_verifications': 'verifications',
+    'executive_safety': 'safety',
     
-    'manager_oracle': 'oracle',
-    'manager_fuel_oracle': 'fuel-oracle',
-    'manager_payments': 'paisa-fast',
-    'manager_strategy': 'strategy-plan',
-    'manager_resilience': 'network-resilience',
-    'manager_system': 'system',
-    'manager_hub_leaves': 'hub-leaves'
+    'executive_oracle': 'oracle',
+    'executive_fuel_oracle': 'fuel-oracle',
+    'executive_payments': 'paisa-fast',
+    'executive_strategy': 'strategy-plan',
+    'executive_resilience': 'network-resilience',
+    'executive_system': 'system',
+    'executive_hub_leaves': 'hub-leaves'
 };
 const initialFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
 const initialSection = pageToSectionInit[initialFilename] || 'analytics';

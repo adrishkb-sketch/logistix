@@ -1385,31 +1385,32 @@ class AutomatedControl {
     }
 
     showSection(id) {
-        if (typeof showSection === 'function') {
-            showSection(id);
+        if (typeof window.showSection === 'function') {
+            window.showSection(id);
         } else {
             const pageToSection = {
-                'executive_analytics.html': 'analytics',
-                'executive_warehouses.html': 'warehouses',
-                'executive_shipments.html': 'shipments',
-                'executive_receivers.html': 'receivers',
-                'executive_drivers.html': 'drivers',
-                'executive_weather.html': 'weather',
-                'executive_messages.html': 'messages',
-                'executive_leaderboard.html': 'leaderboard',
-                'executive_verifications.html': 'verifications',
-                'executive_safety.html': 'safety',
+                'executive_analytics': 'analytics',
+                'executive_warehouses': 'warehouses',
+                'executive_shipments': 'shipments',
+                'executive_receivers': 'receivers',
+                'executive_drivers': 'drivers',
+                'executive_weather': 'weather',
+                'executive_messages': 'messages',
+                'executive_leaderboard': 'leaderboard',
+                'executive_verifications': 'verifications',
+                'executive_safety': 'safety',
                 
-                'executive_oracle.html': 'oracle',
-                'executive_fuel_oracle.html': 'fuel-oracle',
-                'executive_payments.html': 'paisa-fast',
-                'executive_strategy.html': 'strategy-plan',
-                'executive_resilience.html': 'network-resilience',
-                'executive_system.html': 'system',
-                'executive_hub_leaves.html': 'hub-leaves'
+                'executive_oracle': 'oracle',
+                'executive_fuel_oracle': 'fuel-oracle',
+                'executive_payments': 'paisa-fast',
+                'executive_strategy': 'strategy-plan',
+                'executive_resilience': 'network-resilience',
+                'executive_system': 'system',
+                'executive_hub_leaves': 'hub-leaves'
             };
-            const targetPage = Object.keys(pageToSection).find(key => pageToSection[key] === id);
-            if (targetPage) {
+            const targetPageBase = Object.keys(pageToSection).find(key => pageToSection[key] === id);
+            if (targetPageBase) {
+                const targetPage = targetPageBase + '.html';
                 const isRoot = !window.location.pathname.includes('/pages/');
                 window.location.href = isRoot ? `pages/${targetPage}` : targetPage;
             }

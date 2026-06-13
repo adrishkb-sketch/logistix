@@ -136,32 +136,33 @@ window.copyCompanyID = function() {
 
 window.showSection = function(id) {
     const pageToSection = {
-        'manager_analytics': 'analytics',
-        'manager_warehouses': 'warehouses',
-        'manager_shipments': 'shipments',
-        'manager_receivers': 'receivers',
-        'manager_drivers': 'drivers',
-        'manager_weather': 'weather',
-        'manager_messages': 'messages',
-        'manager_leaderboard': 'leaderboard',
-        'manager_verifications': 'verifications',
-        'manager_safety': 'safety',
+        'executive_analytics': 'analytics',
+        'executive_warehouses': 'warehouses',
+        'executive_shipments': 'shipments',
+        'executive_receivers': 'receivers',
+        'executive_drivers': 'drivers',
+        'executive_weather': 'weather',
+        'executive_messages': 'messages',
+        'executive_leaderboard': 'leaderboard',
+        'executive_verifications': 'verifications',
+        'executive_safety': 'safety',
         
-        'manager_oracle': 'oracle',
-        'manager_fuel_oracle': 'fuel-oracle',
-        'manager_payments': 'paisa-fast',
-        'manager_strategy': 'strategy-plan',
-        'manager_resilience': 'network-resilience',
-        'manager_system': 'system',
-        'manager_hub_leaves': 'hub-leaves'
+        'executive_oracle': 'oracle',
+        'executive_fuel_oracle': 'fuel-oracle',
+        'executive_payments': 'paisa-fast',
+        'executive_strategy': 'strategy-plan',
+        'executive_resilience': 'network-resilience',
+        'executive_system': 'system',
+        'executive_hub_leaves': 'hub-leaves'
     };
-    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
+    const pathname = window.location.pathname.replace(/\/$/, '');
+    const currentFilename = pathname.split('/').pop().split('?')[0].replace('.html', '');
     const currentSection = pageToSection[currentFilename] || 'analytics';
     
     if (id !== currentSection && pageToSection[currentFilename]) {
-        const targetPage = Object.keys(pageToSection).find(key => pageToSection[key] === id);
-        if (targetPage) {
-            window.location.href = targetPage;
+        const targetPageBase = Object.keys(pageToSection).find(key => pageToSection[key] === id);
+        if (targetPageBase) {
+            window.location.href = targetPageBase + '.html';
             return;
         }
     }
@@ -176,26 +177,27 @@ window.showSection = function(id) {
 };
 
 function initBase() {
-    const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
+    const pathname = window.location.pathname.replace(/\/$/, '');
+    const currentFilename = pathname.split('/').pop().split('?')[0].replace('.html', '');
     const pageToSection = {
-        'manager_analytics': 'analytics',
-        'manager_warehouses': 'warehouses',
-        'manager_shipments': 'shipments',
-        'manager_receivers': 'receivers',
-        'manager_drivers': 'drivers',
-        'manager_weather': 'weather',
-        'manager_messages': 'messages',
-        'manager_leaderboard': 'leaderboard',
-        'manager_verifications': 'verifications',
-        'manager_safety': 'safety',
+        'executive_analytics': 'analytics',
+        'executive_warehouses': 'warehouses',
+        'executive_shipments': 'shipments',
+        'executive_receivers': 'receivers',
+        'executive_drivers': 'drivers',
+        'executive_weather': 'weather',
+        'executive_messages': 'messages',
+        'executive_leaderboard': 'leaderboard',
+        'executive_verifications': 'verifications',
+        'executive_safety': 'safety',
         
-        'manager_oracle': 'oracle',
-        'manager_fuel_oracle': 'fuel-oracle',
-        'manager_payments': 'paisa-fast',
-        'manager_strategy': 'strategy-plan',
-        'manager_resilience': 'network-resilience',
-        'manager_system': 'system',
-        'manager_hub_leaves': 'hub-leaves'
+        'executive_oracle': 'oracle',
+        'executive_fuel_oracle': 'fuel-oracle',
+        'executive_payments': 'paisa-fast',
+        'executive_strategy': 'strategy-plan',
+        'executive_resilience': 'network-resilience',
+        'executive_system': 'system',
+        'executive_hub_leaves': 'hub-leaves'
     };
     const section = pageToSection[currentFilename] || 'analytics';
     showSection(section);
@@ -299,8 +301,9 @@ setInterval(async () => {
         if (!mId || mId === "null") return;
         const msgs = await apiCall(`/tracking/messages/${mId}?company_id=${mId}`, 'GET', null, true);
         
-        const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
-        if (currentFilename === 'manager_messages') {
+        const pathname = window.location.pathname.replace(/\/$/, '');
+        const currentFilename = pathname.split('/').pop().split('?')[0].replace('.html', '');
+        if (currentFilename === 'executive_messages') {
             // Always keep cleared on the messages page
             lastMsgCount = msgs.length;
             localStorage.setItem('last_seen_msg_count', lastMsgCount);
@@ -353,9 +356,10 @@ setInterval(async () => {
         const fundRequests = await apiCall(`/manager/finance/fund-requests?company_id=${companyId}`);
         const badge = document.getElementById('paisa-badge');
         const link = document.getElementById('nav-link-paisa-fast');
-        const currentFilename = window.location.pathname.split('/').pop().split('?')[0].replace('.html', '');
+        const pathname = window.location.pathname.replace(/\/$/, '');
+        const currentFilename = pathname.split('/').pop().split('?')[0].replace('.html', '');
         
-        if (fundRequests.length > 0 && currentFilename !== 'manager_payments') {
+        if (fundRequests.length > 0 && currentFilename !== 'executive_payments') {
             if (badge) {
                 badge.style.display = 'inline-block';
                 badge.style.background = 'var(--danger)';
