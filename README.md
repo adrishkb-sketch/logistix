@@ -152,7 +152,7 @@ Logistix is engineered with production-ready software architecture and robust te
 > [!NOTE]
 > **Evaluation Metric:** *How well is AI integrated into the solution? Does it use advanced AI models correctly, or could a simpler approach have worked?*
 
-* **Vertex AI Predictions:** Hosts custom Random Forest regression models trained on real New York Uber TLC trip data, predicting precise travel durations (ETAs) dynamically under varying weather, fatigue, and traffic congestion conditions.
+* **Vertex AI Predictions:** Hosts custom Random Forest regression models trained on real Uber TLC trip data, predicting precise travel durations (ETAs) dynamically under varying weather, fatigue, and traffic congestion conditions.
 * **Key Rotation Pool:** Deploys a self-healing API rotation pool for Gemini API queries in [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) to avoid rate limits and quotas.
 * **Fail-Safe Local Fallback Engine:** Features a `local_heuristic_fallback_engine` in [gemini_service.py](file:///Users/adrish/Desktop/Projects/logistix/backend/services/gemini_service.py) that queries active database tables to synthesize context-rich briefings, route splits, and safety reports locally if the Gemini APIs are offline.
 
