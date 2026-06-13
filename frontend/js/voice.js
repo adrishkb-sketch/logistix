@@ -1421,11 +1421,11 @@ class AutomatedControl {
         } else {
             const tabToPage = {
                 'dash': 'hub_manager_dashboard.html',
-                'verifications': 'hub_executive_verifications.html',
+                'verifications': 'hub_manager_verifications.html',
                 'fleet': 'hub_manager_fleet.html',
                 'gate': 'hub_manager_gate.html',
                 'audit': 'hub_manager_audit.html',
-                'leaderboard': 'hub_executive_leaderboard.html',
+                'leaderboard': 'hub_manager_leaderboard.html',
                 'settings': 'hub_manager_settings.html'
             };
             const targetPage = tabToPage[tab];
