@@ -40,3 +40,7 @@ scratch/
 backend/scratch/
 backend/scripts/
 
+# Presentation Wireframes/Mockups
+wireframe_diagram.png
+architecture_diagram.png
+process_flow_diagram.png
