@@ -203,22 +203,30 @@ class TursoCompaniesDB:
             _DB_CACHE["companies"] = (now, items)
             return copy.deepcopy(items)
         except Exception as e:
-            print(f"[TursoDB] get_all error: {e}")
-            raise e
+            print(f"[TursoDB] get_all error: {e}. Falling back to local storage.")
+            return self._fallback().get_all()
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().get_by_id(item_id)
         
-        all_items = self.get_all()
-        for item in all_items:
-            if str(item.get("id")) == str(item_id):
-                return copy.deepcopy(item)
-        return None
+        try:
+            all_items = self.get_all()
+            for item in all_items:
+                if str(item.get("id")) == str(item_id):
+                    return copy.deepcopy(item)
+            return None
+        except Exception as e:
+            print(f"[TursoDB] get_by_id error: {e}. Falling back to local storage.")
+            return self._fallback().get_by_id(item_id)
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
-        all_items = self.get_all()
-        return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
+        try:
+            all_items = self.get_all()
+            return [i for i in all_items if all(str(i.get(k)) == str(v) for k, v in filters.items())]
+        except Exception as e:
+            print(f"[TursoDB] get_filtered error: {e}. Falling back to local storage.")
+            return self._fallback().get_filtered(filters)
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
         self._lazy_init()
@@ -248,8 +256,8 @@ class TursoCompaniesDB:
             }])
             return item
         except Exception as e:
-            print(f"[TursoDB] insert error: {e}")
-            raise e
+            print(f"[TursoDB] insert error: {e}. Falling back to local storage.")
+            return self._fallback().insert(item)
 
     def update(self, item_id: str, updated: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not _is_configured():
@@ -262,8 +270,8 @@ class TursoCompaniesDB:
             current.update(updated)
             return self.insert(current)
         except Exception as e:
-            print(f"[TursoDB] update error: {e}")
-            raise e
+            print(f"[TursoDB] update error: {e}. Falling back to local storage.")
+            return self._fallback().update(item_id, updated)
 
     def delete(self, item_id: str) -> bool:
         self._lazy_init()
@@ -280,8 +288,8 @@ class TursoCompaniesDB:
             _execute([{"sql": "DELETE FROM companies WHERE id = :id", "args": {"id": item_id}}])
             return True
         except Exception as e:
-            print(f"[TursoDB] delete error: {e}")
-            raise e
+            print(f"[TursoDB] delete error: {e}. Falling back to local storage.")
+            return self._fallback().delete(item_id)
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
         self._lazy_init()
@@ -311,8 +319,8 @@ class TursoCompaniesDB:
             }])
             return deleted_count
         except Exception as e:
-            print(f"[TursoCompaniesDB] delete_many error: {e}")
-            raise e
+            print(f"[TursoCompaniesDB] delete_many error: {e}. Falling back to local storage.")
+            return self._fallback().delete_many(filter_column, filter_value)
 
     def write(self, data: List[Dict[str, Any]]):
         self._lazy_init()
@@ -328,8 +336,8 @@ class TursoCompaniesDB:
                     "sql": "INSERT OR REPLACE INTO companies (id, name, email, password) VALUES (:id, :name, :email, :password)",
                     "args": {
                         "id": item.get("id", ""),
-                        "name": item.get("name", ""),
                         "email": item.get("email", ""),
+                        "name": item.get("name", ""),
                         "password": item.get("password", "")
                     }
                 })
@@ -338,11 +346,15 @@ class TursoCompaniesDB:
             for i in range(0, len(stmts), chunk_size):
                 _execute(stmts[i:i+chunk_size])
         except Exception as e:
-            print(f"[TursoCompaniesDB] write error: {e}")
-            raise e
+            print(f"[TursoCompaniesDB] write error: {e}. Falling back to local storage.")
+            self._fallback().write(data)
 
     def clear_all(self):
-        self.write([])
+        try:
+            self.write([])
+        except Exception as e:
+            print(f"[TursoCompaniesDB] clear_all error: {e}. Falling back to local storage.")
+            self._fallback().clear_all()
 
 
 
@@ -439,18 +451,22 @@ class TursoGenericDB:
             _DB_CACHE[self.table_name] = (now, items)
             return copy.deepcopy(items)
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] get_all error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] get_all error: {e}. Falling back to local storage.")
+            return self._fallback().get_all()
 
     def get_by_id(self, item_id: str) -> Optional[Dict[str, Any]]:
         if not _is_configured():
             return self._fallback().get_by_id(item_id)
         
-        all_items = self.get_all()
-        for item in all_items:
-            if str(item.get("id")) == str(item_id):
-                return copy.deepcopy(item)
-        return None
+        try:
+            all_items = self.get_all()
+            for item in all_items:
+                if str(item.get("id")) == str(item_id):
+                    return copy.deepcopy(item)
+            return None
+        except Exception as e:
+            print(f"[TursoGenericDB:{self.table_name}] get_by_id error: {e}. Falling back to local storage.")
+            return self._fallback().get_by_id(item_id)
 
     def get_filtered(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         self._lazy_init()
@@ -483,8 +499,8 @@ class TursoGenericDB:
                     pass
             return items
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] get_filtered error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] get_filtered error: {e}. Falling back to local storage.")
+            return self._fallback().get_filtered(filters)
 
 
     def insert(self, item: Dict[str, Any]) -> Dict[str, Any]:
@@ -512,8 +528,8 @@ class TursoGenericDB:
             }])
             return item
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] insert error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] insert error: {e}. Falling back to local storage.")
+            return self._fallback().insert(item)
 
     def update(self, item_id: str, updated: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if not _is_configured():
@@ -527,8 +543,8 @@ class TursoGenericDB:
             self.insert(current)
             return current
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] update error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] update error: {e}. Falling back to local storage.")
+            return self._fallback().update(item_id, updated)
 
     def delete(self, item_id: str) -> bool:
         self._lazy_init()
@@ -548,8 +564,8 @@ class TursoGenericDB:
             }])
             return True
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] delete error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] delete error: {e}. Falling back to local storage.")
+            return self._fallback().delete(item_id)
 
     def delete_many(self, filter_column: str, filter_value: Any) -> int:
         self._lazy_init()
@@ -581,8 +597,8 @@ class TursoGenericDB:
             _execute([{"sql": sql, "args": {"val": str(filter_value)}}])
             return deleted_count
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] delete_many error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] delete_many error: {e}. Falling back to local storage.")
+            return self._fallback().delete_many(filter_column, filter_value)
 
     def write(self, data: List[Dict[str, Any]]):
         self._lazy_init()
@@ -606,8 +622,8 @@ class TursoGenericDB:
             for i in range(0, len(stmts), chunk_size):
                 _execute(stmts[i:i+chunk_size])
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] write error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] write error: {e}. Falling back to local storage.")
+            self._fallback().write(data)
 
     def update_many(self, items_to_update: List[tuple]) -> int:
         """
@@ -618,17 +634,7 @@ class TursoGenericDB:
             
         self._lazy_init()
         if not _is_configured():
-            fallback_db = self._fallback()
-            data = fallback_db.get_all()
-            data_map = {str(item.get("id")): item for item in data if item}
-            updated_count = 0
-            for item_id, fields in items_to_update:
-                s_id = str(item_id)
-                if s_id in data_map:
-                    data_map[s_id].update(fields)
-                    updated_count += 1
-            fallback_db.write(list(data_map.values()))
-            return updated_count
+            return self._fallback().update_many(items_to_update)
 
         global _DB_CACHE
         if self.table_name in _DB_CACHE:
@@ -659,8 +665,12 @@ class TursoGenericDB:
                 
             return len(items_to_update)
         except Exception as e:
-            print(f"[TursoGenericDB:{self.table_name}] update_many error: {e}")
-            raise e
+            print(f"[TursoGenericDB:{self.table_name}] update_many error: {e}. Falling back to local storage.")
+            return self._fallback().update_many(items_to_update)
 
     def clear_all(self):
-        self.write([])
+        try:
+            self.write([])
+        except Exception as e:
+            print(f"[TursoGenericDB:{self.table_name}] clear_all error: {e}. Falling back to local storage.")
+            self._fallback().clear_all()
